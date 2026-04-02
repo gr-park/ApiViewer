@@ -92,6 +92,8 @@
     tbody tr:last-child { border-bottom: none; }
     tbody tr:hover { background: var(--row-hover); }
     tbody tr.row-selected { background: #eff6ff !important; }
+    tbody tr.row-changed { background: #fef2f2 !important; }
+    tbody tr.row-changed:hover { background: #fee2e2 !important; }
     tbody td { padding: 8px 12px; vertical-align: top; max-width: 260px; word-break: break-all; }
     td.cb-cell { width: 36px; max-width: 36px; text-align: center; padding: 8px 0; }
     input[type=checkbox] { width: 15px; height: 15px; cursor: pointer; accent-color: var(--primary); }
@@ -183,6 +185,8 @@
     <div class="stat-pill s-block" id="pill-bt-top" onclick="setFilter('bt-최우선')" style="cursor:pointer;"><span>최우선</span><strong id="stat-bt-top" style="color:#dc2626;">0</strong></div>
     <div class="stat-pill s-block" id="pill-bt-low" onclick="setFilter('bt-후순위')" style="cursor:pointer;"><span>후순위</span><strong id="stat-bt-low" style="color:#ea580c;">0</strong></div>
     <span style="border-left:2px solid var(--border);height:28px;margin:0 4px;"></span>
+    <div class="stat-pill" id="pill-changed" onclick="setFilter('changed')" style="cursor:pointer;"><span>상태변경</span><strong id="stat-changed" style="color:#dc2626;">0</strong></div>
+    <span style="border-left:2px solid var(--border);height:28px;margin:0 4px;"></span>
     <div class="stat-pill" style="cursor:default;"><span>GET</span>   <strong id="statGet">0</strong></div>
     <div class="stat-pill" style="cursor:default;"><span>POST</span>  <strong id="statPost">0</strong></div>
     <div class="stat-pill" style="cursor:default;"><span>PUT</span>   <strong id="statPut">0</strong></div>
@@ -219,6 +223,7 @@
       <option value="__SKIP__">-- 차단대상기준 --</option>
     </select>
     <button class="btn-apply" onclick="applyBulk()">적용</button>
+    <button class="btn-apply" onclick="bulkClearStatusChange()" style="background:#6b7280;">상태변경 확인</button>
     <button class="btn-cancel" onclick="clearSelection()">취소</button>
   </div>
 
@@ -240,6 +245,7 @@
           <th onclick="sortBy('apiOperationValue')">설명 <span class="sort-icon">↕</span></th>
           <th onclick="sortBy('callCount')">호출건수 <span class="sort-icon">↕</span></th>
           <th onclick="sortBy('status')">상태 <span class="sort-icon">↕</span></th>
+          <th onclick="sortBy('blockedDate')">차단일자 <span class="sort-icon">↕</span></th>
           <th onclick="sortBy('blockTarget')">차단대상 <span class="sort-icon">↕</span></th>
           <th onclick="sortBy('blockCriteria')">차단대상기준 <span class="sort-icon">↕</span></th>
           <th onclick="sortBy('reviewResult')">현업검토결과 <span class="sort-icon">↕</span></th>
@@ -253,7 +259,7 @@
         </tr>
       </thead>
       <tbody id="tbody">
-        <tr><td colspan="23"><div class="state-box">레포지토리를 선택하고 <b>조회</b>를 클릭하세요.</div></td></tr>
+        <tr><td colspan="24"><div class="state-box">레포지토리를 선택하고 <b>조회</b>를 클릭하세요.</div></td></tr>
       </tbody>
     </table>
   </div>
@@ -320,7 +326,7 @@
 
     document.getElementById('loadBtn').disabled = true;
     document.getElementById('tbody').innerHTML =
-      '<tr><td colspan="23"><div class="state-box"><div class="spinner"></div><br>조회 중...</div></td></tr>';
+      '<tr><td colspan="24"><div class="state-box"><div class="spinner"></div><br>조회 중...</div></td></tr>';
     clearSelection();
 
     try {
@@ -360,7 +366,7 @@
     } catch(e) {
       showToast(e.message, 'error');
       document.getElementById('tbody').innerHTML =
-        `<tr><td colspan="23"><div class="state-box">조회 오류: ${esc(e.message)}</div></td></tr>`;
+        `<tr><td colspan="24"><div class="state-box">조회 오류: ${esc(e.message)}</div></td></tr>`;
     } finally {
       document.getElementById('loadBtn').disabled = false;
     }
@@ -380,6 +386,7 @@
     document.getElementById('stat-차단완료').textContent = sCounts['차단완료'];
     document.getElementById('stat-bt-top').textContent  = btCounts['최우선 차단대상'];
     document.getElementById('stat-bt-low').textContent  = btCounts['후순위 차단대상'];
+    document.getElementById('stat-changed').textContent  = allApis.filter(a => a.statusChanged).length;
     document.getElementById('statGet').textContent      = allApis.filter(a => a.httpMethod === 'GET').length;
     document.getElementById('statPost').textContent     = allApis.filter(a => a.httpMethod === 'POST').length;
     document.getElementById('statPut').textContent      = allApis.filter(a => a.httpMethod === 'PUT').length;
@@ -395,6 +402,7 @@
     else if (val === '차단완료') { document.getElementById('pill-차단완료').classList.add('active-filter'); }
     else if (val === 'bt-최우선') { document.getElementById('pill-bt-top').classList.add('active-filter'); }
     else if (val === 'bt-후순위') { document.getElementById('pill-bt-low').classList.add('active-filter'); }
+    else if (val === 'changed') { document.getElementById('pill-changed').classList.add('active-filter'); }
     filterTable();
   }
 
@@ -410,6 +418,7 @@
       if (activeFilter === '사용' || activeFilter === '차단완료') filterOk = a.status === activeFilter;
       else if (activeFilter === 'bt-최우선') filterOk = a.blockTarget === '최우선 차단대상';
       else if (activeFilter === 'bt-후순위') filterOk = a.blockTarget === '후순위 차단대상';
+      else if (activeFilter === 'changed') filterOk = a.statusChanged === true;
       return (!q || text.includes(q))
           && (!method || a.httpMethod === method)
           && filterOk;
@@ -444,12 +453,12 @@
   function renderRows(list) {
     const tbody = document.getElementById('tbody');
     if (!list.length) {
-      tbody.innerHTML = '<tr><td colspan="23"><div class="state-box">검색 결과가 없습니다.</div></td></tr>';
+      tbody.innerHTML = '<tr><td colspan="24"><div class="state-box">검색 결과가 없습니다.</div></td></tr>';
       return;
     }
     tbody.innerHTML = list.map(a => {
       const checked = selectedIds.has(a.id) ? 'checked' : '';
-      const rowCls  = selectedIds.has(a.id) ? ' row-selected' : '';
+      const rowCls  = (selectedIds.has(a.id) ? ' row-selected' : '') + (a.statusChanged ? ' row-changed' : '');
       const cfg = repoConfigMap[a.repositoryName] || {};
       return `
       <tr class="${rowCls}" id="row-${a.id}">
@@ -467,7 +476,8 @@
         <td style="font-family:monospace;font-size:11px;">${esc(a.programId)}</td>
         <td class="api-op">${esc(label(a))}</td>
         <td style="text-align:right;font-size:12px;">${a.callCount != null ? a.callCount.toLocaleString() : '<span style="color:#cbd5e1;">-</span>'}</td>
-        <td>${statusBadge(a.status)}${a.statusOverridden ? ' <span title="수동설정" style="font-size:10px;color:#94a3b8;">🔒</span>' : ''}</td>
+        <td>${statusBadge(a.status)}${a.statusOverridden ? ' <span title="수동설정" style="font-size:10px;color:#94a3b8;">🔒</span>' : ''}${a.statusChanged ? ` <span title="${esc(a.statusChangeLog||'상태변경 감지')}" style="color:#dc2626;cursor:pointer;font-size:10px;" onclick="clearStatusFlag(event,${a.id})">⚠️확인</span>` : ''}</td>
+        <td style="font-size:11px;color:var(--text-muted);white-space:nowrap;">${esc(a.blockedDate || '')}</td>
         <td>${blockTargetBadge(a.blockTarget)}</td>
         <td style="font-size:11px;color:var(--text-muted);max-width:140px;">${esc(a.blockCriteria || '')}</td>
         <td>${reviewResultBadge(a.reviewResult)}</td>
@@ -506,6 +516,29 @@
     return html;
   }
 
+  async function bulkClearStatusChange() {
+    const changedIds = Array.from(selectedIds).filter(id => allApis.find(a => a.id===id && a.statusChanged));
+    if (!changedIds.length) { showToast('상태변경된 항목이 없습니다.','error'); return; }
+    if (!confirm(`${changedIds.length}개 항목의 상태변경 플래그를 해제하시겠습니까?`)) return;
+    try {
+      await fetch('/api/db/clear-status-change', { method:'PATCH', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ids:changedIds}) });
+      changedIds.forEach(id => { const a=allApis.find(x=>x.id===id); if(a){a.statusChanged=false;a.statusChangeLog=null;} });
+      renderStats(); filterTable(); showToast(`${changedIds.length}개 플래그 해제 완료`,'success');
+    } catch(e) { showToast('실패','error'); }
+  }
+
+  async function clearStatusFlag(event, id) {
+    event.stopPropagation();
+    if (!confirm('상태변경 플래그를 해제하시겠습니까?')) return;
+    try {
+      await fetch('/api/db/clear-status-change', { method:'PATCH', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ids:[id]}) });
+      const a = allApis.find(x => x.id === id);
+      if (a) { a.statusChanged = false; a.statusChangeLog = null; }
+      renderStats(); filterTable();
+      showToast('플래그 해제 완료', 'success');
+    } catch(e) { showToast('실패','error'); }
+  }
+
   function reviewResultBadge(rv) {
     if (!rv) return '<span style="color:#cbd5e1;font-size:11px;">-</span>';
     if (rv === '차단대상 제외') return `<span class="status-badge" style="background:#dbeafe;color:#1e40af;">${esc(rv)}</span>`;
@@ -535,7 +568,7 @@
   // ── 정렬 ──────────────────────────────────────────────────
   const colIndexMap = { repositoryName:1, teamName:2, managerName:3, httpMethod:4, apiPath:5,
                         controllerName:7, methodName:8, programId:9, apiOperationValue:10,
-                        callCount:11, status:12, blockTarget:13, blockCriteria:14, reviewResult:15, lastAnalyzedDate:17 };
+                        callCount:11, status:12, blockedDate:13, blockTarget:14, blockCriteria:15, reviewResult:16, lastAnalyzedDate:18 };
   function sortBy(key) {
     if (sortKey === key) sortAsc = !sortAsc; else { sortKey = key; sortAsc = true; }
     document.querySelectorAll('thead th').forEach(th => th.classList.remove('sorted'));

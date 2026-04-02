@@ -11,10 +11,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Service
 public class ApiStorageService {
@@ -29,49 +28,100 @@ public class ApiStorageService {
         this.globalConfigRepository = globalConfigRepository;
     }
 
+    private static final Pattern BLOCKED_DATE_PATTERN =
+            Pattern.compile("\\[URL차단작업\\]\\[(\\d{4}-\\d{2}-\\d{2})\\]");
+
     /**
-     * 추출된 API 목록을 DB에 upsert합니다.
-     * - (repositoryName, apiPath, httpMethod) 기준으로 기존 레코드 검색
-     * - 없으면 신규 삽입, 있으면 업데이트
-     * - statusOverridden=true인 레코드는 status를 변경하지 않고, 그 외는 자동 계산
+     * 추출된 API 목록을 DB에 저장합니다.
+     * ① 신규: 전체 필드 세팅
+     * ② 기존 + 차단완료: SKIP (건드리지 않음)
+     * ③ 기존 + 차단완료 아님: 추출 필드만 업데이트, 수동 설정 필드 보호
      */
     @Transactional
     public int save(String repositoryName, List<ApiInfo> apis) {
         LocalDate today = LocalDate.now();
         int reviewThreshold = getReviewThreshold();
+        int saved = 0;
 
         for (ApiInfo a : apis) {
             Optional<ApiRecord> existing = repository.findByRepositoryNameAndApiPathAndHttpMethod(
                     repositoryName, a.getApiPath(), a.getHttpMethod());
 
-            ApiRecord r = existing.orElse(new ApiRecord());
+            if (existing.isPresent()) {
+                ApiRecord r = existing.get();
 
-            r.setRepositoryName(repositoryName);
-            r.setApiPath(a.getApiPath());
-            r.setHttpMethod(a.getHttpMethod());
-            r.setLastAnalyzedDate(today);
-            r.setMethodName(a.getMethodName());
-            r.setControllerName(a.getControllerName());
-            r.setRepoPath(a.getRepoPath());
-            r.setIsDeprecated(a.getIsDeprecated());
-            r.setProgramId(a.getProgramId());
-            r.setApiOperationValue(a.getApiOperationValue());
-            r.setDescriptionTag(a.getDescriptionTag());
-            r.setFullComment(a.getFullComment());
-            r.setControllerComment(a.getControllerComment());
-            r.setRequestPropertyValue(a.getRequestPropertyValue());
-            r.setControllerRequestPropertyValue(a.getControllerRequestPropertyValue());
-            r.setFullUrl(a.getFullUrl());
-            r.setGitHistory(serializeGitHistory(a));
+                // ② 차단완료 → SKIP
+                if ("차단완료".equals(r.getStatus())) continue;
 
-            // statusOverridden=true이면 status 유지, 아니면 자동 계산
-            if (!r.isStatusOverridden()) {
+                // ③ 기존 + 차단완료 아님 → 추출 필드만 업데이트
+                String oldStatus = r.getStatus();
+                updateExtractedFields(r, a, today);
+
+                // status 재계산 + 변경 감지
+                if (!r.isStatusOverridden()) {
+                    String newStatus = calculateStatus(r, reviewThreshold);
+                    if (!Objects.equals(oldStatus, newStatus)) {
+                        appendChangeLog(r, oldStatus + "→" + newStatus + ": 재추출 시 상태 변경 감지");
+                    }
+                    r.setStatus(newStatus);
+                }
+                // 차단완료로 변경되었으면 blockedDate 파싱
+                if ("차단완료".equals(r.getStatus())) {
+                    r.setBlockedDate(parseBlockedDate(r.getFullComment()));
+                }
+
+            } else {
+                // ① 신규
+                ApiRecord r = new ApiRecord();
+                r.setRepositoryName(repositoryName);
+                r.setApiPath(a.getApiPath());
+                r.setHttpMethod(a.getHttpMethod());
+                updateExtractedFields(r, a, today);
                 r.setStatus(calculateStatus(r, reviewThreshold));
+                if ("차단완료".equals(r.getStatus())) {
+                    r.setBlockedDate(parseBlockedDate(r.getFullComment()));
+                }
+                repository.save(r);
+                saved++;
+                continue;
             }
 
-            repository.save(r);
+            repository.save(existing.get());
+            saved++;
         }
-        return apis.size();
+        return saved;
+    }
+
+    /** 추출로 갱신해도 되는 필드만 업데이트 (수동 설정 필드는 건드리지 않음) */
+    private void updateExtractedFields(ApiRecord r, ApiInfo a, LocalDate today) {
+        r.setLastAnalyzedDate(today);
+        r.setMethodName(a.getMethodName());
+        r.setControllerName(a.getControllerName());
+        r.setRepoPath(a.getRepoPath());
+        r.setIsDeprecated(a.getIsDeprecated());
+        r.setProgramId(a.getProgramId());
+        r.setApiOperationValue(a.getApiOperationValue());
+        r.setDescriptionTag(a.getDescriptionTag());
+        r.setFullComment(a.getFullComment());
+        r.setControllerComment(a.getControllerComment());
+        r.setRequestPropertyValue(a.getRequestPropertyValue());
+        r.setControllerRequestPropertyValue(a.getControllerRequestPropertyValue());
+        r.setFullUrl(a.getFullUrl());
+        r.setGitHistory(serializeGitHistory(a));
+    }
+
+    /** fullComment에서 [URL차단작업][YYYY-MM-DD] 패턴의 날짜 파싱 */
+    private LocalDate parseBlockedDate(String fullComment) {
+        if (fullComment == null) return null;
+        Matcher m = BLOCKED_DATE_PATTERN.matcher(fullComment);
+        return m.find() ? LocalDate.parse(m.group(1)) : null;
+    }
+
+    /** 상태 변경 로그 추가 (기존 로그에 이어붙임) */
+    private void appendChangeLog(ApiRecord r, String msg) {
+        r.setStatusChanged(true);
+        String existing = r.getStatusChangeLog();
+        r.setStatusChangeLog(existing != null ? existing + " | " + msg : msg);
     }
 
     /**
@@ -87,12 +137,31 @@ public class ApiStorageService {
         List<ApiRecord> records = repository.findByRepositoryName(repoName);
 
         for (ApiRecord r : records) {
-            Long count = pathToCount.get(r.getApiPath());
-            if (count != null) {
-                r.setCallCount(count);
+            // 차단완료 SKIP
+            if ("차단완료".equals(r.getStatus())) continue;
+
+            Long newCount = pathToCount.get(r.getApiPath());
+            if (newCount != null) {
+                Long oldCount = r.getCallCount();
+                r.setCallCount(newCount);
+
+                // 호출건수 0↔N 변화 감지
+                boolean wasZero = (oldCount == null || oldCount == 0);
+                boolean isZero  = (newCount == 0);
+                if (wasZero && !isZero) {
+                    appendChangeLog(r, "호출건수 0→" + newCount + "건 발생");
+                } else if (!wasZero && isZero) {
+                    appendChangeLog(r, "호출건수 " + oldCount + "→0건 변경");
+                }
             }
+
             if (!r.isStatusOverridden()) {
-                r.setStatus(calculateStatus(r, reviewThreshold));
+                String oldStatus = r.getStatus();
+                String newStatus = calculateStatus(r, reviewThreshold);
+                if (!Objects.equals(oldStatus, newStatus)) {
+                    appendChangeLog(r, oldStatus + "→" + newStatus + ": 호출건수 반영 시 상태 변경");
+                }
+                r.setStatus(newStatus);
             }
             repository.save(r);
         }

@@ -109,6 +109,18 @@ public class ApiRecord {
     @Column(name = "reviewed_at")
     private LocalDateTime reviewedAt;
 
+    /** 차단일자: fullComment에서 [URL차단작업][YYYY-MM-DD] 파싱 */
+    @Column(name = "blocked_date")
+    private LocalDate blockedDate;
+
+    /** 상태 변경 감지 플래그 (IT 담당자 검토 필요) */
+    @Column(name = "status_changed")
+    private boolean statusChanged = false;
+
+    /** 상태 변경 내역 로그 */
+    @Column(name = "status_change_log", length = 500)
+    private String statusChangeLog;
+
     /** 팀 오버라이드 (조회화면에서 수정 시) */
     @Column(name = "team_override", length = 100)
     private String teamOverride;
@@ -165,6 +177,12 @@ public class ApiRecord {
     public void setReviewResult(String reviewResult) { this.reviewResult = reviewResult; }
     public String getReviewOpinion() { return reviewOpinion; }
     public void setReviewOpinion(String reviewOpinion) { this.reviewOpinion = reviewOpinion; }
+    public LocalDate getBlockedDate() { return blockedDate; }
+    public void setBlockedDate(LocalDate blockedDate) { this.blockedDate = blockedDate; }
+    public boolean isStatusChanged() { return statusChanged; }
+    public void setStatusChanged(boolean statusChanged) { this.statusChanged = statusChanged; }
+    public String getStatusChangeLog() { return statusChangeLog; }
+    public void setStatusChangeLog(String statusChangeLog) { this.statusChangeLog = statusChangeLog; }
     public String getReviewTeam() { return reviewTeam; }
     public void setReviewTeam(String reviewTeam) { this.reviewTeam = reviewTeam; }
     public String getReviewManager() { return reviewManager; }

@@ -127,6 +127,32 @@ public class ApiViewController {
         }
     }
 
+    /** 상태변경 플래그 해제 (IT 담당자 확인 후) */
+    @PatchMapping("/db/clear-status-change")
+    public ResponseEntity<?> clearStatusChange(@RequestBody Map<String, Object> body) {
+        try {
+            @SuppressWarnings("unchecked")
+            List<Integer> rawIds = (List<Integer>) body.get("ids");
+            if (rawIds == null || rawIds.isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of("error", "ids가 비어 있습니다."));
+            }
+            int cleared = 0;
+            for (Integer rawId : rawIds) {
+                Optional<ApiRecord> opt = recordRepository.findById(rawId.longValue());
+                if (opt.isPresent()) {
+                    ApiRecord r = opt.get();
+                    r.setStatusChanged(false);
+                    r.setStatusChangeLog(null);
+                    recordRepository.save(r);
+                    cleared++;
+                }
+            }
+            return ResponseEntity.ok(Map.of("cleared", cleared));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body(Map.of("error", e.getMessage()));
+        }
+    }
+
     /** 개별 레코드 필드 수정 (memo, reviewResult, reviewOpinion 등)
      * Body: { "memo": "내용", "reviewResult": "차단대상 제외", "reviewOpinion": "의견" }
      */

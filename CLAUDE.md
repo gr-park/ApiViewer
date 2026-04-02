@@ -101,9 +101,16 @@ src/main/resources/static/
 
 ### 4. DB 저장 규칙 (ApiStorageService)
 - 키: `(repository_name, api_path, http_method)` — 날짜는 키에서 제거
-- **upsert**: 동일 키가 있으면 업데이트, 없으면 신규 삽입
+- **3분기 저장 로직**:
+  - ① 신규 (DB에 없음): 전체 필드 세팅, status 자동계산
+  - ② 기존 + 차단완료: **SKIP** (아무것도 건드리지 않음)
+  - ③ 기존 + 차단완료 아님: 추출 필드만 업데이트, 수동 설정 필드(callCount, memo, blockTarget, blockCriteria, review*, teamOverride, managerOverride) 보호
 - `last_analyzed_date`: 추출할 때마다 오늘 날짜로 갱신 (키 아님)
 - `statusOverridden=true`인 레코드는 추출/호출건수 업데이트 시 status 변경 안 함
+- **차단일자(blockedDate)**: fullComment에서 `[URL차단작업][YYYY-MM-DD]` 패턴 파싱
+- **상태변경 감지**: 재추출/호출건수 반영 시 status가 변경되면 `statusChanged=true`, `statusChangeLog`에 이력 기록
+- **호출건수 변화 감지**: callCount 0↔N건 변화 시 `statusChanged=true`로 플래그
+- `updateCallCounts()`도 차단완료 레코드 SKIP
 
 ### 5. 상태(status) 자동 계산 로직
 | 상태 | 조건 |
