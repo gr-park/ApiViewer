@@ -84,6 +84,18 @@ public class ApiRecord {
     @Column(name = "full_url", length = 1000)
     private String fullUrl;
 
+    /** 비고 (사용자 메모) */
+    @Column(name = "memo", length = 500)
+    private String memo;
+
+    /** 현업검토결과: 차단대상 제외 등 */
+    @Column(name = "review_result", length = 50)
+    private String reviewResult;
+
+    /** 현업검토의견: 자유 텍스트 */
+    @Column(name = "review_opinion", length = 500)
+    private String reviewOpinion;
+
     @Column(name = "git_history", columnDefinition = "TEXT")
     private String gitHistory; // JSON: [{"date":"...","author":"...","message":"..."},...]
 
@@ -126,6 +138,12 @@ public class ApiRecord {
     public void setControllerRequestPropertyValue(String v) { this.controllerRequestPropertyValue = v; }
     public String getFullUrl() { return fullUrl; }
     public void setFullUrl(String fullUrl) { this.fullUrl = fullUrl; }
+    public String getMemo() { return memo; }
+    public void setMemo(String memo) { this.memo = memo; }
+    public String getReviewResult() { return reviewResult; }
+    public void setReviewResult(String reviewResult) { this.reviewResult = reviewResult; }
+    public String getReviewOpinion() { return reviewOpinion; }
+    public void setReviewOpinion(String reviewOpinion) { this.reviewOpinion = reviewOpinion; }
     public String getBlockTarget() { return blockTarget; }
     public void setBlockTarget(String blockTarget) { this.blockTarget = blockTarget; }
     public String getBlockCriteria() { return blockCriteria; }

@@ -17,4 +17,6 @@ public interface ApiRecordRepository extends JpaRepository<ApiRecord, Long> {
 
     @Query("SELECT DISTINCT r.repositoryName FROM ApiRecord r ORDER BY r.repositoryName")
     List<String> findAllRepositoryNames();
+
+    List<ApiRecord> findByBlockTargetIsNotNull();
 }

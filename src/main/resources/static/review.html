@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>API Viewer — 현업 검토</title>
+  <style>
+    :root {
+      --bg:#f4f6f9; --card:#fff; --primary:#3b82f6; --primary-hover:#2563eb;
+      --danger:#ef4444; --success:#22c55e; --purple:#8b5cf6;
+      --text:#1e293b; --text-muted:#64748b; --border:#e2e8f0;
+      --row-hover:#f8fafc; --shadow:0 1px 4px rgba(0,0,0,.08);
+    }
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);font-size:13px;}
+
+    .header{background:var(--card);border-bottom:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;gap:12px;box-shadow:var(--shadow);}
+    .header h1{font-size:18px;font-weight:700;color:var(--primary);}
+    .header-sub{font-size:12px;color:var(--text-muted);background:#f1f5f9;padding:3px 10px;border-radius:4px;font-weight:600;}
+    .header-right{margin-left:auto;display:flex;align-items:center;gap:6px;}
+    .nav-link{font-size:12px;color:var(--text-muted);font-weight:600;text-decoration:none;padding:6px 12px;border:1px solid var(--border);border-radius:6px;}
+    .nav-link:hover{background:#f1f5f9;}
+    .nav-active{color:var(--primary)!important;border-color:var(--primary)!important;}
+
+    .main{max-width:1500px;margin:0 auto;padding:20px 24px;}
+
+    .card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:18px 20px;margin-bottom:14px;box-shadow:var(--shadow);}
+    .card-title{font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:14px;display:flex;align-items:center;gap:8px;}
+    .card-title .dot{width:8px;height:8px;border-radius:50%;background:var(--primary);}
+
+    .btn{padding:8px 20px;border:none;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;transition:background .15s;white-space:nowrap;height:34px;}
+    .btn:disabled{opacity:.5;cursor:not-allowed;}
+    .btn-blue{background:var(--primary);color:#fff;}
+    .btn-blue:not(:disabled):hover{background:var(--primary-hover);}
+    .btn-green{background:#16a34a;color:#fff;}
+    .btn-green:not(:disabled):hover{background:#15803d;}
+
+    .stats-bar{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;align-items:center;}
+    .stat-pill{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:6px 14px;font-size:12px;display:flex;align-items:center;gap:6px;box-shadow:var(--shadow);}
+    .stat-pill strong{font-size:15px;font-weight:700;}
+
+    .filter-bar{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center;}
+    .filter-bar input[type=text]{padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;outline:none;width:260px;}
+    .filter-bar input:focus{border-color:var(--primary);}
+    .filter-bar select{padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;outline:none;background:var(--card);}
+    .filter-count{margin-left:auto;font-size:12px;color:var(--text-muted);}
+
+    .table-wrap{background:var(--card);border:1px solid var(--border);border-radius:10px;overflow:auto;box-shadow:var(--shadow);max-height:calc(100vh - 280px);}
+    table{width:100%;border-collapse:collapse;}
+    thead th{position:sticky;top:0;z-index:2;background:#f1f5f9;padding:9px 12px;text-align:left;font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--border);white-space:nowrap;}
+    tbody tr{border-bottom:1px solid var(--border);transition:background .1s;}
+    tbody tr:last-child{border-bottom:none;}
+    tbody tr:hover{background:var(--row-hover);}
+    tbody td{padding:8px 12px;vertical-align:middle;max-width:260px;word-break:break-all;}
+
+    .status-badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;white-space:nowrap;}
+    .bt-top{background:#fee2e2;color:#991b1b;}
+    .bt-low{background:#ffedd5;color:#c2410c;}
+    .rv-exclude{background:#dbeafe;color:#1e40af;}
+
+    .api-path{font-family:'Consolas',monospace;font-size:12px;color:#1e40af;}
+    .badge{display:inline-block;padding:2px 7px;border-radius:4px;font-size:11px;font-weight:700;}
+    .badge-GET{background:#dcfce7;color:#166534;} .badge-POST{background:#dbeafe;color:#1e40af;}
+    .badge-PUT{background:#fef9c3;color:#854d0e;} .badge-DELETE{background:#fee2e2;color:#991b1b;}
+    .badge-PATCH{background:#ede9fe;color:#5b21b6;} .badge-REQUEST{background:#f1f5f9;color:#475569;}
+
+    .state-box{text-align:center;padding:60px 20px;color:var(--text-muted);}
+    .spinner{display:inline-block;width:26px;height:26px;border:3px solid var(--border);border-top-color:var(--primary);border-radius:50%;animation:spin .7s linear infinite;margin-bottom:10px;}
+    @keyframes spin{to{transform:rotate(360deg)}}
+
+    .toast{position:fixed;bottom:24px;right:24px;padding:10px 18px;border-radius:8px;font-size:13px;font-weight:500;color:#fff;z-index:9999;opacity:0;transition:opacity .3s;pointer-events:none;}
+    .toast.show{opacity:1;}
+    .toast.error{background:var(--danger);}
+    .toast.success{background:var(--success);}
+    .toast.info{background:var(--purple);}
+
+    .edit-select{padding:4px 8px;border:1px solid var(--border);border-radius:4px;font-size:11px;outline:none;background:var(--card);min-width:100px;}
+    .edit-select:focus{border-color:var(--primary);}
+    .edit-input{padding:4px 8px;border:1px solid var(--border);border-radius:4px;font-size:11px;outline:none;width:160px;}
+    .edit-input:focus{border-color:var(--primary);}
+
+    .guide-box{background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:12px 16px;font-size:12px;color:#1e40af;margin-bottom:14px;line-height:1.7;}
+    .guide-box strong{display:block;font-size:13px;margin-bottom:4px;}
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+    <polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>
+  </svg>
+  <h1>API Viewer</h1>
+  <span class="header-sub">현업 검토</span>
+  <div class="header-right">
+    <a href="/"             class="nav-link">📊 대시보드</a>
+    <a href="/extract.html" class="nav-link">🔍 API 추출</a>
+    <a href="/viewer.html"  class="nav-link">📋 이력 조회</a>
+    <a href="/review.html"  class="nav-link nav-active">📝 현업 검토</a>
+    <a href="/settings.html"class="nav-link">⚙️ 설정</a>
+  </div>
+</div>
+
+<div class="main">
+
+  <div class="guide-box">
+    <strong>차단대상 API 현업 검토</strong>
+    차단대상으로 분류된 API 목록입니다. 검토 후 <b>현업검토결과</b>와 <b>현업검토의견</b>을 입력해 주세요.<br>
+    차단이 부적절한 경우 "차단대상 제외"를 선택하고 사유를 기입해 주세요.
+  </div>
+
+  <div class="card" style="padding:12px 20px;">
+    <div style="display:flex;gap:12px;align-items:center;">
+      <button class="btn btn-blue" onclick="loadReviewData()">조회</button>
+      <button class="btn btn-green" id="excelBtn" onclick="downloadExcel()" style="display:none;">⬇ 엑셀 다운로드</button>
+    </div>
+  </div>
+
+  <div class="stats-bar" id="statsBar" style="display:none">
+    <div class="stat-pill"><span>전체</span><strong id="rTotal">0</strong></div>
+    <div class="stat-pill"><span>최우선</span><strong id="rTop" style="color:#dc2626;">0</strong></div>
+    <div class="stat-pill"><span>후순위</span><strong id="rLow" style="color:#ea580c;">0</strong></div>
+    <div class="stat-pill"><span>검토완료</span><strong id="rReviewed" style="color:var(--primary);">0</strong></div>
+    <div class="stat-pill"><span>미검토</span><strong id="rPending" style="color:var(--text-muted);">0</strong></div>
+  </div>
+
+  <div class="filter-bar" id="filterBar" style="display:none">
+    <input type="text" id="searchInput" placeholder="API 경로, 레포지토리, 팀, 담당자 검색..." oninput="filterTable()">
+    <select id="btFilter" onchange="filterTable()">
+      <option value="">전체 차단대상</option>
+      <option value="최우선 차단대상">최우선 차단대상</option>
+      <option value="후순위 차단대상">후순위 차단대상</option>
+    </select>
+    <select id="rvFilter" onchange="filterTable()">
+      <option value="">전체 검토결과</option>
+      <option value="미검토">미검토</option>
+      <option value="차단대상 제외">차단대상 제외</option>
+    </select>
+    <span class="filter-count" id="filterCount"></span>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>레포지토리 / 업무명</th>
+          <th>팀</th>
+          <th>담당자</th>
+          <th>Method</th>
+          <th>API 경로</th>
+          <th>호출건수</th>
+          <th>차단대상</th>
+          <th>차단대상기준</th>
+          <th>현업검토결과</th>
+          <th>현업검토의견</th>
+        </tr>
+      </thead>
+      <tbody id="tbody">
+        <tr><td colspan="10"><div class="state-box"><b>조회</b> 버튼을 클릭하세요.</div></td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  let allApis = [];
+  let filteredApis = [];
+  let repoConfigMap = {};
+
+  async function loadReviewData() {
+    document.getElementById('tbody').innerHTML =
+      '<tr><td colspan="10"><div class="state-box"><div class="spinner"></div><br>조회 중...</div></td></tr>';
+    try {
+      const [dataRes, cfgRes] = await Promise.all([
+        fetch('/api/db/apis?blockTargetOnly=true'),
+        fetch('/api/config/repos')
+      ]);
+      const data = await dataRes.json();
+      const cfgs = await cfgRes.json();
+      cfgs.forEach(c => { repoConfigMap[c.repoName] = { team:c.teamName||'', manager:c.managerName||'', businessName:c.businessName||'' }; });
+
+      allApis = data.apis || [];
+      renderStats();
+      filterTable();
+      document.getElementById('statsBar').style.display = 'flex';
+      document.getElementById('filterBar').style.display = 'flex';
+      document.getElementById('excelBtn').style.display = 'inline-block';
+      showToast(`${allApis.length}개 차단대상 API 조회 완료`, 'success');
+    } catch(e) {
+      showToast('조회 실패: '+e.message, 'error');
+      document.getElementById('tbody').innerHTML =
+        '<tr><td colspan="10"><div class="state-box">조회 오류</div></td></tr>';
+    }
+  }
+
+  function renderStats() {
+    let top=0, low=0, reviewed=0;
+    allApis.forEach(a => {
+      if (a.blockTarget==='최우선 차단대상') top++;
+      if (a.blockTarget==='후순위 차단대상') low++;
+      if (a.reviewResult) reviewed++;
+    });
+    document.getElementById('rTotal').textContent = allApis.length;
+    document.getElementById('rTop').textContent = top;
+    document.getElementById('rLow').textContent = low;
+    document.getElementById('rReviewed').textContent = reviewed;
+    document.getElementById('rPending').textContent = allApis.length - reviewed;
+  }
+
+  function filterTable() {
+    const q  = document.getElementById('searchInput').value.toLowerCase();
+    const bt = document.getElementById('btFilter').value;
+    const rv = document.getElementById('rvFilter').value;
+
+    filteredApis = allApis.filter(a => {
+      const cfg = repoConfigMap[a.repositoryName] || {};
+      const text = [a.apiPath, a.repositoryName, cfg.team, cfg.manager, cfg.businessName].join(' ').toLowerCase();
+      const rvOk = !rv || (rv==='미검토' ? !a.reviewResult : a.reviewResult===rv);
+      return (!q || text.includes(q)) && (!bt || a.blockTarget===bt) && rvOk;
+    });
+
+    document.getElementById('filterCount').textContent = `${filteredApis.length} / ${allApis.length}건`;
+    renderRows(filteredApis);
+  }
+
+  function renderRows(list) {
+    const tbody = document.getElementById('tbody');
+    if (!list.length) {
+      tbody.innerHTML = '<tr><td colspan="10"><div class="state-box">검색 결과가 없습니다.</div></td></tr>';
+      return;
+    }
+    tbody.innerHTML = list.map(a => {
+      const cfg = repoConfigMap[a.repositoryName] || {};
+      const rvVal = a.reviewResult || '';
+      return `<tr>
+        <td style="min-width:110px;"><b style="font-size:12px;">${esc(a.repositoryName)}</b>${cfg.businessName ? `<br><span style="font-size:10px;color:var(--text-muted);">${esc(cfg.businessName)}</span>` : ''}</td>
+        <td style="font-size:11px;color:var(--text-muted);white-space:nowrap;">${esc(cfg.team)}</td>
+        <td style="font-size:11px;color:var(--text-muted);white-space:nowrap;">${esc(cfg.manager)}</td>
+        <td><span class="badge badge-${a.httpMethod||'REQUEST'}">${a.httpMethod||'?'}</span></td>
+        <td><div class="api-path">${esc(a.apiPath)}</div></td>
+        <td style="text-align:right;font-size:12px;">${a.callCount!=null ? a.callCount.toLocaleString() : '<span style="color:#cbd5e1;">-</span>'}</td>
+        <td>${blockTargetBadge(a.blockTarget)}</td>
+        <td style="font-size:11px;color:var(--text-muted);max-width:140px;">${esc(a.blockCriteria||'')}</td>
+        <td>
+          <select class="edit-select" data-id="${a.id}" data-field="reviewResult" onchange="saveField(this)">
+            <option value="">-- 선택 --</option>
+            <option value="차단대상 제외" ${rvVal==='차단대상 제외'?'selected':''}>차단대상 제외</option>
+          </select>
+        </td>
+        <td>
+          <input class="edit-input" type="text" value="${esc(a.reviewOpinion||'')}"
+            data-id="${a.id}" data-field="reviewOpinion" placeholder="검토의견 입력..."
+            onblur="saveField(this)" onkeydown="if(event.key==='Enter')this.blur();">
+        </td>
+      </tr>`;
+    }).join('');
+  }
+
+  async function saveField(el) {
+    const id    = el.dataset.id;
+    const field = el.dataset.field;
+    const val   = el.value.trim();
+    try {
+      const body = {};
+      body[field] = val || null;
+      const res = await fetch(`/api/db/record/${id}`, {
+        method:'PATCH', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)
+      });
+      if (!res.ok) throw new Error();
+      // 로컬 데이터 업데이트
+      const a = allApis.find(x => x.id == id);
+      if (a) a[field] = val || null;
+      renderStats();
+      showToast('저장 완료', 'success');
+    } catch(e) { showToast('저장 실패', 'error'); }
+  }
+
+  function blockTargetBadge(bt) {
+    if (!bt) return '-';
+    if (bt.includes('최우선')) return `<span class="status-badge bt-top">${esc(bt)}</span>`;
+    if (bt.includes('후순위')) return `<span class="status-badge bt-low">${esc(bt)}</span>`;
+    return esc(bt);
+  }
+
+  function downloadExcel() {
+    if (!filteredApis.length) { showToast('다운로드할 데이터가 없습니다.','error'); return; }
+    const headers = ['레포지토리','업무명','팀','담당자','HTTP Method','API 경로','호출건수','차단대상','차단대상기준','현업검토결과','현업검토의견'];
+    const rows = filteredApis.map(a => {
+      const cfg = repoConfigMap[a.repositoryName]||{};
+      return [a.repositoryName||'', cfg.businessName||'', cfg.team||'', cfg.manager||'',
+        a.httpMethod||'', a.apiPath||'', a.callCount!=null?a.callCount:'',
+        a.blockTarget||'', a.blockCriteria||'', a.reviewResult||'', a.reviewOpinion||''];
+    });
+    const csv = [headers,...rows].map(r =>
+      r.map(c => { const s=String(c).replace(/"/g,'""'); return (s.includes(',')||s.includes('"')||s.includes('\n'))?`"${s}"`:s; }).join(',')
+    ).join('\r\n');
+    const blob = new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8;'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href=url; a.download=`review-${new Date().toISOString().slice(0,10)}.csv`;
+    a.click(); URL.revokeObjectURL(url);
+    showToast(`${filteredApis.length}건 다운로드 완료`,'success');
+  }
+
+  function esc(s) { if(!s) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+  function showToast(msg,type='success') { const t=document.getElementById('toast'); t.textContent=msg; t.className=`toast ${type} show`; setTimeout(()=>t.classList.remove('show'),3000); }
+
+  // 자동 로드
+  loadReviewData();
+</script>
+</body>
+</html>

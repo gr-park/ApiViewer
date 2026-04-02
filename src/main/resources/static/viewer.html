@@ -112,8 +112,13 @@
     .api-path { font-family:'Consolas',monospace; font-size:12px; color:#1e40af; }
     .api-op   { color:var(--text-muted); font-size:12px; }
     .ctrl-name { font-size:11px; color:var(--text-muted); }
-    .git-info { font-size:11px; color:var(--text-muted); line-height:1.7; min-width:180px; }
-    .git-date { font-weight:600; color:var(--text); }
+    .git-chips { display:flex; gap:4px; flex-wrap:nowrap; }
+    .git-chip { background:#f8fafc; border:1px solid var(--border); border-radius:4px; padding:2px 6px; font-size:10px; white-space:nowrap; cursor:default; line-height:1.4; }
+    .git-chip-d { font-weight:600; color:var(--text); }
+    .git-chip-a { color:var(--text-muted); }
+    .memo-cell { cursor:pointer; min-width:80px; max-width:140px; font-size:11px; color:var(--text-muted); }
+    .memo-cell:hover { background:#f8fafc; }
+    .memo-cell input { width:100%; padding:3px 6px; border:1px solid var(--primary); border-radius:4px; font-size:11px; outline:none; }
 
     .state-box { text-align:center; padding:60px 20px; color:var(--text-muted); }
     .spinner { display:inline-block; width:26px; height:26px; border:3px solid var(--border); border-top-color:var(--primary); border-radius:50%; animation:spin .7s linear infinite; margin-bottom:10px; }
@@ -138,6 +143,7 @@
     <a href="/"             class="nav-link">📊 대시보드</a>
     <a href="/extract.html" class="nav-link">🔍 API 추출</a>
     <a href="/viewer.html"  class="nav-link nav-active">📋 이력 조회</a>
+    <a href="/review.html" class="nav-link">📝 현업 검토</a>
     <a href="/settings.html"class="nav-link">⚙️ 설정</a>
   </div>
 </div>
@@ -231,12 +237,13 @@
           <th onclick="sortBy('status')">상태 <span class="sort-icon">↕</span></th>
           <th onclick="sortBy('blockTarget')">차단대상 <span class="sort-icon">↕</span></th>
           <th onclick="sortBy('blockCriteria')">차단대상기준 <span class="sort-icon">↕</span></th>
+          <th class="no-sort">비고</th>
           <th onclick="sortBy('lastAnalyzedDate')">마지막분석일 <span class="sort-icon">↕</span></th>
-          <th class="no-sort">최근 커밋 이력</th>
+          <th class="no-sort">최근 커밋</th>
         </tr>
       </thead>
       <tbody id="tbody">
-        <tr><td colspan="17"><div class="state-box">레포지토리를 선택하고 <b>조회</b>를 클릭하세요.</div></td></tr>
+        <tr><td colspan="18"><div class="state-box">레포지토리를 선택하고 <b>조회</b>를 클릭하세요.</div></td></tr>
       </tbody>
     </table>
   </div>
@@ -284,7 +291,7 @@
 
     document.getElementById('loadBtn').disabled = true;
     document.getElementById('tbody').innerHTML =
-      '<tr><td colspan="17"><div class="state-box"><div class="spinner"></div><br>조회 중...</div></td></tr>';
+      '<tr><td colspan="18"><div class="state-box"><div class="spinner"></div><br>조회 중...</div></td></tr>';
     clearSelection();
 
     try {
@@ -317,7 +324,7 @@
     } catch(e) {
       showToast(e.message, 'error');
       document.getElementById('tbody').innerHTML =
-        `<tr><td colspan="17"><div class="state-box">조회 오류: ${esc(e.message)}</div></td></tr>`;
+        `<tr><td colspan="18"><div class="state-box">조회 오류: ${esc(e.message)}</div></td></tr>`;
     } finally {
       document.getElementById('loadBtn').disabled = false;
     }
@@ -401,7 +408,7 @@
   function renderRows(list) {
     const tbody = document.getElementById('tbody');
     if (!list.length) {
-      tbody.innerHTML = '<tr><td colspan="17"><div class="state-box">검색 결과가 없습니다.</div></td></tr>';
+      tbody.innerHTML = '<tr><td colspan="18"><div class="state-box">검색 결과가 없습니다.</div></td></tr>';
       return;
     }
     tbody.innerHTML = list.map(a => {
@@ -427,8 +434,9 @@
         <td>${statusBadge(a.status)}${a.statusOverridden ? ' <span title="수동설정" style="font-size:10px;color:#94a3b8;">🔒</span>' : ''}</td>
         <td>${blockTargetBadge(a.blockTarget)}</td>
         <td style="font-size:11px;color:var(--text-muted);max-width:140px;">${esc(a.blockCriteria || '')}</td>
+        <td class="memo-cell" onclick="editMemo(this,${a.id})" title="클릭하여 편집">${esc(a.memo || '')}</td>
         <td style="font-size:11px;color:var(--text-muted);white-space:nowrap;">${esc(a.lastAnalyzedDate || '-')}</td>
-        <td class="git-info">${gitHistoryCell(a.gitHistory)}</td>
+        <td>${gitHistoryCell(a.gitHistory)}</td>
       </tr>`;
     }).join('');
   }
@@ -447,21 +455,37 @@
   }
 
   function gitHistoryCell(json) {
-    if (!json) return '<span style="color:#cbd5e1;font-size:11px;">이력 없음</span>';
+    if (!json) return '<span style="color:#cbd5e1;font-size:11px;">-</span>';
     let list;
     try { list = JSON.parse(json); } catch(e) { return '-'; }
-    if (!list.length) return '<span style="color:#cbd5e1;font-size:11px;">이력 없음</span>';
-    return list.map((g, i) => {
-      const sep = i > 0 ? '<hr style="border:none;border-top:1px solid var(--border);margin:3px 0;">' : '';
-      return `${sep}<span class="git-date">${esc(g.date)}</span> ${esc(g.author)}<br>
-              <span style="font-size:10px;">${esc(g.message)}</span>`;
-    }).join('');
+    if (!list.length) return '<span style="color:#cbd5e1;font-size:11px;">-</span>';
+    return '<div class="git-chips">' + list.map(g =>
+      `<div class="git-chip" title="${esc(g.date)} ${esc(g.author)}: ${esc(g.message)}">` +
+      `<span class="git-chip-d">${esc(g.date)}</span> <span class="git-chip-a">${esc(g.author)}</span></div>`
+    ).join('') + '</div>';
+  }
+
+  // ── 비고 인라인 편집 ──────────────────────────────────────
+  function editMemo(td, id) {
+    if (td.querySelector('input')) return;
+    const old = td.textContent.trim();
+    td.innerHTML = `<input type="text" value="${esc(old)}" onblur="saveMemo(this,${id})" onkeydown="if(event.key==='Enter')this.blur();if(event.key==='Escape'){this.dataset.cancel='1';this.blur();}">`;
+    td.querySelector('input').focus();
+  }
+  async function saveMemo(input, id) {
+    if (input.dataset.cancel) { const a = allApis.find(x=>x.id===id); input.parentElement.textContent = a?.memo||''; return; }
+    const val = input.value.trim();
+    try {
+      await fetch(`/api/db/record/${id}`, { method:'PATCH', headers:{'Content-Type':'application/json'}, body:JSON.stringify({memo:val||null}) });
+      const a = allApis.find(x=>x.id===id); if(a) a.memo = val||null;
+      input.parentElement.textContent = val;
+    } catch(e) { showToast('저장 실패','error'); }
   }
 
   // ── 정렬 ──────────────────────────────────────────────────
   const colIndexMap = { repositoryName:1, teamName:2, managerName:3, httpMethod:4, apiPath:5,
                         controllerName:7, methodName:8, programId:9, apiOperationValue:10,
-                        callCount:11, status:12, blockTarget:13, blockCriteria:14, lastAnalyzedDate:15 };
+                        callCount:11, status:12, blockTarget:13, blockCriteria:14, lastAnalyzedDate:16 };
   function sortBy(key) {
     if (sortKey === key) sortAsc = !sortAsc; else { sortKey = key; sortAsc = true; }
     document.querySelectorAll('thead th').forEach(th => th.classList.remove('sorted'));
@@ -594,7 +618,7 @@
     for (let i = 1; i <= 5; i++) commitHeaders.push(`날짜${i}`, `커밋터${i}`, `내용${i}`);
     const headers = [
       '레포지토리','업무명','팀','담당자',
-      'HTTP Method','API 경로','Full URL','컨트롤러','메소드명','프로그램ID','설명','호출건수','상태','차단대상','차단대상기준','마지막분석일',
+      'HTTP Method','API 경로','Full URL','컨트롤러','메소드명','프로그램ID','설명','호출건수','상태','차단대상','차단대상기준','비고','마지막분석일',
       ...commitHeaders
     ];
     const rows = filteredApis.map(a => {
@@ -621,6 +645,7 @@
         a.status || '',
         a.blockTarget || '',
         a.blockCriteria || '',
+        a.memo || '',
         a.lastAnalyzedDate || '',
         ...commitCols
       ];

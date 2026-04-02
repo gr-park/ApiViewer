@@ -27,6 +27,7 @@ run.bat                # Windows
 | http://localhost:8080 | 대시보드 (통계) |
 | http://localhost:8080/extract.html | API 추출 페이지 |
 | http://localhost:8080/viewer.html | DB 저장 이력 조회 |
+| http://localhost:8080/review.html | 현업 검토 (차단대상만) |
 | http://localhost:8080/settings.html | 레포지토리 설정 관리 |
 | http://localhost:8080/h2-console | H2 DB 콘솔 (JDBC: `jdbc:h2:file:./data/api-viewer-db`, user: sa, pw: 없음) |
 
@@ -120,6 +121,19 @@ src/main/resources/static/
 - PATCH `/api/db/status`에 `blockTarget`, `blockCriteria` 필드 포함하여 일괄 변경 가능
 - viewer.html 하단 bulk bar에서 상태/차단대상/차단대상기준 동시 변경 가능
 
+### 5-2. 비고 / 현업검토 필드
+- `memo` (비고): viewer.html에서 클릭하여 인라인 편집, PATCH `/api/db/record/{id}` 로 저장
+- `reviewResult` (현업검토결과): `차단대상 제외` 등 — review.html에서 인라인 select
+- `reviewOpinion` (현업검토의견): 자유 텍스트 — review.html에서 인라인 input
+
+### 5-3. 현업 검토 화면 (review.html)
+- 차단대상이 지정된 API만 조회 (`GET /api/db/apis?blockTargetOnly=true`)
+- IT 비전문가용 단순 화면: 레포지토리/업무명, 팀, 담당자, Method, API경로, 호출건수, 차단대상, 차단대상기준
+- 인라인 편집: 현업검토결과(select), 현업검토의견(text input) — 변경 즉시 저장
+- 통계: 전체, 최우선, 후순위, 검토완료, 미검토
+- 필터: 차단대상 유형별, 검토상태별, 텍스트 검색
+- 엑셀 다운로드 지원
+
 ### 6. 이력 조회 (viewer.html)
 - 레포지토리 선택 → 조회 버튼 클릭 → API 목록 조회 (달력 제거)
 - 상태 배지: 사용(초록), 차단검토필요(노랑), 차단대상(주황), 차단완료(회색)
@@ -147,7 +161,8 @@ src/main/resources/static/
 | GET | `/api/db/repositories` | DB 저장된 레포 목록 |
 | GET | `/api/db/apis?repository=` | DB에서 API 목록 조회 (repository 생략 시 전체 조회) |
 | GET | `/api/db/stats` | 전체 통계 (상태별/Method별/팀별/담당자별/레포별) |
-| PATCH | `/api/db/status` | 상태 일괄 변경 `{ids:[],status:"차단대상"}` |
+| PATCH | `/api/db/status` | 상태/차단대상/차단대상기준 일괄 변경 |
+| PATCH | `/api/db/record/{id}` | 개별 레코드 필드 수정 (memo, reviewResult, reviewOpinion) |
 | POST | `/api/db/call-counts` | Whatap 호출건수 DB 반영 `{repoName,callCounts:{}}` |
 | POST | `/api/whatap/stats` | Whatap 호출건수 조회 |
 

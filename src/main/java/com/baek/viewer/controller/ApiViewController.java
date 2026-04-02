@@ -84,12 +84,18 @@ public class ApiViewController {
         return ResponseEntity.ok(recordRepository.findAllRepositoryNames());
     }
 
-    /** DB에서 API 목록 조회 (repository 미입력 시 전체 조회) */
+    /** DB에서 API 목록 조회 (repository 미입력 시 전체, blockTargetOnly=true면 차단대상만) */
     @GetMapping("/db/apis")
-    public ResponseEntity<?> dbApis(@RequestParam(required = false) String repository) {
-        List<ApiRecord> records = (repository != null && !repository.isBlank())
-                ? recordRepository.findByRepositoryName(repository)
-                : recordRepository.findAll();
+    public ResponseEntity<?> dbApis(@RequestParam(required = false) String repository,
+                                     @RequestParam(required = false, defaultValue = "false") boolean blockTargetOnly) {
+        List<ApiRecord> records;
+        if (blockTargetOnly) {
+            records = recordRepository.findByBlockTargetIsNotNull();
+        } else if (repository != null && !repository.isBlank()) {
+            records = recordRepository.findByRepositoryName(repository);
+        } else {
+            records = recordRepository.findAll();
+        }
         Map<String, Object> response = new HashMap<>();
         response.put("total", records.size());
         response.put("apis", records);
@@ -127,6 +133,24 @@ public class ApiViewController {
             int updated = storageService.updateBulk(ids, status, updateStatus,
                     blockTarget, blockCriteria, updateBlock);
             return ResponseEntity.ok(Map.of("updated", updated));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    /** 개별 레코드 필드 수정 (memo, reviewResult, reviewOpinion 등)
+     * Body: { "memo": "내용", "reviewResult": "차단대상 제외", "reviewOpinion": "의견" }
+     */
+    @PatchMapping("/db/record/{id}")
+    public ResponseEntity<?> updateRecord(@PathVariable Long id, @RequestBody Map<String, Object> body) {
+        try {
+            ApiRecord r = recordRepository.findById(id)
+                    .orElseThrow(() -> new IllegalArgumentException("레코드를 찾을 수 없습니다: " + id));
+            if (body.containsKey("memo"))          r.setMemo(body.get("memo") != null ? body.get("memo").toString() : null);
+            if (body.containsKey("reviewResult"))   r.setReviewResult(body.get("reviewResult") != null ? body.get("reviewResult").toString() : null);
+            if (body.containsKey("reviewOpinion"))  r.setReviewOpinion(body.get("reviewOpinion") != null ? body.get("reviewOpinion").toString() : null);
+            recordRepository.save(r);
+            return ResponseEntity.ok(Map.of("success", true));
         } catch (Exception e) {
             return ResponseEntity.internalServerError().body(Map.of("error", e.getMessage()));
         }
