@@ -12,6 +12,7 @@ import com.baek.viewer.repository.RepoConfigRepository;
 import com.baek.viewer.service.ApiExtractorService;
 import com.baek.viewer.service.ApiStorageService;
 import com.baek.viewer.service.WhatapService;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -54,10 +55,17 @@ public class ApiViewController {
         return ResponseEntity.ok(Map.of("valid", ok));
     }
 
+    private String getClientIp(HttpServletRequest req) {
+        String ip = req.getHeader("X-Forwarded-For");
+        if (ip == null || ip.isBlank()) ip = req.getRemoteAddr();
+        return ip.split(",")[0].trim();
+    }
+
     /** 추출 실행 (비동기) */
     @PostMapping("/extract")
-    public ResponseEntity<?> extract(@RequestBody ExtractRequest request) {
+    public ResponseEntity<?> extract(@RequestBody ExtractRequest request, HttpServletRequest httpReq) {
         try {
+            request.setClientIp(getClientIp(httpReq));
             extractorService.startExtractAsync(request);
             return ResponseEntity.accepted().body(Map.of("message", "추출 시작됨"));
         } catch (IllegalStateException e) {
@@ -172,20 +180,31 @@ public class ApiViewController {
      * Body: { "memo": "내용", "reviewResult": "차단대상 제외", "reviewOpinion": "의견" }
      */
     @PatchMapping("/db/record/{id}")
-    public ResponseEntity<?> updateRecord(@PathVariable Long id, @RequestBody Map<String, Object> body) {
+    public ResponseEntity<?> updateRecord(@PathVariable Long id, @RequestBody Map<String, Object> body, HttpServletRequest httpReq) {
         try {
+            String ip = getClientIp(httpReq);
             ApiRecord r = recordRepository.findById(id)
                     .orElseThrow(() -> new IllegalArgumentException("레코드를 찾을 수 없습니다: " + id));
-            if (body.containsKey("memo"))            r.setMemo(body.get("memo") != null ? body.get("memo").toString() : null);
-            if (body.containsKey("teamOverride"))    r.setTeamOverride(body.get("teamOverride") != null ? body.get("teamOverride").toString() : null);
-            if (body.containsKey("managerOverride")) r.setManagerOverride(body.get("managerOverride") != null ? body.get("managerOverride").toString() : null);
+
+            boolean viewerChanged = false;
+            if (body.containsKey("memo"))            { r.setMemo(body.get("memo") != null ? body.get("memo").toString() : null); viewerChanged = true; }
+            if (body.containsKey("teamOverride"))    { r.setTeamOverride(body.get("teamOverride") != null ? body.get("teamOverride").toString() : null); viewerChanged = true; }
+            if (body.containsKey("managerOverride")) { r.setManagerOverride(body.get("managerOverride") != null ? body.get("managerOverride").toString() : null); viewerChanged = true; }
+            if (viewerChanged) {
+                r.setModifiedAt(java.time.LocalDateTime.now());
+                r.setModifiedIp(ip);
+            }
 
             boolean reviewChanged = false;
             if (body.containsKey("reviewResult"))   { r.setReviewResult(body.get("reviewResult") != null ? body.get("reviewResult").toString() : null); reviewChanged = true; }
             if (body.containsKey("reviewOpinion"))  { r.setReviewOpinion(body.get("reviewOpinion") != null ? body.get("reviewOpinion").toString() : null); reviewChanged = true; }
             if (body.containsKey("reviewTeam"))     { r.setReviewTeam(body.get("reviewTeam") != null ? body.get("reviewTeam").toString() : null); reviewChanged = true; }
             if (body.containsKey("reviewManager"))  { r.setReviewManager(body.get("reviewManager") != null ? body.get("reviewManager").toString() : null); reviewChanged = true; }
-            if (reviewChanged) r.setReviewedAt(java.time.LocalDateTime.now());
+            if (reviewChanged) {
+                r.setReviewedAt(java.time.LocalDateTime.now());
+                r.setReviewedIp(ip);
+            }
+
             recordRepository.save(r);
             return ResponseEntity.ok(Map.of("success", true));
         } catch (Exception e) {
@@ -263,8 +282,8 @@ public class ApiViewController {
                                     r -> r.getHttpMethod() != null ? r.getHttpMethod() : "?",
                                     Collectors.counting()));
                     String lastDate = records.stream()
-                            .filter(r -> r.getLastAnalyzedDate() != null)
-                            .map(r -> r.getLastAnalyzedDate().toString())
+                            .filter(r -> r.getLastAnalyzedAt() != null)
+                            .map(r -> r.getLastAnalyzedAt().toString())
                             .max(Comparator.naturalOrder()).orElse("-");
 
                     Map<String, Object> m = new LinkedHashMap<>();

@@ -144,7 +144,7 @@ public class ApiExtractorService {
         if (repoName != null && !repoName.isBlank()) {
             try {
                 addLog("INFO", "DB 저장 중 — 레포: " + repoName.trim());
-                savedCount = storageService.save(repoName.trim(), cachedApis);
+                savedCount = storageService.save(repoName.trim(), cachedApis, req.getClientIp());
                 addLog("OK", "DB 저장 완료 — " + savedCount + "개 저장/갱신");
             } catch (Exception e) {
                 savedCount = -1;

@@ -133,7 +133,7 @@
     <a href="/extract.html" class="nav-link nav-active">🔍 API 추출</a>
     <a href="/viewer.html"  class="nav-link">📋 이력 조회</a>
     <a href="/review.html" class="nav-link">📝 현업 검토</a>
-    <a href="/settings.html"class="nav-link">⚙️ 설정</a>
+    <a href="#" class="nav-link" onclick="goSettings(event)">⚙️ 설정</a>
   </div>
 </div>
 
@@ -345,7 +345,9 @@
   let progressTimer = null;
 
   async function doExtract() {
-    // 비밀번호 확인
+    // 비밀번호 확인 (관리자면 스킵)
+    if (sessionStorage.getItem('isAdmin') === 'true') { /* skip */ }
+    else {
     const pw = prompt('추출 비밀번호를 입력하세요:');
     if (!pw) return;
     try {
@@ -354,7 +356,9 @@
       });
       const pwData = await pwRes.json();
       if (!pwData.valid) { showToast('비밀번호가 일치하지 않습니다.','error'); return; }
+      sessionStorage.setItem('isAdmin','true');
     } catch(e) { showToast('비밀번호 확인 실패','error'); return; }
+    } // end of password check
 
     const selVal = document.getElementById('repoConfigSelect').value;
 
@@ -661,6 +665,19 @@
     for (let i = parts.length - 1; i >= 0; i--) {
       if (!skip.has(parts[i].toLowerCase())) { repoInput.value = parts[i]; break; }
     }
+  }
+
+  async function goSettings(e) {
+    e.preventDefault();
+    if (sessionStorage.getItem('isAdmin')==='true') { location.href='/settings.html'; return; }
+    const pw = prompt('관리자 비밀번호를 입력하세요:');
+    if (!pw) return;
+    try {
+      const res = await fetch('/api/verify-password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:pw})});
+      const d = await res.json();
+      if (d.valid) { sessionStorage.setItem('isAdmin','true'); location.href='/settings.html'; }
+      else showToast('비밀번호가 일치하지 않습니다.','error');
+    } catch(e) { showToast('확인 실패','error'); }
   }
 
   initRepoConfigs();

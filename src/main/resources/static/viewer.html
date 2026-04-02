@@ -166,7 +166,7 @@
     <a href="/extract.html" class="nav-link">🔍 API 추출</a>
     <a href="/viewer.html"  class="nav-link nav-active">📋 이력 조회</a>
     <a href="/review.html" class="nav-link">📝 현업 검토</a>
-    <a href="/settings.html"class="nav-link">⚙️ 설정</a>
+    <a href="#" class="nav-link" onclick="goSettings(event)">⚙️ 설정</a>
   </div>
 </div>
 
@@ -285,11 +285,12 @@
           <th class="hg-git no-sort">커밋3</th>
           <th class="hg-git no-sort">커밋4</th>
           <th class="hg-git no-sort">커밋5</th>
-          <th class="hg-info" onclick="sortBy('lastAnalyzedDate')">분석일 <span class="sort-icon">↕</span></th>
+          <th class="hg-info" onclick="sortBy('lastAnalyzedAt')">분석일시 <span class="sort-icon">↕</span></th>
+          <th class="hg-info" onclick="sortBy('modifiedAt')">변경일시 <span class="sort-icon">↕</span></th>
         </tr>
       </thead>
       <tbody id="tbody">
-        <tr><td colspan="32"><div class="state-box">레포지토리를 선택하고 <b>조회</b>를 클릭하세요.</div></td></tr>
+        <tr><td colspan="33"><div class="state-box">레포지토리를 선택하고 <b>조회</b>를 클릭하세요.</div></td></tr>
       </tbody>
     </table>
   </div>
@@ -356,7 +357,7 @@
 
     document.getElementById('loadBtn').disabled = true;
     document.getElementById('tbody').innerHTML =
-      '<tr><td colspan="32"><div class="state-box"><div class="spinner"></div><br>조회 중...</div></td></tr>';
+      '<tr><td colspan="33"><div class="state-box"><div class="spinner"></div><br>조회 중...</div></td></tr>';
     clearSelection();
 
     try {
@@ -379,8 +380,8 @@
 
       // 마지막 분석일 (최신)
       const latestDate = allApis.reduce((max, a) => {
-        if (!a.lastAnalyzedDate) return max;
-        return (!max || a.lastAnalyzedDate > max) ? a.lastAnalyzedDate : max;
+        if (!a.lastAnalyzedAt) return max;
+        return (!max || a.lastAnalyzedAt > max) ? a.lastAnalyzedAt : max;
       }, null);
 
       renderStats();
@@ -396,7 +397,7 @@
     } catch(e) {
       showToast(e.message, 'error');
       document.getElementById('tbody').innerHTML =
-        `<tr><td colspan="32"><div class="state-box">조회 오류: ${esc(e.message)}</div></td></tr>`;
+        `<tr><td colspan="33"><div class="state-box">조회 오류: ${esc(e.message)}</div></td></tr>`;
     } finally {
       document.getElementById('loadBtn').disabled = false;
     }
@@ -489,7 +490,7 @@
   function renderRows(list) {
     const tbody = document.getElementById('tbody');
     if (!list.length) {
-      tbody.innerHTML = '<tr><td colspan="32"><div class="state-box">검색 결과가 없습니다.</div></td></tr>';
+      tbody.innerHTML = '<tr><td colspan="33"><div class="state-box">검색 결과가 없습니다.</div></td></tr>';
       return;
     }
     tbody.innerHTML = list.map(a => {
@@ -526,7 +527,8 @@
         <td class="memo-cell" onclick="editField(this,${a.id},'memo')" title="클릭하여 편집">${esc(a.memo || '')}</td>
         <td>${reviewResultBadge(a.reviewResult)}</td>
         ${gitCols(a.gitHistory)}
-        <td style="font-size:11px;color:var(--text-muted);white-space:nowrap;">${esc(a.lastAnalyzedDate || '-')}</td>
+        <td style="font-size:10px;color:var(--text-muted);white-space:nowrap;">${fmtDt(a.lastAnalyzedAt)}${isAdmin()&&a.createdIp ? `<br><span style="color:#94a3b8;font-size:9px;">${esc(a.createdIp)}</span>` : ''}</td>
+        <td style="font-size:10px;color:var(--text-muted);white-space:nowrap;">${fmtDt(a.modifiedAt)}${isAdmin()&&a.modifiedIp ? `<br><span style="color:#94a3b8;font-size:9px;">${esc(a.modifiedIp)}</span>` : ''}</td>
       </tr>`;
     }).join('');
   }
@@ -612,7 +614,7 @@
   const colIndexMap = { repositoryName:1, businessName:2, teamName:3, managerName:4, apiPath:5,
                         httpMethod:7, controllerName:8, methodName:9, programId:10,
                         apiOperationValue:17, callCount:18, status:19, blockedDate:20,
-                        blockTarget:22, blockCriteria:23, reviewResult:25, lastAnalyzedDate:31 };
+                        blockTarget:22, blockCriteria:23, reviewResult:25, lastAnalyzedAt:31, modifiedAt:32 };
   function sortBy(key) {
     if (sortKey === key) sortAsc = !sortAsc; else { sortKey = key; sortAsc = true; }
     document.querySelectorAll('thead th').forEach(th => th.classList.remove('sorted'));
@@ -749,7 +751,7 @@
       'ApiOperation(참고용)','Description주석(참고용)','메소드주석(참고용)','RequestProperty(참고용)','컨트롤러RequestProperty(참고용)','컨트롤러주석(참고용)',
       '내용','호출건수','상태','차단일자','차단근거',
       '차단대상선정','차단대상선정기준','비고','현업검토결과',
-      ...commitHeaders, '마지막분석일'
+      ...commitHeaders, '분석일시', '변경일시'
     ];
     const rows = filteredApis.map(a => {
       const cfg = repoConfigMap[a.repositoryName] || {};
@@ -787,7 +789,7 @@
         a.memo || '',
         a.reviewResult || '',
         ...commitCols,
-        a.lastAnalyzedDate || ''
+        fmtDt(a.lastAnalyzedAt), fmtDt(a.modifiedAt)
       ];
     });
     exportCsv(headers, rows, `api-list-${document.getElementById('repoSelect').value || 'all'}`);
@@ -832,6 +834,11 @@
     return parts.join(' | ') || '';
   }
 
+  function fmtDt(s) {
+    if (!s) return '-';
+    return s.replace('T',' ').substring(0,16);
+  }
+
   function esc(s) {
     if (!s) return '';
     return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
@@ -844,6 +851,20 @@
   }
 
   document.addEventListener('keydown', e => { if (e.key === 'Enter') loadApis(); });
+
+  function isAdmin() { return sessionStorage.getItem('isAdmin') === 'true'; }
+  async function goSettings(e) {
+    e.preventDefault();
+    if (isAdmin()) { location.href='/settings.html'; return; }
+    const pw = prompt('관리자 비밀번호를 입력하세요:');
+    if (!pw) return;
+    try {
+      const res = await fetch('/api/verify-password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:pw})});
+      const d = await res.json();
+      if (d.valid) { sessionStorage.setItem('isAdmin','true'); location.href='/settings.html'; }
+      else showToast('비밀번호가 일치하지 않습니다.','error');
+    } catch(e) { showToast('확인 실패','error'); }
+  }
 
   initRepos();
 </script>

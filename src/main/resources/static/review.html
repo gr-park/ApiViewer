@@ -93,7 +93,7 @@
     <a href="/extract.html" class="nav-link">🔍 API 추출</a>
     <a href="/viewer.html" class="nav-link">📋 이력 조회</a>
     <a href="/review.html" class="nav-link nav-active">📝 현업 검토</a>
-    <a href="/settings.html" class="nav-link">⚙️ 설정</a>
+    <a href="#" class="nav-link" onclick="goSettings(event)">⚙️ 설정</a>
   </div>
 </div>
 <div class="main">
@@ -284,7 +284,7 @@
         <td><input class="edit-input" type="text" value="${esc(a.reviewOpinion||'')}" data-id="${a.id}" data-field="reviewOpinion" placeholder="의견..." onblur="saveField(this)" onkeydown="if(event.key==='Enter')this.blur();"></td>
         <td><input class="edit-input" type="text" value="${esc(a.reviewTeam||'')}" data-id="${a.id}" data-field="reviewTeam" placeholder="팀명" style="width:80px;" onblur="saveField(this)" onkeydown="if(event.key==='Enter')this.blur();"></td>
         <td><input class="edit-input" type="text" value="${esc(a.reviewManager||'')}" data-id="${a.id}" data-field="reviewManager" placeholder="담당자" style="width:70px;" onblur="saveField(this)" onkeydown="if(event.key==='Enter')this.blur();"></td>
-        <td style="font-size:10px;color:var(--text-muted);white-space:nowrap;">${esc(rvAt)}</td>
+        <td style="font-size:10px;color:var(--text-muted);white-space:nowrap;">${esc(rvAt)}${isAdmin()&&a.reviewedIp ? `<br><span style="color:#94a3b8;font-size:9px;">${esc(a.reviewedIp)}</span>` : ''}</td>
       </tr>`;
     }).join('');
   }
@@ -342,6 +342,14 @@
 
   function esc(s){if(!s)return'';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
   function showToast(msg,type='success'){const t=document.getElementById('toast');t.textContent=msg;t.className=`toast ${type} show`;setTimeout(()=>t.classList.remove('show'),3000);}
+  function isAdmin(){return sessionStorage.getItem('isAdmin')==='true';}
+  async function goSettings(e){
+    e.preventDefault();
+    if(isAdmin()){location.href='/settings.html';return;}
+    const pw=prompt('관리자 비밀번호를 입력하세요:');if(!pw)return;
+    try{const res=await fetch('/api/verify-password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:pw})});const d=await res.json();
+    if(d.valid){sessionStorage.setItem('isAdmin','true');location.href='/settings.html';}else showToast('비밀번호 불일치','error');}catch(e){showToast('확인 실패','error');}
+  }
   loadReviewData();
 </script>
 </body>

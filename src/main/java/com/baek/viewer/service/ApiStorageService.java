@@ -40,8 +40,8 @@ public class ApiStorageService {
      * ③ 기존 + 차단완료 아님: 추출 필드만 업데이트, 수동 설정 필드 보호
      */
     @Transactional
-    public int save(String repositoryName, List<ApiInfo> apis) {
-        LocalDate today = LocalDate.now();
+    public int save(String repositoryName, List<ApiInfo> apis, String clientIp) {
+        java.time.LocalDateTime now = java.time.LocalDateTime.now();
         int reviewThreshold = getReviewThreshold();
         int saved = 0;
 
@@ -57,7 +57,7 @@ public class ApiStorageService {
 
                 // ③ 기존 + 차단완료 아님 → 추출 필드만 업데이트
                 String oldStatus = r.getStatus();
-                updateExtractedFields(r, a, today);
+                updateExtractedFields(r, a, now);
 
                 // status 재계산 + 변경 감지
                 if (!r.isStatusOverridden()) {
@@ -79,7 +79,8 @@ public class ApiStorageService {
                 r.setRepositoryName(repositoryName);
                 r.setApiPath(a.getApiPath());
                 r.setHttpMethod(a.getHttpMethod());
-                updateExtractedFields(r, a, today);
+                r.setCreatedIp(clientIp);
+                updateExtractedFields(r, a, now);
                 r.setStatus(calculateStatus(r, reviewThreshold));
                 if ("차단완료".equals(r.getStatus())) {
                     r.setBlockedDate(parseBlockedDate(r.getFullComment()));
@@ -97,8 +98,8 @@ public class ApiStorageService {
     }
 
     /** 추출로 갱신해도 되는 필드만 업데이트 (수동 설정 필드는 건드리지 않음) */
-    private void updateExtractedFields(ApiRecord r, ApiInfo a, LocalDate today) {
-        r.setLastAnalyzedDate(today);
+    private void updateExtractedFields(ApiRecord r, ApiInfo a, java.time.LocalDateTime now) {
+        r.setLastAnalyzedAt(now);
         r.setMethodName(a.getMethodName());
         r.setControllerName(a.getControllerName());
         r.setRepoPath(a.getRepoPath());

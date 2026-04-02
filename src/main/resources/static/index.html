@@ -151,7 +151,7 @@
     <a href="/extract.html" class="nav-link">🔍 API 추출</a>
     <a href="/viewer.html"  class="nav-link">📋 이력 조회</a>
     <a href="/review.html" class="nav-link">📝 현업 검토</a>
-    <a href="/settings.html"class="nav-link">⚙️ 설정</a>
+    <a href="#" class="nav-link" onclick="goSettings(event)">⚙️ 설정</a>
   </div>
 </div>
 
@@ -505,6 +505,18 @@
     setTimeout(() => t.classList.remove('show'), 3000);
   }
 
+  async function goSettings(e) {
+    e.preventDefault();
+    if (sessionStorage.getItem('isAdmin')==='true') { location.href='/settings.html'; return; }
+    const pw = prompt('관리자 비밀번호를 입력하세요:');
+    if (!pw) return;
+    try {
+      const res = await fetch('/api/verify-password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:pw})});
+      const d = await res.json();
+      if (d.valid) { sessionStorage.setItem('isAdmin','true'); location.href='/settings.html'; }
+      else showToast('비밀번호 불일치','error');
+    } catch(e) { showToast('확인 실패','error'); }
+  }
   loadStats();
 </script>
 </body>

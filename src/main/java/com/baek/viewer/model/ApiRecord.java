@@ -23,9 +23,25 @@ public class ApiRecord {
     @Column(name = "http_method", length = 20)
     private String httpMethod;
 
-    /** 마지막으로 소스에서 분석된 날짜 (추출 시마다 갱신) */
-    @Column(name = "last_analyzed_date")
-    private LocalDate lastAnalyzedDate;
+    /** 마지막 분석 일시 (추출 시마다 갱신) */
+    @Column(name = "last_analyzed_at")
+    private LocalDateTime lastAnalyzedAt;
+
+    /** 최초 생성 IP */
+    @Column(name = "created_ip", length = 50)
+    private String createdIp;
+
+    /** 변경 일시 (조회화면 수정 시 갱신) */
+    @Column(name = "modified_at")
+    private LocalDateTime modifiedAt;
+
+    /** 변경 IP */
+    @Column(name = "modified_ip", length = 50)
+    private String modifiedIp;
+
+    /** 검토 IP */
+    @Column(name = "reviewed_ip", length = 50)
+    private String reviewedIp;
 
     /**
      * 상태: 사용 / 차단완료
@@ -143,8 +159,16 @@ public class ApiRecord {
     public void setApiPath(String apiPath) { this.apiPath = apiPath; }
     public String getHttpMethod() { return httpMethod; }
     public void setHttpMethod(String httpMethod) { this.httpMethod = httpMethod; }
-    public LocalDate getLastAnalyzedDate() { return lastAnalyzedDate; }
-    public void setLastAnalyzedDate(LocalDate lastAnalyzedDate) { this.lastAnalyzedDate = lastAnalyzedDate; }
+    public LocalDateTime getLastAnalyzedAt() { return lastAnalyzedAt; }
+    public void setLastAnalyzedAt(LocalDateTime lastAnalyzedAt) { this.lastAnalyzedAt = lastAnalyzedAt; }
+    public String getCreatedIp() { return createdIp; }
+    public void setCreatedIp(String createdIp) { this.createdIp = createdIp; }
+    public LocalDateTime getModifiedAt() { return modifiedAt; }
+    public void setModifiedAt(LocalDateTime modifiedAt) { this.modifiedAt = modifiedAt; }
+    public String getModifiedIp() { return modifiedIp; }
+    public void setModifiedIp(String modifiedIp) { this.modifiedIp = modifiedIp; }
+    public String getReviewedIp() { return reviewedIp; }
+    public void setReviewedIp(String reviewedIp) { this.reviewedIp = reviewedIp; }
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
     public boolean isStatusOverridden() { return statusOverridden; }

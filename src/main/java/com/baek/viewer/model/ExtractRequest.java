@@ -7,6 +7,10 @@ public class ExtractRequest {
     private String apiPathPrefix;
     private String pathConstants;
     private String gitBinPath;
+    private String clientIp; // 서버에서 세팅
+
+    public String getClientIp() { return clientIp; }
+    public void setClientIp(String clientIp) { this.clientIp = clientIp; }
 
     public String getRootPath() { return rootPath; }
     public void setRootPath(String rootPath) { this.rootPath = rootPath; }
