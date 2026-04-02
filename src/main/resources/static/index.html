@@ -223,21 +223,19 @@
     <!-- ── 탭 (팀별 / 담당자별 / 레포지토리별) ── -->
     <div class="card">
       <div class="tabs">
-        <div class="tab active" onclick="switchTab('team',this)">팀별</div>
+        <div class="tab active" onclick="switchTab('repo',this)">레포지토리별</div>
+        <div class="tab" onclick="switchTab('team',this)">팀별</div>
         <div class="tab" onclick="switchTab('manager',this)">담당자별</div>
-        <div class="tab" onclick="switchTab('repo',this)">레포지토리별</div>
       </div>
 
       <!-- 팀별 -->
-      <div class="tab-panel active" id="panel-team">
+      <div class="tab-panel" id="panel-team">
         <div class="tbl-wrap">
           <table id="teamTable">
             <thead><tr>
               <th>팀명</th>
               <th style="text-align:right;">전체</th>
               <th style="text-align:right;">사용</th>
-              <th style="text-align:right;">차단검토필요</th>
-              <th style="text-align:right;">차단대상</th>
               <th style="text-align:right;">차단완료</th>
               <th style="min-width:200px;">상태 분포</th>
               <th></th>
@@ -256,8 +254,6 @@
               <th>담당자</th>
               <th style="text-align:right;">전체</th>
               <th style="text-align:right;">사용</th>
-              <th style="text-align:right;">차단검토필요</th>
-              <th style="text-align:right;">차단대상</th>
               <th style="text-align:right;">차단완료</th>
               <th style="min-width:200px;">상태 분포</th>
               <th></th>
@@ -268,18 +264,15 @@
       </div>
 
       <!-- 레포지토리별 -->
-      <div class="tab-panel" id="panel-repo">
+      <div class="tab-panel active" id="panel-repo">
         <div class="tbl-wrap">
           <table id="repoTable">
             <thead><tr>
               <th>레포지토리</th>
               <th>업무명</th>
               <th>팀</th>
-              <th>담당자</th>
               <th style="text-align:right;">전체</th>
               <th style="text-align:right;">사용</th>
-              <th style="text-align:right;">차단검토필요</th>
-              <th style="text-align:right;">차단대상</th>
               <th style="text-align:right;">차단완료</th>
               <th style="min-width:200px;">상태 분포</th>
               <th>마지막 분석일</th>
@@ -391,27 +384,20 @@
   function renderGroupTable(tbodyId, data, key, grandTotal) {
     const tbody = document.getElementById(tbodyId);
     if (!data.length) {
-      tbody.innerHTML = `<tr><td colspan="8" class="empty">데이터 없음</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="6" class="empty">데이터 없음</td></tr>`;
       return;
     }
     tbody.innerHTML = data.map(row => {
       const sd = row.statusDetail || {};
-      const use    = sd['사용']        || 0;
-      const review = sd['차단검토필요'] || 0;
-      const target = sd['차단대상']    || 0;
-      const done   = sd['차단완료']    || 0;
-      const cnt    = row.count || 0;
-      const filterVal = encodeURIComponent(row[key] || '');
-      const viewerLink = key === 'team'
-        ? `/viewer.html` : `/viewer.html`;
+      const use  = sd['사용']     || 0;
+      const done = sd['차단완료'] || 0;
+      const cnt  = row.count || 0;
       return `<tr>
         <td><b>${esc(row[key])}</b></td>
         <td style="text-align:right;font-weight:700;">${cnt.toLocaleString()}</td>
         <td style="text-align:right;"><span class="st st-use">${use.toLocaleString()}</span></td>
-        <td style="text-align:right;"><span class="st st-review">${review.toLocaleString()}</span></td>
-        <td style="text-align:right;"><span class="st st-target">${target.toLocaleString()}</span></td>
         <td style="text-align:right;"><span class="st st-done">${done.toLocaleString()}</span></td>
-        <td>${miniBar(use,review,target,done,cnt)}</td>
+        <td>${miniBar(use,0,0,done,cnt)}</td>
         <td>${pct(cnt, grandTotal)}</td>
       </tr>`;
     }).join('');
@@ -420,25 +406,21 @@
   function renderManagerTable(data, grandTotal) {
     const tbody = document.getElementById('managerTbody');
     if (!data.length) {
-      tbody.innerHTML = `<tr><td colspan="9" class="empty">데이터 없음</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="7" class="empty">데이터 없음</td></tr>`;
       return;
     }
     tbody.innerHTML = data.map(row => {
       const sd = row.statusDetail || {};
-      const use    = sd['사용']        || 0;
-      const review = sd['차단검토필요'] || 0;
-      const target = sd['차단대상']    || 0;
-      const done   = sd['차단완료']    || 0;
-      const cnt    = row.count || 0;
+      const use  = sd['사용']     || 0;
+      const done = sd['차단완료'] || 0;
+      const cnt  = row.count || 0;
       return `<tr>
         <td style="color:var(--text-muted);">${esc(row.team || '-')}</td>
         <td><b>${esc(row.manager)}</b></td>
         <td style="text-align:right;font-weight:700;">${cnt.toLocaleString()}</td>
         <td style="text-align:right;"><span class="st st-use">${use.toLocaleString()}</span></td>
-        <td style="text-align:right;"><span class="st st-review">${review.toLocaleString()}</span></td>
-        <td style="text-align:right;"><span class="st st-target">${target.toLocaleString()}</span></td>
         <td style="text-align:right;"><span class="st st-done">${done.toLocaleString()}</span></td>
-        <td>${miniBar(use,review,target,done,cnt)}</td>
+        <td>${miniBar(use,0,0,done,cnt)}</td>
         <td>${pct(cnt, grandTotal)}</td>
       </tr>`;
     }).join('');
@@ -447,17 +429,15 @@
   function renderRepoTable(data, grandTotal) {
     const tbody = document.getElementById('repoTbody');
     if (!data.length) {
-      tbody.innerHTML = `<tr><td colspan="13" class="empty">데이터 없음</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="10" class="empty">데이터 없음</td></tr>`;
       return;
     }
     tbody.innerHTML = data.map(row => {
       const sd = row.statusDetail || {};
-      const use    = sd['사용']        || 0;
-      const review = sd['차단검토필요'] || 0;
-      const target = sd['차단대상']    || 0;
-      const done   = sd['차단완료']    || 0;
-      const cnt    = row.count || 0;
-      const md     = row.methodDetail || {};
+      const use  = sd['사용']     || 0;
+      const done = sd['차단완료'] || 0;
+      const cnt  = row.count || 0;
+      const md   = row.methodDetail || {};
       const methodStr = Object.entries(md)
         .sort((a,b) => b[1]-a[1])
         .map(([m,v]) => `<span style="font-size:10px;padding:1px 5px;border-radius:3px;font-weight:600;" class="m-badge m-${['GET','POST','PUT','DELETE','PATCH'].includes(m)?m:'OTHER'}">${m} ${v}</span>`)
@@ -466,13 +446,10 @@
         <td><b>${esc(row.repo)}</b></td>
         <td style="color:var(--text-muted);">${esc(row.businessName || '-')}</td>
         <td style="color:var(--text-muted);">${esc(row.team)}</td>
-        <td style="color:var(--text-muted);">${esc(row.manager)}</td>
         <td style="text-align:right;font-weight:700;">${cnt.toLocaleString()}</td>
         <td style="text-align:right;"><span class="st st-use">${use.toLocaleString()}</span></td>
-        <td style="text-align:right;"><span class="st st-review">${review.toLocaleString()}</span></td>
-        <td style="text-align:right;"><span class="st st-target">${target.toLocaleString()}</span></td>
         <td style="text-align:right;"><span class="st st-done">${done.toLocaleString()}</span></td>
-        <td>${miniBar(use,review,target,done,cnt)}</td>
+        <td>${miniBar(use,0,0,done,cnt)}</td>
         <td style="font-size:11px;color:var(--text-muted);white-space:nowrap;">${esc(row.lastAnalyzedDate)}</td>
         <td>${methodStr}</td>
         <td><a class="link-btn" href="/viewer.html?repo=${encodeURIComponent(row.repo)}">조회 →</a></td>

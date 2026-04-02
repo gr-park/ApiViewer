@@ -345,6 +345,17 @@
   let progressTimer = null;
 
   async function doExtract() {
+    // 비밀번호 확인
+    const pw = prompt('추출 비밀번호를 입력하세요:');
+    if (!pw) return;
+    try {
+      const pwRes = await fetch('/api/verify-password', {
+        method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({password:pw})
+      });
+      const pwData = await pwRes.json();
+      if (!pwData.valid) { showToast('비밀번호가 일치하지 않습니다.','error'); return; }
+    } catch(e) { showToast('비밀번호 확인 실패','error'); return; }
+
     const selVal = document.getElementById('repoConfigSelect').value;
 
     // 초기화

@@ -16,7 +16,10 @@ public class GlobalConfig {
     private String endDate;
 
     @Column(name = "review_threshold")
-    private Integer reviewThreshold = 3; // 차단검토 대상 호출건수 기준 (기본값 3)
+    private Integer reviewThreshold = 3;
+
+    @Column(name = "password", length = 100)
+    private String password;
 
     public Long getId() { return id; }
     public String getStartDate() { return startDate; }
@@ -25,4 +28,6 @@ public class GlobalConfig {
     public void setEndDate(String endDate) { this.endDate = endDate; }
     public Integer getReviewThreshold() { return reviewThreshold != null ? reviewThreshold : 3; }
     public void setReviewThreshold(Integer reviewThreshold) { this.reviewThreshold = reviewThreshold; }
+    public String getPassword() { return password; }
+    public void setPassword(String password) { this.password = password; }
 }

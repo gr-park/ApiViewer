@@ -7,6 +7,7 @@ import com.baek.viewer.model.RepoConfig;
 import com.baek.viewer.model.WhatapRequest;
 import com.baek.viewer.model.WhatapResult;
 import com.baek.viewer.repository.ApiRecordRepository;
+import com.baek.viewer.repository.GlobalConfigRepository;
 import com.baek.viewer.repository.RepoConfigRepository;
 import com.baek.viewer.service.ApiExtractorService;
 import com.baek.viewer.service.ApiStorageService;
@@ -25,18 +26,32 @@ public class ApiViewController {
     private final WhatapService whatapService;
     private final ApiRecordRepository recordRepository;
     private final RepoConfigRepository repoConfigRepository;
+    private final GlobalConfigRepository globalConfigRepository;
     private final ApiStorageService storageService;
 
     public ApiViewController(ApiExtractorService extractorService,
                              WhatapService whatapService,
                              ApiRecordRepository recordRepository,
                              RepoConfigRepository repoConfigRepository,
+                             GlobalConfigRepository globalConfigRepository,
                              ApiStorageService storageService) {
         this.extractorService = extractorService;
         this.whatapService = whatapService;
         this.recordRepository = recordRepository;
         this.repoConfigRepository = repoConfigRepository;
+        this.globalConfigRepository = globalConfigRepository;
         this.storageService = storageService;
+    }
+
+    /** 추출 비밀번호 확인 */
+    @PostMapping("/verify-password")
+    public ResponseEntity<?> verifyPassword(@RequestBody Map<String, String> body) {
+        String input = body.get("password");
+        String stored = globalConfigRepository.findById(1L)
+                .map(g -> g.getPassword()).orElse(null);
+        if (stored == null || stored.isBlank()) stored = "lotte1!";
+        boolean ok = stored.equals(input);
+        return ResponseEntity.ok(Map.of("valid", ok));
     }
 
     /** 추출 실행 (비동기) */

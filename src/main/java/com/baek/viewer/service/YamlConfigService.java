@@ -64,6 +64,7 @@ public class YamlConfigService {
                 if (g.getPeriod().getEndDate()   != null) gc.setEndDate(g.getPeriod().getEndDate());
             }
             if (g.getReviewThreshold() != null) gc.setReviewThreshold(g.getReviewThreshold());
+            if (g.getPassword() != null) gc.setPassword(g.getPassword());
             globalRepo.save(gc);
         }
 

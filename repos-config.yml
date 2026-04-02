@@ -9,6 +9,7 @@ global:
     startDate: "20250201"    # 조회 시작일 (YYYYMMDD)
     endDate: "20260220"      # 조회 종료일 (YYYYMMDD)
   reviewThreshold: 3         # 차단검토필요 판단 호출건수 기준 (이 값 이하이면서 커밋 1년 초과 시)
+  password: "lotte1!"        # API 추출 비밀번호
 
 # 레포지토리별 설정 목록
 repositories:

@@ -17,10 +17,13 @@ public class ReposYamlConfig {
     public static class GlobalSection {
         private PeriodGlobal period;
         private Integer reviewThreshold;
+        private String password;
         public PeriodGlobal getPeriod() { return period; }
         public void setPeriod(PeriodGlobal period) { this.period = period; }
         public Integer getReviewThreshold() { return reviewThreshold; }
         public void setReviewThreshold(Integer reviewThreshold) { this.reviewThreshold = reviewThreshold; }
+        public String getPassword() { return password; }
+        public void setPassword(String password) { this.password = password; }
     }
 
     public static class PeriodGlobal {
