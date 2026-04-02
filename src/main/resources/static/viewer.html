@@ -113,9 +113,11 @@
     .api-op   { color:var(--text-muted); font-size:12px; }
     .ctrl-name { font-size:11px; color:var(--text-muted); }
     .git-chips { display:flex; gap:4px; flex-wrap:nowrap; }
-    .git-chip { background:#f8fafc; border:1px solid var(--border); border-radius:4px; padding:2px 6px; font-size:10px; white-space:nowrap; cursor:default; line-height:1.4; }
+    .git-chip { background:#f8fafc; border:1px solid var(--border); border-radius:4px; padding:3px 6px; font-size:10px; cursor:default; line-height:1.4; max-width:180px; }
+    .git-chip-top { display:flex; gap:4px; white-space:nowrap; }
     .git-chip-d { font-weight:600; color:var(--text); }
     .git-chip-a { color:var(--text-muted); }
+    .git-chip-m { color:#475569; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; display:block; margin-top:1px; }
     .memo-cell { cursor:pointer; min-width:80px; max-width:140px; font-size:11px; color:var(--text-muted); }
     .memo-cell:hover { background:#f8fafc; }
     .memo-cell input { width:100%; padding:3px 6px; border:1px solid var(--primary); border-radius:4px; font-size:11px; outline:none; }
@@ -493,8 +495,9 @@
     try { list = JSON.parse(json); } catch(e) { return '-'; }
     if (!list.length) return '<span style="color:#cbd5e1;font-size:11px;">-</span>';
     return '<div class="git-chips">' + list.map(g =>
-      `<div class="git-chip" title="${esc(g.date)} ${esc(g.author)}: ${esc(g.message)}">` +
-      `<span class="git-chip-d">${esc(g.date)}</span> <span class="git-chip-a">${esc(g.author)}</span></div>`
+      `<div class="git-chip" title="${esc(g.message)}">` +
+      `<div class="git-chip-top"><span class="git-chip-d">${esc(g.date)}</span> <span class="git-chip-a">${esc(g.author)}</span></div>` +
+      `<span class="git-chip-m">${esc(g.message)}</span></div>`
     ).join('') + '</div>';
   }
 
