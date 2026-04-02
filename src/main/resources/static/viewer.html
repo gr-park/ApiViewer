@@ -112,12 +112,10 @@
     .api-path { font-family:'Consolas',monospace; font-size:12px; color:#1e40af; }
     .api-op   { color:var(--text-muted); font-size:12px; }
     .ctrl-name { font-size:11px; color:var(--text-muted); }
-    .git-chips { display:flex; gap:4px; flex-wrap:nowrap; }
-    .git-chip { background:#f8fafc; border:1px solid var(--border); border-radius:4px; padding:3px 6px; font-size:10px; cursor:default; line-height:1.4; max-width:180px; }
-    .git-chip-top { display:flex; gap:4px; white-space:nowrap; }
-    .git-chip-d { font-weight:600; color:var(--text); }
-    .git-chip-a { color:var(--text-muted); }
-    .git-chip-m { color:#475569; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; display:block; margin-top:1px; }
+    .git-col { font-size:10px; line-height:1.5; min-width:120px; max-width:180px; vertical-align:top; }
+    .git-col-d { font-weight:600; color:var(--text); white-space:nowrap; }
+    .git-col-a { color:var(--text-muted); white-space:nowrap; }
+    .git-col-m { color:#475569; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; word-break:break-all; }
     .memo-cell { cursor:pointer; min-width:80px; max-width:140px; font-size:11px; color:var(--text-muted); }
     .memo-cell:hover { background:#f8fafc; }
     .memo-cell input { width:100%; padding:3px 6px; border:1px solid var(--primary); border-radius:4px; font-size:11px; outline:none; }
@@ -247,11 +245,15 @@
           <th onclick="sortBy('reviewResult')">현업검토결과 <span class="sort-icon">↕</span></th>
           <th class="no-sort">비고</th>
           <th onclick="sortBy('lastAnalyzedDate')">마지막분석일 <span class="sort-icon">↕</span></th>
-          <th class="no-sort">최근 커밋</th>
+          <th class="no-sort">커밋1</th>
+          <th class="no-sort">커밋2</th>
+          <th class="no-sort">커밋3</th>
+          <th class="no-sort">커밋4</th>
+          <th class="no-sort">커밋5</th>
         </tr>
       </thead>
       <tbody id="tbody">
-        <tr><td colspan="19"><div class="state-box">레포지토리를 선택하고 <b>조회</b>를 클릭하세요.</div></td></tr>
+        <tr><td colspan="23"><div class="state-box">레포지토리를 선택하고 <b>조회</b>를 클릭하세요.</div></td></tr>
       </tbody>
     </table>
   </div>
@@ -318,7 +320,7 @@
 
     document.getElementById('loadBtn').disabled = true;
     document.getElementById('tbody').innerHTML =
-      '<tr><td colspan="19"><div class="state-box"><div class="spinner"></div><br>조회 중...</div></td></tr>';
+      '<tr><td colspan="23"><div class="state-box"><div class="spinner"></div><br>조회 중...</div></td></tr>';
     clearSelection();
 
     try {
@@ -358,7 +360,7 @@
     } catch(e) {
       showToast(e.message, 'error');
       document.getElementById('tbody').innerHTML =
-        `<tr><td colspan="19"><div class="state-box">조회 오류: ${esc(e.message)}</div></td></tr>`;
+        `<tr><td colspan="23"><div class="state-box">조회 오류: ${esc(e.message)}</div></td></tr>`;
     } finally {
       document.getElementById('loadBtn').disabled = false;
     }
@@ -442,7 +444,7 @@
   function renderRows(list) {
     const tbody = document.getElementById('tbody');
     if (!list.length) {
-      tbody.innerHTML = '<tr><td colspan="19"><div class="state-box">검색 결과가 없습니다.</div></td></tr>';
+      tbody.innerHTML = '<tr><td colspan="23"><div class="state-box">검색 결과가 없습니다.</div></td></tr>';
       return;
     }
     tbody.innerHTML = list.map(a => {
@@ -471,7 +473,7 @@
         <td>${reviewResultBadge(a.reviewResult)}</td>
         <td class="memo-cell" onclick="editField(this,${a.id},'memo')" title="클릭하여 편집">${esc(a.memo || '')}</td>
         <td style="font-size:11px;color:var(--text-muted);white-space:nowrap;">${esc(a.lastAnalyzedDate || '-')}</td>
-        <td>${gitHistoryCell(a.gitHistory)}</td>
+        ${gitCols(a.gitHistory)}
       </tr>`;
     }).join('');
   }
@@ -489,16 +491,19 @@
     return `<span class="status-badge" style="background:#f1f5f9;color:#475569;">${esc(bt)}</span>`;
   }
 
-  function gitHistoryCell(json) {
-    if (!json) return '<span style="color:#cbd5e1;font-size:11px;">-</span>';
-    let list;
-    try { list = JSON.parse(json); } catch(e) { return '-'; }
-    if (!list.length) return '<span style="color:#cbd5e1;font-size:11px;">-</span>';
-    return '<div class="git-chips">' + list.map(g =>
-      `<div class="git-chip" title="${esc(g.message)}">` +
-      `<div class="git-chip-top"><span class="git-chip-d">${esc(g.date)}</span> <span class="git-chip-a">${esc(g.author)}</span></div>` +
-      `<span class="git-chip-m">${esc(g.message)}</span></div>`
-    ).join('') + '</div>';
+  function gitCols(json) {
+    let list = [];
+    if (json) { try { list = JSON.parse(json); } catch(e) {} }
+    let html = '';
+    for (let i = 0; i < 5; i++) {
+      const g = list[i];
+      if (g) {
+        html += `<td class="git-col"><span class="git-col-d">${esc(g.date)}</span> <span class="git-col-a">${esc(g.author)}</span><br><span class="git-col-m" title="${esc(g.message)}">${esc(g.message)}</span></td>`;
+      } else {
+        html += '<td style="color:#cbd5e1;font-size:10px;text-align:center;">-</td>';
+      }
+    }
+    return html;
   }
 
   function reviewResultBadge(rv) {
