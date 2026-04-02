@@ -113,6 +113,10 @@ public class ApiRecord {
     @Column(name = "blocked_date")
     private LocalDate blockedDate;
 
+    /** 차단근거: fullComment에서 [CSR-XXXXX] 내용 파싱 */
+    @Column(name = "blocked_reason", columnDefinition = "TEXT")
+    private String blockedReason;
+
     /** 상태 변경 감지 플래그 (IT 담당자 검토 필요) */
     @Column(name = "status_changed")
     private boolean statusChanged = false;
@@ -179,6 +183,8 @@ public class ApiRecord {
     public void setReviewOpinion(String reviewOpinion) { this.reviewOpinion = reviewOpinion; }
     public LocalDate getBlockedDate() { return blockedDate; }
     public void setBlockedDate(LocalDate blockedDate) { this.blockedDate = blockedDate; }
+    public String getBlockedReason() { return blockedReason; }
+    public void setBlockedReason(String blockedReason) { this.blockedReason = blockedReason; }
     public boolean isStatusChanged() { return statusChanged; }
     public void setStatusChanged(boolean statusChanged) { this.statusChanged = statusChanged; }
     public String getStatusChangeLog() { return statusChangeLog; }

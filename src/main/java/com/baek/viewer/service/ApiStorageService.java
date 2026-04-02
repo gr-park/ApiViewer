@@ -30,6 +30,8 @@ public class ApiStorageService {
 
     private static final Pattern BLOCKED_DATE_PATTERN =
             Pattern.compile("\\[URL차단작업\\]\\[(\\d{4}-\\d{2}-\\d{2})\\]");
+    private static final Pattern BLOCKED_REASON_PATTERN =
+            Pattern.compile("\\[URL차단작업\\]\\[\\d{4}-\\d{2}-\\d{2}\\]\\s*(.+)");
 
     /**
      * 추출된 API 목록을 DB에 저장합니다.
@@ -68,6 +70,7 @@ public class ApiStorageService {
                 // 차단완료로 변경되었으면 blockedDate 파싱
                 if ("차단완료".equals(r.getStatus())) {
                     r.setBlockedDate(parseBlockedDate(r.getFullComment()));
+                    r.setBlockedReason(parseBlockedReason(r.getFullComment()));
                 }
 
             } else {
@@ -80,6 +83,7 @@ public class ApiStorageService {
                 r.setStatus(calculateStatus(r, reviewThreshold));
                 if ("차단완료".equals(r.getStatus())) {
                     r.setBlockedDate(parseBlockedDate(r.getFullComment()));
+                    r.setBlockedReason(parseBlockedReason(r.getFullComment()));
                 }
                 repository.save(r);
                 saved++;
@@ -115,6 +119,13 @@ public class ApiStorageService {
         if (fullComment == null) return null;
         Matcher m = BLOCKED_DATE_PATTERN.matcher(fullComment);
         return m.find() ? LocalDate.parse(m.group(1)) : null;
+    }
+
+    /** fullComment에서 차단근거 파싱: [URL차단작업][YYYY-MM-DD] 뒤의 텍스트 */
+    private String parseBlockedReason(String fullComment) {
+        if (fullComment == null) return null;
+        Matcher m = BLOCKED_REASON_PATTERN.matcher(fullComment);
+        return m.find() ? m.group(1).trim() : null;
     }
 
     /** 상태 변경 로그 추가 (기존 로그에 이어붙임) */

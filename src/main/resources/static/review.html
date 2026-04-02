@@ -47,6 +47,8 @@
     .status-badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;white-space:nowrap;}
     .bt-top{background:#fee2e2;color:#991b1b;} .bt-low{background:#ffedd5;color:#c2410c;}
     .rv-exclude{background:#dbeafe;color:#1e40af;}
+    thead th.rv-sticky { position:sticky; z-index:3; }
+    tbody td.rv-sticky { position:sticky; z-index:1; background:inherit; }
     .api-path{font-family:'Consolas',monospace;font-size:12px;color:#1e40af;}
     .state-box{text-align:center;padding:60px 20px;color:var(--text-muted);}
     .spinner{display:inline-block;width:26px;height:26px;border:3px solid var(--border);border-top-color:var(--primary);border-radius:50%;animation:spin .7s linear infinite;margin-bottom:10px;}
@@ -158,8 +160,8 @@
         <th>내용</th>
         <th>호출건수</th>
         <th>비고</th>
-        <th>차단대상</th>
-        <th>차단대상기준</th>
+        <th>차단대상선정</th>
+        <th>차단대상선정기준</th>
         <th>현업검토결과</th>
         <th>현업검토의견</th>
         <th>현업 팀</th>
@@ -323,7 +325,7 @@
 
   function downloadExcel() {
     if(!filteredApis.length){showToast('다운로드할 데이터가 없습니다.','error');return;}
-    const h=['레포지토리','업무명','팀','담당자','API 경로','Full URL','내용','호출건수','비고','차단대상','차단대상기준','현업검토결과','현업검토의견','현업 팀','현업 담당자','현업검토일시'];
+    const h=['레포지토리','업무명','팀','담당자','API 경로','Full URL','내용','호출건수','비고','차단대상선정','차단대상선정기준','현업검토결과','현업검토의견','현업 팀','현업 담당자','현업검토일시'];
     const rows=filteredApis.map(a=>{const c=repoConfigMap[a.repositoryName]||{};const desc=a.apiOperationValue&&a.apiOperationValue!=='-'?a.apiOperationValue:(a.descriptionTag&&a.descriptionTag!=='-'?a.descriptionTag:'');return[a.repositoryName||'',c.businessName||'',c.team||'',c.manager||'',a.apiPath||'',a.fullUrl||'',desc,a.callCount!=null?a.callCount:'',a.memo||'',a.blockTarget||'',a.blockCriteria||'',a.reviewResult||'',a.reviewOpinion||'',a.reviewTeam||'',a.reviewManager||'',a.reviewedAt?a.reviewedAt.replace('T',' ').substring(0,16):''];});
     const csv=[h,...rows].map(r=>r.map(c=>{const s=String(c).replace(/"/g,'""');return(s.includes(',')||s.includes('"')||s.includes('\n'))?`"${s}"`:s;}).join(',')).join('\r\n');
     const blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8;'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=`review-${new Date().toISOString().slice(0,10)}.csv`;a.click();URL.revokeObjectURL(url);
