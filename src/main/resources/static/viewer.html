@@ -252,12 +252,12 @@
     <table id="apiTable">
       <thead>
         <tr>
-          <th class="no-sort cb-cell hg-info sticky-h" style="left:0;"><input type="checkbox" id="checkAll" onclick="toggleAll(this)"></th>
-          <th class="hg-info sticky-h" onclick="sortBy('repositoryName')" style="left:36px;">레포지토리 <span class="sort-icon">↕</span></th>
-          <th class="hg-info sticky-h" onclick="sortBy('businessName')" style="left:140px;">업무명 <span class="sort-icon">↕</span></th>
-          <th class="hg-info sticky-h" onclick="sortBy('teamName')" style="left:240px;">팀 <span class="sort-icon">↕</span></th>
-          <th class="hg-info sticky-h" onclick="sortBy('managerName')" style="left:310px;">담당자 <span class="sort-icon">↕</span></th>
-          <th class="hg-info sticky-h sticky-last" onclick="sortBy('apiPath')" style="left:380px;">API 경로 <span class="sort-icon">↕</span></th>
+          <th class="no-sort cb-cell hg-info sticky-h" style="left:0;min-width:36px;width:36px;"><input type="checkbox" id="checkAll" onclick="toggleAll(this)"></th>
+          <th class="hg-info sticky-h" onclick="sortBy('repositoryName')" style="left:36px;min-width:110px;">레포지토리 <span class="sort-icon">↕</span></th>
+          <th class="hg-info sticky-h" onclick="sortBy('businessName')" style="left:146px;min-width:100px;">업무명 <span class="sort-icon">↕</span></th>
+          <th class="hg-info sticky-h" onclick="sortBy('teamName')" style="left:246px;min-width:80px;">팀 <span class="sort-icon">↕</span></th>
+          <th class="hg-info sticky-h" onclick="sortBy('managerName')" style="left:326px;min-width:70px;">담당자 <span class="sort-icon">↕</span></th>
+          <th class="hg-info sticky-h sticky-last" onclick="sortBy('apiPath')" style="left:396px;min-width:200px;">API 경로 <span class="sort-icon">↕</span></th>
           <th class="hg-info no-sort">URL호출</th>
           <th class="hg-info" onclick="sortBy('httpMethod')">Method <span class="sort-icon">↕</span></th>
           <th class="hg-dev" onclick="sortBy('controllerName')">컨트롤러 <span class="sort-icon">↕</span></th>
@@ -494,12 +494,12 @@
       const v = (s) => s && s !== '-' ? s : '';
       return `
       <tr class="${rowCls}" id="row-${a.id}">
-        <td class="cb-cell sk" style="left:0;"><input type="checkbox" data-id="${a.id}" ${checked} onchange="toggleRow(this)"></td>
-        <td class="sk" style="left:36px;min-width:100px;"><b style="font-size:12px;">${esc(a.repositoryName)}</b></td>
-        <td class="sk" style="left:140px;font-size:11px;color:var(--text-muted);">${esc(cfg.businessName || '')}</td>
-        <td class="sk memo-cell" onclick="editField(this,${a.id},'teamOverride')" title="클릭하여 편집" style="left:240px;font-size:11px;color:var(--text-muted);white-space:nowrap;">${esc(a.teamOverride || cfg.team)}</td>
-        <td class="sk memo-cell" onclick="editField(this,${a.id},'managerOverride')" title="클릭하여 편집" style="left:310px;font-size:11px;color:var(--text-muted);white-space:nowrap;">${esc(a.managerOverride || cfg.manager)}</td>
-        <td class="sk sk-last" style="left:380px;"><div class="api-path">${esc(a.apiPath)}</div></td>
+        <td class="cb-cell sk" style="left:0;min-width:36px;width:36px;"><input type="checkbox" data-id="${a.id}" ${checked} onchange="toggleRow(this)"></td>
+        <td class="sk" style="left:36px;min-width:110px;"><b style="font-size:12px;">${esc(a.repositoryName)}</b></td>
+        <td class="sk" style="left:146px;min-width:100px;font-size:11px;color:var(--text-muted);">${esc(cfg.businessName || '')}</td>
+        <td class="sk memo-cell" onclick="editField(this,${a.id},'teamOverride')" title="클릭하여 편집" style="left:246px;min-width:80px;font-size:11px;color:var(--text-muted);white-space:nowrap;">${esc(a.teamOverride || cfg.team)}</td>
+        <td class="sk memo-cell" onclick="editField(this,${a.id},'managerOverride')" title="클릭하여 편집" style="left:326px;min-width:70px;font-size:11px;color:var(--text-muted);white-space:nowrap;">${esc(a.managerOverride || cfg.manager)}</td>
+        <td class="sk sk-last" style="left:396px;min-width:200px;"><div class="api-path">${esc(a.apiPath)}</div></td>
         <td>${a.fullUrl ? `<a href="${esc(a.fullUrl)}" target="_blank" style="font-size:11px;color:var(--primary);text-decoration:none;padding:2px 8px;border:1px solid var(--primary);border-radius:4px;white-space:nowrap;">열기 ↗</a>` : '<span style="color:#cbd5e1;font-size:11px;">-</span>'}</td>
         <td><span class="badge badge-${a.httpMethod||'REQUEST'}">${a.httpMethod||'?'}</span></td>
         <td class="ctrl-name">${esc(a.controllerName)}</td>
