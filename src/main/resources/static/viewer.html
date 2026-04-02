@@ -115,16 +115,22 @@
     .api-op   { color:var(--text-muted); font-size:12px; }
     .ctrl-name { font-size:11px; color:var(--text-muted); }
     /* 헤더 색상 그룹 */
-    thead th.hg-info  { background:#e0f2fe; }  /* 분석일~URL호출: 파랑 */
+    thead th.hg-info  { background:#e0f2fe; }  /* 레포~URL호출+분석일: 파랑 */
     thead th.hg-dev   { background:#fef3c7; }  /* 컨트롤러~프로그램ID: 노랑 */
+    thead th.hg-ref   { background:#fef3c7; }  /* 참고용 주석 컬럼: 노랑 (개발과 동일) */
     thead th.hg-desc  { background:#e0e7ff; }  /* 내용~차단근거: 보라 */
     thead th.hg-block { background:#ffe4e6; }  /* 차단대상선정~현업검토결과: 분홍 */
     thead th.hg-git   { background:#d1fae5; }  /* 커밋1~5: 초록 */
-    /* sticky 컬럼 body */
-    tbody td.sticky-cb   { position:sticky; left:0; z-index:1; background:inherit; }
-    tbody td.sticky-date { position:sticky; left:36px; z-index:1; background:inherit; }
-    tbody td.sticky-repo { position:sticky; left:110px; z-index:1; background:inherit; }
+    /* sticky 헤더+바디 */
+    thead th.sticky-h { position:sticky; z-index:4; }
+    tbody td.sk { position:sticky; z-index:1; }
+    tbody tr { background: var(--card); }
+    tbody tr:hover td.sk { background: var(--row-hover); }
+    tbody tr.row-changed td.sk { background: #fef2f2; }
+    tbody tr.row-selected td.sk { background: #eff6ff; }
 
+    .ref-col { font-size:10px; color:var(--text-muted); max-width:140px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .desc-col { font-size:11px; color:var(--text); min-width:400px; max-width:600px; line-height:1.5; word-break:break-all; }
     .git-col { font-size:10px; line-height:1.5; min-width:120px; max-width:180px; vertical-align:top; }
     .git-col-d { font-weight:600; color:var(--text); white-space:nowrap; }
     .git-col-a { color:var(--text-muted); white-space:nowrap; }
@@ -243,18 +249,23 @@
     <table id="apiTable">
       <thead>
         <tr>
-          <th class="no-sort cb-cell hg-info" style="position:sticky;left:0;z-index:3;"><input type="checkbox" id="checkAll" onclick="toggleAll(this)"></th>
-          <th class="hg-info" onclick="sortBy('lastAnalyzedDate')" style="position:sticky;left:36px;z-index:3;">분석일 <span class="sort-icon">↕</span></th>
-          <th class="hg-info" onclick="sortBy('repositoryName')" style="position:sticky;left:110px;z-index:3;">레포지토리 <span class="sort-icon">↕</span></th>
-          <th class="hg-info" onclick="sortBy('businessName')">업무명 <span class="sort-icon">↕</span></th>
-          <th class="hg-info" onclick="sortBy('teamName')">팀 <span class="sort-icon">↕</span></th>
-          <th class="hg-info" onclick="sortBy('managerName')">담당자 <span class="sort-icon">↕</span></th>
-          <th class="hg-info" onclick="sortBy('httpMethod')">Method <span class="sort-icon">↕</span></th>
-          <th class="hg-info" onclick="sortBy('apiPath')">API 경로 <span class="sort-icon">↕</span></th>
+          <th class="no-sort cb-cell hg-info sticky-h" style="left:0;"><input type="checkbox" id="checkAll" onclick="toggleAll(this)"></th>
+          <th class="hg-info sticky-h" onclick="sortBy('repositoryName')" style="left:36px;">레포지토리 <span class="sort-icon">↕</span></th>
+          <th class="hg-info sticky-h" onclick="sortBy('businessName')" style="left:140px;">업무명 <span class="sort-icon">↕</span></th>
+          <th class="hg-info sticky-h" onclick="sortBy('teamName')" style="left:240px;">팀 <span class="sort-icon">↕</span></th>
+          <th class="hg-info sticky-h" onclick="sortBy('managerName')" style="left:310px;">담당자 <span class="sort-icon">↕</span></th>
+          <th class="hg-info sticky-h" onclick="sortBy('apiPath')" style="left:380px;">API 경로 <span class="sort-icon">↕</span></th>
           <th class="hg-info no-sort">URL호출</th>
+          <th class="hg-info" onclick="sortBy('httpMethod')">Method <span class="sort-icon">↕</span></th>
           <th class="hg-dev" onclick="sortBy('controllerName')">컨트롤러 <span class="sort-icon">↕</span></th>
           <th class="hg-dev" onclick="sortBy('methodName')">메소드명 <span class="sort-icon">↕</span></th>
           <th class="hg-dev" onclick="sortBy('programId')">프로그램ID <span class="sort-icon">↕</span></th>
+          <th class="hg-ref no-sort">ApiOperation</th>
+          <th class="hg-ref no-sort">description주석</th>
+          <th class="hg-ref no-sort">메소드주석</th>
+          <th class="hg-ref no-sort">RequestProperty</th>
+          <th class="hg-ref no-sort">컨트롤러RequestProperty</th>
+          <th class="hg-ref no-sort">컨트롤러주석</th>
           <th class="hg-desc" onclick="sortBy('apiOperationValue')">내용 <span class="sort-icon">↕</span></th>
           <th class="hg-desc" onclick="sortBy('callCount')">호출건수 <span class="sort-icon">↕</span></th>
           <th class="hg-desc" onclick="sortBy('status')">상태 <span class="sort-icon">↕</span></th>
@@ -269,10 +280,11 @@
           <th class="hg-git no-sort">커밋3</th>
           <th class="hg-git no-sort">커밋4</th>
           <th class="hg-git no-sort">커밋5</th>
+          <th class="hg-info" onclick="sortBy('lastAnalyzedDate')">분석일 <span class="sort-icon">↕</span></th>
         </tr>
       </thead>
       <tbody id="tbody">
-        <tr><td colspan="26"><div class="state-box">레포지토리를 선택하고 <b>조회</b>를 클릭하세요.</div></td></tr>
+        <tr><td colspan="32"><div class="state-box">레포지토리를 선택하고 <b>조회</b>를 클릭하세요.</div></td></tr>
       </tbody>
     </table>
   </div>
@@ -339,7 +351,7 @@
 
     document.getElementById('loadBtn').disabled = true;
     document.getElementById('tbody').innerHTML =
-      '<tr><td colspan="26"><div class="state-box"><div class="spinner"></div><br>조회 중...</div></td></tr>';
+      '<tr><td colspan="32"><div class="state-box"><div class="spinner"></div><br>조회 중...</div></td></tr>';
     clearSelection();
 
     try {
@@ -379,7 +391,7 @@
     } catch(e) {
       showToast(e.message, 'error');
       document.getElementById('tbody').innerHTML =
-        `<tr><td colspan="26"><div class="state-box">조회 오류: ${esc(e.message)}</div></td></tr>`;
+        `<tr><td colspan="32"><div class="state-box">조회 오류: ${esc(e.message)}</div></td></tr>`;
     } finally {
       document.getElementById('loadBtn').disabled = false;
     }
@@ -469,28 +481,34 @@
   function renderRows(list) {
     const tbody = document.getElementById('tbody');
     if (!list.length) {
-      tbody.innerHTML = '<tr><td colspan="26"><div class="state-box">검색 결과가 없습니다.</div></td></tr>';
+      tbody.innerHTML = '<tr><td colspan="32"><div class="state-box">검색 결과가 없습니다.</div></td></tr>';
       return;
     }
     tbody.innerHTML = list.map(a => {
       const checked = selectedIds.has(a.id) ? 'checked' : '';
       const rowCls  = (selectedIds.has(a.id) ? ' row-selected' : '') + (a.statusChanged ? ' row-changed' : '');
       const cfg = repoConfigMap[a.repositoryName] || {};
+      const v = (s) => s && s !== '-' ? s : '';
       return `
       <tr class="${rowCls}" id="row-${a.id}">
-        <td class="cb-cell sticky-cb"><input type="checkbox" data-id="${a.id}" ${checked} onchange="toggleRow(this)"></td>
-        <td class="sticky-date" style="font-size:11px;color:var(--text-muted);white-space:nowrap;">${esc(a.lastAnalyzedDate || '-')}</td>
-        <td class="sticky-repo" style="min-width:100px;"><b style="font-size:12px;">${esc(a.repositoryName)}</b></td>
-        <td style="font-size:11px;color:var(--text-muted);">${esc(cfg.businessName || '')}</td>
-        <td class="memo-cell" onclick="editField(this,${a.id},'teamOverride')" title="클릭하여 편집" style="font-size:11px;color:var(--text-muted);white-space:nowrap;">${esc(a.teamOverride || cfg.team)}</td>
-        <td class="memo-cell" onclick="editField(this,${a.id},'managerOverride')" title="클릭하여 편집" style="font-size:11px;color:var(--text-muted);white-space:nowrap;">${esc(a.managerOverride || cfg.manager)}</td>
-        <td><span class="badge badge-${a.httpMethod||'REQUEST'}">${a.httpMethod||'?'}</span></td>
-        <td><div class="api-path">${esc(a.apiPath)}</div></td>
+        <td class="cb-cell sk" style="left:0;"><input type="checkbox" data-id="${a.id}" ${checked} onchange="toggleRow(this)"></td>
+        <td class="sk" style="left:36px;min-width:100px;"><b style="font-size:12px;">${esc(a.repositoryName)}</b></td>
+        <td class="sk" style="left:140px;font-size:11px;color:var(--text-muted);">${esc(cfg.businessName || '')}</td>
+        <td class="sk memo-cell" onclick="editField(this,${a.id},'teamOverride')" title="클릭하여 편집" style="left:240px;font-size:11px;color:var(--text-muted);white-space:nowrap;">${esc(a.teamOverride || cfg.team)}</td>
+        <td class="sk memo-cell" onclick="editField(this,${a.id},'managerOverride')" title="클릭하여 편집" style="left:310px;font-size:11px;color:var(--text-muted);white-space:nowrap;">${esc(a.managerOverride || cfg.manager)}</td>
+        <td class="sk" style="left:380px;"><div class="api-path">${esc(a.apiPath)}</div></td>
         <td>${a.fullUrl ? `<a href="${esc(a.fullUrl)}" target="_blank" style="font-size:11px;color:var(--primary);text-decoration:none;padding:2px 8px;border:1px solid var(--primary);border-radius:4px;white-space:nowrap;">열기 ↗</a>` : '<span style="color:#cbd5e1;font-size:11px;">-</span>'}</td>
+        <td><span class="badge badge-${a.httpMethod||'REQUEST'}">${a.httpMethod||'?'}</span></td>
         <td class="ctrl-name">${esc(a.controllerName)}</td>
         <td style="font-size:12px;">${esc(a.methodName)}</td>
         <td style="font-family:monospace;font-size:11px;">${esc(a.programId)}</td>
-        <td class="api-op" style="max-width:220px;" title="${esc(allDesc(a))}">${esc(allDesc(a).slice(0,80))}${allDesc(a).length>80?'…':''}</td>
+        <td class="ref-col" title="${esc(v(a.apiOperationValue))}">${esc(v(a.apiOperationValue))}</td>
+        <td class="ref-col" title="${esc(v(a.descriptionTag))}">${esc(v(a.descriptionTag))}</td>
+        <td class="ref-col" title="${esc(v(a.fullComment))}">${esc((v(a.fullComment)).slice(0,50))}${(v(a.fullComment)).length>50?'…':''}</td>
+        <td class="ref-col" title="${esc(v(a.requestPropertyValue))}">${esc(v(a.requestPropertyValue))}</td>
+        <td class="ref-col" title="${esc(v(a.controllerRequestPropertyValue))}">${esc(v(a.controllerRequestPropertyValue))}</td>
+        <td class="ref-col" title="${esc(v(a.controllerComment))}">${esc((v(a.controllerComment)).slice(0,40))}${(v(a.controllerComment)).length>40?'…':''}</td>
+        <td class="desc-col" title="${esc(allDesc(a))}">${esc(allDesc(a))}</td>
         <td style="text-align:right;font-size:12px;">${a.callCount != null ? a.callCount.toLocaleString() : '<span style="color:#cbd5e1;">-</span>'}</td>
         <td>${statusBadge(a.status)}${a.statusOverridden ? ' <span title="수동설정" style="font-size:10px;color:#94a3b8;">🔒</span>' : ''}${a.statusChanged ? ` <span title="${esc(a.statusChangeLog||'상태변경 감지')}" style="color:#dc2626;cursor:pointer;font-size:10px;" onclick="clearStatusFlag(event,${a.id})">⚠️확인</span>` : ''}</td>
         <td style="font-size:11px;color:var(--text-muted);white-space:nowrap;">${esc(a.blockedDate || '')}</td>
@@ -500,6 +518,7 @@
         <td class="memo-cell" onclick="editField(this,${a.id},'memo')" title="클릭하여 편집">${esc(a.memo || '')}</td>
         <td>${reviewResultBadge(a.reviewResult)}</td>
         ${gitCols(a.gitHistory)}
+        <td style="font-size:11px;color:var(--text-muted);white-space:nowrap;">${esc(a.lastAnalyzedDate || '-')}</td>
       </tr>`;
     }).join('');
   }
@@ -582,10 +601,10 @@
   }
 
   // ── 정렬 ──────────────────────────────────────────────────
-  const colIndexMap = { lastAnalyzedDate:1, repositoryName:2, businessName:3, teamName:4, managerName:5,
-                        httpMethod:6, apiPath:7, controllerName:9, methodName:10, programId:11,
-                        apiOperationValue:12, callCount:13, status:14, blockedDate:15,
-                        blockTarget:17, blockCriteria:18, reviewResult:20 };
+  const colIndexMap = { repositoryName:1, businessName:2, teamName:3, managerName:4, apiPath:5,
+                        httpMethod:7, controllerName:8, methodName:9, programId:10,
+                        apiOperationValue:17, callCount:18, status:19, blockedDate:20,
+                        blockTarget:22, blockCriteria:23, reviewResult:25, lastAnalyzedDate:31 };
   function sortBy(key) {
     if (sortKey === key) sortAsc = !sortAsc; else { sortKey = key; sortAsc = true; }
     document.querySelectorAll('thead th').forEach(th => th.classList.remove('sorted'));
@@ -717,10 +736,12 @@
     const commitHeaders = [];
     for (let i = 1; i <= 5; i++) commitHeaders.push(`날짜${i}`, `커밋터${i}`, `내용${i}`);
     const headers = [
-      '마지막분석일','레포지토리','업무명','팀','담당자',
-      'HTTP Method','API 경로','Full URL','컨트롤러','메소드명','프로그램ID','내용','호출건수','상태','차단일자','차단근거',
+      '레포지토리','업무명','팀','담당자','API 경로','Full URL',
+      'HTTP Method','컨트롤러','메소드명','프로그램ID',
+      'ApiOperation','description주석','메소드주석','RequestProperty','컨트롤러RequestProperty','컨트롤러주석',
+      '내용','호출건수','상태','차단일자','차단근거',
       '차단대상선정','차단대상선정기준','비고','현업검토결과',
-      ...commitHeaders
+      ...commitHeaders, '마지막분석일'
     ];
     const rows = filteredApis.map(a => {
       const cfg = repoConfigMap[a.repositoryName] || {};
@@ -730,18 +751,24 @@
         const c = commits[i];
         commitCols.push(c ? c.date : '', c ? c.author : '', c ? c.message : '');
       }
+      const v = (s) => s && s !== '-' ? s : '';
       return [
-        a.lastAnalyzedDate || '',
         a.repositoryName || '',
         cfg.businessName || '',
         a.teamOverride || cfg.team || '',
         a.managerOverride || cfg.manager || '',
-        a.httpMethod || '',
         a.apiPath || '',
         a.fullUrl || '',
+        a.httpMethod || '',
         a.controllerName || '',
         a.methodName || '',
         a.programId || '',
+        v(a.apiOperationValue),
+        v(a.descriptionTag),
+        v(a.fullComment),
+        v(a.requestPropertyValue),
+        v(a.controllerRequestPropertyValue),
+        v(a.controllerComment),
         allDesc(a),
         a.callCount != null ? a.callCount : '',
         a.status || '',
@@ -751,7 +778,8 @@
         a.blockCriteria || '',
         a.memo || '',
         a.reviewResult || '',
-        ...commitCols
+        ...commitCols,
+        a.lastAnalyzedDate || ''
       ];
     });
     exportCsv(headers, rows, `api-list-${document.getElementById('repoSelect').value || 'all'}`);

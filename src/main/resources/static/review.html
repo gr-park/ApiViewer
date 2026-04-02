@@ -151,7 +151,6 @@
     <table>
       <thead><tr>
         <th style="width:32px;"><input type="checkbox" id="checkAll" onclick="toggleAll(this)"></th>
-        <th>레포지토리</th>
         <th>업무명</th>
         <th>팀</th>
         <th>담당자</th>
@@ -169,7 +168,7 @@
         <th>현업검토일시</th>
       </tr></thead>
       <tbody id="tbody">
-        <tr><td colspan="17"><div class="state-box"><b>조회</b> 버튼을 클릭하세요.</div></td></tr>
+        <tr><td colspan="16"><div class="state-box"><b>조회</b> 버튼을 클릭하세요.</div></td></tr>
       </tbody>
     </table>
   </div>
@@ -181,7 +180,7 @@
   let bizLoaded = false;
 
   async function loadReviewData() {
-    document.getElementById('tbody').innerHTML = '<tr><td colspan="17"><div class="state-box"><div class="spinner"></div><br>조회 중...</div></td></tr>';
+    document.getElementById('tbody').innerHTML = '<tr><td colspan="16"><div class="state-box"><div class="spinner"></div><br>조회 중...</div></td></tr>';
     clearSelection();
     const biz = document.getElementById('bizSelect').value;
     try {
@@ -217,7 +216,7 @@
       showToast(`${allApis.length}개 차단대상 API 조회 완료`, 'success');
     } catch(e) {
       showToast('조회 실패','error');
-      document.getElementById('tbody').innerHTML = '<tr><td colspan="17"><div class="state-box">조회 오류</div></td></tr>';
+      document.getElementById('tbody').innerHTML = '<tr><td colspan="16"><div class="state-box">조회 오류</div></td></tr>';
     }
   }
 
@@ -248,7 +247,7 @@
 
   function renderRows(list) {
     const tbody = document.getElementById('tbody');
-    if (!list.length) { tbody.innerHTML = '<tr><td colspan="17"><div class="state-box">검색 결과가 없습니다.</div></td></tr>'; return; }
+    if (!list.length) { tbody.innerHTML = '<tr><td colspan="16"><div class="state-box">검색 결과가 없습니다.</div></td></tr>'; return; }
     tbody.innerHTML = list.map(a => {
       const cfg = repoConfigMap[a.repositoryName]||{};
       const checked = selectedIds.has(a.id)?'checked':'';
@@ -258,8 +257,7 @@
       const rvAt = a.reviewedAt ? a.reviewedAt.replace('T',' ').substring(0,16) : '';
       return `<tr class="${rowCls}" id="row-${a.id}">
         <td class="cb-cell"><input type="checkbox" data-id="${a.id}" ${checked} onchange="toggleRow(this)"></td>
-        <td style="font-size:12px;font-weight:700;white-space:nowrap;">${esc(a.repositoryName)}</td>
-        <td style="font-size:11px;color:var(--text-muted);">${esc(cfg.businessName)}</td>
+        <td style="font-size:12px;font-weight:700;">${esc(cfg.businessName || a.repositoryName)}</td>
         <td style="font-size:11px;color:var(--text-muted);white-space:nowrap;">${esc(cfg.team)}</td>
         <td style="font-size:11px;color:var(--text-muted);white-space:nowrap;">${esc(cfg.manager)}</td>
         <td><div class="api-path">${esc(a.apiPath)}</div></td>
