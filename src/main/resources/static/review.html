@@ -47,8 +47,18 @@
     .status-badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;white-space:nowrap;}
     .bt-top{background:#fee2e2;color:#991b1b;} .bt-low{background:#ffedd5;color:#c2410c;}
     .rv-exclude{background:#dbeafe;color:#1e40af;}
-    thead th.rv-sticky { position:sticky; z-index:3; }
-    tbody td.rv-sticky { position:sticky; z-index:1; background:inherit; }
+    /* 헤더 색상 그룹 (조회화면과 동일) */
+    thead th.hg-info  { background:#e0f2fe; }
+    thead th.hg-desc  { background:#e0e7ff; }
+    thead th.hg-block { background:#ffe4e6; }
+    thead th.hg-review{ background:#fef3c7; }
+    /* sticky */
+    thead th.sticky-h { position:sticky; z-index:4; background:#e0f2fe; border-right:1px solid #bfdbfe; }
+    thead th.sticky-last { border-right:2px solid #93c5fd; }
+    tbody td.sk { position:sticky; z-index:1; background:var(--card); border-right:1px solid var(--border); }
+    tbody td.sk-last { border-right:2px solid #e2e8f0; box-shadow:2px 0 4px rgba(0,0,0,.06); }
+    tbody tr:hover td.sk { background:var(--row-hover); }
+    tbody tr.row-selected td.sk { background:#eff6ff; }
     .api-path{font-family:'Consolas',monospace;font-size:12px;color:#1e40af;}
     .state-box{text-align:center;padding:60px 20px;color:var(--text-muted);}
     .spinner{display:inline-block;width:26px;height:26px;border:3px solid var(--border);border-top-color:var(--primary);border-radius:50%;animation:spin .7s linear infinite;margin-bottom:10px;}
@@ -150,22 +160,22 @@
   <div class="table-wrap">
     <table>
       <thead><tr>
-        <th style="width:32px;"><input type="checkbox" id="checkAll" onclick="toggleAll(this)"></th>
-        <th>업무명</th>
-        <th>팀</th>
-        <th>담당자</th>
-        <th>API 경로</th>
-        <th>URL 호출</th>
-        <th>내용</th>
-        <th>호출건수</th>
-        <th>비고</th>
-        <th>차단대상선정</th>
-        <th>차단대상선정기준</th>
-        <th>현업검토결과</th>
-        <th>현업검토의견</th>
-        <th>현업 팀</th>
-        <th>현업 담당자</th>
-        <th>현업검토일시</th>
+        <th class="hg-info sticky-h" style="width:32px;left:0;"><input type="checkbox" id="checkAll" onclick="toggleAll(this)"></th>
+        <th class="hg-info sticky-h" style="left:36px;">업무명</th>
+        <th class="hg-info sticky-h" style="left:140px;">팀</th>
+        <th class="hg-info sticky-h" style="left:210px;">담당자</th>
+        <th class="hg-info sticky-h sticky-last" style="left:280px;">API 경로</th>
+        <th class="hg-info">URL 호출</th>
+        <th class="hg-desc">내용</th>
+        <th class="hg-desc">호출건수</th>
+        <th class="hg-desc">비고</th>
+        <th class="hg-block">차단대상선정</th>
+        <th class="hg-block">차단대상선정기준</th>
+        <th class="hg-review">현업검토결과</th>
+        <th class="hg-review">현업검토의견</th>
+        <th class="hg-review">현업 팀</th>
+        <th class="hg-review">현업 담당자</th>
+        <th class="hg-review">현업검토일시</th>
       </tr></thead>
       <tbody id="tbody">
         <tr><td colspan="16"><div class="state-box"><b>조회</b> 버튼을 클릭하세요.</div></td></tr>
@@ -256,11 +266,11 @@
                    (a.descriptionTag && a.descriptionTag!=='-' ? a.descriptionTag : '');
       const rvAt = a.reviewedAt ? a.reviewedAt.replace('T',' ').substring(0,16) : '';
       return `<tr class="${rowCls}" id="row-${a.id}">
-        <td class="cb-cell"><input type="checkbox" data-id="${a.id}" ${checked} onchange="toggleRow(this)"></td>
-        <td style="font-size:12px;font-weight:700;">${esc(cfg.businessName || a.repositoryName)}</td>
-        <td style="font-size:11px;color:var(--text-muted);white-space:nowrap;">${esc(cfg.team)}</td>
-        <td style="font-size:11px;color:var(--text-muted);white-space:nowrap;">${esc(cfg.manager)}</td>
-        <td><div class="api-path">${esc(a.apiPath)}</div></td>
+        <td class="cb-cell sk" style="left:0;"><input type="checkbox" data-id="${a.id}" ${checked} onchange="toggleRow(this)"></td>
+        <td class="sk" style="left:36px;font-size:12px;font-weight:700;">${esc(cfg.businessName || a.repositoryName)}</td>
+        <td class="sk" style="left:140px;font-size:11px;color:var(--text-muted);white-space:nowrap;">${esc(cfg.team)}</td>
+        <td class="sk" style="left:210px;font-size:11px;color:var(--text-muted);white-space:nowrap;">${esc(cfg.manager)}</td>
+        <td class="sk sk-last" style="left:280px;"><div class="api-path">${esc(a.apiPath)}</div></td>
         <td>${a.fullUrl ? `<a href="${esc(a.fullUrl)}" target="_blank" style="font-size:11px;color:var(--primary);text-decoration:none;padding:2px 6px;border:1px solid var(--primary);border-radius:4px;white-space:nowrap;">열기 ↗</a>` : '<span style="color:#cbd5e1;">-</span>'}</td>
         <td class="api-op" style="font-size:11px;max-width:160px;">${esc(desc)}</td>
         <td style="text-align:right;font-size:12px;">${a.callCount!=null?a.callCount.toLocaleString():'<span style="color:#cbd5e1;">-</span>'}</td>

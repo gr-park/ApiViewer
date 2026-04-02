@@ -122,12 +122,15 @@
     thead th.hg-block { background:#ffe4e6; }  /* 차단대상선정~현업검토결과: 분홍 */
     thead th.hg-git   { background:#d1fae5; }  /* 커밋1~5: 초록 */
     /* sticky 헤더+바디 */
-    thead th.sticky-h { position:sticky; z-index:4; }
-    tbody td.sk { position:sticky; z-index:1; }
-    tbody tr { background: var(--card); }
-    tbody tr:hover td.sk { background: var(--row-hover); }
-    tbody tr.row-changed td.sk { background: #fef2f2; }
-    tbody tr.row-selected td.sk { background: #eff6ff; }
+    thead th.sticky-h { position:sticky; z-index:4; background:#e0f2fe; border-right:1px solid #bfdbfe; }
+    tbody td.sk { position:sticky; z-index:1; background:var(--card); border-right:1px solid var(--border); }
+    tbody tr:hover td.sk { background:var(--row-hover); }
+    tbody tr.row-changed td.sk { background:#fef2f2; }
+    tbody tr.row-changed:hover td.sk { background:#fee2e2; }
+    tbody tr.row-selected td.sk { background:#eff6ff; }
+    /* 마지막 sticky 컬럼에 그림자 */
+    thead th.sticky-last { border-right:2px solid #93c5fd; }
+    tbody td.sk-last { border-right:2px solid #e2e8f0; box-shadow:2px 0 4px rgba(0,0,0,.06); }
 
     .ref-col { font-size:10px; color:var(--text-muted); max-width:140px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
     .desc-col { font-size:11px; color:var(--text); min-width:400px; max-width:600px; line-height:1.5; word-break:break-all; }
@@ -254,7 +257,7 @@
           <th class="hg-info sticky-h" onclick="sortBy('businessName')" style="left:140px;">업무명 <span class="sort-icon">↕</span></th>
           <th class="hg-info sticky-h" onclick="sortBy('teamName')" style="left:240px;">팀 <span class="sort-icon">↕</span></th>
           <th class="hg-info sticky-h" onclick="sortBy('managerName')" style="left:310px;">담당자 <span class="sort-icon">↕</span></th>
-          <th class="hg-info sticky-h" onclick="sortBy('apiPath')" style="left:380px;">API 경로 <span class="sort-icon">↕</span></th>
+          <th class="hg-info sticky-h sticky-last" onclick="sortBy('apiPath')" style="left:380px;">API 경로 <span class="sort-icon">↕</span></th>
           <th class="hg-info no-sort">URL호출</th>
           <th class="hg-info" onclick="sortBy('httpMethod')">Method <span class="sort-icon">↕</span></th>
           <th class="hg-dev" onclick="sortBy('controllerName')">컨트롤러 <span class="sort-icon">↕</span></th>
@@ -496,7 +499,7 @@
         <td class="sk" style="left:140px;font-size:11px;color:var(--text-muted);">${esc(cfg.businessName || '')}</td>
         <td class="sk memo-cell" onclick="editField(this,${a.id},'teamOverride')" title="클릭하여 편집" style="left:240px;font-size:11px;color:var(--text-muted);white-space:nowrap;">${esc(a.teamOverride || cfg.team)}</td>
         <td class="sk memo-cell" onclick="editField(this,${a.id},'managerOverride')" title="클릭하여 편집" style="left:310px;font-size:11px;color:var(--text-muted);white-space:nowrap;">${esc(a.managerOverride || cfg.manager)}</td>
-        <td class="sk" style="left:380px;"><div class="api-path">${esc(a.apiPath)}</div></td>
+        <td class="sk sk-last" style="left:380px;"><div class="api-path">${esc(a.apiPath)}</div></td>
         <td>${a.fullUrl ? `<a href="${esc(a.fullUrl)}" target="_blank" style="font-size:11px;color:var(--primary);text-decoration:none;padding:2px 8px;border:1px solid var(--primary);border-radius:4px;white-space:nowrap;">열기 ↗</a>` : '<span style="color:#cbd5e1;font-size:11px;">-</span>'}</td>
         <td><span class="badge badge-${a.httpMethod||'REQUEST'}">${a.httpMethod||'?'}</span></td>
         <td class="ctrl-name">${esc(a.controllerName)}</td>
