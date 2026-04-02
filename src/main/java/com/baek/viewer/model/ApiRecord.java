@@ -27,7 +27,7 @@ public class ApiRecord {
     private LocalDate lastAnalyzedDate;
 
     /**
-     * 상태: 사용 / 차단대상 / 차단검토필요 / 차단완료
+     * 상태: 사용 / 차단완료
      * statusOverridden=true이면 수동 설정 유지 (자동 재계산 안 함)
      */
     @Column(name = "status", length = 20)
@@ -35,6 +35,14 @@ public class ApiRecord {
 
     @Column(name = "status_overridden")
     private boolean statusOverridden = false;
+
+    /** 차단대상: 최우선 차단대상 / 후순위 차단대상 / null(미지정) — 수동 설정 전용 */
+    @Column(name = "block_target", length = 30)
+    private String blockTarget;
+
+    /** 차단대상기준: 사유 텍스트 — 수동 설정 전용 */
+    @Column(name = "block_criteria", length = 100)
+    private String blockCriteria;
 
     @Column(name = "call_count")
     private Long callCount;
@@ -118,6 +126,10 @@ public class ApiRecord {
     public void setControllerRequestPropertyValue(String v) { this.controllerRequestPropertyValue = v; }
     public String getFullUrl() { return fullUrl; }
     public void setFullUrl(String fullUrl) { this.fullUrl = fullUrl; }
+    public String getBlockTarget() { return blockTarget; }
+    public void setBlockTarget(String blockTarget) { this.blockTarget = blockTarget; }
+    public String getBlockCriteria() { return blockCriteria; }
+    public void setBlockCriteria(String blockCriteria) { this.blockCriteria = blockCriteria; }
     public String getGitHistory() { return gitHistory; }
     public void setGitHistory(String gitHistory) { this.gitHistory = gitHistory; }
 }

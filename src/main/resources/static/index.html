@@ -35,6 +35,10 @@
 
     /* ── 요약 카드 ── */
     .summary-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:20px;}
+    .sum-card.c-bt-top::before{background:#dc2626;}
+    .sum-card.c-bt-low::before{background:var(--target);}
+    .sum-card.c-bt-top .sum-value{color:#dc2626;}
+    .sum-card.c-bt-low .sum-value{color:var(--target);}
     .sum-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px 20px;box-shadow:var(--shadow);position:relative;overflow:hidden;}
     .sum-card::before{content:'';position:absolute;top:0;left:0;width:4px;height:100%;border-radius:12px 0 0 12px;}
     .sum-card.c-total::before{background:var(--primary);}
@@ -179,20 +183,20 @@
         <div class="sum-value" id="sUse">0</div>
         <div class="sum-sub" id="sUsePct"></div>
       </div>
-      <div class="sum-card c-review">
-        <div class="sum-label">차단검토필요</div>
-        <div class="sum-value" id="sReview">0</div>
-        <div class="sum-sub" id="sReviewPct"></div>
-      </div>
-      <div class="sum-card c-target">
-        <div class="sum-label">차단대상</div>
-        <div class="sum-value" id="sTarget">0</div>
-        <div class="sum-sub" id="sTargetPct"></div>
-      </div>
       <div class="sum-card c-done">
         <div class="sum-label">차단완료</div>
         <div class="sum-value" id="sDone">0</div>
         <div class="sum-sub" id="sDonePct"></div>
+      </div>
+      <div class="sum-card c-bt-top">
+        <div class="sum-label">최우선 차단대상</div>
+        <div class="sum-value" id="sBtTop">0</div>
+        <div class="sum-sub" id="sBtTopPct"></div>
+      </div>
+      <div class="sum-card c-bt-low">
+        <div class="sum-label">후순위 차단대상</div>
+        <div class="sum-value" id="sBtLow">0</div>
+        <div class="sum-sub" id="sBtLowPct"></div>
       </div>
     </div>
 
@@ -203,9 +207,9 @@
         <div class="status-dist" id="distBar"></div>
         <div class="status-legend">
           <div class="legend-item"><div class="legend-dot seg-use"></div>사용</div>
-          <div class="legend-item"><div class="legend-dot seg-review"></div>차단검토필요</div>
-          <div class="legend-item"><div class="legend-dot seg-target"></div>차단대상</div>
           <div class="legend-item"><div class="legend-dot seg-done"></div>차단완료</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#dc2626;"></div>최우선 차단대상</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#ea580c;"></div>후순위 차단대상</div>
         </div>
         <div style="margin-top:16px;" id="distDetail"></div>
       </div>
@@ -319,31 +323,30 @@
   function render(s) {
     const total = s.total || 0;
     const st = s.byStatus || {};
-    const use    = st['사용']        || 0;
-    const review = st['차단검토필요'] || 0;
-    const target = st['차단대상']    || 0;
-    const done   = st['차단완료']    || 0;
+    const bt = s.byBlockTarget || {};
+    const use    = st['사용']     || 0;
+    const done   = st['차단완료'] || 0;
+    const btTop  = bt['최우선 차단대상'] || 0;
+    const btLow  = bt['후순위 차단대상'] || 0;
 
     // 요약 카드
     document.getElementById('sTotal').textContent  = total.toLocaleString();
     document.getElementById('sRepoCount').textContent =
       `레포지토리 ${(s.byRepo || []).length}개`;
-    document.getElementById('sUse').textContent    = use.toLocaleString();
-    document.getElementById('sUsePct').textContent    = pct(use, total);
-    document.getElementById('sReview').textContent = review.toLocaleString();
-    document.getElementById('sReviewPct').textContent = pct(review, total);
-    document.getElementById('sTarget').textContent = target.toLocaleString();
-    document.getElementById('sTargetPct').textContent = pct(target, total);
-    document.getElementById('sDone').textContent   = done.toLocaleString();
-    document.getElementById('sDonePct').textContent   = pct(done, total);
+    document.getElementById('sUse').textContent     = use.toLocaleString();
+    document.getElementById('sUsePct').textContent  = pct(use, total);
+    document.getElementById('sDone').textContent    = done.toLocaleString();
+    document.getElementById('sDonePct').textContent = pct(done, total);
+    document.getElementById('sBtTop').textContent   = btTop.toLocaleString();
+    document.getElementById('sBtTopPct').textContent = pct(btTop, total);
+    document.getElementById('sBtLow').textContent   = btLow.toLocaleString();
+    document.getElementById('sBtLowPct').textContent = pct(btLow, total);
 
     // 상태 분포 바
     const bar = document.getElementById('distBar');
     bar.innerHTML = [
-      ['seg-use',    use],
-      ['seg-review', review],
-      ['seg-target', target],
-      ['seg-done',   done]
+      ['seg-use',  use],
+      ['seg-done', done]
     ].filter(([,v]) => v > 0).map(([cls, v]) =>
       `<div class="seg ${cls}" style="width:${(v/total*100).toFixed(1)}%;" title="${v}건 (${(v/total*100).toFixed(1)}%)"></div>`
     ).join('');
@@ -351,13 +354,13 @@
     // 상태 분포 상세
     document.getElementById('distDetail').innerHTML = [
       ['사용','seg-use st-use',use],
-      ['차단검토필요','seg-review st-review',review],
-      ['차단대상','seg-target st-target',target],
-      ['차단완료','seg-done st-done',done]
-    ].map(([label, cls, v]) => `
+      ['차단완료','seg-done st-done',done],
+      ['최우선 차단대상','',btTop,'#dc2626'],
+      ['후순위 차단대상','',btLow,'#ea580c']
+    ].map(([label, cls, v, color]) => `
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
-        <span style="width:90px;font-size:12px;color:var(--text-muted);">${label}</span>
-        <div class="bar-bg"><div class="bar-fill" style="background:${barColor(label)};width:${total?((v/total)*100).toFixed(1):0}%;"></div></div>
+        <span style="width:110px;font-size:12px;color:var(--text-muted);">${label}</span>
+        <div class="bar-bg"><div class="bar-fill" style="background:${color || barColor(label)};width:${total?((v/total)*100).toFixed(1):0}%;"></div></div>
         <span class="bar-num">${v.toLocaleString()}</span>
         <span class="bar-pct">${pct(v,total)}</span>
       </div>`).join('');

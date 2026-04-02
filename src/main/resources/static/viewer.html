@@ -105,9 +105,9 @@
     /* 상태 배지 */
     .status-badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 700; white-space: nowrap; }
     .st-use      { background:#dcfce7; color:#166534; }
-    .st-target   { background:#ffedd5; color:#c2410c; }
-    .st-review   { background:#fef9c3; color:#92400e; }
     .st-done     { background:#f1f5f9; color:#6b7280; }
+    .bt-top      { background:#fee2e2; color:#991b1b; }
+    .bt-low      { background:#ffedd5; color:#c2410c; }
 
     .api-path { font-family:'Consolas',monospace; font-size:12px; color:#1e40af; }
     .api-op   { color:var(--text-muted); font-size:12px; }
@@ -165,15 +165,17 @@
 
   <!-- 통계 (상태 필터 겸용) -->
   <div class="stats-bar" id="statsBar" style="display:none">
-    <div class="stat-pill" id="pill-all"     onclick="setStatusFilter('')">      <span>전체</span>    <strong id="statTotal">0</strong></div>
-    <div class="stat-pill s-use"    id="pill-사용"     onclick="setStatusFilter('사용')">    <span>사용</span>    <strong id="stat-사용">0</strong></div>
-    <div class="stat-pill s-review" id="pill-차단검토필요" onclick="setStatusFilter('차단검토필요')"><span>차단검토필요</span><strong id="stat-차단검토필요">0</strong></div>
-    <div class="stat-pill s-target" id="pill-차단대상"   onclick="setStatusFilter('차단대상')">  <span>차단대상</span>  <strong id="stat-차단대상">0</strong></div>
-    <div class="stat-pill s-done"   id="pill-차단완료"   onclick="setStatusFilter('차단완료')">  <span>차단완료</span>  <strong id="stat-차단완료">0</strong></div>
-    <div class="stat-pill" style="cursor:default;">                                                     <span>GET</span>     <strong id="statGet">0</strong></div>
-    <div class="stat-pill" style="cursor:default;">                                                     <span>POST</span>    <strong id="statPost">0</strong></div>
-    <div class="stat-pill" style="cursor:default;">                                                     <span>PUT</span>     <strong id="statPut">0</strong></div>
-    <div class="stat-pill" style="cursor:default;">                                                     <span>DELETE</span>  <strong id="statDelete">0</strong></div>
+    <div class="stat-pill" id="pill-all"   onclick="setFilter('')">          <span>전체</span>      <strong id="statTotal">0</strong></div>
+    <div class="stat-pill s-use"  id="pill-사용"   onclick="setFilter('사용')">    <span>사용</span>      <strong id="stat-사용">0</strong></div>
+    <div class="stat-pill s-done" id="pill-차단완료" onclick="setFilter('차단완료')"><span>차단완료</span>  <strong id="stat-차단완료">0</strong></div>
+    <span style="border-left:2px solid var(--border);height:28px;margin:0 4px;"></span>
+    <div class="stat-pill s-block" id="pill-bt-top" onclick="setFilter('bt-최우선')" style="cursor:pointer;"><span>최우선</span><strong id="stat-bt-top" style="color:#dc2626;">0</strong></div>
+    <div class="stat-pill s-block" id="pill-bt-low" onclick="setFilter('bt-후순위')" style="cursor:pointer;"><span>후순위</span><strong id="stat-bt-low" style="color:#ea580c;">0</strong></div>
+    <span style="border-left:2px solid var(--border);height:28px;margin:0 4px;"></span>
+    <div class="stat-pill" style="cursor:default;"><span>GET</span>   <strong id="statGet">0</strong></div>
+    <div class="stat-pill" style="cursor:default;"><span>POST</span>  <strong id="statPost">0</strong></div>
+    <div class="stat-pill" style="cursor:default;"><span>PUT</span>   <strong id="statPut">0</strong></div>
+    <div class="stat-pill" style="cursor:default;"><span>DELETE</span><strong id="statDelete">0</strong></div>
   </div>
 
   <!-- 검색/필터 -->
@@ -191,14 +193,21 @@
   <div class="bulk-bar" id="bulkBar">
     <span class="bulk-count" id="bulkCount">0개 선택됨</span>
     <select id="bulkStatus">
-      <option value="">-- 상태 선택 --</option>
+      <option value="__SKIP__">-- 상태 --</option>
       <option value="사용">사용</option>
-      <option value="차단검토필요">차단검토필요</option>
-      <option value="차단대상">차단대상</option>
       <option value="차단완료">차단완료</option>
       <option value="">자동계산 (초기화)</option>
     </select>
-    <button class="btn-apply" onclick="applyBulkStatus()">적용</button>
+    <select id="bulkBlockTarget" onchange="onBulkBlockTargetChange()">
+      <option value="__SKIP__">-- 차단대상 --</option>
+      <option value="최우선 차단대상">최우선 차단대상</option>
+      <option value="후순위 차단대상">후순위 차단대상</option>
+      <option value="">해제 (없음)</option>
+    </select>
+    <select id="bulkBlockCriteria">
+      <option value="__SKIP__">-- 차단대상기준 --</option>
+    </select>
+    <button class="btn-apply" onclick="applyBulk()">적용</button>
     <button class="btn-cancel" onclick="clearSelection()">취소</button>
   </div>
 
@@ -220,12 +229,14 @@
           <th onclick="sortBy('apiOperationValue')">설명 <span class="sort-icon">↕</span></th>
           <th onclick="sortBy('callCount')">호출건수 <span class="sort-icon">↕</span></th>
           <th onclick="sortBy('status')">상태 <span class="sort-icon">↕</span></th>
+          <th onclick="sortBy('blockTarget')">차단대상 <span class="sort-icon">↕</span></th>
+          <th onclick="sortBy('blockCriteria')">차단대상기준 <span class="sort-icon">↕</span></th>
           <th onclick="sortBy('lastAnalyzedDate')">마지막분석일 <span class="sort-icon">↕</span></th>
           <th class="no-sort">최근 커밋 이력</th>
         </tr>
       </thead>
       <tbody id="tbody">
-        <tr><td colspan="15"><div class="state-box">레포지토리를 선택하고 <b>조회</b>를 클릭하세요.</div></td></tr>
+        <tr><td colspan="17"><div class="state-box">레포지토리를 선택하고 <b>조회</b>를 클릭하세요.</div></td></tr>
       </tbody>
     </table>
   </div>
@@ -237,7 +248,6 @@
   let allApis = [];
   let filteredApis = [];
   let sortKey = 'apiPath', sortAsc = true;
-  let statusFilter = '';
   let selectedIds = new Set(); // api id 기준
   let repoConfigMap = {}; // repoName → {team, manager}
 
@@ -274,7 +284,7 @@
 
     document.getElementById('loadBtn').disabled = true;
     document.getElementById('tbody').innerHTML =
-      '<tr><td colspan="15"><div class="state-box"><div class="spinner"></div><br>조회 중...</div></td></tr>';
+      '<tr><td colspan="17"><div class="state-box"><div class="spinner"></div><br>조회 중...</div></td></tr>';
     clearSelection();
 
     try {
@@ -286,7 +296,7 @@
       if (!res.ok) throw new Error(data.error || '서버 오류');
 
       allApis = data.apis || [];
-      statusFilter = '';
+      activeFilter = '';
 
       // 마지막 분석일 (최신)
       const latestDate = allApis.reduce((max, a) => {
@@ -307,7 +317,7 @@
     } catch(e) {
       showToast(e.message, 'error');
       document.getElementById('tbody').innerHTML =
-        `<tr><td colspan="15"><div class="state-box">조회 오류: ${esc(e.message)}</div></td></tr>`;
+        `<tr><td colspan="17"><div class="state-box">조회 오류: ${esc(e.message)}</div></td></tr>`;
     } finally {
       document.getElementById('loadBtn').disabled = false;
     }
@@ -315,26 +325,33 @@
 
   // ── 통계 ──────────────────────────────────────────────────
   function renderStats() {
-    const counts = { '사용':0, '차단검토필요':0, '차단대상':0, '차단완료':0 };
-    allApis.forEach(a => { if (counts[a.status] !== undefined) counts[a.status]++; });
+    const sCounts = { '사용':0, '차단완료':0 };
+    const btCounts = { '최우선 차단대상':0, '후순위 차단대상':0 };
+    allApis.forEach(a => {
+      if (sCounts[a.status] !== undefined) sCounts[a.status]++;
+      if (btCounts[a.blockTarget] !== undefined) btCounts[a.blockTarget]++;
+    });
 
-    document.getElementById('statTotal').textContent  = allApis.length;
-    document.getElementById('stat-사용').textContent      = counts['사용'];
-    document.getElementById('stat-차단검토필요').textContent = counts['차단검토필요'];
-    document.getElementById('stat-차단대상').textContent   = counts['차단대상'];
-    document.getElementById('stat-차단완료').textContent   = counts['차단완료'];
-    document.getElementById('statGet').textContent     = allApis.filter(a => a.httpMethod === 'GET').length;
-    document.getElementById('statPost').textContent    = allApis.filter(a => a.httpMethod === 'POST').length;
-    document.getElementById('statPut').textContent     = allApis.filter(a => a.httpMethod === 'PUT').length;
-    document.getElementById('statDelete').textContent  = allApis.filter(a => a.httpMethod === 'DELETE').length;
+    document.getElementById('statTotal').textContent   = allApis.length;
+    document.getElementById('stat-사용').textContent    = sCounts['사용'];
+    document.getElementById('stat-차단완료').textContent = sCounts['차단완료'];
+    document.getElementById('stat-bt-top').textContent  = btCounts['최우선 차단대상'];
+    document.getElementById('stat-bt-low').textContent  = btCounts['후순위 차단대상'];
+    document.getElementById('statGet').textContent      = allApis.filter(a => a.httpMethod === 'GET').length;
+    document.getElementById('statPost').textContent     = allApis.filter(a => a.httpMethod === 'POST').length;
+    document.getElementById('statPut').textContent      = allApis.filter(a => a.httpMethod === 'PUT').length;
+    document.getElementById('statDelete').textContent   = allApis.filter(a => a.httpMethod === 'DELETE').length;
   }
 
-  function setStatusFilter(val) {
-    statusFilter = val;
+  let activeFilter = '';
+  function setFilter(val) {
+    activeFilter = val;
     document.querySelectorAll('.stat-pill').forEach(p => p.classList.remove('active-filter'));
-    const pillId = val ? `pill-${val}` : 'pill-all';
-    const pill = document.getElementById(pillId);
-    if (pill) pill.classList.add('active-filter');
+    if (val === '') { document.getElementById('pill-all').classList.add('active-filter'); }
+    else if (val === '사용') { document.getElementById('pill-사용').classList.add('active-filter'); }
+    else if (val === '차단완료') { document.getElementById('pill-차단완료').classList.add('active-filter'); }
+    else if (val === 'bt-최우선') { document.getElementById('pill-bt-top').classList.add('active-filter'); }
+    else if (val === 'bt-후순위') { document.getElementById('pill-bt-low').classList.add('active-filter'); }
     filterTable();
   }
 
@@ -346,9 +363,13 @@
     filteredApis = allApis.filter(a => {
       const text = [a.apiPath, a.controllerName, a.methodName, a.apiOperationValue,
                     a.programId, a.descriptionTag].join(' ').toLowerCase();
+      let filterOk = true;
+      if (activeFilter === '사용' || activeFilter === '차단완료') filterOk = a.status === activeFilter;
+      else if (activeFilter === 'bt-최우선') filterOk = a.blockTarget === '최우선 차단대상';
+      else if (activeFilter === 'bt-후순위') filterOk = a.blockTarget === '후순위 차단대상';
       return (!q || text.includes(q))
           && (!method || a.httpMethod === method)
-          && (!statusFilter || a.status === statusFilter);
+          && filterOk;
     });
 
     filteredApis.sort((x, y) => {
@@ -380,7 +401,7 @@
   function renderRows(list) {
     const tbody = document.getElementById('tbody');
     if (!list.length) {
-      tbody.innerHTML = '<tr><td colspan="15"><div class="state-box">검색 결과가 없습니다.</div></td></tr>';
+      tbody.innerHTML = '<tr><td colspan="17"><div class="state-box">검색 결과가 없습니다.</div></td></tr>';
       return;
     }
     tbody.innerHTML = list.map(a => {
@@ -404,6 +425,8 @@
         <td class="api-op">${esc(label(a))}</td>
         <td style="text-align:right;font-size:12px;">${a.callCount != null ? a.callCount.toLocaleString() : '<span style="color:#cbd5e1;">-</span>'}</td>
         <td>${statusBadge(a.status)}${a.statusOverridden ? ' <span title="수동설정" style="font-size:10px;color:#94a3b8;">🔒</span>' : ''}</td>
+        <td>${blockTargetBadge(a.blockTarget)}</td>
+        <td style="font-size:11px;color:var(--text-muted);max-width:140px;">${esc(a.blockCriteria || '')}</td>
         <td style="font-size:11px;color:var(--text-muted);white-space:nowrap;">${esc(a.lastAnalyzedDate || '-')}</td>
         <td class="git-info">${gitHistoryCell(a.gitHistory)}</td>
       </tr>`;
@@ -411,9 +434,16 @@
   }
 
   function statusBadge(status) {
-    const cls = { '사용':'st-use', '차단대상':'st-target', '차단검토필요':'st-review', '차단완료':'st-done' };
+    const cls = { '사용':'st-use', '차단완료':'st-done' };
     const c = cls[status] || 'st-use';
     return `<span class="status-badge ${c}">${esc(status || '사용')}</span>`;
+  }
+
+  function blockTargetBadge(bt) {
+    if (!bt) return '<span style="color:#cbd5e1;font-size:11px;">-</span>';
+    if (bt.includes('최우선')) return `<span class="status-badge bt-top">${esc(bt)}</span>`;
+    if (bt.includes('후순위')) return `<span class="status-badge bt-low">${esc(bt)}</span>`;
+    return `<span class="status-badge" style="background:#f1f5f9;color:#475569;">${esc(bt)}</span>`;
   }
 
   function gitHistoryCell(json) {
@@ -431,7 +461,7 @@
   // ── 정렬 ──────────────────────────────────────────────────
   const colIndexMap = { repositoryName:1, teamName:2, managerName:3, httpMethod:4, apiPath:5,
                         controllerName:7, methodName:8, programId:9, apiOperationValue:10,
-                        callCount:11, status:12, lastAnalyzedDate:13 };
+                        callCount:11, status:12, blockTarget:13, blockCriteria:14, lastAnalyzedDate:15 };
   function sortBy(key) {
     if (sortKey === key) sortAsc = !sortAsc; else { sortKey = key; sortAsc = true; }
     document.querySelectorAll('thead th').forEach(th => th.classList.remove('sorted'));
@@ -490,27 +520,67 @@
     updateBulkBar();
   }
 
-  // ── 상태 일괄 변경 ────────────────────────────────────────
-  async function applyBulkStatus() {
-    if (selectedIds.size === 0) { showToast('선택된 항목이 없습니다.', 'error'); return; }
-    const statusSel = document.getElementById('bulkStatus');
-    const status = statusSel.value;
+  // ── 차단대상기준 옵션 동적 생성 ──────────────────────────
+  const criteriaOptions = {
+    '최우선 차단대상': ['호출 0건 + 커밋1년경과', '호출 0건 + 커밋1년경과(침해사고 로그 제외)', 'IT담당자검토건', '기타'],
+    '후순위 차단대상': ['호출 0건 + 커밋1년미만', '호출 1~3건 + 커밋1년경과', '호출 4건이상 + 커밋1년경과', '기타']
+  };
 
-    const label = status || '자동계산';
-    if (!confirm(`선택된 ${selectedIds.size}개 항목의 상태를 [${label}]으로 변경하시겠습니까?`)) return;
+  function onBulkBlockTargetChange() {
+    const bt = document.getElementById('bulkBlockTarget').value;
+    const sel = document.getElementById('bulkBlockCriteria');
+    sel.innerHTML = '<option value="__SKIP__">-- 차단대상기준 --</option>';
+    const opts = criteriaOptions[bt] || [];
+    opts.forEach(o => {
+      const opt = document.createElement('option');
+      opt.value = o; opt.textContent = o;
+      sel.appendChild(opt);
+    });
+    if (!opts.length) {
+      const opt = document.createElement('option');
+      opt.value = ''; opt.textContent = '(해제)';
+      sel.appendChild(opt);
+    }
+  }
+
+  // ── 일괄 변경 ─────────────────────────────────────────────
+  async function applyBulk() {
+    if (selectedIds.size === 0) { showToast('선택된 항목이 없습니다.', 'error'); return; }
+
+    const statusVal = document.getElementById('bulkStatus').value;
+    const btVal     = document.getElementById('bulkBlockTarget').value;
+    const bcVal     = document.getElementById('bulkBlockCriteria').value;
+
+    const body = { ids: Array.from(selectedIds) };
+    const parts = [];
+
+    if (statusVal !== '__SKIP__') {
+      body.status = statusVal || null;
+      parts.push('상태→' + (statusVal || '자동계산'));
+    }
+    if (btVal !== '__SKIP__') {
+      body.blockTarget = btVal || null;
+      parts.push('차단대상→' + (btVal || '해제'));
+    }
+    if (bcVal !== '__SKIP__') {
+      body.blockCriteria = bcVal || null;
+      parts.push('기준→' + (bcVal || '해제'));
+    }
+
+    if (!parts.length) { showToast('변경할 항목을 선택하세요.', 'error'); return; }
+    if (!confirm(`선택된 ${selectedIds.size}개 항목: ${parts.join(', ')} 변경하시겠습니까?`)) return;
 
     try {
       const res = await fetch('/api/db/status', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ids: Array.from(selectedIds), status: status || null })
+        body: JSON.stringify(body)
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || '서버 오류');
 
-      showToast(`${data.updated}개 항목 상태 변경 완료`, 'success');
+      showToast(`${data.updated}개 항목 변경 완료`, 'success');
       clearSelection();
-      // 화면 갱신
       await loadApis();
     } catch(e) {
       showToast(e.message, 'error');
@@ -524,7 +594,7 @@
     for (let i = 1; i <= 5; i++) commitHeaders.push(`날짜${i}`, `커밋터${i}`, `내용${i}`);
     const headers = [
       '레포지토리','업무명','팀','담당자',
-      'HTTP Method','API 경로','Full URL','컨트롤러','메소드명','프로그램ID','설명','호출건수','상태','마지막분석일',
+      'HTTP Method','API 경로','Full URL','컨트롤러','메소드명','프로그램ID','설명','호출건수','상태','차단대상','차단대상기준','마지막분석일',
       ...commitHeaders
     ];
     const rows = filteredApis.map(a => {
@@ -549,6 +619,8 @@
         label(a),
         a.callCount != null ? a.callCount : '',
         a.status || '',
+        a.blockTarget || '',
+        a.blockCriteria || '',
         a.lastAnalyzedDate || '',
         ...commitCols
       ];

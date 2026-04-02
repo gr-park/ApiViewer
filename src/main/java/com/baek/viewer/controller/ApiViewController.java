@@ -96,22 +96,36 @@ public class ApiViewController {
         return ResponseEntity.ok(response);
     }
 
-    /** 상태 일괄 변경
-     * Body: { "ids": [1,2,3], "status": "차단대상" }
-     * status가 null이거나 비어있으면 자동 계산 모드로 복원
+    /** 상태/차단대상/차단대상기준 일괄 변경
+     * Body: { "ids": [1,2,3], "status": "차단완료", "blockTarget": "최우선 차단대상", "blockCriteria": "IT담당자검토건" }
+     * - status: 없으면 변경 안 함, null/빈값이면 자동계산 복원, 값이면 수동 설정
+     * - blockTarget/blockCriteria: 없으면 변경 안 함, null/빈값이면 해제, 값이면 설정
      */
     @PatchMapping("/db/status")
     public ResponseEntity<?> updateStatus(@RequestBody Map<String, Object> body) {
         try {
             @SuppressWarnings("unchecked")
             List<Integer> rawIds = (List<Integer>) body.get("ids");
-            String status = (String) body.get("status");
-
             if (rawIds == null || rawIds.isEmpty()) {
                 return ResponseEntity.badRequest().body(Map.of("error", "ids가 비어 있습니다."));
             }
             List<Long> ids = rawIds.stream().map(i -> i.longValue()).toList();
-            int updated = storageService.updateStatus(ids, status);
+
+            boolean updateStatus = body.containsKey("status");
+            String status = (String) body.get("status");
+
+            boolean updateBlock = body.containsKey("blockTarget") || body.containsKey("blockCriteria");
+            String blockTarget = body.containsKey("blockTarget")
+                    ? (body.get("blockTarget") != null ? body.get("blockTarget").toString() : null) : null;
+            String blockCriteria = body.containsKey("blockCriteria")
+                    ? (body.get("blockCriteria") != null ? body.get("blockCriteria").toString() : null) : null;
+
+            // 빈 문자열은 null로 처리 (해제)
+            if (blockTarget != null && blockTarget.isBlank()) blockTarget = null;
+            if (blockCriteria != null && blockCriteria.isBlank()) blockCriteria = null;
+
+            int updated = storageService.updateBulk(ids, status, updateStatus,
+                    blockTarget, blockCriteria, updateBlock);
             return ResponseEntity.ok(Map.of("updated", updated));
         } catch (Exception e) {
             return ResponseEntity.internalServerError().body(Map.of("error", e.getMessage()));
@@ -251,13 +265,22 @@ public class ApiViewController {
                     return m;
                 }).collect(Collectors.toList());
 
+        // 차단대상별
+        Map<String, Long> byBlockTarget = new LinkedHashMap<>();
+        all.forEach(r -> {
+            String bt = r.getBlockTarget();
+            String key = (bt != null && !bt.isBlank()) ? bt : "(미지정)";
+            byBlockTarget.merge(key, 1L, Long::sum);
+        });
+
         Map<String, Object> result = new LinkedHashMap<>();
-        result.put("total",     all.size());
-        result.put("byStatus",  byStatus);
-        result.put("byMethod",  byMethod);
-        result.put("byRepo",    byRepo);
-        result.put("byTeam",    byTeam);
-        result.put("byManager", byManager);
+        result.put("total",         all.size());
+        result.put("byStatus",      byStatus);
+        result.put("byBlockTarget", byBlockTarget);
+        result.put("byMethod",      byMethod);
+        result.put("byRepo",        byRepo);
+        result.put("byTeam",        byTeam);
+        result.put("byManager",     byManager);
         return ResponseEntity.ok(result);
     }
 

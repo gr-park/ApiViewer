@@ -108,12 +108,17 @@ src/main/resources/static/
 | 상태 | 조건 |
 |------|------|
 | 차단완료 | `isDeprecated=Y` AND `fullComment`에 `[URL차단작업]` 포함 |
-| 차단대상 | `callCount=0` AND 모든 커밋이 오늘 기준 1년 초과 |
-| 차단검토필요 | `0 < callCount ≤ reviewThreshold` AND 모든 커밋 1년 초과 |
 | 사용 | 그 외 (기본값) |
-- `reviewThreshold`: `repos-config.yml` `global.reviewThreshold` (기본 3), GlobalConfig에 저장
 - `statusOverridden=true`: 사용자 수동 변경 시 설정, 이후 자동 재계산 안 함
 - 자동계산 복원: PATCH `/api/db/status`에 `status: null` 전송 → `statusOverridden=false`로 리셋
+
+### 5-1. 차단대상 / 차단대상기준 (수동 설정 전용)
+- `blockTarget`: `최우선 차단대상`, `후순위 차단대상`, null (프로그램 자동 계산 안 함)
+- `blockCriteria`: 사유 텍스트 (프로그램 자동 계산 안 함)
+- 최우선 차단대상 기준 옵션: `호출 0건 + 커밋1년경과`, `호출 0건 + 커밋1년경과(침해사고 로그 제외)`, `IT담당자검토건`, `기타`
+- 후순위 차단대상 기준 옵션: `호출 0건 + 커밋1년미만`, `호출 1~3건 + 커밋1년경과`, `호출 4건이상 + 커밋1년경과`, `기타`
+- PATCH `/api/db/status`에 `blockTarget`, `blockCriteria` 필드 포함하여 일괄 변경 가능
+- viewer.html 하단 bulk bar에서 상태/차단대상/차단대상기준 동시 변경 가능
 
 ### 6. 이력 조회 (viewer.html)
 - 레포지토리 선택 → 조회 버튼 클릭 → API 목록 조회 (달력 제거)
@@ -197,7 +202,7 @@ src/main/resources/static/
 - **서버 로그**: `ApiExtractorService.extractLogs` — 파일별 OK/WARN/ERROR 로그 축적, `/api/progress` 응답에 `logs` 배열 포함
 - Whatap 호출건수 조회 카드는 유지 (접힘/펼침)
 
-## viewer.html 테이블 컬럼 (15개)
+## viewer.html 테이블 컬럼 (17개)
 | 순서 | 컬럼명 |
 |------|--------|
 | 0 | 체크박스 |
@@ -213,8 +218,10 @@ src/main/resources/static/
 | 10 | 설명 |
 | 11 | 호출건수 |
 | 12 | 상태 |
-| 13 | 마지막분석일 |
-| 14 | 최근 커밋 이력 |
+| 13 | 차단대상 |
+| 14 | 차단대상기준 |
+| 15 | 마지막분석일 |
+| 16 | 최근 커밋 이력 |
 
 ---
 

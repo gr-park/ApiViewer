@@ -99,11 +99,15 @@ public class ApiStorageService {
     }
 
     /**
-     * 상태를 수동으로 일괄 변경합니다. statusOverridden=true로 설정합니다.
-     * status가 null이면 자동 계산 모드로 복원합니다 (statusOverridden=false).
+     * 상태/차단대상/차단대상기준을 수동으로 일괄 변경합니다.
+     * - status: null이면 자동 계산 복원, 값이면 수동 설정
+     * - blockTarget: "__CLEAR__"이면 해제(null), 값이면 설정
+     * - blockCriteria: "__CLEAR__"이면 해제(null), 값이면 설정
+     * - updateStatus=false: status 변경 안 함, updateBlock=false: 차단대상 변경 안 함
      */
     @Transactional
-    public int updateStatus(List<Long> ids, String status) {
+    public int updateBulk(List<Long> ids, String status, boolean updateStatus,
+                          String blockTarget, String blockCriteria, boolean updateBlock) {
         int reviewThreshold = getReviewThreshold();
         int updated = 0;
         for (Long id : ids) {
@@ -111,41 +115,40 @@ public class ApiStorageService {
             if (opt.isEmpty()) continue;
             ApiRecord r = opt.get();
 
-            if (status == null || status.isBlank()) {
-                // 자동 계산 복원
-                r.setStatusOverridden(false);
-                r.setStatus(calculateStatus(r, reviewThreshold));
-            } else {
-                r.setStatus(status);
-                r.setStatusOverridden(true);
+            if (updateStatus) {
+                if (status == null || status.isBlank()) {
+                    r.setStatusOverridden(false);
+                    r.setStatus(calculateStatus(r, reviewThreshold));
+                } else {
+                    r.setStatus(status);
+                    r.setStatusOverridden(true);
+                }
             }
+
+            if (updateBlock) {
+                r.setBlockTarget(blockTarget);
+                r.setBlockCriteria(blockCriteria);
+            }
+
             repository.save(r);
             updated++;
         }
         return updated;
     }
 
+    /** 기존 호환용 — 상태만 변경 */
+    @Transactional
+    public int updateStatus(List<Long> ids, String status) {
+        return updateBulk(ids, status, true, null, null, false);
+    }
+
     // ── 상태 계산 ────────────────────────────────────────────────────────────
 
     String calculateStatus(ApiRecord r, int reviewThreshold) {
-        // 1. 차단완료: fullComment에 [URL차단작업] 포함 AND @Deprecated 어노테이션 있음
+        // 차단완료: fullComment에 [URL차단작업] 포함 AND @Deprecated 어노테이션 있음
         if ("Y".equals(r.getIsDeprecated()) && containsBlockText(r.getFullComment())) {
             return "차단완료";
         }
-
-        // 2. 차단대상: callCount=0 AND 최근 커밋 이력 모두 1년 초과
-        if (r.getCallCount() != null && r.getCallCount() == 0
-                && areAllCommitsOlderThanOneYear(r.getGitHistory())) {
-            return "차단대상";
-        }
-
-        // 3. 차단검토필요: 0 < callCount <= reviewThreshold AND 커밋 이력 모두 1년 초과
-        if (r.getCallCount() != null && r.getCallCount() > 0
-                && r.getCallCount() <= reviewThreshold
-                && areAllCommitsOlderThanOneYear(r.getGitHistory())) {
-            return "차단검토필요";
-        }
-
         return "사용";
     }
 
