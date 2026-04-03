@@ -126,7 +126,9 @@
   </div>
 
   <div class="filter-bar" id="filterBar" style="display:none">
-    <input type="text" id="searchInput" placeholder="URL 경로, 레포지토리, 팀, 담당자 검색..." oninput="filterTable()">
+    <input type="text" id="searchInput" placeholder="URL, 메뉴명, 비고 검색" oninput="filterTable()" style="width:200px;">
+    <input type="text" id="searchTeam" placeholder="팀/현업팀 검색" oninput="filterTable()" style="width:120px;">
+    <input type="text" id="searchManager" placeholder="담당자/현업담당자 검색" oninput="filterTable()" style="width:140px;">
     <select id="btFilter" onchange="filterTable()">
       <option value="">전체 차단대상</option>
       <option value="최우선 차단대상">최우선 차단대상</option>
@@ -168,7 +170,7 @@
         <th class="hg-info sticky-h" style="left:216px;min-width:70px;">담당자</th>
         <th class="hg-info sticky-h sticky-last" style="left:286px;min-width:200px;">URL 경로</th>
         <th class="hg-info">URL 호출</th>
-        <th class="hg-desc" style="min-width:300px;">내용</th>
+        <th class="hg-desc" style="min-width:300px;">관련 메뉴(또는 기능)</th>
         <th class="hg-desc">호출건수</th>
         <th class="hg-desc">비고</th>
         <th class="hg-block">차단대상선정</th>
@@ -244,13 +246,17 @@
 
   function filterTable() {
     const q = document.getElementById('searchInput').value.toLowerCase();
+    const qTeam = document.getElementById('searchTeam').value.toLowerCase();
+    const qMgr  = document.getElementById('searchManager').value.toLowerCase();
     const bt = document.getElementById('btFilter').value;
     const rv = document.getElementById('rvFilter').value;
     filteredApis = allApis.filter(a => {
       const cfg = repoConfigMap[a.repositoryName]||{};
-      const text = [a.apiPath,a.repositoryName,cfg.team,cfg.manager,cfg.businessName,a.apiOperationValue,a.descriptionTag].join(' ').toLowerCase();
+      const text = [a.apiPath,a.apiOperationValue,a.descriptionTag,a.memo].join(' ').toLowerCase();
+      const teamText = [cfg.team,a.reviewTeam].join(' ').toLowerCase();
+      const mgrText  = [cfg.manager,a.reviewManager].join(' ').toLowerCase();
       const rvOk = !rv||(rv==='미검토'?!a.reviewResult:a.reviewResult===rv);
-      return (!q||text.includes(q))&&(!bt||a.blockTarget===bt)&&rvOk;
+      return (!q||text.includes(q))&&(!qTeam||teamText.includes(qTeam))&&(!qMgr||mgrText.includes(qMgr))&&(!bt||a.blockTarget===bt)&&rvOk;
     });
     document.getElementById('filterCount').textContent = `${filteredApis.length} / ${allApis.length}건`;
     renderRows(filteredApis);
@@ -335,7 +341,7 @@
 
   async function downloadExcel() {
     if(!filteredApis.length){showToast('다운로드할 데이터가 없습니다.','error');return;}
-    const h=['레포지토리','업무명','팀','담당자','URL 경로','Full URL','내용','호출건수','비고','차단대상선정','차단대상선정기준','현업검토결과','현업검토의견','현업 팀','현업 담당자','현업검토일시'];
+    const h=['레포지토리','업무명','팀','담당자','URL 경로','Full URL','관련 메뉴(또는 기능)','호출건수','비고','차단대상선정','차단대상선정기준','현업검토결과','현업검토의견','현업 팀','현업 담당자','현업검토일시'];
     const blue='E0F2FE',purple='E0E7FF',pink='FFE4E6',yellow='FEF3C7';
     const hColors=[blue,blue,blue,blue,blue,blue,purple,purple,purple,pink,pink,yellow,yellow,yellow,yellow,yellow];
     const rows=filteredApis.map(a=>{const c=repoConfigMap[a.repositoryName]||{};const desc=a.apiOperationValue&&a.apiOperationValue!=='-'?a.apiOperationValue:(a.descriptionTag&&a.descriptionTag!=='-'?a.descriptionTag:'');return[a.repositoryName||'',c.businessName||'',c.team||'',c.manager||'',a.apiPath||'',a.fullUrl||'',desc,a.callCount!=null?a.callCount:'',a.memo||'',a.blockTarget||'',a.blockCriteria||'',a.reviewResult||'',a.reviewOpinion||'',a.reviewTeam||'',a.reviewManager||'',a.reviewedAt?a.reviewedAt.replace('T',' ').substring(0,16):''];});

@@ -235,6 +235,10 @@ public class ApiStorageService {
                 r.setBlockTarget(toNullableStr(fields.get("blockTarget")));
             if (fields.containsKey("blockCriteria"))
                 r.setBlockCriteria(toNullableStr(fields.get("blockCriteria")));
+            if (fields.containsKey("teamOverride"))
+                r.setTeamOverride(toNullableStr(fields.get("teamOverride")));
+            if (fields.containsKey("managerOverride"))
+                r.setManagerOverride(toNullableStr(fields.get("managerOverride")));
 
             boolean reviewChanged = false;
             if (fields.containsKey("reviewResult"))  { r.setReviewResult(toNullableStr(fields.get("reviewResult"))); reviewChanged = true; }

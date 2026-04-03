@@ -236,7 +236,9 @@
 
   <!-- 검색/필터 -->
   <div class="filter-bar" id="filterBar" style="display:none">
-    <input type="text" id="searchInput" placeholder="경로, 컨트롤러, 메소드명 검색..." oninput="filterTable()">
+    <input type="text" id="searchInput" placeholder="URL, 메소드명, 메뉴명, 비고 검색" oninput="filterTable()" style="width:260px;">
+    <input type="text" id="searchTeam" placeholder="팀 검색" oninput="filterTable()" style="width:100px;">
+    <input type="text" id="searchManager" placeholder="담당자 검색" oninput="filterTable()" style="width:100px;">
     <select id="methodFilter" onchange="filterTable()">
       <option value="">전체 HTTP Method</option>
       <option>GET</option><option>POST</option><option>PUT</option>
@@ -453,11 +455,15 @@
   // ── 필터 ──────────────────────────────────────────────────
   function filterTable() {
     const q      = document.getElementById('searchInput').value.toLowerCase();
+    const qTeam  = document.getElementById('searchTeam').value.toLowerCase();
+    const qMgr   = document.getElementById('searchManager').value.toLowerCase();
     const method = document.getElementById('methodFilter').value;
 
     filteredApis = allApis.filter(a => {
-      const text = [a.apiPath, a.controllerName, a.methodName, a.apiOperationValue,
-                    a.programId, a.descriptionTag].join(' ').toLowerCase();
+      const cfg = repoConfigMap[a.repositoryName] || {};
+      const text = [a.apiPath, a.methodName, a.apiOperationValue, a.descriptionTag, a.memo].join(' ').toLowerCase();
+      const team = (a.teamOverride || cfg.team || '').toLowerCase();
+      const mgr  = (a.managerOverride || cfg.manager || '').toLowerCase();
       let filterOk = true;
       if (activeFilter === '사용' || activeFilter === '차단완료') filterOk = a.status === activeFilter;
       else if (activeFilter === 'bt-최우선') filterOk = a.blockTarget === '최우선 차단대상';
@@ -465,6 +471,8 @@
       else if (activeFilter === 'reviewed') filterOk = !!a.reviewResult;
       else if (activeFilter === 'changed') filterOk = a.statusChanged === true;
       return (!q || text.includes(q))
+          && (!qTeam || team.includes(qTeam))
+          && (!qMgr || mgr.includes(qMgr))
           && (!method || a.httpMethod === method)
           && filterOk;
     });
@@ -771,9 +779,8 @@
     const headers = [
       '레포지토리','업무명','팀','담당자','URL 경로','Full URL',
       'HTTP Method','컨트롤러','메소드명','프로그램ID',
-      '관련 메뉴(또는 기능)',
       'ApiOperation','Description주석','메소드주석','컨트롤러주석','RequestProperty','컨트롤러RequestProperty',
-      '호출건수','상태','차단일자','차단근거',
+      '관련 메뉴(또는 기능)','호출건수','상태','차단일자','차단근거',
       '차단대상선정','차단대상선정기준','비고','현업검토결과','현업검토의견',
       ...commitHeaders, '분석일시', '변경일시'
     ];
@@ -781,9 +788,8 @@
     const headerColors = [
       blue,blue,blue,blue,blue,blue,blue,blue,           // 레포~Method
       yellow,yellow,yellow,                                // 컨트롤러~프로그램ID
-      purple,                                              // 관련 메뉴
       yellow,yellow,yellow,yellow,yellow,yellow,           // 참고용 6개
-      purple,purple,purple,purple,                         // 호출건수~차단근거
+      purple,purple,purple,purple,purple,                  // 관련메뉴~차단근거
       pink,pink,pink,pink,pink,                            // 차단대상~현업검토의견
       green,green,green,green,green,green,green,green,green,green,green,green,green,green,green, // 커밋5×3
       blue,blue                                            // 분석/변경일시
@@ -808,9 +814,9 @@
         a.controllerName || '',
         a.methodName || '',
         a.programId || '',
-        allDesc(a),
         v(a.apiOperationValue), v(a.descriptionTag), v(a.fullComment),
         v(a.controllerComment), v(a.requestPropertyValue), v(a.controllerRequestPropertyValue),
+        allDesc(a),
         a.callCount != null ? a.callCount : '',
         a.status || '',
         a.blockedDate || '',
