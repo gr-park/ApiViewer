@@ -268,22 +268,42 @@ public class ApiStorageService {
         return fullComment.contains("[URL차단작업]");
     }
 
+    /**
+     * 모든 커밋이 1년 초과인지 판단 (excludeNonBiz=false: 전체 커밋 대상)
+     */
     private boolean areAllCommitsOlderThanOneYear(String gitHistoryJson) {
+        return areAllCommitsOlderThanOneYear(gitHistoryJson, false);
+    }
+
+    /**
+     * 모든 커밋이 1년 초과인지 판단
+     * @param excludeNonBiz true이면 커밋 메시지에 "불필요" 또는 "로그"가 포함된 커밋은 제외 (침해사고 로그 등 비즈니스 무관 커밋)
+     */
+    private boolean areAllCommitsOlderThanOneYear(String gitHistoryJson, boolean excludeNonBiz) {
         if (gitHistoryJson == null || gitHistoryJson.isBlank() || "[]".equals(gitHistoryJson.trim())) {
-            return false; // 이력 없으면 판단 불가 → false
+            return false;
         }
         try {
             List<Map<String, String>> commits = objectMapper.readValue(
                     gitHistoryJson, new TypeReference<>() {});
             if (commits.isEmpty()) return false;
             LocalDate oneYearAgo = LocalDate.now().minusYears(1);
+            boolean hasValidCommit = false;
             for (Map<String, String> c : commits) {
                 String dateStr = c.get("date");
                 if (dateStr == null || dateStr.isBlank()) continue;
+
+                // 비즈니스 무관 커밋 제외 (침해사고 로그 등)
+                if (excludeNonBiz) {
+                    String msg = c.get("message");
+                    if (msg != null && (msg.contains("불필요") || msg.contains("로그"))) continue;
+                }
+
+                hasValidCommit = true;
                 LocalDate commitDate = LocalDate.parse(dateStr.trim());
-                if (!commitDate.isBefore(oneYearAgo)) return false; // 1년 이내 커밋 있음
+                if (!commitDate.isBefore(oneYearAgo)) return false;
             }
-            return true; // 모든 커밋이 1년 초과
+            return hasValidCommit; // 유효한 커밋이 있고 모두 1년 초과
         } catch (Exception e) {
             return false;
         }
