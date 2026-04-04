@@ -110,14 +110,17 @@
   <!-- YAML 임포트 -->
   <div class="card">
     <div class="card-title"><span class="dot" style="background:var(--purple);"></span>YAML 파일에서 설정 가져오기</div>
-    <div style="display:grid;grid-template-columns:1fr auto;gap:10px;align-items:end;">
-      <label class="field">repos-config.yml 파일 경로
-        <input id="yamlFilePath" type="text" placeholder="/Users/.../ApiViewer/repos-config.yml"
-               style="font-family:monospace;">
-        <span class="field-hint">레포지토리명 기준으로 기존 항목은 업데이트, 신규 항목은 추가됩니다.</span>
+    <div style="display:flex;gap:10px;align-items:end;flex-wrap:wrap;">
+      <label class="field" style="flex:1;min-width:200px;">서버 파일 경로
+        <input id="yamlFilePath" type="text" placeholder="repos-config.yml 절대 경로" style="font-family:monospace;">
       </label>
-      <button class="btn btn-blue" onclick="importYaml()" style="background:var(--purple);">YAML 가져오기</button>
+      <button class="btn btn-blue" onclick="importYaml()" style="background:var(--purple);height:34px;">경로에서 가져오기</button>
+      <span style="color:var(--text-muted);font-size:11px;padding-bottom:8px;">또는</span>
+      <label class="field">
+        <input id="yamlFileInput" type="file" accept=".yml,.yaml" onchange="importYamlFile()" style="font-size:12px;">
+      </label>
     </div>
+    <span class="field-hint" style="margin-top:4px;display:block;">레포지토리명 기준으로 기존 항목은 업데이트, 신규 항목은 추가됩니다.</span>
   </div>
 
   <!-- 공통 설정 -->
@@ -146,8 +149,10 @@
   <div class="card">
     <div class="card-title" style="margin-bottom:12px;">
       <span class="dot dot-green"></span>레포지토리별 설정
-      <span style="font-size:11px;font-weight:400;color:var(--text-muted);margin-left:6px;">repos-config.yml 파일을 편집 후 동기화하세요.</span>
-      <button class="btn btn-ghost" style="margin-left:auto;height:28px;padding:4px 14px;font-size:12px;" onclick="syncYaml()">🔄 YAML 동기화</button>
+      <div style="margin-left:auto;display:flex;gap:6px;">
+        <button class="btn btn-blue" style="height:28px;padding:4px 14px;font-size:12px;" onclick="openModal()">+ 레포 추가</button>
+        <button class="btn btn-ghost" style="height:28px;padding:4px 14px;font-size:12px;" onclick="syncYaml()">🔄 YAML 동기화</button>
+      </div>
     </div>
     <div class="repo-list" id="repoList">
       <div class="empty-repos">등록된 레포지토리가 없습니다.</div>
@@ -375,7 +380,9 @@
           <span>Whatap: <b style="color:${r.whatapEnabled==='Y'?'var(--success)':'var(--text-muted)'}">${r.whatapEnabled||'N'}</b></span>
         </div>
         <div class="repo-actions">
-          <button class="btn btn-danger" onclick="deleteRepo(${r.id}, '${esc(r.repoName)}')">삭제</button>
+          <button class="btn btn-ghost" style="font-size:11px;padding:3px 10px;" onclick="openModal(${r.id})">편집</button>
+          <button class="btn btn-ghost" style="font-size:11px;padding:3px 10px;" onclick="copyRepo(${r.id})">복사</button>
+          <button class="btn btn-danger" style="font-size:11px;padding:3px 10px;" onclick="deleteRepo(${r.id}, '${esc(r.repoName)}')">삭제</button>
         </div>
       </div>`).join('');
   }
@@ -453,7 +460,7 @@
     try {
       const url    = editingId ? `/api/config/repos/${editingId}` : '/api/config/repos';
       const method = editingId ? 'PUT' : 'POST';
-      const res = await fetch(url, { method, headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
+      const res = await fetch(url, { method, headers: adminHeaders(), body: JSON.stringify(body) });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || '저장 실패');
       closeModal();
@@ -465,11 +472,42 @@
   async function deleteRepo(id, name) {
     if (!confirm(`"${name}" 레포지토리 설정을 삭제하시겠습니까?`)) return;
     try {
-      const res = await fetch(`/api/config/repos/${id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/config/repos/${id}`, { method: 'DELETE', headers:{'X-Admin-Token':sessionStorage.getItem('adminToken')||''} });
       if (!res.ok) throw new Error();
       await loadRepos();
       showToast('삭제 완료', 'success');
     } catch(e) { showToast('삭제 실패', 'error'); }
+  }
+
+  // ── 레포 복사 ─────────────────────────────────────────────
+  async function copyRepo(id) {
+    try {
+      const res = await fetch(`/api/config/repos/${id}`);
+      const r = await res.json();
+      openModal(); // 신규 모드
+      setTimeout(() => {
+        fillForm(r);
+        document.getElementById('f_repoName').value = r.repoName + '-copy';
+      }, 100);
+    } catch(e) { showToast('복사 실패','error'); }
+  }
+
+  // ── YAML 파일 업로드 ──────────────────────────────────────
+  async function importYamlFile() {
+    const fileInput = document.getElementById('yamlFileInput');
+    const file = fileInput.files[0];
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const res = await fetch('/api/config/import-yaml-content', {
+        method: 'POST', headers: adminHeaders(), body: JSON.stringify({ content: text })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || '임포트 실패');
+      showToast(`추가 ${data.added}개, 업데이트 ${data.updated}개`, 'success');
+      await loadRepos();
+    } catch(e) { showToast(e.message, 'error'); }
+    fileInput.value = '';
   }
 
   // ── 헬퍼 ──────────────────────────────────────────────────
@@ -540,13 +578,17 @@
         const dayOpts = ['MON','TUE','WED','THU','FRI','SAT','SUN'].map(d =>
           `<option value="${d}" ${s.runDay===d?'selected':''}>${{MON:'월',TUE:'화',WED:'수',THU:'목',FRI:'금',SAT:'토',SUN:'일'}[d]}</option>`
         ).join('');
-        return `<div style="border:1px solid var(--border);border-radius:8px;padding:12px 16px;" id="sch-${s.id}">
+        const bgColor = s.enabled ? '#f0fdf4' : '#fff';
+        const borderColor = s.enabled ? '#86efac' : 'var(--border)';
+        const statusDot = s.enabled ? '<span style="width:8px;height:8px;border-radius:50%;background:#22c55e;display:inline-block;"></span>' : '<span style="width:8px;height:8px;border-radius:50%;background:#d1d5db;display:inline-block;"></span>';
+        return `<div style="border:2px solid ${borderColor};border-radius:8px;padding:12px 16px;background:${bgColor};" id="sch-${s.id}">
           <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
-            <label style="display:flex;align-items:center;gap:4px;cursor:pointer;">
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
+              ${statusDot}
               <input type="checkbox" ${s.enabled?'checked':''} onchange="toggleSchedule(${s.id},this.checked)" style="width:16px;height:16px;">
               <b style="font-size:13px;">${esc(s.description||s.jobType)}</b>
+              ${s.enabled ? '<span style="font-size:10px;color:#16a34a;font-weight:600;">활성</span>' : '<span style="font-size:10px;color:#94a3b8;">비활성</span>'}
             </label>
-            <span style="font-size:10px;color:var(--text-muted);margin-left:auto;">${s.lastRunAt ? '마지막: '+fmtDt(s.lastRunAt)+' ('+esc(s.lastRunResult||'')+')' : '미실행'}</span>
           </div>
           <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;">
             <label class="field" style="min-width:100px;">실행 주기
@@ -565,6 +607,9 @@
               <input id="schCron-${s.id}" type="text" value="${esc(s.cronExpression||'')}" placeholder="0 0 3 * * ?" style="padding:4px 8px;border:1px solid var(--border);border-radius:4px;font-size:12px;font-family:monospace;">
             </label>
             <button class="btn btn-blue" style="height:30px;padding:4px 14px;font-size:12px;" onclick="saveSchedule(${s.id})">저장</button>
+          </div>
+          <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);font-size:11px;color:var(--text-muted);">
+            ${s.lastRunAt ? `📋 마지막 수행: <b>${fmtDt(s.lastRunAt)}</b> — 결과: <b style="color:${(s.lastRunResult||'').startsWith('성공')?'#16a34a':'#dc2626'}">${esc(s.lastRunResult||'-')}</b>` : '📋 아직 수행된 이력이 없습니다.'}
           </div>
         </div>`;
       }).join('');

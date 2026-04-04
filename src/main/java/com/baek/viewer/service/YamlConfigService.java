@@ -57,6 +57,18 @@ public class YamlConfigService {
         }
 
         if (config == null) throw new IllegalArgumentException("YAML 파일이 비어 있습니다.");
+        return processYamlConfig(config);
+    }
+
+    public Map<String, Object> importFromYamlContent(String content) throws Exception {
+        log.info("[YAML 내용 임포트] 크기={}bytes", content.length());
+        Yaml yaml = new Yaml(new Constructor(ReposYamlConfig.class, new LoaderOptions()));
+        ReposYamlConfig config = yaml.load(content);
+        if (config == null) throw new IllegalArgumentException("YAML 내용이 비어 있습니다.");
+        return processYamlConfig(config);
+    }
+
+    private Map<String, Object> processYamlConfig(ReposYamlConfig config) {
 
         int added = 0, updated = 0;
 

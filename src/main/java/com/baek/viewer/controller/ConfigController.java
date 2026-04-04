@@ -108,4 +108,21 @@ public class ConfigController {
             return ResponseEntity.badRequest().body(Map.of("error", "임포트 실패: " + e.getMessage()));
         }
     }
+
+    /** YAML 내용 직접 임포트 (파일 업로드용) */
+    @PostMapping("/import-yaml-content")
+    public ResponseEntity<?> importYamlContent(@RequestBody Map<String, String> body) {
+        String content = body.get("content");
+        if (content == null || content.isBlank())
+            return ResponseEntity.badRequest().body(Map.of("error", "YAML 내용이 비어 있습니다."));
+        log.info("[YAML 내용 임포트] 크기={}bytes", content.length());
+        try {
+            Map<String, Object> result = yamlConfigService.importFromYamlContent(content);
+            log.info("[YAML 내용 임포트 완료] 추가={}, 업데이트={}", result.get("added"), result.get("updated"));
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            log.error("[YAML 내용 임포트 실패] {}", e.getMessage(), e);
+            return ResponseEntity.badRequest().body(Map.of("error", "임포트 실패: " + e.getMessage()));
+        }
+    }
 }

@@ -1,0 +1,616 @@
+2026-04-04 10:48:59 [INFO ] [SYSTEM] [] c.b.v.ApiViewerApplication - Starting ApiViewerApplication v1.0.0 using Java 25.0.2 with PID 7682 (/Users/baegmyeongseon/LP_DEV/ApiViewer/target/api-viewer-1.0.0.jar started by baegmyeongseon in /Users/baegmyeongseon/LP_DEV/ApiViewer)
+2026-04-04 10:48:59 [INFO ] [SYSTEM] [] c.b.v.ApiViewerApplication - No active profile set, falling back to 1 default profile: "default"
+2026-04-04 10:49:00 [INFO ] [SYSTEM] [] o.s.d.r.c.RepositoryConfigurationDelegate - Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-04-04 10:49:00 [INFO ] [SYSTEM] [] o.s.d.r.c.RepositoryConfigurationDelegate - Finished Spring Data repository scanning in 21 ms. Found 4 JPA repository interfaces.
+2026-04-04 10:49:00 [INFO ] [SYSTEM] [] o.s.b.w.e.t.TomcatWebServer - Tomcat initialized with port 8080 (http)
+2026-04-04 10:49:00 [INFO ] [SYSTEM] [] o.a.c.http11.Http11NioProtocol - Initializing ProtocolHandler ["http-nio-0.0.0.0-8080"]
+2026-04-04 10:49:00 [INFO ] [SYSTEM] [] o.a.c.core.StandardService - Starting service [Tomcat]
+2026-04-04 10:49:00 [INFO ] [SYSTEM] [] o.a.c.core.StandardEngine - Starting Servlet engine: [Apache Tomcat/10.1.33]
+2026-04-04 10:49:00 [INFO ] [SYSTEM] [] o.a.c.c.C.[.[localhost].[/] - Initializing Spring embedded WebApplicationContext
+2026-04-04 10:49:00 [INFO ] [SYSTEM] [] o.s.b.w.s.c.ServletWebServerApplicationContext - Root WebApplicationContext: initialization completed in 496 ms
+2026-04-04 10:49:00 [INFO ] [SYSTEM] [] c.z.hikari.HikariDataSource - HikariPool-1 - Starting...
+2026-04-04 10:49:00 [INFO ] [SYSTEM] [] c.z.hikari.pool.HikariPool - HikariPool-1 - Added connection conn0: url=jdbc:h2:file:./data/api-viewer-db user=SA
+2026-04-04 10:49:00 [INFO ] [SYSTEM] [] c.z.hikari.HikariDataSource - HikariPool-1 - Start completed.
+2026-04-04 10:49:00 [INFO ] [SYSTEM] [] o.s.b.a.h.H2ConsoleAutoConfiguration - H2 console available at '/h2-console'. Database available at 'jdbc:h2:file:./data/api-viewer-db'
+2026-04-04 10:49:00 [INFO ] [SYSTEM] [] o.h.j.internal.util.LogHelper - HHH000204: Processing PersistenceUnitInfo [name: default]
+2026-04-04 10:49:00 [INFO ] [SYSTEM] [] org.hibernate.Version - HHH000412: Hibernate ORM core version 6.6.2.Final
+2026-04-04 10:49:00 [INFO ] [SYSTEM] [] o.h.c.i.RegionFactoryInitiator - HHH000026: Second-level cache disabled
+2026-04-04 10:49:00 [INFO ] [SYSTEM] [] o.s.o.j.p.SpringPersistenceUnitInfo - No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-04-04 10:49:00 [WARN ] [SYSTEM] [] org.hibernate.orm.deprecation - HHH90000025: H2Dialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+2026-04-04 10:49:00 [INFO ] [SYSTEM] [] o.h.orm.connections.pooling - HHH10001005: Database info:
+	Database JDBC URL [Connecting through datasource 'HikariDataSource (HikariPool-1)']
+	Database driver: undefined/unknown
+	Database version: 2.3.232
+	Autocommit mode: undefined/unknown
+	Isolation level: undefined/unknown
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+2026-04-04 10:49:01 [INFO ] [SYSTEM] [] o.h.e.t.j.p.i.JtaPlatformInitiator - HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-04-04 10:49:01 [INFO ] [SYSTEM] [] o.s.o.j.LocalContainerEntityManagerFactoryBean - Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-04-04 10:49:01 [INFO ] [SYSTEM] [] o.s.d.j.r.q.QueryEnhancerFactory - Hibernate is in classpath; If applicable, HQL parser will be used.
+2026-04-04 10:49:01 [INFO ] [SYSTEM] [] o.q.impl.StdSchedulerFactory - Using default implementation for ThreadExecutor
+2026-04-04 10:49:01 [INFO ] [SYSTEM] [] o.q.core.SchedulerSignalerImpl - Initialized Scheduler Signaller of type: class org.quartz.core.SchedulerSignalerImpl
+2026-04-04 10:49:01 [INFO ] [SYSTEM] [] o.quartz.core.QuartzScheduler - Quartz Scheduler v.2.3.2 created.
+2026-04-04 10:49:01 [INFO ] [SYSTEM] [] org.quartz.simpl.RAMJobStore - RAMJobStore initialized.
+2026-04-04 10:49:01 [INFO ] [SYSTEM] [] o.quartz.core.QuartzScheduler - Scheduler meta-data: Quartz Scheduler (v2.3.2) 'quartzScheduler' with instanceId 'NON_CLUSTERED'
+  Scheduler class: 'org.quartz.core.QuartzScheduler' - running locally.
+  NOT STARTED.
+  Currently in standby mode.
+  Number of jobs executed: 0
+  Using thread pool 'org.quartz.simpl.SimpleThreadPool' - with 10 threads.
+  Using job-store 'org.quartz.simpl.RAMJobStore' - which does not support persistence. and is not clustered.
+
+2026-04-04 10:49:01 [INFO ] [SYSTEM] [] o.q.impl.StdSchedulerFactory - Quartz scheduler 'quartzScheduler' initialized from an externally provided properties instance.
+2026-04-04 10:49:01 [INFO ] [SYSTEM] [] o.q.impl.StdSchedulerFactory - Quartz scheduler version: 2.3.2
+2026-04-04 10:49:01 [INFO ] [SYSTEM] [] o.quartz.core.QuartzScheduler - JobFactory set to: org.springframework.scheduling.quartz.SpringBeanJobFactory@6f2bb798
+2026-04-04 10:49:01 [INFO ] [SYSTEM] [] c.b.v.service.ScheduleService - [스케줄] GIT_PULL_EXTRACT 비활성화
+2026-04-04 10:49:01 [INFO ] [SYSTEM] [] c.b.v.service.ScheduleService - [스케줄] APM_DAILY 비활성화
+2026-04-04 10:49:01 [INFO ] [SYSTEM] [] c.b.v.service.ScheduleService - [스케줄] APM_WEEKLY 비활성화
+2026-04-04 10:49:01 [WARN ] [SYSTEM] [] o.s.b.a.o.j.JpaBaseConfiguration$JpaWebConfiguration - spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-04-04 10:49:01 [INFO ] [SYSTEM] [] o.s.b.a.w.s.WelcomePageHandlerMapping - Adding welcome page: class path resource [static/index.html]
+2026-04-04 10:49:01 [INFO ] [SYSTEM] [] o.a.c.http11.Http11NioProtocol - Starting ProtocolHandler ["http-nio-0.0.0.0-8080"]
+2026-04-04 10:49:01 [INFO ] [SYSTEM] [] o.s.b.w.e.t.TomcatWebServer - Tomcat started on port 8080 (http) with context path '/'
+2026-04-04 10:49:01 [INFO ] [SYSTEM] [] o.s.s.q.SchedulerFactoryBean - Starting Quartz Scheduler now
+2026-04-04 10:49:01 [INFO ] [SYSTEM] [] o.quartz.core.QuartzScheduler - Scheduler quartzScheduler_$_NON_CLUSTERED started.
+2026-04-04 10:49:01 [INFO ] [SYSTEM] [] c.b.v.ApiViewerApplication - Started ApiViewerApplication in 2.123 seconds (process running for 2.326)
+2026-04-04 10:49:01 [INFO ] [SYSTEM] [] c.b.viewer.StartupConfigLoader - [기동 시 설정 로드] YAML 경로=./repos-config.yml
+2026-04-04 10:49:01 [INFO ] [SYSTEM] [] c.b.v.s.YamlConfigService - [YAML 임포트] 파일 경로=./repos-config.yml
+2026-04-04 10:49:01 [INFO ] [SYSTEM] [] c.b.v.s.YamlConfigService - [YAML 임포트 완료] 레포 2개 발견, 추가=0, 업데이트=2
+2026-04-04 10:49:01 [INFO ] [SYSTEM] [] c.b.viewer.StartupConfigLoader - [기동 시 설정 로드] 동기화 완료 — 추가 0개, 업데이트 2개
+2026-04-04 10:49:19 [INFO ] [SYSTEM] [] o.a.c.c.C.[.[localhost].[/] - Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-04-04 10:49:19 [INFO ] [SYSTEM] [] o.s.w.s.DispatcherServlet - Initializing Servlet 'dispatcherServlet'
+2026-04-04 10:49:19 [INFO ] [SYSTEM] [] o.s.w.s.DispatcherServlet - Completed initialization in 1 ms
+2026-04-04 10:49:19 [WARN ] [SYSTEM] [127.0.0.1] c.b.viewer.service.AuthService - [토큰 검증 실패] 존재하지 않는 토큰
+2026-04-04 10:49:19 [WARN ] [SYSTEM] [127.0.0.1] c.b.viewer.service.AuthService - [토큰 검증 실패] 존재하지 않는 토큰
+2026-04-04 10:49:19 [WARN ] [USER] [127.0.0.1] c.b.viewer.service.AuthService - [토큰 검증 실패] 존재하지 않는 토큰
+2026-04-04 10:49:19 [WARN ] [USER] [127.0.0.1] c.b.viewer.service.AuthService - [토큰 검증 실패] 존재하지 않는 토큰
+2026-04-04 10:49:19 [WARN ] [USER] [127.0.0.1] c.b.v.config.AdminInterceptor - [인증 차단] 401 GET /api/logs/dates (IP=127.0.0.1)
+2026-04-04 10:49:19 [WARN ] [USER] [127.0.0.1] c.b.v.config.AdminInterceptor - [인증 차단] 401 GET /api/schedule (IP=127.0.0.1)
+2026-04-04 10:49:19 [INFO ] [USER] [127.0.0.1] c.b.v.c.ConfigController - [공통설정 조회] GET /api/config/global
+2026-04-04 10:49:19 [INFO ] [USER] [127.0.0.1] c.b.v.c.ConfigController - [레포설정 목록 조회] GET /api/config/repos
+2026-04-04 10:49:24 [WARN ] [SYSTEM] [127.0.0.1] c.b.viewer.service.AuthService - [토큰 검증 실패] 존재하지 않는 토큰
+2026-04-04 10:49:24 [WARN ] [USER] [127.0.0.1] c.b.viewer.service.AuthService - [토큰 검증 실패] 존재하지 않는 토큰
+2026-04-04 10:49:24 [WARN ] [USER] [127.0.0.1] c.b.v.config.AdminInterceptor - [인증 차단] 401 GET /api/logs/view (IP=127.0.0.1)
+2026-04-04 10:49:25 [WARN ] [SYSTEM] [127.0.0.1] c.b.viewer.service.AuthService - [토큰 검증 실패] 존재하지 않는 토큰
+2026-04-04 10:49:25 [WARN ] [USER] [127.0.0.1] c.b.viewer.service.AuthService - [토큰 검증 실패] 존재하지 않는 토큰
+2026-04-04 10:49:25 [WARN ] [USER] [127.0.0.1] c.b.v.config.AdminInterceptor - [인증 차단] 401 GET /api/logs/view (IP=127.0.0.1)
+2026-04-04 10:49:31 [INFO ] [USER] [127.0.0.1] c.b.v.c.ApiViewController - [통계 조회] GET /api/db/stats
+2026-04-04 10:49:33 [INFO ] [USER] [127.0.0.1] c.b.v.c.ConfigController - [레포설정 목록 조회] GET /api/config/repos
+2026-04-04 10:49:33 [INFO ] [USER] [127.0.0.1] c.b.v.c.ConfigController - [공통설정 조회] GET /api/config/global
+2026-04-04 10:49:35 [INFO ] [USER] [127.0.0.1] c.b.v.c.ApiViewController - [목록 조회] repo=null, blockTargetOnly=false, 건수=30, 소요=13ms
+2026-04-04 10:49:41 [INFO ] [USER] [127.0.0.1] c.b.viewer.service.AuthService - [토큰 발급] 현재 활성 토큰 수=1
+2026-04-04 10:49:41 [INFO ] [USER] [127.0.0.1] c.b.v.c.ApiViewController - [인증 성공] 토큰 발급
+2026-04-04 10:49:45 [INFO ] [USER] [127.0.0.1] c.b.v.c.ConfigController - [공통설정 조회] GET /api/config/global
+2026-04-04 10:49:45 [INFO ] [ADMIN] [127.0.0.1] c.b.v.c.ApiViewController - [로그 날짜 조회] GET /api/logs/dates
+2026-04-04 10:49:45 [INFO ] [USER] [127.0.0.1] c.b.v.c.ConfigController - [레포설정 목록 조회] GET /api/config/repos
+2026-04-04 10:49:49 [INFO ] [ADMIN] [127.0.0.1] c.b.v.c.ApiViewController - [로그 조회] GET /api/logs/view date=2026-04-04
+2026-04-04 10:49:57 [INFO ] [ADMIN] [127.0.0.1] c.b.v.c.ApiViewController - [로그 조회] GET /api/logs/view date=2026-04-04
+2026-04-04 10:50:01 [ERROR] [SYSTEM] [] o.a.c.c.C.[.[.[.[dispatcherServlet] - Servlet.service() for servlet [dispatcherServlet] in context with path [] threw exception [Request processing failed: org.springframework.dao.DataIntegrityViolationException: not-null property references a null or transient value: com.baek.viewer.model.ScheduleConfig.jobType] with root cause
+org.hibernate.PropertyValueException: not-null property references a null or transient value: com.baek.viewer.model.ScheduleConfig.jobType
+	at org.hibernate.engine.internal.Nullability.checkNullability(Nullability.java:112)
+	at org.hibernate.engine.internal.Nullability.checkNullability(Nullability.java:57)
+	at org.hibernate.event.internal.DefaultFlushEntityEventListener.scheduleUpdate(DefaultFlushEntityEventListener.java:260)
+	at org.hibernate.event.internal.DefaultFlushEntityEventListener.onFlushEntity(DefaultFlushEntityEventListener.java:150)
+	at org.hibernate.event.service.internal.EventListenerGroupImpl.fireEventOnEachListener(EventListenerGroupImpl.java:127)
+	at org.hibernate.event.internal.AbstractFlushingEventListener.flushEntities(AbstractFlushingEventListener.java:269)
+	at org.hibernate.event.internal.AbstractFlushingEventListener.flushEverythingToExecutions(AbstractFlushingEventListener.java:90)
+	at org.hibernate.event.internal.AbstractFlushingEventListener.flushEverythingToExecutions(AbstractFlushingEventListener.java:84)
+	at org.hibernate.event.internal.DefaultFlushEventListener.onFlush(DefaultFlushEventListener.java:40)
+	at org.hibernate.event.service.internal.EventListenerGroupImpl.fireEventOnEachListener(EventListenerGroupImpl.java:127)
+	at org.hibernate.internal.SessionImpl.doFlush(SessionImpl.java:1429)
+	at org.hibernate.internal.SessionImpl.managedFlush(SessionImpl.java:491)
+	at org.hibernate.internal.SessionImpl.flushBeforeTransactionCompletion(SessionImpl.java:2354)
+	at org.hibernate.internal.SessionImpl.beforeTransactionCompletion(SessionImpl.java:1978)
+	at org.hibernate.engine.jdbc.internal.JdbcCoordinatorImpl.beforeTransactionCompletion(JdbcCoordinatorImpl.java:439)
+	at org.hibernate.resource.transaction.backend.jdbc.internal.JdbcResourceLocalTransactionCoordinatorImpl.beforeCompletionCallback(JdbcResourceLocalTransactionCoordinatorImpl.java:169)
+	at org.hibernate.resource.transaction.backend.jdbc.internal.JdbcResourceLocalTransactionCoordinatorImpl$TransactionDriverControlImpl.commit(JdbcResourceLocalTransactionCoordinatorImpl.java:267)
+	at org.hibernate.engine.transaction.internal.TransactionImpl.commit(TransactionImpl.java:101)
+	at org.springframework.orm.jpa.JpaTransactionManager.doCommit(JpaTransactionManager.java:562)
+	at org.springframework.transaction.support.AbstractPlatformTransactionManager.processCommit(AbstractPlatformTransactionManager.java:795)
+	at org.springframework.transaction.support.AbstractPlatformTransactionManager.commit(AbstractPlatformTransactionManager.java:758)
+	at org.springframework.transaction.interceptor.TransactionAspectSupport.commitTransactionAfterReturning(TransactionAspectSupport.java:698)
+	at org.springframework.transaction.interceptor.TransactionAspectSupport.invokeWithinTransaction(TransactionAspectSupport.java:416)
+	at org.springframework.transaction.interceptor.TransactionInterceptor.invoke(TransactionInterceptor.java:119)
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:184)
+	at org.springframework.dao.support.PersistenceExceptionTranslationInterceptor.invoke(PersistenceExceptionTranslationInterceptor.java:138)
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:184)
+	at org.springframework.data.jpa.repository.support.CrudMethodMetadataPostProcessor$CrudMethodMetadataPopulatingMethodInterceptor.invoke(CrudMethodMetadataPostProcessor.java:165)
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:184)
+	at org.springframework.aop.framework.JdkDynamicAopProxy.invoke(JdkDynamicAopProxy.java:223)
+	at jdk.proxy2/jdk.proxy2.$Proxy128.save(Unknown Source)
+	at com.baek.viewer.service.ScheduleService.saveAndApply(ScheduleService.java:97)
+	at com.baek.viewer.controller.ScheduleController.update(ScheduleController.java:28)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:104)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	at org.springframework.web.method.support.InvocableHandlerMethod.doInvoke(InvocableHandlerMethod.java:255)
+	at org.springframework.web.method.support.InvocableHandlerMethod.invokeForRequest(InvocableHandlerMethod.java:188)
+	at org.springframework.web.servlet.mvc.method.annotation.ServletInvocableHandlerMethod.invokeAndHandle(ServletInvocableHandlerMethod.java:118)
+	at org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter.invokeHandlerMethod(RequestMappingHandlerAdapter.java:986)
+	at org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter.handleInternal(RequestMappingHandlerAdapter.java:891)
+	at org.springframework.web.servlet.mvc.method.AbstractHandlerMethodAdapter.handle(AbstractHandlerMethodAdapter.java:87)
+	at org.springframework.web.servlet.DispatcherServlet.doDispatch(DispatcherServlet.java:1088)
+	at org.springframework.web.servlet.DispatcherServlet.doService(DispatcherServlet.java:978)
+	at org.springframework.web.servlet.FrameworkServlet.processRequest(FrameworkServlet.java:1014)
+	at org.springframework.web.servlet.FrameworkServlet.doPut(FrameworkServlet.java:925)
+	at jakarta.servlet.http.HttpServlet.service(HttpServlet.java:593)
+	at org.springframework.web.servlet.FrameworkServlet.service(FrameworkServlet.java:885)
+	at jakarta.servlet.http.HttpServlet.service(HttpServlet.java:658)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:195)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140)
+	at org.apache.tomcat.websocket.server.WsFilter.doFilter(WsFilter.java:51)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:164)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140)
+	at com.baek.viewer.config.LoggingFilter.doFilter(LoggingFilter.java:40)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:164)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140)
+	at org.springframework.web.filter.RequestContextFilter.doFilterInternal(RequestContextFilter.java:100)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:164)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140)
+	at org.springframework.web.filter.FormContentFilter.doFilterInternal(FormContentFilter.java:93)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:164)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140)
+	at org.springframework.web.filter.CharacterEncodingFilter.doFilterInternal(CharacterEncodingFilter.java:201)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:164)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140)
+	at org.apache.catalina.core.StandardWrapperValve.invoke(StandardWrapperValve.java:167)
+	at org.apache.catalina.core.StandardContextValve.invoke(StandardContextValve.java:90)
+	at org.apache.catalina.authenticator.AuthenticatorBase.invoke(AuthenticatorBase.java:483)
+	at org.apache.catalina.core.StandardHostValve.invoke(StandardHostValve.java:115)
+	at org.apache.catalina.valves.ErrorReportValve.invoke(ErrorReportValve.java:93)
+	at org.apache.catalina.core.StandardEngineValve.invoke(StandardEngineValve.java:74)
+	at org.apache.catalina.connector.CoyoteAdapter.service(CoyoteAdapter.java:344)
+	at org.apache.coyote.http11.Http11Processor.service(Http11Processor.java:397)
+	at org.apache.coyote.AbstractProcessorLight.process(AbstractProcessorLight.java:63)
+	at org.apache.coyote.AbstractProtocol$ConnectionHandler.process(AbstractProtocol.java:905)
+	at org.apache.tomcat.util.net.NioEndpoint$SocketProcessor.doRun(NioEndpoint.java:1741)
+	at org.apache.tomcat.util.net.SocketProcessorBase.run(SocketProcessorBase.java:52)
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1190)
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:659)
+	at org.apache.tomcat.util.threads.TaskThread$WrappingRunnable.run(TaskThread.java:63)
+	at java.base/java.lang.Thread.run(Thread.java:1474)
+2026-04-04 10:50:23 [ERROR] [SYSTEM] [] o.a.c.c.C.[.[.[.[dispatcherServlet] - Servlet.service() for servlet [dispatcherServlet] in context with path [] threw exception [Request processing failed: org.springframework.dao.DataIntegrityViolationException: not-null property references a null or transient value: com.baek.viewer.model.ScheduleConfig.jobType] with root cause
+org.hibernate.PropertyValueException: not-null property references a null or transient value: com.baek.viewer.model.ScheduleConfig.jobType
+	at org.hibernate.engine.internal.Nullability.checkNullability(Nullability.java:112)
+	at org.hibernate.engine.internal.Nullability.checkNullability(Nullability.java:57)
+	at org.hibernate.event.internal.DefaultFlushEntityEventListener.scheduleUpdate(DefaultFlushEntityEventListener.java:260)
+	at org.hibernate.event.internal.DefaultFlushEntityEventListener.onFlushEntity(DefaultFlushEntityEventListener.java:150)
+	at org.hibernate.event.service.internal.EventListenerGroupImpl.fireEventOnEachListener(EventListenerGroupImpl.java:127)
+	at org.hibernate.event.internal.AbstractFlushingEventListener.flushEntities(AbstractFlushingEventListener.java:269)
+	at org.hibernate.event.internal.AbstractFlushingEventListener.flushEverythingToExecutions(AbstractFlushingEventListener.java:90)
+	at org.hibernate.event.internal.AbstractFlushingEventListener.flushEverythingToExecutions(AbstractFlushingEventListener.java:84)
+	at org.hibernate.event.internal.DefaultFlushEventListener.onFlush(DefaultFlushEventListener.java:40)
+	at org.hibernate.event.service.internal.EventListenerGroupImpl.fireEventOnEachListener(EventListenerGroupImpl.java:127)
+	at org.hibernate.internal.SessionImpl.doFlush(SessionImpl.java:1429)
+	at org.hibernate.internal.SessionImpl.managedFlush(SessionImpl.java:491)
+	at org.hibernate.internal.SessionImpl.flushBeforeTransactionCompletion(SessionImpl.java:2354)
+	at org.hibernate.internal.SessionImpl.beforeTransactionCompletion(SessionImpl.java:1978)
+	at org.hibernate.engine.jdbc.internal.JdbcCoordinatorImpl.beforeTransactionCompletion(JdbcCoordinatorImpl.java:439)
+	at org.hibernate.resource.transaction.backend.jdbc.internal.JdbcResourceLocalTransactionCoordinatorImpl.beforeCompletionCallback(JdbcResourceLocalTransactionCoordinatorImpl.java:169)
+	at org.hibernate.resource.transaction.backend.jdbc.internal.JdbcResourceLocalTransactionCoordinatorImpl$TransactionDriverControlImpl.commit(JdbcResourceLocalTransactionCoordinatorImpl.java:267)
+	at org.hibernate.engine.transaction.internal.TransactionImpl.commit(TransactionImpl.java:101)
+	at org.springframework.orm.jpa.JpaTransactionManager.doCommit(JpaTransactionManager.java:562)
+	at org.springframework.transaction.support.AbstractPlatformTransactionManager.processCommit(AbstractPlatformTransactionManager.java:795)
+	at org.springframework.transaction.support.AbstractPlatformTransactionManager.commit(AbstractPlatformTransactionManager.java:758)
+	at org.springframework.transaction.interceptor.TransactionAspectSupport.commitTransactionAfterReturning(TransactionAspectSupport.java:698)
+	at org.springframework.transaction.interceptor.TransactionAspectSupport.invokeWithinTransaction(TransactionAspectSupport.java:416)
+	at org.springframework.transaction.interceptor.TransactionInterceptor.invoke(TransactionInterceptor.java:119)
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:184)
+	at org.springframework.dao.support.PersistenceExceptionTranslationInterceptor.invoke(PersistenceExceptionTranslationInterceptor.java:138)
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:184)
+	at org.springframework.data.jpa.repository.support.CrudMethodMetadataPostProcessor$CrudMethodMetadataPopulatingMethodInterceptor.invoke(CrudMethodMetadataPostProcessor.java:165)
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:184)
+	at org.springframework.aop.framework.JdkDynamicAopProxy.invoke(JdkDynamicAopProxy.java:223)
+	at jdk.proxy2/jdk.proxy2.$Proxy128.save(Unknown Source)
+	at com.baek.viewer.service.ScheduleService.saveAndApply(ScheduleService.java:97)
+	at com.baek.viewer.controller.ScheduleController.update(ScheduleController.java:28)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:104)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	at org.springframework.web.method.support.InvocableHandlerMethod.doInvoke(InvocableHandlerMethod.java:255)
+	at org.springframework.web.method.support.InvocableHandlerMethod.invokeForRequest(InvocableHandlerMethod.java:188)
+	at org.springframework.web.servlet.mvc.method.annotation.ServletInvocableHandlerMethod.invokeAndHandle(ServletInvocableHandlerMethod.java:118)
+	at org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter.invokeHandlerMethod(RequestMappingHandlerAdapter.java:986)
+	at org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter.handleInternal(RequestMappingHandlerAdapter.java:891)
+	at org.springframework.web.servlet.mvc.method.AbstractHandlerMethodAdapter.handle(AbstractHandlerMethodAdapter.java:87)
+	at org.springframework.web.servlet.DispatcherServlet.doDispatch(DispatcherServlet.java:1088)
+	at org.springframework.web.servlet.DispatcherServlet.doService(DispatcherServlet.java:978)
+	at org.springframework.web.servlet.FrameworkServlet.processRequest(FrameworkServlet.java:1014)
+	at org.springframework.web.servlet.FrameworkServlet.doPut(FrameworkServlet.java:925)
+	at jakarta.servlet.http.HttpServlet.service(HttpServlet.java:593)
+	at org.springframework.web.servlet.FrameworkServlet.service(FrameworkServlet.java:885)
+	at jakarta.servlet.http.HttpServlet.service(HttpServlet.java:658)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:195)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140)
+	at org.apache.tomcat.websocket.server.WsFilter.doFilter(WsFilter.java:51)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:164)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140)
+	at com.baek.viewer.config.LoggingFilter.doFilter(LoggingFilter.java:40)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:164)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140)
+	at org.springframework.web.filter.RequestContextFilter.doFilterInternal(RequestContextFilter.java:100)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:164)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140)
+	at org.springframework.web.filter.FormContentFilter.doFilterInternal(FormContentFilter.java:93)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:164)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140)
+	at org.springframework.web.filter.CharacterEncodingFilter.doFilterInternal(CharacterEncodingFilter.java:201)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:164)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140)
+	at org.apache.catalina.core.StandardWrapperValve.invoke(StandardWrapperValve.java:167)
+	at org.apache.catalina.core.StandardContextValve.invoke(StandardContextValve.java:90)
+	at org.apache.catalina.authenticator.AuthenticatorBase.invoke(AuthenticatorBase.java:483)
+	at org.apache.catalina.core.StandardHostValve.invoke(StandardHostValve.java:115)
+	at org.apache.catalina.valves.ErrorReportValve.invoke(ErrorReportValve.java:93)
+	at org.apache.catalina.core.StandardEngineValve.invoke(StandardEngineValve.java:74)
+	at org.apache.catalina.connector.CoyoteAdapter.service(CoyoteAdapter.java:344)
+	at org.apache.coyote.http11.Http11Processor.service(Http11Processor.java:397)
+	at org.apache.coyote.AbstractProcessorLight.process(AbstractProcessorLight.java:63)
+	at org.apache.coyote.AbstractProtocol$ConnectionHandler.process(AbstractProtocol.java:905)
+	at org.apache.tomcat.util.net.NioEndpoint$SocketProcessor.doRun(NioEndpoint.java:1741)
+	at org.apache.tomcat.util.net.SocketProcessorBase.run(SocketProcessorBase.java:52)
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1190)
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:659)
+	at org.apache.tomcat.util.threads.TaskThread$WrappingRunnable.run(TaskThread.java:63)
+	at java.base/java.lang.Thread.run(Thread.java:1474)
+2026-04-04 10:50:26 [ERROR] [SYSTEM] [] o.a.c.c.C.[.[.[.[dispatcherServlet] - Servlet.service() for servlet [dispatcherServlet] in context with path [] threw exception [Request processing failed: org.springframework.dao.DataIntegrityViolationException: not-null property references a null or transient value: com.baek.viewer.model.ScheduleConfig.jobType] with root cause
+org.hibernate.PropertyValueException: not-null property references a null or transient value: com.baek.viewer.model.ScheduleConfig.jobType
+	at org.hibernate.engine.internal.Nullability.checkNullability(Nullability.java:112)
+	at org.hibernate.engine.internal.Nullability.checkNullability(Nullability.java:57)
+	at org.hibernate.event.internal.DefaultFlushEntityEventListener.scheduleUpdate(DefaultFlushEntityEventListener.java:260)
+	at org.hibernate.event.internal.DefaultFlushEntityEventListener.onFlushEntity(DefaultFlushEntityEventListener.java:150)
+	at org.hibernate.event.service.internal.EventListenerGroupImpl.fireEventOnEachListener(EventListenerGroupImpl.java:127)
+	at org.hibernate.event.internal.AbstractFlushingEventListener.flushEntities(AbstractFlushingEventListener.java:269)
+	at org.hibernate.event.internal.AbstractFlushingEventListener.flushEverythingToExecutions(AbstractFlushingEventListener.java:90)
+	at org.hibernate.event.internal.AbstractFlushingEventListener.flushEverythingToExecutions(AbstractFlushingEventListener.java:84)
+	at org.hibernate.event.internal.DefaultFlushEventListener.onFlush(DefaultFlushEventListener.java:40)
+	at org.hibernate.event.service.internal.EventListenerGroupImpl.fireEventOnEachListener(EventListenerGroupImpl.java:127)
+	at org.hibernate.internal.SessionImpl.doFlush(SessionImpl.java:1429)
+	at org.hibernate.internal.SessionImpl.managedFlush(SessionImpl.java:491)
+	at org.hibernate.internal.SessionImpl.flushBeforeTransactionCompletion(SessionImpl.java:2354)
+	at org.hibernate.internal.SessionImpl.beforeTransactionCompletion(SessionImpl.java:1978)
+	at org.hibernate.engine.jdbc.internal.JdbcCoordinatorImpl.beforeTransactionCompletion(JdbcCoordinatorImpl.java:439)
+	at org.hibernate.resource.transaction.backend.jdbc.internal.JdbcResourceLocalTransactionCoordinatorImpl.beforeCompletionCallback(JdbcResourceLocalTransactionCoordinatorImpl.java:169)
+	at org.hibernate.resource.transaction.backend.jdbc.internal.JdbcResourceLocalTransactionCoordinatorImpl$TransactionDriverControlImpl.commit(JdbcResourceLocalTransactionCoordinatorImpl.java:267)
+	at org.hibernate.engine.transaction.internal.TransactionImpl.commit(TransactionImpl.java:101)
+	at org.springframework.orm.jpa.JpaTransactionManager.doCommit(JpaTransactionManager.java:562)
+	at org.springframework.transaction.support.AbstractPlatformTransactionManager.processCommit(AbstractPlatformTransactionManager.java:795)
+	at org.springframework.transaction.support.AbstractPlatformTransactionManager.commit(AbstractPlatformTransactionManager.java:758)
+	at org.springframework.transaction.interceptor.TransactionAspectSupport.commitTransactionAfterReturning(TransactionAspectSupport.java:698)
+	at org.springframework.transaction.interceptor.TransactionAspectSupport.invokeWithinTransaction(TransactionAspectSupport.java:416)
+	at org.springframework.transaction.interceptor.TransactionInterceptor.invoke(TransactionInterceptor.java:119)
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:184)
+	at org.springframework.dao.support.PersistenceExceptionTranslationInterceptor.invoke(PersistenceExceptionTranslationInterceptor.java:138)
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:184)
+	at org.springframework.data.jpa.repository.support.CrudMethodMetadataPostProcessor$CrudMethodMetadataPopulatingMethodInterceptor.invoke(CrudMethodMetadataPostProcessor.java:165)
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:184)
+	at org.springframework.aop.framework.JdkDynamicAopProxy.invoke(JdkDynamicAopProxy.java:223)
+	at jdk.proxy2/jdk.proxy2.$Proxy128.save(Unknown Source)
+	at com.baek.viewer.service.ScheduleService.saveAndApply(ScheduleService.java:97)
+	at com.baek.viewer.controller.ScheduleController.update(ScheduleController.java:28)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:104)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	at org.springframework.web.method.support.InvocableHandlerMethod.doInvoke(InvocableHandlerMethod.java:255)
+	at org.springframework.web.method.support.InvocableHandlerMethod.invokeForRequest(InvocableHandlerMethod.java:188)
+	at org.springframework.web.servlet.mvc.method.annotation.ServletInvocableHandlerMethod.invokeAndHandle(ServletInvocableHandlerMethod.java:118)
+	at org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter.invokeHandlerMethod(RequestMappingHandlerAdapter.java:986)
+	at org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter.handleInternal(RequestMappingHandlerAdapter.java:891)
+	at org.springframework.web.servlet.mvc.method.AbstractHandlerMethodAdapter.handle(AbstractHandlerMethodAdapter.java:87)
+	at org.springframework.web.servlet.DispatcherServlet.doDispatch(DispatcherServlet.java:1088)
+	at org.springframework.web.servlet.DispatcherServlet.doService(DispatcherServlet.java:978)
+	at org.springframework.web.servlet.FrameworkServlet.processRequest(FrameworkServlet.java:1014)
+	at org.springframework.web.servlet.FrameworkServlet.doPut(FrameworkServlet.java:925)
+	at jakarta.servlet.http.HttpServlet.service(HttpServlet.java:593)
+	at org.springframework.web.servlet.FrameworkServlet.service(FrameworkServlet.java:885)
+	at jakarta.servlet.http.HttpServlet.service(HttpServlet.java:658)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:195)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140)
+	at org.apache.tomcat.websocket.server.WsFilter.doFilter(WsFilter.java:51)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:164)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140)
+	at com.baek.viewer.config.LoggingFilter.doFilter(LoggingFilter.java:40)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:164)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140)
+	at org.springframework.web.filter.RequestContextFilter.doFilterInternal(RequestContextFilter.java:100)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:164)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140)
+	at org.springframework.web.filter.FormContentFilter.doFilterInternal(FormContentFilter.java:93)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:164)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140)
+	at org.springframework.web.filter.CharacterEncodingFilter.doFilterInternal(CharacterEncodingFilter.java:201)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:164)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140)
+	at org.apache.catalina.core.StandardWrapperValve.invoke(StandardWrapperValve.java:167)
+	at org.apache.catalina.core.StandardContextValve.invoke(StandardContextValve.java:90)
+	at org.apache.catalina.authenticator.AuthenticatorBase.invoke(AuthenticatorBase.java:483)
+	at org.apache.catalina.core.StandardHostValve.invoke(StandardHostValve.java:115)
+	at org.apache.catalina.valves.ErrorReportValve.invoke(ErrorReportValve.java:93)
+	at org.apache.catalina.core.StandardEngineValve.invoke(StandardEngineValve.java:74)
+	at org.apache.catalina.connector.CoyoteAdapter.service(CoyoteAdapter.java:344)
+	at org.apache.coyote.http11.Http11Processor.service(Http11Processor.java:397)
+	at org.apache.coyote.AbstractProcessorLight.process(AbstractProcessorLight.java:63)
+	at org.apache.coyote.AbstractProtocol$ConnectionHandler.process(AbstractProtocol.java:905)
+	at org.apache.tomcat.util.net.NioEndpoint$SocketProcessor.doRun(NioEndpoint.java:1741)
+	at org.apache.tomcat.util.net.SocketProcessorBase.run(SocketProcessorBase.java:52)
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1190)
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:659)
+	at org.apache.tomcat.util.threads.TaskThread$WrappingRunnable.run(TaskThread.java:63)
+	at java.base/java.lang.Thread.run(Thread.java:1474)
+2026-04-04 10:50:36 [ERROR] [SYSTEM] [] o.a.c.c.C.[.[.[.[dispatcherServlet] - Servlet.service() for servlet [dispatcherServlet] in context with path [] threw exception [Request processing failed: org.springframework.dao.DataIntegrityViolationException: not-null property references a null or transient value: com.baek.viewer.model.ScheduleConfig.jobType] with root cause
+org.hibernate.PropertyValueException: not-null property references a null or transient value: com.baek.viewer.model.ScheduleConfig.jobType
+	at org.hibernate.engine.internal.Nullability.checkNullability(Nullability.java:112)
+	at org.hibernate.engine.internal.Nullability.checkNullability(Nullability.java:57)
+	at org.hibernate.event.internal.DefaultFlushEntityEventListener.scheduleUpdate(DefaultFlushEntityEventListener.java:260)
+	at org.hibernate.event.internal.DefaultFlushEntityEventListener.onFlushEntity(DefaultFlushEntityEventListener.java:150)
+	at org.hibernate.event.service.internal.EventListenerGroupImpl.fireEventOnEachListener(EventListenerGroupImpl.java:127)
+	at org.hibernate.event.internal.AbstractFlushingEventListener.flushEntities(AbstractFlushingEventListener.java:269)
+	at org.hibernate.event.internal.AbstractFlushingEventListener.flushEverythingToExecutions(AbstractFlushingEventListener.java:90)
+	at org.hibernate.event.internal.AbstractFlushingEventListener.flushEverythingToExecutions(AbstractFlushingEventListener.java:84)
+	at org.hibernate.event.internal.DefaultFlushEventListener.onFlush(DefaultFlushEventListener.java:40)
+	at org.hibernate.event.service.internal.EventListenerGroupImpl.fireEventOnEachListener(EventListenerGroupImpl.java:127)
+	at org.hibernate.internal.SessionImpl.doFlush(SessionImpl.java:1429)
+	at org.hibernate.internal.SessionImpl.managedFlush(SessionImpl.java:491)
+	at org.hibernate.internal.SessionImpl.flushBeforeTransactionCompletion(SessionImpl.java:2354)
+	at org.hibernate.internal.SessionImpl.beforeTransactionCompletion(SessionImpl.java:1978)
+	at org.hibernate.engine.jdbc.internal.JdbcCoordinatorImpl.beforeTransactionCompletion(JdbcCoordinatorImpl.java:439)
+	at org.hibernate.resource.transaction.backend.jdbc.internal.JdbcResourceLocalTransactionCoordinatorImpl.beforeCompletionCallback(JdbcResourceLocalTransactionCoordinatorImpl.java:169)
+	at org.hibernate.resource.transaction.backend.jdbc.internal.JdbcResourceLocalTransactionCoordinatorImpl$TransactionDriverControlImpl.commit(JdbcResourceLocalTransactionCoordinatorImpl.java:267)
+	at org.hibernate.engine.transaction.internal.TransactionImpl.commit(TransactionImpl.java:101)
+	at org.springframework.orm.jpa.JpaTransactionManager.doCommit(JpaTransactionManager.java:562)
+	at org.springframework.transaction.support.AbstractPlatformTransactionManager.processCommit(AbstractPlatformTransactionManager.java:795)
+	at org.springframework.transaction.support.AbstractPlatformTransactionManager.commit(AbstractPlatformTransactionManager.java:758)
+	at org.springframework.transaction.interceptor.TransactionAspectSupport.commitTransactionAfterReturning(TransactionAspectSupport.java:698)
+	at org.springframework.transaction.interceptor.TransactionAspectSupport.invokeWithinTransaction(TransactionAspectSupport.java:416)
+	at org.springframework.transaction.interceptor.TransactionInterceptor.invoke(TransactionInterceptor.java:119)
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:184)
+	at org.springframework.dao.support.PersistenceExceptionTranslationInterceptor.invoke(PersistenceExceptionTranslationInterceptor.java:138)
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:184)
+	at org.springframework.data.jpa.repository.support.CrudMethodMetadataPostProcessor$CrudMethodMetadataPopulatingMethodInterceptor.invoke(CrudMethodMetadataPostProcessor.java:165)
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:184)
+	at org.springframework.aop.framework.JdkDynamicAopProxy.invoke(JdkDynamicAopProxy.java:223)
+	at jdk.proxy2/jdk.proxy2.$Proxy128.save(Unknown Source)
+	at com.baek.viewer.service.ScheduleService.saveAndApply(ScheduleService.java:97)
+	at com.baek.viewer.controller.ScheduleController.update(ScheduleController.java:28)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:104)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	at org.springframework.web.method.support.InvocableHandlerMethod.doInvoke(InvocableHandlerMethod.java:255)
+	at org.springframework.web.method.support.InvocableHandlerMethod.invokeForRequest(InvocableHandlerMethod.java:188)
+	at org.springframework.web.servlet.mvc.method.annotation.ServletInvocableHandlerMethod.invokeAndHandle(ServletInvocableHandlerMethod.java:118)
+	at org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter.invokeHandlerMethod(RequestMappingHandlerAdapter.java:986)
+	at org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter.handleInternal(RequestMappingHandlerAdapter.java:891)
+	at org.springframework.web.servlet.mvc.method.AbstractHandlerMethodAdapter.handle(AbstractHandlerMethodAdapter.java:87)
+	at org.springframework.web.servlet.DispatcherServlet.doDispatch(DispatcherServlet.java:1088)
+	at org.springframework.web.servlet.DispatcherServlet.doService(DispatcherServlet.java:978)
+	at org.springframework.web.servlet.FrameworkServlet.processRequest(FrameworkServlet.java:1014)
+	at org.springframework.web.servlet.FrameworkServlet.doPut(FrameworkServlet.java:925)
+	at jakarta.servlet.http.HttpServlet.service(HttpServlet.java:593)
+	at org.springframework.web.servlet.FrameworkServlet.service(FrameworkServlet.java:885)
+	at jakarta.servlet.http.HttpServlet.service(HttpServlet.java:658)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:195)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140)
+	at org.apache.tomcat.websocket.server.WsFilter.doFilter(WsFilter.java:51)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:164)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140)
+	at com.baek.viewer.config.LoggingFilter.doFilter(LoggingFilter.java:40)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:164)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140)
+	at org.springframework.web.filter.RequestContextFilter.doFilterInternal(RequestContextFilter.java:100)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:164)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140)
+	at org.springframework.web.filter.FormContentFilter.doFilterInternal(FormContentFilter.java:93)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:164)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140)
+	at org.springframework.web.filter.CharacterEncodingFilter.doFilterInternal(CharacterEncodingFilter.java:201)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:164)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140)
+	at org.apache.catalina.core.StandardWrapperValve.invoke(StandardWrapperValve.java:167)
+	at org.apache.catalina.core.StandardContextValve.invoke(StandardContextValve.java:90)
+	at org.apache.catalina.authenticator.AuthenticatorBase.invoke(AuthenticatorBase.java:483)
+	at org.apache.catalina.core.StandardHostValve.invoke(StandardHostValve.java:115)
+	at org.apache.catalina.valves.ErrorReportValve.invoke(ErrorReportValve.java:93)
+	at org.apache.catalina.core.StandardEngineValve.invoke(StandardEngineValve.java:74)
+	at org.apache.catalina.connector.CoyoteAdapter.service(CoyoteAdapter.java:344)
+	at org.apache.coyote.http11.Http11Processor.service(Http11Processor.java:397)
+	at org.apache.coyote.AbstractProcessorLight.process(AbstractProcessorLight.java:63)
+	at org.apache.coyote.AbstractProtocol$ConnectionHandler.process(AbstractProtocol.java:905)
+	at org.apache.tomcat.util.net.NioEndpoint$SocketProcessor.doRun(NioEndpoint.java:1741)
+	at org.apache.tomcat.util.net.SocketProcessorBase.run(SocketProcessorBase.java:52)
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1190)
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:659)
+	at org.apache.tomcat.util.threads.TaskThread$WrappingRunnable.run(TaskThread.java:63)
+	at java.base/java.lang.Thread.run(Thread.java:1474)
+2026-04-04 10:51:04 [INFO ] [ADMIN] [127.0.0.1] c.b.v.c.ApiViewController - [로그 조회] GET /api/logs/view date=2026-04-04
+2026-04-04 10:53:27 [INFO ] [SYSTEM] [] o.quartz.core.QuartzScheduler - Scheduler quartzScheduler_$_NON_CLUSTERED paused.
+2026-04-04 10:53:27 [INFO ] [SYSTEM] [] o.s.b.w.e.t.GracefulShutdown - Commencing graceful shutdown. Waiting for active requests to complete
+2026-04-04 10:53:27 [INFO ] [SYSTEM] [] o.s.b.w.e.t.GracefulShutdown - Graceful shutdown complete
+2026-04-04 10:53:27 [INFO ] [SYSTEM] [] o.s.s.q.SchedulerFactoryBean - Shutting down Quartz Scheduler
+2026-04-04 10:53:27 [INFO ] [SYSTEM] [] o.quartz.core.QuartzScheduler - Scheduler quartzScheduler_$_NON_CLUSTERED shutting down.
+2026-04-04 10:53:27 [INFO ] [SYSTEM] [] o.quartz.core.QuartzScheduler - Scheduler quartzScheduler_$_NON_CLUSTERED paused.
+2026-04-04 10:53:27 [INFO ] [SYSTEM] [] o.quartz.core.QuartzScheduler - Scheduler quartzScheduler_$_NON_CLUSTERED shutdown complete.
+2026-04-04 10:53:27 [INFO ] [SYSTEM] [] o.s.o.j.LocalContainerEntityManagerFactoryBean - Closing JPA EntityManagerFactory for persistence unit 'default'
+2026-04-04 10:53:27 [INFO ] [SYSTEM] [] c.z.hikari.HikariDataSource - HikariPool-1 - Shutdown initiated...
+2026-04-04 10:53:27 [INFO ] [SYSTEM] [] c.z.hikari.HikariDataSource - HikariPool-1 - Shutdown completed.
+2026-04-04 10:53:33 [INFO ] [SYSTEM] [] c.b.v.ApiViewerApplication - Starting ApiViewerApplication v1.0.0 using Java 25.0.2 with PID 7848 (/Users/baegmyeongseon/LP_DEV/ApiViewer/target/api-viewer-1.0.0.jar started by baegmyeongseon in /Users/baegmyeongseon/LP_DEV/ApiViewer)
+2026-04-04 10:53:33 [INFO ] [SYSTEM] [] c.b.v.ApiViewerApplication - No active profile set, falling back to 1 default profile: "default"
+2026-04-04 10:53:33 [INFO ] [SYSTEM] [] o.s.d.r.c.RepositoryConfigurationDelegate - Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-04-04 10:53:33 [INFO ] [SYSTEM] [] o.s.d.r.c.RepositoryConfigurationDelegate - Finished Spring Data repository scanning in 22 ms. Found 4 JPA repository interfaces.
+2026-04-04 10:53:33 [INFO ] [SYSTEM] [] o.s.b.w.e.t.TomcatWebServer - Tomcat initialized with port 8080 (http)
+2026-04-04 10:53:33 [INFO ] [SYSTEM] [] o.a.c.http11.Http11NioProtocol - Initializing ProtocolHandler ["http-nio-0.0.0.0-8080"]
+2026-04-04 10:53:33 [INFO ] [SYSTEM] [] o.a.c.core.StandardService - Starting service [Tomcat]
+2026-04-04 10:53:33 [INFO ] [SYSTEM] [] o.a.c.core.StandardEngine - Starting Servlet engine: [Apache Tomcat/10.1.33]
+2026-04-04 10:53:33 [INFO ] [SYSTEM] [] o.a.c.c.C.[.[localhost].[/] - Initializing Spring embedded WebApplicationContext
+2026-04-04 10:53:33 [INFO ] [SYSTEM] [] o.s.b.w.s.c.ServletWebServerApplicationContext - Root WebApplicationContext: initialization completed in 486 ms
+2026-04-04 10:53:33 [INFO ] [SYSTEM] [] c.z.hikari.HikariDataSource - HikariPool-1 - Starting...
+2026-04-04 10:53:34 [INFO ] [SYSTEM] [] c.z.hikari.pool.HikariPool - HikariPool-1 - Added connection conn0: url=jdbc:h2:file:./data/api-viewer-db user=SA
+2026-04-04 10:53:34 [INFO ] [SYSTEM] [] c.z.hikari.HikariDataSource - HikariPool-1 - Start completed.
+2026-04-04 10:53:34 [INFO ] [SYSTEM] [] o.s.b.a.h.H2ConsoleAutoConfiguration - H2 console available at '/h2-console'. Database available at 'jdbc:h2:file:./data/api-viewer-db'
+2026-04-04 10:53:34 [INFO ] [SYSTEM] [] o.h.j.internal.util.LogHelper - HHH000204: Processing PersistenceUnitInfo [name: default]
+2026-04-04 10:53:34 [INFO ] [SYSTEM] [] org.hibernate.Version - HHH000412: Hibernate ORM core version 6.6.2.Final
+2026-04-04 10:53:34 [INFO ] [SYSTEM] [] o.h.c.i.RegionFactoryInitiator - HHH000026: Second-level cache disabled
+2026-04-04 10:53:34 [INFO ] [SYSTEM] [] o.s.o.j.p.SpringPersistenceUnitInfo - No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-04-04 10:53:34 [WARN ] [SYSTEM] [] org.hibernate.orm.deprecation - HHH90000025: H2Dialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+2026-04-04 10:53:34 [INFO ] [SYSTEM] [] o.h.orm.connections.pooling - HHH10001005: Database info:
+	Database JDBC URL [Connecting through datasource 'HikariDataSource (HikariPool-1)']
+	Database driver: undefined/unknown
+	Database version: 2.3.232
+	Autocommit mode: undefined/unknown
+	Isolation level: undefined/unknown
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+2026-04-04 10:53:34 [INFO ] [SYSTEM] [] o.h.e.t.j.p.i.JtaPlatformInitiator - HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-04-04 10:53:34 [INFO ] [SYSTEM] [] o.s.o.j.LocalContainerEntityManagerFactoryBean - Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-04-04 10:53:34 [INFO ] [SYSTEM] [] o.s.d.j.r.q.QueryEnhancerFactory - Hibernate is in classpath; If applicable, HQL parser will be used.
+2026-04-04 10:53:35 [INFO ] [SYSTEM] [] o.q.impl.StdSchedulerFactory - Using default implementation for ThreadExecutor
+2026-04-04 10:53:35 [INFO ] [SYSTEM] [] o.q.core.SchedulerSignalerImpl - Initialized Scheduler Signaller of type: class org.quartz.core.SchedulerSignalerImpl
+2026-04-04 10:53:35 [INFO ] [SYSTEM] [] o.quartz.core.QuartzScheduler - Quartz Scheduler v.2.3.2 created.
+2026-04-04 10:53:35 [INFO ] [SYSTEM] [] org.quartz.simpl.RAMJobStore - RAMJobStore initialized.
+2026-04-04 10:53:35 [INFO ] [SYSTEM] [] o.quartz.core.QuartzScheduler - Scheduler meta-data: Quartz Scheduler (v2.3.2) 'quartzScheduler' with instanceId 'NON_CLUSTERED'
+  Scheduler class: 'org.quartz.core.QuartzScheduler' - running locally.
+  NOT STARTED.
+  Currently in standby mode.
+  Number of jobs executed: 0
+  Using thread pool 'org.quartz.simpl.SimpleThreadPool' - with 10 threads.
+  Using job-store 'org.quartz.simpl.RAMJobStore' - which does not support persistence. and is not clustered.
+
+2026-04-04 10:53:35 [INFO ] [SYSTEM] [] o.q.impl.StdSchedulerFactory - Quartz scheduler 'quartzScheduler' initialized from an externally provided properties instance.
+2026-04-04 10:53:35 [INFO ] [SYSTEM] [] o.q.impl.StdSchedulerFactory - Quartz scheduler version: 2.3.2
+2026-04-04 10:53:35 [INFO ] [SYSTEM] [] o.quartz.core.QuartzScheduler - JobFactory set to: org.springframework.scheduling.quartz.SpringBeanJobFactory@388b9799
+2026-04-04 10:53:35 [INFO ] [SYSTEM] [] c.b.v.service.ScheduleService - [스케줄] GIT_PULL_EXTRACT 비활성화
+2026-04-04 10:53:35 [INFO ] [SYSTEM] [] c.b.v.service.ScheduleService - [스케줄] APM_DAILY 비활성화
+2026-04-04 10:53:35 [INFO ] [SYSTEM] [] c.b.v.service.ScheduleService - [스케줄] APM_WEEKLY 비활성화
+2026-04-04 10:53:35 [WARN ] [SYSTEM] [] o.s.b.a.o.j.JpaBaseConfiguration$JpaWebConfiguration - spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-04-04 10:53:35 [INFO ] [SYSTEM] [] o.s.b.a.w.s.WelcomePageHandlerMapping - Adding welcome page: class path resource [static/index.html]
+2026-04-04 10:53:35 [INFO ] [SYSTEM] [] o.a.c.http11.Http11NioProtocol - Starting ProtocolHandler ["http-nio-0.0.0.0-8080"]
+2026-04-04 10:53:35 [INFO ] [SYSTEM] [] o.s.b.w.e.t.TomcatWebServer - Tomcat started on port 8080 (http) with context path '/'
+2026-04-04 10:53:35 [INFO ] [SYSTEM] [] o.s.s.q.SchedulerFactoryBean - Starting Quartz Scheduler now
+2026-04-04 10:53:35 [INFO ] [SYSTEM] [] o.quartz.core.QuartzScheduler - Scheduler quartzScheduler_$_NON_CLUSTERED started.
+2026-04-04 10:53:35 [INFO ] [SYSTEM] [] c.b.v.ApiViewerApplication - Started ApiViewerApplication in 2.125 seconds (process running for 2.333)
+2026-04-04 10:53:35 [INFO ] [SYSTEM] [] c.b.viewer.StartupConfigLoader - [기동 시 설정 로드] YAML 경로=./repos-config.yml
+2026-04-04 10:53:35 [INFO ] [SYSTEM] [] c.b.v.s.YamlConfigService - [YAML 임포트] 파일 경로=./repos-config.yml
+2026-04-04 10:53:35 [INFO ] [SYSTEM] [] c.b.v.s.YamlConfigService - [YAML 임포트 완료] 레포 2개 발견, 추가=0, 업데이트=2
+2026-04-04 10:53:35 [INFO ] [SYSTEM] [] c.b.viewer.StartupConfigLoader - [기동 시 설정 로드] 동기화 완료 — 추가 0개, 업데이트 2개
+2026-04-04 10:53:42 [INFO ] [SYSTEM] [] o.a.c.c.C.[.[localhost].[/] - Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-04-04 10:53:42 [INFO ] [SYSTEM] [] o.s.w.s.DispatcherServlet - Initializing Servlet 'dispatcherServlet'
+2026-04-04 10:53:42 [INFO ] [SYSTEM] [] o.s.w.s.DispatcherServlet - Completed initialization in 1 ms
+2026-04-04 10:53:42 [WARN ] [SYSTEM] [127.0.0.1] c.b.viewer.service.AuthService - [토큰 검증 실패] 존재하지 않는 토큰
+2026-04-04 10:53:42 [WARN ] [SYSTEM] [127.0.0.1] c.b.viewer.service.AuthService - [토큰 검증 실패] 존재하지 않는 토큰
+2026-04-04 10:53:42 [WARN ] [USER] [127.0.0.1] c.b.viewer.service.AuthService - [토큰 검증 실패] 존재하지 않는 토큰
+2026-04-04 10:53:42 [WARN ] [USER] [127.0.0.1] c.b.v.config.AdminInterceptor - [인증 차단] 401 GET /api/schedule (IP=127.0.0.1)
+2026-04-04 10:53:42 [WARN ] [USER] [127.0.0.1] c.b.viewer.service.AuthService - [토큰 검증 실패] 존재하지 않는 토큰
+2026-04-04 10:53:42 [WARN ] [USER] [127.0.0.1] c.b.v.config.AdminInterceptor - [인증 차단] 401 GET /api/logs/dates (IP=127.0.0.1)
+2026-04-04 10:53:42 [INFO ] [USER] [127.0.0.1] c.b.v.c.ConfigController - [레포설정 목록 조회] GET /api/config/repos
+2026-04-04 10:53:42 [INFO ] [USER] [127.0.0.1] c.b.v.c.ConfigController - [공통설정 조회] GET /api/config/global
+2026-04-04 10:53:45 [WARN ] [SYSTEM] [127.0.0.1] c.b.viewer.service.AuthService - [토큰 검증 실패] 존재하지 않는 토큰
+2026-04-04 10:53:45 [WARN ] [USER] [127.0.0.1] c.b.viewer.service.AuthService - [토큰 검증 실패] 존재하지 않는 토큰
+2026-04-04 10:53:45 [WARN ] [USER] [127.0.0.1] c.b.v.config.AdminInterceptor - [인증 차단] 401 GET /api/logs/view (IP=127.0.0.1)
+2026-04-04 10:53:51 [INFO ] [USER] [127.0.0.1] c.b.v.c.ApiViewController - [통계 조회] GET /api/db/stats
+2026-04-04 10:53:53 [WARN ] [SYSTEM] [127.0.0.1] c.b.viewer.service.AuthService - [토큰 검증 실패] 존재하지 않는 토큰
+2026-04-04 10:53:53 [INFO ] [USER] [127.0.0.1] c.b.v.c.ConfigController - [레포설정 목록 조회] GET /api/config/repos
+2026-04-04 10:53:53 [INFO ] [USER] [127.0.0.1] c.b.v.c.ConfigController - [공통설정 조회] GET /api/config/global
+2026-04-04 10:53:53 [WARN ] [SYSTEM] [127.0.0.1] c.b.viewer.service.AuthService - [토큰 검증 실패] 존재하지 않는 토큰
+2026-04-04 10:53:53 [WARN ] [USER] [127.0.0.1] c.b.viewer.service.AuthService - [토큰 검증 실패] 존재하지 않는 토큰
+2026-04-04 10:53:53 [WARN ] [USER] [127.0.0.1] c.b.v.config.AdminInterceptor - [인증 차단] 401 GET /api/logs/dates (IP=127.0.0.1)
+2026-04-04 10:53:53 [WARN ] [USER] [127.0.0.1] c.b.viewer.service.AuthService - [토큰 검증 실패] 존재하지 않는 토큰
+2026-04-04 10:53:53 [WARN ] [USER] [127.0.0.1] c.b.v.config.AdminInterceptor - [인증 차단] 401 GET /api/schedule (IP=127.0.0.1)
+2026-04-04 10:53:56 [WARN ] [SYSTEM] [127.0.0.1] c.b.viewer.service.AuthService - [토큰 검증 실패] 존재하지 않는 토큰
+2026-04-04 10:53:56 [WARN ] [USER] [127.0.0.1] c.b.viewer.service.AuthService - [토큰 검증 실패] 존재하지 않는 토큰
+2026-04-04 10:53:56 [WARN ] [USER] [127.0.0.1] c.b.v.config.AdminInterceptor - [인증 차단] 401 GET /api/logs/view (IP=127.0.0.1)
+2026-04-04 10:54:06 [INFO ] [SYSTEM] [] o.quartz.core.QuartzScheduler - Scheduler quartzScheduler_$_NON_CLUSTERED paused.
+2026-04-04 10:54:06 [INFO ] [SYSTEM] [] o.s.b.w.e.t.GracefulShutdown - Commencing graceful shutdown. Waiting for active requests to complete
+2026-04-04 10:54:06 [INFO ] [SYSTEM] [] o.s.b.w.e.t.GracefulShutdown - Graceful shutdown complete
+2026-04-04 10:54:06 [INFO ] [SYSTEM] [] o.s.s.q.SchedulerFactoryBean - Shutting down Quartz Scheduler
+2026-04-04 10:54:06 [INFO ] [SYSTEM] [] o.quartz.core.QuartzScheduler - Scheduler quartzScheduler_$_NON_CLUSTERED shutting down.
+2026-04-04 10:54:06 [INFO ] [SYSTEM] [] o.quartz.core.QuartzScheduler - Scheduler quartzScheduler_$_NON_CLUSTERED paused.
+2026-04-04 10:54:06 [INFO ] [SYSTEM] [] o.quartz.core.QuartzScheduler - Scheduler quartzScheduler_$_NON_CLUSTERED shutdown complete.
+2026-04-04 10:54:06 [INFO ] [SYSTEM] [] o.s.o.j.LocalContainerEntityManagerFactoryBean - Closing JPA EntityManagerFactory for persistence unit 'default'
+2026-04-04 10:54:06 [INFO ] [SYSTEM] [] c.z.hikari.HikariDataSource - HikariPool-1 - Shutdown initiated...
+2026-04-04 10:54:06 [INFO ] [SYSTEM] [] c.z.hikari.HikariDataSource - HikariPool-1 - Shutdown completed.
+2026-04-04 10:54:28 [INFO ] [SYSTEM] [] c.b.v.ApiViewerApplication - Starting ApiViewerApplication v1.0.0 using Java 25.0.2 with PID 7900 (/Users/baegmyeongseon/LP_DEV/ApiViewer/target/api-viewer-1.0.0.jar started by baegmyeongseon in /Users/baegmyeongseon/LP_DEV/ApiViewer)
+2026-04-04 10:54:28 [INFO ] [SYSTEM] [] c.b.v.ApiViewerApplication - No active profile set, falling back to 1 default profile: "default"
+2026-04-04 10:54:29 [INFO ] [SYSTEM] [] o.s.d.r.c.RepositoryConfigurationDelegate - Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-04-04 10:54:29 [INFO ] [SYSTEM] [] o.s.d.r.c.RepositoryConfigurationDelegate - Finished Spring Data repository scanning in 21 ms. Found 4 JPA repository interfaces.
+2026-04-04 10:54:29 [INFO ] [SYSTEM] [] o.s.b.w.e.t.TomcatWebServer - Tomcat initialized with port 8080 (http)
+2026-04-04 10:54:29 [INFO ] [SYSTEM] [] o.a.c.http11.Http11NioProtocol - Initializing ProtocolHandler ["http-nio-0.0.0.0-8080"]
+2026-04-04 10:54:29 [INFO ] [SYSTEM] [] o.a.c.core.StandardService - Starting service [Tomcat]
+2026-04-04 10:54:29 [INFO ] [SYSTEM] [] o.a.c.core.StandardEngine - Starting Servlet engine: [Apache Tomcat/10.1.33]
+2026-04-04 10:54:29 [INFO ] [SYSTEM] [] o.a.c.c.C.[.[localhost].[/] - Initializing Spring embedded WebApplicationContext
+2026-04-04 10:54:29 [INFO ] [SYSTEM] [] o.s.b.w.s.c.ServletWebServerApplicationContext - Root WebApplicationContext: initialization completed in 606 ms
+2026-04-04 10:54:29 [INFO ] [SYSTEM] [] c.z.hikari.HikariDataSource - HikariPool-1 - Starting...
+2026-04-04 10:54:29 [INFO ] [SYSTEM] [] c.z.hikari.pool.HikariPool - HikariPool-1 - Added connection conn0: url=jdbc:h2:file:./data/api-viewer-db user=SA
+2026-04-04 10:54:29 [INFO ] [SYSTEM] [] c.z.hikari.HikariDataSource - HikariPool-1 - Start completed.
+2026-04-04 10:54:29 [INFO ] [SYSTEM] [] o.s.b.a.h.H2ConsoleAutoConfiguration - H2 console available at '/h2-console'. Database available at 'jdbc:h2:file:./data/api-viewer-db'
+2026-04-04 10:54:29 [INFO ] [SYSTEM] [] o.h.j.internal.util.LogHelper - HHH000204: Processing PersistenceUnitInfo [name: default]
+2026-04-04 10:54:29 [INFO ] [SYSTEM] [] org.hibernate.Version - HHH000412: Hibernate ORM core version 6.6.2.Final
+2026-04-04 10:54:29 [INFO ] [SYSTEM] [] o.h.c.i.RegionFactoryInitiator - HHH000026: Second-level cache disabled
+2026-04-04 10:54:30 [INFO ] [SYSTEM] [] o.s.o.j.p.SpringPersistenceUnitInfo - No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-04-04 10:54:30 [WARN ] [SYSTEM] [] org.hibernate.orm.deprecation - HHH90000025: H2Dialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+2026-04-04 10:54:30 [INFO ] [SYSTEM] [] o.h.orm.connections.pooling - HHH10001005: Database info:
+	Database JDBC URL [Connecting through datasource 'HikariDataSource (HikariPool-1)']
+	Database driver: undefined/unknown
+	Database version: 2.3.232
+	Autocommit mode: undefined/unknown
+	Isolation level: undefined/unknown
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+2026-04-04 10:54:30 [INFO ] [SYSTEM] [] o.h.e.t.j.p.i.JtaPlatformInitiator - HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-04-04 10:54:30 [INFO ] [SYSTEM] [] o.s.o.j.LocalContainerEntityManagerFactoryBean - Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-04-04 10:54:30 [INFO ] [SYSTEM] [] o.s.d.j.r.q.QueryEnhancerFactory - Hibernate is in classpath; If applicable, HQL parser will be used.
+2026-04-04 10:54:30 [INFO ] [SYSTEM] [] o.q.impl.StdSchedulerFactory - Using default implementation for ThreadExecutor
+2026-04-04 10:54:30 [INFO ] [SYSTEM] [] o.q.core.SchedulerSignalerImpl - Initialized Scheduler Signaller of type: class org.quartz.core.SchedulerSignalerImpl
+2026-04-04 10:54:30 [INFO ] [SYSTEM] [] o.quartz.core.QuartzScheduler - Quartz Scheduler v.2.3.2 created.
+2026-04-04 10:54:30 [INFO ] [SYSTEM] [] org.quartz.simpl.RAMJobStore - RAMJobStore initialized.
+2026-04-04 10:54:30 [INFO ] [SYSTEM] [] o.quartz.core.QuartzScheduler - Scheduler meta-data: Quartz Scheduler (v2.3.2) 'quartzScheduler' with instanceId 'NON_CLUSTERED'
+  Scheduler class: 'org.quartz.core.QuartzScheduler' - running locally.
+  NOT STARTED.
+  Currently in standby mode.
+  Number of jobs executed: 0
+  Using thread pool 'org.quartz.simpl.SimpleThreadPool' - with 10 threads.
+  Using job-store 'org.quartz.simpl.RAMJobStore' - which does not support persistence. and is not clustered.
+
+2026-04-04 10:54:30 [INFO ] [SYSTEM] [] o.q.impl.StdSchedulerFactory - Quartz scheduler 'quartzScheduler' initialized from an externally provided properties instance.
+2026-04-04 10:54:30 [INFO ] [SYSTEM] [] o.q.impl.StdSchedulerFactory - Quartz scheduler version: 2.3.2
+2026-04-04 10:54:30 [INFO ] [SYSTEM] [] o.quartz.core.QuartzScheduler - JobFactory set to: org.springframework.scheduling.quartz.SpringBeanJobFactory@cfe7be3
+2026-04-04 10:54:31 [INFO ] [SYSTEM] [] c.b.v.service.ScheduleService - [스케줄] GIT_PULL_EXTRACT 비활성화
+2026-04-04 10:54:31 [INFO ] [SYSTEM] [] c.b.v.service.ScheduleService - [스케줄] APM_DAILY 비활성화
+2026-04-04 10:54:31 [INFO ] [SYSTEM] [] c.b.v.service.ScheduleService - [스케줄] APM_WEEKLY 비활성화
+2026-04-04 10:54:31 [WARN ] [SYSTEM] [] o.s.b.a.o.j.JpaBaseConfiguration$JpaWebConfiguration - spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-04-04 10:54:31 [INFO ] [SYSTEM] [] o.s.b.a.w.s.WelcomePageHandlerMapping - Adding welcome page: class path resource [static/index.html]
+2026-04-04 10:54:31 [INFO ] [SYSTEM] [] o.a.c.http11.Http11NioProtocol - Starting ProtocolHandler ["http-nio-0.0.0.0-8080"]
+2026-04-04 10:54:31 [INFO ] [SYSTEM] [] o.s.b.w.e.t.TomcatWebServer - Tomcat started on port 8080 (http) with context path '/'
+2026-04-04 10:54:31 [INFO ] [SYSTEM] [] o.s.s.q.SchedulerFactoryBean - Starting Quartz Scheduler now
+2026-04-04 10:54:31 [INFO ] [SYSTEM] [] o.quartz.core.QuartzScheduler - Scheduler quartzScheduler_$_NON_CLUSTERED started.
+2026-04-04 10:54:31 [INFO ] [SYSTEM] [] c.b.v.ApiViewerApplication - Started ApiViewerApplication in 2.503 seconds (process running for 2.735)
+2026-04-04 10:54:31 [INFO ] [SYSTEM] [] c.b.viewer.StartupConfigLoader - [기동 시 설정 로드] YAML 경로=./repos-config.yml
+2026-04-04 10:54:31 [INFO ] [SYSTEM] [] c.b.v.s.YamlConfigService - [YAML 임포트] 파일 경로=./repos-config.yml
+2026-04-04 10:54:31 [INFO ] [SYSTEM] [] c.b.v.s.YamlConfigService - [YAML 임포트 완료] 레포 2개 발견, 추가=0, 업데이트=2
+2026-04-04 10:54:31 [INFO ] [SYSTEM] [] c.b.viewer.StartupConfigLoader - [기동 시 설정 로드] 동기화 완료 — 추가 0개, 업데이트 2개
+2026-04-04 10:56:56 [INFO ] [SYSTEM] [] o.a.c.c.C.[.[localhost].[/] - Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-04-04 10:56:56 [INFO ] [SYSTEM] [] o.s.w.s.DispatcherServlet - Initializing Servlet 'dispatcherServlet'
+2026-04-04 10:56:56 [INFO ] [SYSTEM] [] o.s.w.s.DispatcherServlet - Completed initialization in 6 ms
+2026-04-04 10:56:56 [INFO ] [USER] [127.0.0.1] c.b.v.c.ApiViewController - [통계 조회] GET /api/db/stats
+2026-04-04 10:57:00 [INFO ] [USER] [127.0.0.1] c.b.v.c.ConfigController - [레포설정 목록 조회] GET /api/config/repos
+2026-04-04 10:57:00 [INFO ] [USER] [127.0.0.1] c.b.v.c.ConfigController - [공통설정 조회] GET /api/config/global
+2026-04-04 10:57:02 [INFO ] [USER] [127.0.0.1] c.b.v.c.ApiViewController - [목록 조회] repo=null, blockTargetOnly=false, 건수=30, 소요=15ms
+2026-04-04 10:57:41 [INFO ] [USER] [127.0.0.1] c.b.viewer.service.AuthService - [토큰 발급] 현재 활성 토큰 수=1
+2026-04-04 10:57:41 [INFO ] [USER] [127.0.0.1] c.b.v.c.ApiViewController - [인증 성공] 토큰 발급
+2026-04-04 10:57:43 [INFO ] [ADMIN] [127.0.0.1] c.b.v.c.ApiViewController - [로그 날짜 조회] GET /api/logs/dates
+2026-04-04 10:57:43 [INFO ] [USER] [127.0.0.1] c.b.v.c.ConfigController - [공통설정 조회] GET /api/config/global
+2026-04-04 10:57:43 [INFO ] [USER] [127.0.0.1] c.b.v.c.ConfigController - [레포설정 목록 조회] GET /api/config/repos
+2026-04-04 10:58:07 [INFO ] [ADMIN] [127.0.0.1] c.b.v.c.ApiViewController - [로그 조회] GET /api/logs/view date=2026-04-04
+2026-04-04 10:58:15 [INFO ] [ADMIN] [127.0.0.1] c.b.v.c.ApiViewController - [로그 조회] GET /api/logs/view date=2026-04-03
+2026-04-04 10:58:20 [INFO ] [ADMIN] [127.0.0.1] c.b.v.c.ApiViewController - [로그 조회] GET /api/logs/view date=2026-04-04
+2026-04-04 10:58:21 [INFO ] [ADMIN] [127.0.0.1] c.b.v.c.ApiViewController - [로그 날짜 조회] GET /api/logs/dates
+2026-04-04 10:58:26 [INFO ] [ADMIN] [127.0.0.1] c.b.v.service.ScheduleService - [스케줄] GIT_PULL_EXTRACT 등록 완료: cron=0 0 3 * * ?
+2026-04-04 10:58:41 [INFO ] [ADMIN] [127.0.0.1] c.b.v.service.ScheduleService - [스케줄] GIT_PULL_EXTRACT 등록 완료: cron=0 59 10 * * ?
+2026-04-04 10:59:00 [INFO ] [SYSTEM] [] c.b.v.job.GitPullExtractJob - [배치] Git Pull & 추출 시작
+2026-04-04 10:59:00 [INFO ] [SYSTEM] [] c.b.v.job.GitPullExtractJob - [배치] Git Pull & 추출 완료 (미구현 - 추후 연동)
