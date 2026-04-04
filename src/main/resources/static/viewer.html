@@ -839,27 +839,41 @@
 
     const commitHeaders = [];
     for (let i = 1; i <= 5; i++) commitHeaders.push(`커밋날짜${i}`, `커밋터${i}`, `커밋내용${i}`);
+    // 0        1      2   3     4        5        6
+    // 레포     업무명 팀  담당자 URL경로  FullURL  Method
+    // 7            8         9       10          11~16 (참고용6개)
+    // 파일경로  컨트롤러  메소드명  프로그램ID  ApiOp~컨트롤러ReqProp
+    // 17         18          19        20          21
+    // 메뉴      Deprecated  총호출건  1달호출건   1주호출건
+    // 22    23      24      25      26    27        28
+    // 상태  차단기준 차단일자 차단근거 비고  검토결과  검토의견
+    // 29~43 커밋1~5(각3열)  44  45
+    //                       분석 변경
     const headers = [
       '레포지토리','업무명','팀','담당자','URL 경로','Full URL',
       'HTTP Method','컨트롤러파일경로','컨트롤러','메소드명','프로그램ID',
       'ApiOperation','Description주석','메소드주석','컨트롤러주석','RequestProperty','컨트롤러RequestProperty',
-      '관련 메뉴(또는 기능)','Deprecated','호출건수','상태','차단기준','차단일자','차단근거',
+      '관련 메뉴(또는 기능)','Deprecated','총 호출건','1달 호출건','1주 호출건',
+      '상태','차단기준','차단일자','차단근거',
       '비고','현업검토결과','현업검토의견',
       ...commitHeaders, '분석일시', '변경일시'
     ];
     const blue='E0F2FE', yellow='FEF3C7', purple='E0E7FF', pink='FFE4E6';
     const g1='D1FAE5', g2='DCFCE7', g3='ECFDF5', g4='F0FDF4', g5='F5FFF9';
     const headerColors = [
-      blue,blue,blue,blue,blue,blue,   // 1~6: 레포~Full URL
-      blue,                             // 7: HTTP Method
-      yellow,yellow,yellow,yellow,      // 8~11: 파일경로,컨트롤러,메소드,프로그램ID
-      yellow,yellow,yellow,yellow,yellow,yellow, // 12~17: 참고용 6개
-      purple,purple,purple,purple,      // 18~21: 메뉴,Deprecated,호출건수,상태
-      pink,pink,pink,pink,pink,pink,    // 22~27: 차단기준~현업검토의견
-      g1,g1,g1, g2,g2,g2, g3,g3,g3, g4,g4,g4, g5,g5,g5, // 28~42: 커밋1~5
-      blue,blue                         // 43~44: 분석/변경일시
+      blue,blue,blue,blue,blue,blue,   // 0~5: 레포~FullURL
+      blue,                             // 6: Method
+      yellow,yellow,yellow,yellow,      // 7~10: 파일경로~프로그램ID
+      yellow,yellow,yellow,yellow,yellow,yellow, // 11~16: 참고용 6개
+      purple,purple,purple,purple,purple, // 17~21: 메뉴,Deprecated,총호출,1달,1주
+      purple,                            // 22: 상태
+      pink,pink,pink,                    // 23~25: 차단기준,차단일자,차단근거
+      pink,pink,pink,                    // 26~28: 비고,검토결과,검토의견
+      g1,g1,g1, g2,g2,g2, g3,g3,g3, g4,g4,g4, g5,g5,g5, // 29~43: 커밋1~5
+      blue,blue                          // 44~45: 분석/변경일시
     ];
-    const groupBorders = new Set([6, 11, 17, 21, 27, 30, 33, 36, 39, 42]);
+    // 색 변경 경계: Method|파일경로(6), 참고용끝|메뉴(16), 상태|차단기준(22), 차단근거|비고(25->그대로pink), 검토의견|커밋(28), 커밋간(31,34,37,40), 커밋5|분석(43)
+    const groupBorders = new Set([6, 16, 22, 28, 31, 34, 37, 40, 43]);
     const rows = details.map(a => {
       const cfg = repoConfigMap[a.repositoryName] || {};
       const commits = parseGitHistory(a.gitHistory);
@@ -886,6 +900,8 @@
         allDesc(a),
         a.isDeprecated || 'N',
         a.callCount != null ? a.callCount : '',
+        a.callCountMonth != null ? a.callCountMonth : '',
+        a.callCountWeek != null ? a.callCountWeek : '',
         a.status || '',
         a.blockCriteria || '',
         a.blockedDate || '',

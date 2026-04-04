@@ -632,6 +632,7 @@
     try {
       await fetch(`/api/schedule/${id}`, { method:'PUT', headers:adminHeaders(), body:JSON.stringify(body) });
       showToast(enabled?'스케줄 활성화':'스케줄 비활성화','success');
+      loadSchedules();
     } catch(e) { showToast('변경 실패','error'); }
   }
 
