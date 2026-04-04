@@ -85,6 +85,16 @@ public class YamlConfigService {
             globalRepo.save(gc);
         }
 
+        // 공통 gitBinPath, 와탭 프로필 맵 준비
+        String globalGitBin = (config.getGlobal() != null && config.getGlobal().getGitBinPath() != null)
+                ? config.getGlobal().getGitBinPath() : "git";
+        Map<String, ReposYamlConfig.WhatapProfile> profileMap = new java.util.HashMap<>();
+        if (config.getGlobal() != null && config.getGlobal().getWhatapProfiles() != null) {
+            for (ReposYamlConfig.WhatapProfile p : config.getGlobal().getWhatapProfiles()) {
+                if (p.getName() != null) profileMap.put(p.getName(), p);
+            }
+        }
+
         // 레포별 설정 저장
         List<String> importedNames = new ArrayList<>();
         if (config.getRepositories() != null) {
@@ -98,7 +108,9 @@ public class YamlConfigService {
                 rc.setRepoName(entry.getRepoName());
                 rc.setDomain(entry.getDomain());
                 rc.setRootPath(entry.getRootPath());
-                rc.setGitBinPath(entry.getGitBinPath());
+                // gitBinPath: 레포 개별 지정 > 공통
+                rc.setGitBinPath(entry.getGitBinPath() != null && !entry.getGitBinPath().isBlank()
+                        ? entry.getGitBinPath() : globalGitBin);
                 rc.setGitPullEnabled(entry.getGitPullEnabled() != null ? entry.getGitPullEnabled() : "Y");
                 rc.setTeamName(entry.getTeamName());
                 rc.setManagerName(entry.getManagerName());
@@ -109,12 +121,21 @@ public class YamlConfigService {
                 if (entry.getWhatap() != null) {
                     ReposYamlConfig.WhatapEntry w = entry.getWhatap();
                     rc.setWhatapEnabled(w.getEnabled());
-                    rc.setWhatapUrl(w.getUrl());
                     rc.setWhatapPcode(w.getPcode());
                     rc.setWhatapFilter(w.getFilter());
                     rc.setWhatapOkinds(w.getOkinds());
                     rc.setWhatapOkindsName(w.getOkindsName());
-                    rc.setWhatapCookie(w.getCookie());
+
+                    // 와탭 URL/쿠키: 레포 개별 지정 > 공통 프로필
+                    String resolvedUrl = w.getUrl();
+                    String resolvedCookie = w.getCookie();
+                    if (w.getProfileName() != null && profileMap.containsKey(w.getProfileName())) {
+                        ReposYamlConfig.WhatapProfile profile = profileMap.get(w.getProfileName());
+                        if (resolvedUrl == null || resolvedUrl.isBlank()) resolvedUrl = profile.getUrl();
+                        if (resolvedCookie == null || resolvedCookie.isBlank()) resolvedCookie = profile.getCookie();
+                    }
+                    rc.setWhatapUrl(resolvedUrl);
+                    rc.setWhatapCookie(resolvedCookie);
                 }
 
                 repoRepo.save(rc);

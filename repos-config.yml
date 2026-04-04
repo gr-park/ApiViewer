@@ -1,23 +1,33 @@
 # =====================================================
-# ApiViewer 레포지토리 설정 파일
+# URL Viewer 레포지토리 설정 파일
 # 이 파일을 수정한 후 settings 화면에서 [YAML 가져오기]를 클릭하세요.
 # =====================================================
 
-# 공통 설정 (모든 레포지토리에 공유)
+# 공통 설정
 global:
   period:
     startDate: "20250201"
     endDate: "20260220"
   reviewThreshold: 3
   password: "lotte1!"
+  gitBinPath: git                                # 공통 git 경로 (레포별 오버라이드 가능)
 
-# 레포지토리별 설정 목록
+  # 와탭 공통 프로필 (URL/쿠키를 공유, 레포에서 profileName으로 참조)
+  whatapProfiles:
+    - name: "운영"
+      url: ""                                    # 예: https://whatap-prod.internal/api/...
+      cookie: ""
+    - name: "개발"
+      url: ""                                    # 예: https://whatap-dev.internal/api/...
+      cookie: ""
+
+# 레포지토리별 설정
 repositories:
 
   - repoName: spring-petclinic
     domain: https://api.petclinic.com
     rootPath: /Users/baegmyeongseon/Downloads/개발_코드/spring-petclinic
-    gitBinPath: git
+    # gitBinPath: /usr/local/bin/git              # 개별 지정 시 공통값 오버라이드
     gitPullEnabled: "N"
     teamName: IT카드개발팀
     managerName: 백명선
@@ -26,17 +36,16 @@ repositories:
     pathConstants: ""
     whatap:
       enabled: N
-      url: ""
+      profileName: "운영"                         # 공통 프로필 참조 (URL/쿠키 자동 적용)
       pcode: 8
       filter: ""
       okinds: ""
       okindsName: ""
-      cookie: ""
 
   - repoName: mall-tiny
     domain: https://api.mall-tiny.com
     rootPath: /Users/baegmyeongseon/Downloads/개발_코드/mall-tiny
-    gitBinPath: git
+    # gitBinPath: git
     gitPullEnabled: "Y"
     teamName: IT커머스개발팀
     managerName: 김민수
@@ -45,17 +54,16 @@ repositories:
     pathConstants: ""
     whatap:
       enabled: N
-      url: ""
-      pcode: 8
+      profileName: "운영"
+      pcode: 9
       filter: ""
       okinds: ""
       okindsName: ""
-      cookie: ""
 
   - repoName: mall-admin
     domain: https://admin.mall.com
     rootPath: /Users/baegmyeongseon/Downloads/개발_코드/mall/mall-admin
-    gitBinPath: git
+    # gitBinPath: git
     gitPullEnabled: "N"
     teamName: IT커머스개발팀
     managerName: 이정우
@@ -64,17 +72,16 @@ repositories:
     pathConstants: ""
     whatap:
       enabled: N
-      url: ""
-      pcode: 8
+      profileName: "운영"
+      pcode: 10
       filter: ""
       okinds: ""
       okindsName: ""
-      cookie: ""
 
   - repoName: mall-portal
     domain: https://portal.mall.com
     rootPath: /Users/baegmyeongseon/Downloads/개발_코드/mall/mall-portal
-    gitBinPath: git
+    # gitBinPath: git
     gitPullEnabled: "N"
     teamName: IT커머스개발팀
     managerName: 박수진
@@ -83,17 +90,16 @@ repositories:
     pathConstants: ""
     whatap:
       enabled: N
-      url: ""
-      pcode: 8
+      profileName: "운영"
+      pcode: 11
       filter: ""
       okinds: ""
       okindsName: ""
-      cookie: ""
 
   - repoName: mall-search
     domain: https://search.mall.com
     rootPath: /Users/baegmyeongseon/Downloads/개발_코드/mall/mall-search
-    gitBinPath: git
+    # gitBinPath: git
     gitPullEnabled: "N"
     teamName: IT인프라팀
     managerName: 최영호
@@ -102,17 +108,16 @@ repositories:
     pathConstants: ""
     whatap:
       enabled: N
-      url: ""
-      pcode: 8
+      profileName: "개발"
+      pcode: 12
       filter: ""
       okinds: ""
       okindsName: ""
-      cookie: ""
 
   - repoName: spring-mvc-showcase
     domain: https://mvc.example.com
     rootPath: /Users/baegmyeongseon/Downloads/개발_코드/spring-mvc-showcase
-    gitBinPath: git
+    # gitBinPath: git
     gitPullEnabled: "Y"
     teamName: IT기반기술팀
     managerName: 정하늘
@@ -121,9 +126,8 @@ repositories:
     pathConstants: ""
     whatap:
       enabled: N
-      url: ""
-      pcode: 8
+      profileName: "개발"
+      pcode: 13
       filter: ""
       okinds: ""
       okindsName: ""
-      cookie: ""
