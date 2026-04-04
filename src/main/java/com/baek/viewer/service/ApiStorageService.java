@@ -61,6 +61,7 @@ public class ApiStorageService {
                 if ("차단완료".equals(r.getStatus())) continue;
 
                 // ③ 기존 + 차단완료 아님 → 추출 필드만 업데이트
+                r.setNew(false); // 재분석 시 신규 플래그 해제
                 String oldStatus = r.getStatus();
                 updateExtractedFields(r, a, now);
 
@@ -88,6 +89,8 @@ public class ApiStorageService {
                 r.setApiPath(a.getApiPath());
                 r.setHttpMethod(a.getHttpMethod());
                 r.setCreatedIp(clientIp);
+                r.setNew(true);
+                r.setDataSource("ANALYSIS");
                 updateExtractedFields(r, a, now);
                 r.setStatus(calculateStatus(r, reviewThreshold));
                 if ("차단완료".equals(r.getStatus())) {

@@ -155,6 +155,14 @@ public class ApiRecord {
     @Column(name = "status_change_log", length = 500)
     private String statusChangeLog;
 
+    /** 신규 추가 플래그 (분석 시 처음 발견) */
+    @Column(name = "is_new")
+    private boolean isNew = false;
+
+    /** 데이터 소스: ANALYSIS(분석), UPLOAD(엑셀 업로드) */
+    @Column(name = "data_source", length = 20)
+    private String dataSource = "ANALYSIS";
+
     /** 팀 오버라이드 (조회화면에서 수정 시) */
     @Column(name = "team_override", length = 100)
     private String teamOverride;
@@ -233,6 +241,10 @@ public class ApiRecord {
     public void setBlockedReason(String blockedReason) { this.blockedReason = blockedReason; }
     public boolean isStatusChanged() { return statusChanged; }
     public void setStatusChanged(boolean statusChanged) { this.statusChanged = statusChanged; }
+    public boolean isNew() { return isNew; }
+    public void setNew(boolean isNew) { this.isNew = isNew; }
+    public String getDataSource() { return dataSource; }
+    public void setDataSource(String dataSource) { this.dataSource = dataSource; }
     public String getStatusChangeLog() { return statusChangeLog; }
     public void setStatusChangeLog(String statusChangeLog) { this.statusChangeLog = statusChangeLog; }
     public String getReviewTeam() { return reviewTeam; }

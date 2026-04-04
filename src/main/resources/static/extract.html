@@ -115,6 +115,7 @@
     .log-msg.m-WARN  { color: #fde68a; }
     .log-empty { color: #475569; padding: 20px; text-align: center; }
   </style>
+  <script src="/exceljs.min.js"></script>
 </head>
 <body>
 
@@ -196,6 +197,29 @@
     <!-- 전체 추출 버튼 -->
     <div id="allRepoBtn" style="display:none;margin-top:12px;text-align:right;">
       <button class="btn btn-blue" id="extractAllBtn" onclick="doExtract()">전체 추출 시작</button>
+    </div>
+  </div>
+
+  <!-- ─── 엑셀 업로드 ─── -->
+  <div class="card">
+    <div class="card-title">
+      <span class="dot" style="background:#8b5cf6;"></span>엑셀 업로드 (파싱 불가 업무용)
+      <span style="font-size:10px;font-weight:400;color:var(--text-muted);">소스 분석이 어려운 경우 엑셀로 URL 목록을 직접 등록합니다.</span>
+    </div>
+    <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;">
+      <label class="field">레포지토리명 *
+        <input id="uploadRepoName" type="text" placeholder="my-project" style="min-width:160px;">
+      </label>
+      <label class="field">엑셀 파일 (.xlsx)
+        <input id="uploadFile" type="file" accept=".xlsx,.xls,.csv" style="font-size:12px;">
+      </label>
+      <button class="btn" style="background:#8b5cf6;color:#fff;height:34px;" onclick="uploadExcel()">업로드</button>
+      <button class="btn btn-ghost" style="height:34px;" onclick="downloadTemplate()">템플릿 다운로드</button>
+    </div>
+    <div id="uploadResult" style="margin-top:8px;font-size:12px;color:var(--text-muted);"></div>
+    <div style="margin-top:8px;font-size:11px;color:var(--text-muted);">
+      필수 컬럼: <b>apiPath</b>, <b>httpMethod</b> &nbsp;|&nbsp;
+      선택 컬럼: controllerName, methodName, programId, fullUrl, apiOperationValue, memo, teamOverride, managerOverride
     </div>
   </div>
 
@@ -520,6 +544,63 @@
   }
 
   // ── UI 헬퍼 ──────────────────────────────────────────────
+  // ── 엑셀 업로드 ─────────────────────────────────────────
+  async function uploadExcel() {
+    const repoName = document.getElementById('uploadRepoName').value.trim();
+    const fileInput = document.getElementById('uploadFile');
+    if (!repoName) { showToast('레포지토리명을 입력하세요.','error'); return; }
+    if (!fileInput.files[0]) { showToast('엑셀 파일을 선택하세요.','error'); return; }
+    const resultEl = document.getElementById('uploadResult');
+    resultEl.textContent = '업로드 중...';
+    try {
+      const wb = new ExcelJS.Workbook();
+      await wb.xlsx.load(await fileInput.files[0].arrayBuffer());
+      const ws = wb.worksheets[0];
+      if (!ws) throw new Error('시트가 없습니다.');
+      const headers = [];
+      ws.getRow(1).eachCell((cell, col) => { headers[col] = cell.value?.toString().trim(); });
+      const rows = [];
+      ws.eachRow((row, rowNum) => {
+        if (rowNum === 1) return;
+        const obj = {};
+        row.eachCell((cell, col) => {
+          const h = headers[col];
+          if (h) obj[h] = cell.value?.toString().trim() || '';
+        });
+        if (obj.apiPath) rows.push(obj);
+      });
+      if (!rows.length) throw new Error('유효한 데이터가 없습니다. apiPath 컬럼을 확인하세요.');
+      const res = await fetch('/api/upload/excel', {
+        method:'POST',
+        headers:{'Content-Type':'application/json','X-Admin-Token':sessionStorage.getItem('adminToken')||''},
+        body:JSON.stringify({ repoName, rows })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      resultEl.innerHTML = `<span style="color:var(--success);">업로드 완료: 추가 ${data.added}건, 업데이트 ${data.updated}건</span>`;
+      showToast(`엑셀 업로드 완료: ${data.added}건 추가`,'success');
+    } catch(e) {
+      resultEl.innerHTML = `<span style="color:var(--danger);">${e.message}</span>`;
+      showToast(e.message,'error');
+    }
+    fileInput.value = '';
+  }
+
+  function downloadTemplate() {
+    const wb = new ExcelJS.Workbook();
+    const ws = wb.addWorksheet('Template');
+    const headers = ['apiPath','httpMethod','controllerName','methodName','programId','fullUrl','apiOperationValue','memo','teamOverride','managerOverride'];
+    const hRow = ws.addRow(headers);
+    hRow.eachCell(cell => { cell.font={bold:true}; cell.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFE0F2FE'}}; });
+    ws.addRow(['/api/sample','GET','SampleController','getSample','PGM001','https://example.com/api/sample','샘플 조회','비고 예시','IT개발팀','홍길동']);
+    ws.columns = headers.map(h => ({width: Math.max(h.length*2, 12)}));
+    wb.xlsx.writeBuffer().then(buf => {
+      const blob = new Blob([buf], {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+      const a = document.createElement('a'); a.href=URL.createObjectURL(blob);
+      a.download='url-upload-template.xlsx'; a.click(); URL.revokeObjectURL(a.href);
+    });
+  }
+
   function setExtracting(v) {
     const b1 = document.getElementById('extractBtn');
     const b2 = document.getElementById('extractAllBtn');

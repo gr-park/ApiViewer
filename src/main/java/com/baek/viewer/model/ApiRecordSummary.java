@@ -43,6 +43,8 @@ public interface ApiRecordSummary {
     LocalDate getBlockedDate();
     String getBlockedReason();
     boolean isStatusChanged();
+    boolean isNew();
+    String getDataSource();
     String getStatusChangeLog();
     String getTeamOverride();
     String getManagerOverride();

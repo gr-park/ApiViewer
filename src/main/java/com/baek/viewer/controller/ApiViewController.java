@@ -228,6 +228,7 @@ public class ApiViewController {
             }
 
             boolean viewerChanged = false;
+            if (body.containsKey("isNew"))             { r.setNew(Boolean.FALSE.equals(body.get("isNew")) ? false : Boolean.parseBoolean(String.valueOf(body.get("isNew")))); }
             if (body.containsKey("memo"))            { r.setMemo(body.get("memo") != null ? body.get("memo").toString() : null); viewerChanged = true; }
             if (body.containsKey("teamOverride"))    { r.setTeamOverride(body.get("teamOverride") != null ? body.get("teamOverride").toString() : null); viewerChanged = true; }
             if (body.containsKey("managerOverride")) { r.setManagerOverride(body.get("managerOverride") != null ? body.get("managerOverride").toString() : null); viewerChanged = true; }

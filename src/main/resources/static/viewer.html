@@ -238,6 +238,7 @@
     <span style="border-left:2px solid var(--border);height:28px;margin:0 4px;"></span>
     <div class="stat-pill" id="pill-reviewed" onclick="setFilter('reviewed')" style="cursor:pointer;"><span>현업검토완료</span><strong id="stat-reviewed" style="color:#1e40af;">0</strong></div>
     <span style="border-left:2px solid var(--border);height:28px;margin:0 4px;"></span>
+    <div class="stat-pill" id="pill-new" onclick="setFilter('new')" style="cursor:pointer;"><span>신규</span><strong id="stat-new" style="color:#1e40af;">0</strong></div>
     <div class="stat-pill" id="pill-changed" onclick="setFilter('changed')" style="cursor:pointer;"><span>상태변경</span><strong id="stat-changed" style="color:#dc2626;">0</strong></div>
     <span style="border-left:2px solid var(--border);height:28px;margin:0 4px;"></span>
     <div class="stat-pill" style="cursor:default;"><span>GET</span>   <strong id="statGet">0</strong></div>
@@ -454,6 +455,7 @@
     document.getElementById('stat-후순위').textContent   = sCounts['후순위 차단대상'];
     document.getElementById('stat-검토필요').textContent  = sCounts['검토필요 차단대상'];
     document.getElementById('stat-reviewed').textContent  = allApis.filter(a => a.reviewResult).length;
+    document.getElementById('stat-new').textContent       = allApis.filter(a => a.isNew || a['new']).length;
     document.getElementById('stat-changed').textContent  = allApis.filter(a => a.statusChanged).length;
     document.getElementById('statGet').textContent      = allApis.filter(a => a.httpMethod === 'GET').length;
     document.getElementById('statPost').textContent     = allApis.filter(a => a.httpMethod === 'POST').length;
@@ -472,6 +474,7 @@
     else if (val === '후순위 차단대상') { document.getElementById('pill-후순위').classList.add('active-filter'); }
     else if (val === '검토필요 차단대상') { document.getElementById('pill-검토필요').classList.add('active-filter'); }
     else if (val === 'reviewed') { document.getElementById('pill-reviewed').classList.add('active-filter'); }
+    else if (val === 'new') { document.getElementById('pill-new').classList.add('active-filter'); }
     else if (val === 'changed') { document.getElementById('pill-changed').classList.add('active-filter'); }
     filterTable();
   }
@@ -490,6 +493,7 @@
       const mgr  = (a.managerOverride || cfg.manager || '').toLowerCase();
       let filterOk = true;
       if (['사용','차단완료','최우선 차단대상','후순위 차단대상','검토필요 차단대상'].includes(activeFilter)) filterOk = a.status === activeFilter;
+      else if (activeFilter === 'new') filterOk = a.isNew || a['new'];
       else if (activeFilter === 'reviewed') filterOk = !!a.reviewResult;
       else if (activeFilter === 'changed') filterOk = a.statusChanged === true;
       return (!q || text.includes(q))
@@ -567,7 +571,7 @@
         <td style="text-align:right;font-size:12px;">${a.callCount != null ? a.callCount.toLocaleString() : '<span style="color:#cbd5e1;">-</span>'}</td>
         <td style="text-align:right;font-size:12px;">${a.callCountMonth != null ? a.callCountMonth.toLocaleString() : '<span style="color:#cbd5e1;">-</span>'}</td>
         <td style="text-align:right;font-size:12px;">${a.callCountWeek != null ? a.callCountWeek.toLocaleString() : '<span style="color:#cbd5e1;">-</span>'}</td>
-        <td>${statusBadge(a.status)}${a.statusOverridden ? ' <span title="상태확정" style="font-size:10px;color:#94a3b8;">🔒</span>' : ''}${a.statusChanged ? `<br><span style="display:inline-block;margin-top:2px;padding:1px 5px;background:#fef2f2;border:1px solid #fca5a5;border-radius:3px;color:#dc2626;font-size:9px;font-weight:600;cursor:pointer;white-space:nowrap;" onclick="clearStatusFlag(event,${a.id})" title="클릭하여 확인 완료">⚠️ ${esc(a.statusChangeLog||'변경감지')}</span>` : ''}</td>
+        <td>${statusBadge(a.status)}${a.statusOverridden ? ' <span title="상태확정" style="font-size:10px;color:#94a3b8;">🔒</span>' : ''}${a.isNew ? `<br><span style="display:inline-block;margin-top:2px;padding:1px 5px;background:#dbeafe;border:1px solid #93c5fd;border-radius:3px;color:#1e40af;font-size:9px;font-weight:600;cursor:pointer;white-space:nowrap;" onclick="clearNewFlag(event,${a.id})" title="클릭하여 확인 완료">🆕 신규추가</span>` : ''}${a.statusChanged ? `<br><span style="display:inline-block;margin-top:2px;padding:1px 5px;background:#fef2f2;border:1px solid #fca5a5;border-radius:3px;color:#dc2626;font-size:9px;font-weight:600;cursor:pointer;white-space:nowrap;" onclick="clearStatusFlag(event,${a.id})" title="클릭하여 확인 완료">⚠️ ${esc(a.statusChangeLog||'변경감지')}</span>` : ''}</td>
         <td style="font-size:11px;color:var(--text-muted);max-width:140px;">${esc(a.blockCriteria || '')}</td>
         <td style="font-size:11px;color:var(--text-muted);white-space:nowrap;">${esc(a.blockedDate || '')}</td>
         <td style="font-size:11px;color:var(--text-muted);max-width:200px;">${esc((a.blockedReason||'').slice(0,40))}${(a.blockedReason||'').length>40?'…':''}</td>
@@ -617,6 +621,17 @@
       await fetch('/api/db/clear-status-change', { method:'PATCH', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ids:changedIds}) });
       changedIds.forEach(id => { const a=allApis.find(x=>x.id===id); if(a){a.statusChanged=false;a.statusChangeLog=null;} });
       renderStats(); filterTable(); showToast(`${changedIds.length}개 플래그 해제 완료`,'success');
+    } catch(e) { showToast('실패','error'); }
+  }
+
+  async function clearNewFlag(event, id) {
+    event.stopPropagation();
+    try {
+      await fetch(`/api/db/record/${id}`, { method:'PATCH', headers:{'Content-Type':'application/json'}, body:JSON.stringify({isNew:false}) });
+      const a = allApis.find(x => x.id === id);
+      if (a) a.isNew = false;
+      filterTable();
+      showToast('신규 확인 완료', 'success');
     } catch(e) { showToast('실패','error'); }
   }
 
