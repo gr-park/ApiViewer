@@ -27,7 +27,7 @@ public class AdminInterceptor implements HandlerInterceptor {
         // GET /api/config/global, /api/config/repos 는 공개 (viewer에서 조회용)
         String uri = request.getRequestURI();
         if ("GET".equalsIgnoreCase(request.getMethod()) &&
-                (uri.equals("/api/config/global") || uri.equals("/api/config/repos"))) {
+                (uri.equals("/api/config/global") || uri.equals("/api/config/repos") || uri.equals("/api/apm/data"))) {
             return true;
         }
 

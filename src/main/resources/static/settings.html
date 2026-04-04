@@ -159,6 +159,48 @@
     </div>
   </div>
 
+  <!-- APM 호출건수 관리 -->
+  <div class="card">
+    <div class="card-title" style="margin-bottom:12px;">
+      <span class="dot" style="background:#0ea5e9;"></span>APM 호출건수 관리
+      <span style="font-size:11px;font-weight:400;color:var(--text-muted);margin-left:6px;">Mock 데이터 생성 또는 실제 APM 데이터 집계</span>
+    </div>
+    <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:12px;">
+      <label class="field">레포지토리
+        <select id="apmRepoSelect" style="padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;min-width:180px;"></select>
+      </label>
+      <label class="field">기간 (일)
+        <input id="apmDays" type="number" value="90" min="1" max="365" style="padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;width:70px;">
+      </label>
+      <button class="btn" style="background:#0ea5e9;color:#fff;height:34px;" onclick="generateMock()">Mock 데이터 생성</button>
+      <button class="btn btn-blue" style="height:34px;" onclick="aggregateApm()">호출건수 집계 반영</button>
+    </div>
+    <div id="apmResult" style="font-size:12px;color:var(--text-muted);"></div>
+    <div id="apmDataWrap" style="display:none;margin-top:12px;">
+      <div style="display:flex;gap:10px;align-items:flex-end;margin-bottom:8px;">
+        <label class="field">조회 시작일 <input id="apmFrom" type="date" style="padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;"></label>
+        <label class="field">조회 종료일 <input id="apmTo" type="date" style="padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;"></label>
+        <button class="btn btn-ghost" style="height:30px;" onclick="loadApmData()">조회</button>
+      </div>
+      <div style="max-height:400px;overflow:auto;">
+        <table style="width:100%;border-collapse:collapse;font-size:11px;" id="apmTable">
+          <thead style="position:sticky;top:0;background:#f1f5f9;">
+            <tr>
+              <th style="padding:6px 8px;text-align:left;border-bottom:1px solid var(--border);">API 경로</th>
+              <th style="padding:6px 8px;text-align:left;">일자</th>
+              <th style="padding:6px 8px;text-align:right;">호출건수</th>
+              <th style="padding:6px 8px;text-align:right;">에러건수</th>
+              <th style="padding:6px 8px;text-align:left;">에러내용</th>
+              <th style="padding:6px 8px;text-align:left;">클래스명</th>
+              <th style="padding:6px 8px;text-align:left;">소스</th>
+            </tr>
+          </thead>
+          <tbody id="apmTbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
   <!-- 주기성 배치 스케줄 -->
   <div class="card">
     <div class="card-title" style="margin-bottom:12px;">
@@ -566,6 +608,69 @@
     }
   }
 
+  // ── APM 관리 ──────────────────────────────────────────────
+  async function initApmRepos() {
+    try {
+      const res = await fetch('/api/config/repos');
+      const repos = await res.json();
+      const sel = document.getElementById('apmRepoSelect');
+      sel.innerHTML = repos.map(r => `<option value="${esc(r.repoName)}">${esc(r.repoName)} | ${esc(r.businessName||'')}</option>`).join('');
+    } catch(e) {}
+    const today = new Date().toISOString().slice(0,10);
+    document.getElementById('apmFrom').value = new Date(Date.now()-30*86400000).toISOString().slice(0,10);
+    document.getElementById('apmTo').value = today;
+  }
+
+  async function generateMock() {
+    const repoName = document.getElementById('apmRepoSelect').value;
+    const days = parseInt(document.getElementById('apmDays').value) || 90;
+    if (!repoName) { showToast('레포지토리를 선택하세요.','error'); return; }
+    document.getElementById('apmResult').textContent = 'Mock 데이터 생성 중...';
+    try {
+      const res = await fetch('/api/apm/mock/generate', { method:'POST', headers:adminHeaders(), body:JSON.stringify({repoName, days}) });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      document.getElementById('apmResult').innerHTML = `<span style="color:var(--success);">Mock 생성 완료: ${data.generated}건 (API ${data.apis}개 × ${data.days}일)</span>`;
+      document.getElementById('apmDataWrap').style.display = 'block';
+      showToast(`Mock ${data.generated}건 생성`,'success');
+    } catch(e) { document.getElementById('apmResult').innerHTML = `<span style="color:var(--danger);">${esc(e.message)}</span>`; }
+  }
+
+  async function aggregateApm() {
+    const repoName = document.getElementById('apmRepoSelect').value;
+    if (!repoName) { showToast('레포지토리를 선택하세요.','error'); return; }
+    try {
+      const res = await fetch('/api/apm/aggregate', { method:'POST', headers:adminHeaders(), body:JSON.stringify({repoName}) });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      showToast(`호출건수 집계 반영: ${data.updated}건 업데이트`,'success');
+      document.getElementById('apmResult').innerHTML = `<span style="color:var(--success);">집계 완료: ${data.updated}건 API 호출건수 업데이트</span>`;
+    } catch(e) { showToast(e.message,'error'); }
+  }
+
+  async function loadApmData() {
+    const repoName = document.getElementById('apmRepoSelect').value;
+    const from = document.getElementById('apmFrom').value;
+    const to = document.getElementById('apmTo').value;
+    if (!repoName) return;
+    try {
+      const res = await fetch(`/api/apm/data?repoName=${encodeURIComponent(repoName)}&from=${from}&to=${to}`, {headers:{'X-Admin-Token':sessionStorage.getItem('adminToken')||''}});
+      const result = await res.json();
+      const tbody = document.getElementById('apmTbody');
+      if (!result.data || !result.data.length) { tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:20px;color:var(--text-muted);">데이터 없음</td></tr>'; return; }
+      tbody.innerHTML = result.data.map(d => `<tr style="border-bottom:1px solid var(--border);">
+        <td style="padding:4px 8px;font-family:monospace;color:#1e40af;">${esc(d.apiPath)}</td>
+        <td style="padding:4px 8px;">${d.callDate}</td>
+        <td style="padding:4px 8px;text-align:right;font-weight:600;">${d.callCount.toLocaleString()}</td>
+        <td style="padding:4px 8px;text-align:right;${d.errorCount>0?'color:#dc2626;font-weight:600;':''}">${d.errorCount}</td>
+        <td style="padding:4px 8px;color:var(--text-muted);font-size:10px;">${esc(d.errorMessage||'-')}</td>
+        <td style="padding:4px 8px;font-size:10px;">${esc(d.className||'-')}</td>
+        <td style="padding:4px 8px;"><span style="font-size:10px;padding:1px 6px;border-radius:3px;background:${d.source==='MOCK'?'#fef3c7':'#dbeafe'};color:${d.source==='MOCK'?'#92400e':'#1e40af'};font-weight:600;">${d.source}</span></td>
+      </tr>`).join('');
+      document.getElementById('apmDataWrap').style.display = 'block';
+    } catch(e) { showToast('APM 데이터 조회 실패','error'); }
+  }
+
   // ── 스케줄 관리 ────────────────────────────────────────────
   async function loadSchedules() {
     try {
@@ -681,6 +786,7 @@
     await init();
     loadLogDates();
     loadSchedules();
+    initApmRepos();
   }
   startApp();
 </script>

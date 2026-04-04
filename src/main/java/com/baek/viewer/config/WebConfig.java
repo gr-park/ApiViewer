@@ -21,7 +21,8 @@ public class WebConfig implements WebMvcConfigurer {
                         "/api/db/delete-all",      // 데이터 삭제
                         "/api/config/**",          // 설정 변경
                         "/api/logs/**",            // 로그 조회
-                        "/api/schedule/**"         // 스케줄 관리
+                        "/api/schedule/**",        // 스케줄 관리
+                        "/api/apm/**"              // APM 데이터 관리
                 )
 ;
     }
