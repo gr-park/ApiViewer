@@ -38,12 +38,8 @@
     label.field input:focus { border-color: var(--primary); box-shadow: 0 0 0 2px #3b82f620; }
     label.field input.purple:focus { border-color: var(--purple); box-shadow: 0 0 0 2px #8b5cf620; }
 
-    .whatap-header { display: flex; align-items: center; justify-content: space-between; cursor: pointer; }
-    .whatap-header:hover .card-title { color: var(--purple); }
     .toggle-arrow { font-size: 12px; color: var(--text-muted); transition: transform .2s; }
     .toggle-arrow.open { transform: rotate(180deg); }
-    .whatap-body { overflow: hidden; max-height: 0; transition: max-height .3s ease; }
-    .whatap-body.open { max-height: 300px; }
 
     .btn { padding: 8px 20px; border: none; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; transition: background .15s, opacity .15s; white-space: nowrap; height: 34px; }
     .btn:disabled { opacity: .5; cursor: not-allowed; }
@@ -141,7 +137,6 @@
   </svg>
   <h1>URL Viewer</h1>
   <div class="header-right">
-    <span id="whatapBadge" class="tag" style="display:none">Whatap 연동됨</span>
     <a href="/"             class="nav-link">📊 대시보드</a>
     <a href="/extract.html" class="nav-link nav-active">🔍 URL 분석</a>
     <a href="/viewer.html"  class="nav-link">📋 이력 조회</a>
@@ -204,48 +199,6 @@
     </div>
   </div>
 
-  <!-- ─── Whatap 설정 ─── -->
-  <div class="card" style="padding-bottom:14px;">
-    <div class="whatap-header" onclick="toggleWhatap()">
-      <div class="card-title" style="margin-bottom:0;">
-        <span class="dot dot-purple"></span>Whatap APM 호출건수 조회
-        <span style="font-size:10px;font-weight:400;color:var(--text-muted);">활성화하면 추출된 URL의 실제 호출건수를 가져옵니다</span>
-      </div>
-      <span class="toggle-arrow" id="whatapArrow">▼</span>
-    </div>
-    <div class="progress-bar-w" id="whatapProgress"><div class="progress-fill-w"></div></div>
-    <div class="whatap-body" id="whatapBody">
-      <div style="margin-top:14px;">
-        <div class="config-grid-w">
-          <label class="field">Whatap URL *
-            <input class="purple" id="wUrl" type="text" placeholder="https://whatap.io/api/...">
-          </label>
-          <label class="field">Project Code (pcode)
-            <input class="purple" id="wPcode" type="number" value="8" placeholder="8">
-          </label>
-          <label class="field">시작일 *
-            <input class="purple" id="wStart" type="text" placeholder="20250101">
-          </label>
-          <label class="field">종료일 *
-            <input class="purple" id="wEnd" type="text" placeholder="20251231">
-          </label>
-          <label class="field">서비스 필터 (쉼표 구분, 빈칸=전체)
-            <input class="purple" id="wFilter" type="text" placeholder="/app, /api">
-          </label>
-        </div>
-        <div class="config-row3">
-          <label class="field">Agent OKINDS (쉼표 구분, 빈칸=전체)
-            <input class="purple" id="wOkinds" type="text" placeholder="123, 456">
-          </label>
-          <label class="field">쿠키 (Cookie) *
-            <input class="purple" id="wCookie" type="password" placeholder="브라우저 개발자도구에서 복사">
-          </label>
-          <button class="btn btn-purple" id="whatapBtn" onclick="doFetchWhatap()" style="align-self:end;">호출건수 가져오기</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
   <!-- ─── 추출 진행 상황 ─── -->
   <div class="card progress-card" id="progressCard">
     <div class="prog-header">
@@ -291,7 +244,6 @@
 
 <script>
   let allRepos = [];
-  let whatapOpen = false;
   let lastLogCount = 0;
 
   // ── 레포 설정 목록 로드 ───────────────────────────────────
@@ -321,12 +273,8 @@
   async function loadRepoConfig(id) {
     if (!id) return;
     try {
-      const [repoRes, globalRes] = await Promise.all([
-        fetch(`/api/config/repos/${id}`),
-        fetch('/api/config/global')
-      ]);
-      const r = await repoRes.json();
-      const g = await globalRes.json();
+      const res = await fetch(`/api/config/repos/${id}`);
+      const r = await res.json();
 
       document.getElementById('rootPath').value       = r.rootPath       || '';
       document.getElementById('repositoryName').value = r.repoName       || '';
@@ -335,25 +283,10 @@
       document.getElementById('gitBinPath').value     = r.gitBinPath     || '';
       document.getElementById('pathConstants').value  = r.pathConstants  || '';
 
-      if (r.whatapEnabled === 'Y') {
-        document.getElementById('wUrl').value    = r.whatapUrl    || '';
-        document.getElementById('wPcode').value  = r.whatapPcode  || 8;
-        document.getElementById('wFilter').value = r.whatapFilter || '';
-        document.getElementById('wOkinds').value = r.whatapOkinds || '';
-        document.getElementById('wCookie').value = r.whatapCookie || '';
-        if (g.startDate) document.getElementById('wStart').value = g.startDate;
-        if (g.endDate)   document.getElementById('wEnd').value   = g.endDate;
-        if (!whatapOpen) toggleWhatap();
-      }
       showToast(`"${r.repoName}" 설정을 불러왔습니다.`, 'info');
     } catch(e) { showToast('설정 불러오기 실패', 'error'); }
   }
 
-  function toggleWhatap() {
-    whatapOpen = !whatapOpen;
-    document.getElementById('whatapBody').classList.toggle('open', whatapOpen);
-    document.getElementById('whatapArrow').classList.toggle('open', whatapOpen);
-  }
 
   // ── API 추출 ─────────────────────────────────────────────
   let progressTimer = null;
@@ -585,56 +518,6 @@
     document.getElementById('resultSummary').className = 'result-summary';
   }
 
-  // ── Whatap 통계 가져오기 ─────────────────────────────────
-  async function doFetchWhatap() {
-    const url    = document.getElementById('wUrl').value.trim();
-    const cookie = document.getElementById('wCookie').value.trim();
-    const start  = document.getElementById('wStart').value.trim();
-    const end    = document.getElementById('wEnd').value.trim();
-    if (!url)    { showToast('Whatap URL을 입력하세요.', 'error'); return; }
-    if (!cookie) { showToast('쿠키를 입력하세요.', 'error'); return; }
-    if (!start || !end) { showToast('시작일/종료일을 입력하세요.', 'error'); return; }
-
-    const btn = document.getElementById('whatapBtn');
-    btn.disabled = true; btn.textContent = '조회 중...';
-    document.getElementById('whatapProgress').style.display = 'block';
-
-    try {
-      const res = await fetch('/api/whatap/stats', {
-        method: 'POST',
-        headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({
-          whatapUrl: url,
-          pcode:     parseInt(document.getElementById('wPcode').value) || 8,
-          cookie, startDate: start, endDate: end,
-          filters: document.getElementById('wFilter').value.trim(),
-          okinds:  document.getElementById('wOkinds').value.trim()
-        })
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || '서버 오류');
-
-      document.getElementById('whatapBadge').style.display = 'inline';
-      showToast(`Whatap 완료 — ${data.apiCount}건 수집`, 'info');
-
-      const repoName = document.getElementById('repositoryName').value.trim();
-      if (repoName && data.stats) {
-        const callCounts = {};
-        Object.entries(data.stats).forEach(([k, v]) => { callCounts[k] = v; });
-        fetch('/api/db/call-counts', {
-          method: 'POST',
-          headers: {'Content-Type':'application/json'},
-          body: JSON.stringify({ repoName, callCounts })
-        }).catch(() => {});
-      }
-    } catch(e) {
-      showToast('Whatap 오류: ' + e.message, 'error');
-    } finally {
-      btn.disabled = false; btn.textContent = '호출건수 가져오기';
-      document.getElementById('whatapProgress').style.display = 'none';
-    }
-  }
-
   // ── UI 헬퍼 ──────────────────────────────────────────────
   function setExtracting(v) {
     const b1 = document.getElementById('extractBtn');
@@ -671,8 +554,7 @@
 
   document.addEventListener('keydown', e => {
     if (e.key === 'Enter' && document.activeElement.closest('.card')) {
-      if (document.activeElement.classList.contains('purple')) doFetchWhatap();
-      else doExtract();
+      doExtract();
     }
   });
 </script>
