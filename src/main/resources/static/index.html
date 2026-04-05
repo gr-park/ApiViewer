@@ -243,7 +243,6 @@
 
       <!-- 팀별 -->
       <div class="tab-panel active" id="panel-team">
-        <div id="teamDistChart" style="margin-bottom:14px;"></div>
         <div class="tbl-wrap">
           <table id="teamTable">
             <thead><tr>
@@ -254,6 +253,7 @@
               <th style="text-align:right;">최우선</th>
               <th style="text-align:right;">후순위</th>
               <th style="text-align:right;">검토필요</th>
+              <th></th>
             </tr></thead>
             <tbody id="teamTbody"></tbody>
           </table>
@@ -262,7 +262,6 @@
 
       <!-- 레포지토리별 -->
       <div class="tab-panel" id="panel-repo">
-        <div id="repoDistChart" style="margin-bottom:14px;"></div>
         <div class="tbl-wrap">
           <table id="repoTable">
             <thead><tr>
@@ -296,6 +295,7 @@
               <th style="text-align:right;">최우선</th>
               <th style="text-align:right;">후순위</th>
               <th style="text-align:right;">검토필요</th>
+              <th></th>
             </tr></thead>
             <tbody id="managerTbody"></tbody>
           </table>
@@ -483,14 +483,12 @@
         <div class="m-pct">${pct(v, total)}</div>
       </div>`).join('');
 
-    // 팀별
+    // 팀별 (표만 표시)
     renderGroupTable('teamTbody', s.byTeam || [], 'team', total);
-    renderTeamDetailChart('teamDistChart', s.byTeam || []);
     // 담당자별
     renderManagerTable(s.byManager || [], total);
-    // 레포별
+    // 레포별 (표만 표시)
     renderRepoTable(s.byRepo || [], total);
-    renderTeamDetailChart('repoDistChart', s.byRepo || [], 'repo');
   }
 
   function renderTeamDetailChart(elId, data, labelKey) {
@@ -567,12 +565,13 @@
 
   function renderGroupTable(tbodyId, data, key, grandTotal) {
     const tbody = document.getElementById(tbodyId);
-    if (!data.length) { tbody.innerHTML = `<tr><td colspan="7" class="empty">데이터 없음</td></tr>`; return; }
+    if (!data.length) { tbody.innerHTML = `<tr><td colspan="8" class="empty">데이터 없음</td></tr>`; return; }
     tbody.innerHTML = data.map(row => {
       const sd = row.statusDetail || {};
       const bd = row.statusDetail || {};
       const use=sd['사용']||0, done=sd['차단완료']||0, cnt=row.count||0;
       const btTop=bd['최우선 차단대상']||0, btLow=bd['후순위 차단대상']||0, btRev=bd['검토필요 차단대상']||0;
+      const qp = key === 'team' ? `team=${encodeURIComponent(row[key]||'')}` : `manager=${encodeURIComponent(row[key]||'')}`;
       return `<tr>
         <td><b>${esc(row[key])}</b></td>
         <td style="text-align:right;font-weight:700;">${cnt.toLocaleString()}</td>
@@ -581,13 +580,14 @@
         <td style="text-align:right;color:#dc2626;">${vp(btTop,cnt)}</td>
         <td style="text-align:right;color:#ea580c;">${vp(btLow,cnt)}</td>
         <td style="text-align:right;color:#d97706;">${vp(btRev,cnt)}</td>
+        <td><a class="link-btn" href="/viewer.html?${qp}">조회 →</a></td>
       </tr>`;
     }).join('');
   }
 
   function renderManagerTable(data, grandTotal) {
     const tbody = document.getElementById('managerTbody');
-    if (!data.length) { tbody.innerHTML = `<tr><td colspan="8" class="empty">데이터 없음</td></tr>`; return; }
+    if (!data.length) { tbody.innerHTML = `<tr><td colspan="9" class="empty">데이터 없음</td></tr>`; return; }
     // 팀 기준 정렬 (같은 팀 내에서는 건수 내림차순)
     data.sort((a, b) => (a.team||'').localeCompare(b.team||'') || (b.count||0) - (a.count||0));
     tbody.innerHTML = data.map(row => {
@@ -604,6 +604,7 @@
         <td style="text-align:right;color:#dc2626;">${vp(btTop,cnt)}</td>
         <td style="text-align:right;color:#ea580c;">${vp(btLow,cnt)}</td>
         <td style="text-align:right;color:#d97706;">${vp(btRev,cnt)}</td>
+        <td><a class="link-btn" href="/viewer.html?manager=${encodeURIComponent(row.manager||'')}">조회 →</a></td>
       </tr>`;
     }).join('');
   }

@@ -75,6 +75,19 @@
     .toast{position:fixed;bottom:24px;right:24px;padding:10px 18px;border-radius:8px;font-size:13px;font-weight:500;color:#fff;z-index:9999;opacity:0;transition:opacity .3s;pointer-events:none;}
     .toast.show{opacity:1;}
     .toast.error{background:var(--danger);} .toast.success{background:var(--success);} .toast.info{background:var(--purple);}
+
+    /* 사이드 탭 레이아웃 */
+    .settings-layout { display:grid; grid-template-columns:200px 1fr; gap:20px; align-items:start; }
+    .settings-sidebar { display:flex; flex-direction:column; gap:4px; position:sticky; top:20px; background:var(--card); border:1px solid var(--border); border-radius:10px; padding:8px; box-shadow:var(--shadow); }
+    .settings-tab { background:none; border:none; text-align:left; padding:10px 14px; border-radius:6px; cursor:pointer; font-size:13px; font-weight:600; color:var(--text-muted); font-family:inherit; transition:background .12s, color .12s; }
+    .settings-tab:hover { background:#f1f5f9; color:var(--text); }
+    .settings-tab.active { background:var(--primary); color:#fff; }
+    .settings-tab.danger { color:#dc2626; }
+    .settings-tab.danger.active { background:#dc2626; color:#fff; }
+    .settings-tab.danger:hover:not(.active) { background:#fee2e2; color:#991b1b; }
+    .settings-section { display:none; }
+    .settings-section.active { display:block; }
+    @media (max-width:900px) { .settings-layout { grid-template-columns:1fr; } .settings-sidebar { flex-direction:row; flex-wrap:wrap; position:static; } .settings-tab { flex:0 1 auto; } }
   </style>
 </head>
 <body>
@@ -108,8 +121,24 @@
   </div>
 </div>
 
-<div class="main">
+<div class="main" style="max-width:1200px;margin:0 auto;padding:20px 24px;">
+  <!-- 사이드 탭 레이아웃 -->
+  <div class="settings-layout">
+    <!-- 사이드바 탭 네비게이션 -->
+    <aside class="settings-sidebar">
+      <button class="settings-tab active" data-tab="monitor">📊 DB 모니터링</button>
+      <button class="settings-tab" data-tab="global">⚙️ 공통 설정</button>
+      <button class="settings-tab" data-tab="repos">📦 레포지토리</button>
+      <button class="settings-tab" data-tab="schedule">⏱️ 배치 스케줄</button>
+      <button class="settings-tab" data-tab="logs">📄 로그</button>
+      <button class="settings-tab" data-tab="archive">📁 APM 아카이브</button>
+      <button class="settings-tab danger" data-tab="danger">🗑 데이터 삭제</button>
+    </aside>
 
+    <!-- 메인 컨텐츠 (섹션별) -->
+    <div class="settings-content">
+
+<section class="settings-section active" data-section="monitor">
   <!-- DB 파일 사이즈 모니터링 -->
   <div class="card">
     <div class="card-title" style="margin-bottom:12px;">
@@ -132,7 +161,9 @@
     <!-- 파일 경로 / OS -->
     <div id="dbMonitorFooter" style="margin-top:10px;font-size:10px;color:var(--text-muted);font-family:monospace;"></div>
   </div>
+</section>
 
+<section class="settings-section" data-section="global">
   <!-- 공통 설정 -->
   <div class="card">
     <div class="card-title"><span class="dot dot-blue"></span>공통 설정 (모든 레포지토리에 적용)</div>
@@ -177,7 +208,9 @@
       <button class="btn btn-blue" onclick="saveGlobal()">공통 설정 저장</button>
     </div>
   </div>
+</section>
 
+<section class="settings-section" data-section="repos">
   <!-- 레포지토리 설정 -->
   <div class="card">
     <div class="card-title" style="margin-bottom:12px;">
@@ -190,7 +223,9 @@
       <div class="empty-repos">등록된 레포지토리가 없습니다.</div>
     </div>
   </div>
+</section>
 
+<section class="settings-section" data-section="schedule">
   <!-- 주기성 배치 스케줄 -->
   <div class="card">
     <div class="card-title" style="margin-bottom:12px;">
@@ -203,7 +238,9 @@
     </div>
     <div id="scheduleList" style="display:flex;flex-direction:column;gap:12px;">로딩 중...</div>
   </div>
+</section>
 
+<section class="settings-section" data-section="logs">
   <!-- 애플리케이션 로그 -->
   <div class="card">
     <div class="card-title" style="margin-bottom:12px;">
@@ -227,7 +264,9 @@
       날짜를 선택하고 조회를 클릭하세요.
     </div>
   </div>
+</section>
 
+<section class="settings-section" data-section="archive">
   <!-- APM 호출이력 아카이브 -->
   <div class="card" style="border:1px solid #fcd34d;">
     <div class="card-title" style="margin-bottom:12px;">
@@ -249,7 +288,9 @@
       파일 저장 위치: <code>./data/archive/apm_call_data_before_YYYY-MM-DD_archived_YYYY-MM-DD.csv</code>
     </div>
   </div>
+</section>
 
+<section class="settings-section" data-section="danger">
   <!-- 데이터 삭제 -->
   <div class="card" style="border:1px solid #fca5a5;">
     <div class="card-title" style="margin-bottom:12px;">
@@ -271,7 +312,10 @@
     </div>
     <div id="delResult" style="margin-top:8px;font-size:12px;"></div>
   </div>
+</section>
 
+    </div><!-- /settings-content -->
+  </div><!-- /settings-layout -->
 </div>
 
 <!-- 레포 편집 모달 -->
@@ -1172,9 +1216,9 @@
       const pct = maxSize > 0 ? (h.dbSizeBytes / maxSize) * 100 : 0;
       const barH = (pct / 100) * chartHeight;
       const tip = `${h.date}\nDB: ${fmtBytes(h.dbSizeBytes)}\n증가: ${h.deltaBytes>=0?'+':''}${fmtBytes(h.deltaBytes)}\nAPM: ${h.apmCallDataCount.toLocaleString()}건`;
-      return `<div style="display:flex;flex-direction:column;align-items:center;flex:0 0 ${barWidth}px;" title="${esc(tip)}">
+      return `<div class="db-chart-bar" data-tip="${esc(tip)}" style="flex:0 0 ${barWidth}px;display:flex;flex-direction:column;align-items:center;cursor:pointer;">
         <div style="width:${barWidth-4}px;height:${chartHeight}px;display:flex;flex-direction:column;justify-content:flex-end;">
-          <div style="background:linear-gradient(180deg,#60a5fa,#3b82f6);height:${barH}px;border-radius:2px 2px 0 0;transition:opacity .15s;" onmouseover="this.style.opacity='0.7'" onmouseout="this.style.opacity='1'"></div>
+          <div class="db-chart-fill" style="background:linear-gradient(180deg,#60a5fa,#3b82f6);height:${barH}px;border-radius:2px 2px 0 0;transition:background .15s;"></div>
         </div>
       </div>`;
     }).join('');
@@ -1190,6 +1234,25 @@
       <div style="display:flex;gap:2px;padding:4px 4px 0;border-top:1px solid var(--border);margin-top:4px;">${labels}</div>
       <div style="font-size:10px;color:var(--text-muted);margin-top:6px;">최대 DB 크기: ${fmtBytes(maxSize)} · 기록 일수: ${history.length}일</div>
     `;
+    // 플로팅 툴팁 연결
+    let tip = document.getElementById('dbChartTooltip');
+    if (!tip) {
+      tip = document.createElement('div');
+      tip.id = 'dbChartTooltip';
+      tip.style.cssText = 'position:fixed;background:#1e293b;color:#fff;font-size:11px;line-height:1.5;padding:6px 10px;border-radius:6px;white-space:pre;pointer-events:none;z-index:300;box-shadow:0 2px 8px rgba(0,0,0,.3);font-variant-numeric:tabular-nums;display:none;';
+      document.body.appendChild(tip);
+    }
+    el.querySelectorAll('.db-chart-bar').forEach(bar => {
+      bar.addEventListener('mouseenter', () => { tip.textContent = bar.dataset.tip || ''; tip.style.display = 'block'; bar.querySelector('.db-chart-fill').style.background = 'linear-gradient(180deg,#3b82f6,#1e40af)'; });
+      bar.addEventListener('mousemove', e => {
+        const w = tip.offsetWidth || 140, h = tip.offsetHeight || 60;
+        let left = e.clientX + 14, top = e.clientY - h - 12;
+        if (left + w > window.innerWidth) left = e.clientX - w - 14;
+        if (top < 8) top = e.clientY + 18;
+        tip.style.left = left + 'px'; tip.style.top = top + 'px';
+      });
+      bar.addEventListener('mouseleave', () => { tip.style.display = 'none'; bar.querySelector('.db-chart-fill').style.background = 'linear-gradient(180deg,#60a5fa,#3b82f6)'; });
+    });
   }
 
   async function dbMonitorSnapshot() {
@@ -1258,6 +1321,24 @@
     loadDbMonitor();
   }
   startApp();
+
+  // 사이드 탭 전환
+  document.querySelectorAll('.settings-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      const target = tab.dataset.tab;
+      document.querySelectorAll('.settings-tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      document.querySelectorAll('.settings-section').forEach(s => s.classList.toggle('active', s.dataset.section === target));
+      // URL 해시 업데이트
+      history.replaceState({}, '', '#' + target);
+    });
+  });
+  // 페이지 로드 시 해시 반영
+  const hash = location.hash.slice(1);
+  if (hash) {
+    const tab = document.querySelector(`.settings-tab[data-tab="${hash}"]`);
+    if (tab) tab.click();
+  }
 </script>
 </body>
 </html>

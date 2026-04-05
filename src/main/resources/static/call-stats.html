@@ -369,14 +369,26 @@
       if (!d.items || d.items.length === 0) {
         tbody.innerHTML = '<tr><td colspan="8" class="empty">검색 결과가 없습니다.</td></tr>';
       } else {
+        // 현재 페이지 내 최대값 계산 (미니바 비율용)
+        const maxAll   = Math.max(1, ...d.items.map(i => i.totalAll));
+        const maxYear  = Math.max(1, ...d.items.map(i => i.totalYear));
+        const maxMonth = Math.max(1, ...d.items.map(i => i.totalMonth));
+        const maxWeek  = Math.max(1, ...d.items.map(i => i.totalWeek));
+        const cell = (val, max, color) => {
+          const pct = Math.max(2, Math.round((val / max) * 100));
+          return `<td class="num" style="position:relative;">
+            <div style="position:absolute;left:0;top:0;bottom:0;width:${pct}%;background:${color};opacity:.15;pointer-events:none;"></div>
+            <span style="position:relative;">${fmt(val)}</span>
+          </td>`;
+        };
         tbody.innerHTML = d.items.map(a => `
           <tr>
             <td><div class="api-path">${esc(a.apiPath)}</div></td>
             <td><span class="repo-badge">${esc(a.repoName)}</span></td>
-            <td class="num">${fmt(a.totalAll)}</td>
-            <td class="num" style="font-weight:700;">${fmt(a.totalYear)}</td>
-            <td class="num">${fmt(a.totalMonth)}</td>
-            <td class="num">${fmt(a.totalWeek)}</td>
+            ${cell(a.totalAll, maxAll, '#64748b')}
+            ${cell(a.totalYear, maxYear, '#3b82f6').replace('<span', '<span style="font-weight:700;"')}
+            ${cell(a.totalMonth, maxMonth, '#22c55e')}
+            ${cell(a.totalWeek, maxWeek, '#f59e0b')}
             <td class="num" style="color:${a.totalError>0?'#dc2626':'inherit'};">${fmt(a.totalError)}</td>
             <td class="num"><button class="btn btn-ghost" style="font-size:10px;padding:3px 10px;height:auto;" onclick="openDetail('${esc(a.repoName)}','${esc(a.apiPath)}')">상세</button></td>
           </tr>`).join('');
