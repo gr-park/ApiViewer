@@ -101,13 +101,37 @@
   <div class="header-right">
     <a href="/"             class="nav-link">📊 대시보드</a>
     <a href="/extract.html" class="nav-link">🔍 URL 분석</a>
-    <a href="/viewer.html"  class="nav-link">📋 이력 조회</a>
+    <a href="/viewer.html"  class="nav-link">📋 URL분석현황</a>
+    <a href="/call-stats.html" class="nav-link">📈 URL호출현황</a>
     <a href="/review.html" class="nav-link">📝 현업 검토</a>
     <a href="/settings.html"class="nav-link nav-active">⚙️ 설정</a>
   </div>
 </div>
 
 <div class="main">
+
+  <!-- DB 파일 사이즈 모니터링 -->
+  <div class="card">
+    <div class="card-title" style="margin-bottom:12px;">
+      <span class="dot" style="background:#0ea5e9;"></span>DB 파일 사이즈 모니터링
+      <span style="font-size:11px;font-weight:400;color:var(--text-muted);margin-left:6px;">파일 크기 · 디스크 사용량 · 일별 증가 추이</span>
+      <div style="margin-left:auto;display:flex;gap:6px;">
+        <button class="btn btn-ghost" style="height:28px;padding:4px 14px;font-size:12px;" onclick="loadDbMonitor()">🔄 새로고침</button>
+        <button class="btn btn-ghost" style="height:28px;padding:4px 14px;font-size:12px;" onclick="dbMonitorSnapshot()">📸 지금 기록</button>
+      </div>
+    </div>
+    <!-- 현재 상태 카드 -->
+    <div id="dbMonitorCurrent" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px;">
+      <div style="padding:10px 12px;color:var(--text-muted);font-size:12px;">로딩 중...</div>
+    </div>
+    <!-- 30일 증가 추이 차트 -->
+    <div>
+      <div style="font-size:11px;font-weight:700;color:var(--text-muted);margin-bottom:6px;text-transform:uppercase;">최근 30일 증가 추이</div>
+      <div id="dbMonitorChart" style="background:#fafbfc;border-radius:6px;padding:12px;"></div>
+    </div>
+    <!-- 파일 경로 / OS -->
+    <div id="dbMonitorFooter" style="margin-top:10px;font-size:10px;color:var(--text-muted);font-family:monospace;"></div>
+  </div>
 
   <!-- 공통 설정 -->
   <div class="card">
@@ -204,7 +228,29 @@
     </div>
   </div>
 
-  <!-- 데이터 초기화 -->
+  <!-- APM 호출이력 아카이브 -->
+  <div class="card" style="border:1px solid #fcd34d;">
+    <div class="card-title" style="margin-bottom:12px;">
+      <span class="dot" style="background:#d97706;"></span>APM 호출이력 아카이브 (장기 보존)
+      <span style="font-size:11px;font-weight:400;color:var(--text-muted);margin-left:6px;">지정 기간 이전 데이터를 CSV로 백업 후 DB에서 제거합니다.</span>
+    </div>
+    <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;">
+      <label class="field" style="min-width:140px;">유지 기간 (일)
+        <input id="archKeepDays" type="number" min="30" value="365" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;">
+        <span class="field-hint">기본 365 (1년)</span>
+      </label>
+      <button class="btn btn-ghost" style="height:34px;" onclick="runArchive(true)">대상 건수 확인</button>
+      <button class="btn" style="background:#d97706;color:#fff;height:34px;" onclick="runArchive(false)">📦 CSV 백업 + 삭제</button>
+      <button class="btn btn-ghost" style="height:34px;" onclick="loadArchiveList()">아카이브 목록</button>
+    </div>
+    <div id="archResult" style="margin-top:8px;font-size:12px;"></div>
+    <div id="archList" style="margin-top:10px;"></div>
+    <div style="margin-top:8px;font-size:11px;color:var(--text-muted);">
+      파일 저장 위치: <code>./data/archive/apm_call_data_before_YYYY-MM-DD_archived_YYYY-MM-DD.csv</code>
+    </div>
+  </div>
+
+  <!-- 데이터 삭제 -->
   <div class="card" style="border:1px solid #fca5a5;">
     <div class="card-title" style="margin-bottom:12px;">
       <span class="dot" style="background:#ef4444;"></span>데이터 삭제
@@ -834,11 +880,20 @@
       showToast('실시간 모드 종료', 'info');
       return;
     }
-    // 오늘 날짜 자동 설정
-    const today = new Date().toISOString().slice(0,10);
-    document.getElementById('logDate').value = today;
+    // 오늘 날짜 자동 설정 (실시간 모드는 서버 시각 기준 오늘 로그를 계속 추적)
+    const todayStr = () => new Date().toISOString().slice(0,10);
+    document.getElementById('logDate').value = todayStr();
     loadLog();
-    tailTimer = setInterval(() => loadLog(true), 2000);
+    tailTimer = setInterval(() => {
+      // 자정 넘어간 경우 날짜 자동 갱신 (새 일자 로그로 전환)
+      const today = todayStr();
+      const dateInput = document.getElementById('logDate');
+      if (dateInput.value !== today) {
+        dateInput.value = today;
+        showToast(`날짜 변경됨 — ${today} 로그로 전환`, 'info');
+      }
+      loadLog(true);
+    }, 2000);
     btn.textContent = '🔴 실시간 ON (2초)';
     btn.style.background = '#ef4444';
     btn.style.color = '#fff';
@@ -1044,6 +1099,150 @@
     }
   }
 
+  // ── DB 모니터링 ──────────────────────────────────────────
+  function fmtBytes(n) {
+    if (n == null) return '-';
+    if (Math.abs(n) < 1024) return n + ' B';
+    if (Math.abs(n) < 1024*1024) return (n/1024).toFixed(1) + ' KB';
+    if (Math.abs(n) < 1024*1024*1024) return (n/1024/1024).toFixed(1) + ' MB';
+    return (n/1024/1024/1024).toFixed(2) + ' GB';
+  }
+  async function loadDbMonitor() {
+    try {
+      const res = await adminFetch('/api/db/monitor/current', { method:'GET' });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error || '조회 실패');
+      const growthColor = d.todayGrowthBytes >= 0 ? '#16a34a' : '#dc2626';
+      const growthSign = d.todayGrowthBytes > 0 ? '+' : '';
+      document.getElementById('dbMonitorCurrent').innerHTML = `
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:12px;border-left:4px solid #3b82f6;">
+          <div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px;">DB 파일 크기</div>
+          <div style="font-size:22px;font-weight:800;color:#3b82f6;">${fmtBytes(d.dbSizeBytes)}</div>
+          <div style="font-size:10px;color:var(--text-muted);margin-top:4px;">
+            오늘 변화: <span style="color:${growthColor};font-weight:600;">${growthSign}${fmtBytes(d.todayGrowthBytes)}</span>
+          </div>
+        </div>
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:12px;border-left:4px solid #8b5cf6;">
+          <div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px;">시스템 디스크</div>
+          <div style="font-size:16px;font-weight:700;color:#7c3aed;">
+            ${fmtBytes(d.diskUsableBytes)} <span style="font-size:10px;font-weight:400;color:var(--text-muted);">여유</span>
+          </div>
+          <div style="width:100%;background:#e2e8f0;border-radius:3px;height:6px;margin-top:6px;overflow:hidden;">
+            <div style="background:${d.diskUsedPct>80?'#ef4444':d.diskUsedPct>60?'#f59e0b':'#22c55e'};height:100%;width:${d.diskUsedPct}%;"></div>
+          </div>
+          <div style="font-size:10px;color:var(--text-muted);margin-top:4px;">
+            사용 ${d.diskUsedPct}% (${fmtBytes(d.diskUsedBytes)} / ${fmtBytes(d.diskTotalBytes)})
+          </div>
+        </div>
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:12px;border-left:4px solid #22c55e;">
+          <div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px;">API 분석 레코드</div>
+          <div style="font-size:22px;font-weight:800;color:#16a34a;">${d.apiRecordCount.toLocaleString()}</div>
+          <div style="font-size:10px;color:var(--text-muted);margin-top:4px;">api_record 테이블</div>
+        </div>
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:12px;border-left:4px solid #f59e0b;">
+          <div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px;">APM 호출이력</div>
+          <div style="font-size:22px;font-weight:800;color:#d97706;">${d.apmCallDataCount.toLocaleString()}</div>
+          <div style="font-size:10px;color:var(--text-muted);margin-top:4px;">
+            오늘 +<span style="font-weight:600;color:#d97706;">${(d.todayGrowthApm||0).toLocaleString()}</span> 건
+          </div>
+        </div>
+      `;
+      document.getElementById('dbMonitorFooter').innerHTML =
+        `📁 <b>${esc(d.dbFilePath)}</b> &nbsp; · &nbsp; OS: ${esc(d.osName)} &nbsp; · &nbsp; Java ${esc(d.javaVersion)} &nbsp; · &nbsp; ${d.timestamp.substring(0,19).replace('T',' ')}`;
+
+      // 30일 추이 차트
+      const res2 = await adminFetch('/api/db/monitor/history?days=30', { method:'GET' });
+      const hdata = await res2.json();
+      renderDbMonitorChart(hdata.history || []);
+    } catch(e) {
+      document.getElementById('dbMonitorCurrent').innerHTML = `<div style="color:var(--danger);padding:10px;">조회 실패: ${esc(e.message)}</div>`;
+    }
+  }
+
+  function renderDbMonitorChart(history) {
+    const el = document.getElementById('dbMonitorChart');
+    if (!history.length) {
+      el.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-muted);font-size:11px;">아직 기록된 스냅샷이 없습니다. 시간이 지나면서 자동 기록됩니다.</div>';
+      return;
+    }
+    const maxSize = Math.max(...history.map(h => h.dbSizeBytes));
+    const barWidth = Math.max(12, Math.floor(700 / history.length));
+    const chartHeight = 120;
+    const bars = history.map(h => {
+      const pct = maxSize > 0 ? (h.dbSizeBytes / maxSize) * 100 : 0;
+      const barH = (pct / 100) * chartHeight;
+      const tip = `${h.date}\nDB: ${fmtBytes(h.dbSizeBytes)}\n증가: ${h.deltaBytes>=0?'+':''}${fmtBytes(h.deltaBytes)}\nAPM: ${h.apmCallDataCount.toLocaleString()}건`;
+      return `<div style="display:flex;flex-direction:column;align-items:center;flex:0 0 ${barWidth}px;" title="${esc(tip)}">
+        <div style="width:${barWidth-4}px;height:${chartHeight}px;display:flex;flex-direction:column;justify-content:flex-end;">
+          <div style="background:linear-gradient(180deg,#60a5fa,#3b82f6);height:${barH}px;border-radius:2px 2px 0 0;transition:opacity .15s;" onmouseover="this.style.opacity='0.7'" onmouseout="this.style.opacity='1'"></div>
+        </div>
+      </div>`;
+    }).join('');
+    // 날짜 라벨 (최대 10개)
+    const labelSkip = Math.max(1, Math.ceil(history.length / 10));
+    const labels = history.map((h, i) => {
+      const show = (i % labelSkip === 0) || i === history.length - 1;
+      const md = h.date.substring(5).replace('-','/');
+      return `<div style="flex:0 0 ${barWidth}px;text-align:center;font-size:9px;color:var(--text-muted);">${show?md:''}</div>`;
+    }).join('');
+    el.innerHTML = `
+      <div style="display:flex;align-items:flex-end;gap:2px;padding:0 4px;">${bars}</div>
+      <div style="display:flex;gap:2px;padding:4px 4px 0;border-top:1px solid var(--border);margin-top:4px;">${labels}</div>
+      <div style="font-size:10px;color:var(--text-muted);margin-top:6px;">최대 DB 크기: ${fmtBytes(maxSize)} · 기록 일수: ${history.length}일</div>
+    `;
+  }
+
+  async function dbMonitorSnapshot() {
+    try {
+      const res = await adminFetch('/api/db/monitor/snapshot', { method:'POST' });
+      const d = await res.json();
+      if (!res.ok) throw new Error('실패');
+      showToast('스냅샷 기록 완료', 'success');
+      loadDbMonitor();
+    } catch(e) { showToast('실패: ' + e.message, 'error'); }
+  }
+
+  // ── APM 아카이브 ────────────────────────────────────────
+  async function runArchive(dryRun) {
+    const keepDays = parseInt(document.getElementById('archKeepDays').value) || 365;
+    const resEl = document.getElementById('archResult');
+    if (!dryRun && !confirm(`${keepDays}일 이전의 APM 호출이력을 CSV로 백업하고 DB에서 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`)) return;
+    resEl.innerHTML = '<span style="color:var(--text-muted);">처리 중...</span>';
+    try {
+      const res = await adminFetch('/api/apm/archive', {
+        method: 'POST', body: JSON.stringify({ keepDays, dryRun })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || '실패');
+      if (dryRun) {
+        resEl.innerHTML = `<span style="color:#d97706;">ℹ 대상 ${data.targetCount.toLocaleString()}건 (cutoff: ${data.cutoff})</span>`;
+      } else {
+        resEl.innerHTML = `<span style="color:var(--success);">✓ 아카이브 완료: ${data.archived.toLocaleString()}건 (cutoff: ${data.cutoff})<br><code style="font-size:10px;">${data.csvPath || ''}</code></span>`;
+        loadArchiveList();
+      }
+    } catch(e) {
+      resEl.innerHTML = `<span style="color:var(--danger);">${esc(e.message)}</span>`;
+    }
+  }
+
+  async function loadArchiveList() {
+    try {
+      const res = await adminFetch('/api/apm/archive/list', { method:'GET' });
+      const list = await res.json();
+      const el = document.getElementById('archList');
+      if (!list.length) {
+        el.innerHTML = '<div style="font-size:11px;color:var(--text-muted);padding:6px 0;">아카이브 파일이 없습니다.</div>';
+        return;
+      }
+      el.innerHTML = '<table style="width:100%;border-collapse:collapse;font-size:11px;margin-top:6px;"><thead><tr style="background:#f1f5f9;"><th style="padding:5px 8px;text-align:left;">파일명</th><th style="padding:5px 8px;text-align:right;">크기</th><th style="padding:5px 8px;text-align:left;">수정일</th></tr></thead><tbody>' +
+        list.map(f => `<tr style="border-bottom:1px solid var(--border);">
+          <td style="padding:5px 8px;font-family:monospace;">${esc(f.name)}</td>
+          <td style="padding:5px 8px;text-align:right;">${(f.size/1024).toFixed(1)} KB</td>
+          <td style="padding:5px 8px;color:var(--text-muted);">${esc(f.modified).replace('T',' ').substring(0,19)}</td>
+        </tr>`).join('') + '</tbody></table>';
+    } catch(e) {}
+  }
+
   // 가드 완료 후 초기화 (가드가 비동기이므로 약간 지연)
   async function startApp() {
     // 가드가 토큰을 설정할 때까지 대기
@@ -1056,6 +1255,7 @@
     loadLogDates();
     loadSchedules();
     loadDelRepoOptions();
+    loadDbMonitor();
   }
   startApp();
 </script>

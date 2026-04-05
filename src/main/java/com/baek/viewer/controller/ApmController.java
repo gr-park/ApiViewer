@@ -19,10 +19,41 @@ public class ApmController {
     private static final Logger log = LoggerFactory.getLogger(ApmController.class);
     private final MockApmService mockApmService;
     private final RepoConfigRepository repoConfigRepository;
+    private final com.baek.viewer.service.ApmArchiveService apmArchiveService;
 
-    public ApmController(MockApmService mockApmService, RepoConfigRepository repoConfigRepository) {
+    public ApmController(MockApmService mockApmService,
+                         RepoConfigRepository repoConfigRepository,
+                         com.baek.viewer.service.ApmArchiveService apmArchiveService) {
         this.mockApmService = mockApmService;
         this.repoConfigRepository = repoConfigRepository;
+        this.apmArchiveService = apmArchiveService;
+    }
+
+    /** 1년 이상 지난 호출이력 CSV 백업 + 원본 삭제 */
+    @PostMapping("/archive")
+    public ResponseEntity<?> archive(@RequestBody(required = false) java.util.Map<String, Object> body) {
+        int keepDays = 365;
+        boolean dryRun = false;
+        if (body != null) {
+            if (body.get("keepDays") instanceof Number n) keepDays = n.intValue();
+            dryRun = Boolean.TRUE.equals(body.get("dryRun"));
+        }
+        try {
+            return ResponseEntity.ok(apmArchiveService.archive(keepDays, dryRun));
+        } catch (Exception e) {
+            log.error("[APM 아카이브 실패] {}", e.getMessage(), e);
+            return ResponseEntity.internalServerError().body(java.util.Map.of("error", e.getMessage()));
+        }
+    }
+
+    /** 아카이브 파일 목록 */
+    @GetMapping("/archive/list")
+    public ResponseEntity<?> archiveList() {
+        try {
+            return ResponseEntity.ok(apmArchiveService.listArchives());
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body(java.util.Map.of("error", e.getMessage()));
+        }
     }
 
     /** Mock 데이터 생성 (source: MOCK/WHATAP/JENNIFER, 기본 MOCK) */

@@ -96,7 +96,7 @@
     #chartTooltip { position:fixed; background:#1e293b; color:#fff; font-size:11px; line-height:1.5; padding:6px 10px; border-radius:6px; white-space:pre; pointer-events:none; z-index:300; box-shadow:0 2px 8px rgba(0,0,0,.3); font-variant-numeric:tabular-nums; display:none; }
     .bar-call { background:#22c55e; width:100%; transition:background .15s; }
     .bar-err  { background:#ec4899; width:100%; transition:background .15s; }
-    .chart-xlabels { display:flex; padding:0 4px; margin-top:6px; min-height:28px; }
+    .chart-xlabels { display:flex; padding:0 4px; margin-top:6px; min-height:42px; }
     .chart-xlabel { font-size:9px; color:#64748b; text-align:center; white-space:nowrap; font-variant-numeric:tabular-nums; line-height:1.25; }
     .chart-xlabel .year { color:#94a3b8; font-size:8px; }
     .chart-xlabel .md { font-weight:600; color:#475569; }
@@ -129,7 +129,8 @@
   <div class="header-right">
     <a href="/" class="nav-link">📊 대시보드</a>
     <a href="/extract.html" class="nav-link" id="navExtract" style="display:none;">🔍 URL 분석</a>
-    <a href="/viewer.html" class="nav-link">📋 이력 조회</a>
+    <a href="/viewer.html" class="nav-link">📋 URL분석현황</a>
+    <a href="/call-stats.html" class="nav-link">📈 URL호출현황</a>
     <a href="/review.html" class="nav-link nav-active">📝 현업 검토</a>
     <a href="/settings.html" class="nav-link" id="navSettings" style="display:none;">⚙️ 설정</a>
     <button class="nav-link" id="adminBtn" onclick="toggleAdmin()" style="background:none;cursor:pointer;">🔑 관리자</button>
@@ -215,7 +216,7 @@
         <th class="hg-info sticky-h sticky-last" style="left:286px;min-width:200px;">URL 경로</th>
         <th class="hg-info">URL 호출</th>
         <th class="hg-desc" style="min-width:300px;">관련 메뉴(또는 기능)</th>
-        <th class="hg-desc" style="min-width:120px;">총 호출건</th>
+        <th class="hg-desc" style="min-width:120px;">1년 호출건</th>
         <th class="hg-desc" style="min-width:260px;">비고</th>
         <th class="hg-block">상태</th>
         <th class="hg-block">차단기준</th>
@@ -494,18 +495,18 @@
       return;
     }
 
-    // Y축: 100 단위 / 최소 1000
-    let yMax = 1000;
-    if (maxCall > yMax) yMax = Math.ceil(maxCall / 100) * 100;
-    let tickStep = 100;
-    if (yMax > 3000) tickStep = 500;
-    else if (yMax > 1500) tickStep = 200;
+    // Y축 스케일: 데이터 최대값에 따라 자동 조정
+    const ys = calcYScale(maxCall);
+    const yMax = ys.yMax, tickStep = ys.tickStep;
     const ticks = [];
     for (let v = 0; v <= yMax; v += tickStep) ticks.push(v);
 
     const chartHeight = 260;
-    const barWidth = 28;
-    const barGap = 8;
+    let barWidth, barGap;
+    if (buckets.length <= 7)       { barWidth = 70; barGap = 20; }
+    else if (buckets.length <= 14) { barWidth = 50; barGap = 14; }
+    else if (buckets.length <= 31) { barWidth = 34; barGap = 10; }
+    else                            { barWidth = 28; barGap = 8;  }
     const colWidth = barWidth + barGap;
     const chartMinWidth = buckets.length * colWidth + 10;
 
@@ -527,7 +528,7 @@
       const errH  = (err / yMax) * chartHeight;
       const greenH = Math.max(0, callH - errH);
       const ym = fmtYearMD(b.label);
-      const tooltip = `${ym.year} ${ym.md}\n호출: ${call.toLocaleString()}건\n에러: ${(b.errorCount||0).toLocaleString()}건`;
+      const tooltip = `${ym.year} ${ym.md} ${ym.dow}\n호출: ${call.toLocaleString()}건\n에러: ${(b.errorCount||0).toLocaleString()}건`;
       return `<div class="chart-col" style="width:${barWidth}px;height:${chartHeight}px;margin-right:${barGap}px;" data-tip="${esc(tooltip)}">
         ${errH>0?`<div class="bar-err" style="height:${errH}px;"></div>`:''}
         ${greenH>0?`<div class="bar-call" style="height:${greenH}px;"></div>`:''}
@@ -538,8 +539,9 @@
       const show = (i % labelSkip === 0) || i === buckets.length - 1;
       if (!show) return `<div class="chart-xlabel" style="width:${barWidth}px;margin-right:${barGap}px;"></div>`;
       const ym = fmtYearMD(b.label);
+      const dowColor = ym.dowIdx === 0 ? '#dc2626' : (ym.dowIdx === 6 ? '#2563eb' : '#64748b');
       return `<div class="chart-xlabel" style="width:${barWidth}px;margin-right:${barGap}px;">
-        <span class="year">${esc(ym.year)}</span><br><span class="md">${esc(ym.md)}</span>
+        <span class="year">${esc(ym.year)}</span><br><span class="md">${esc(ym.md)}</span><br><span style="font-size:9px;color:${dowColor};font-weight:600;">${esc(ym.dow)}</span>
       </div>`;
     }).join('');
 
@@ -578,6 +580,20 @@
     });
   }
 
+  function calcYScale(maxVal) {
+    if (maxVal <= 0) return { yMax: 10, tickStep: 1 };
+    const rough = maxVal / 8;
+    const magnitude = Math.pow(10, Math.floor(Math.log10(rough)));
+    const normalized = rough / magnitude;
+    let tickStep;
+    if (normalized < 1.5)      tickStep = 1 * magnitude;
+    else if (normalized < 3)   tickStep = 2 * magnitude;
+    else if (normalized < 7)   tickStep = 5 * magnitude;
+    else                       tickStep = 10 * magnitude;
+    const yMax = Math.ceil(maxVal / tickStep) * tickStep;
+    return { yMax, tickStep };
+  }
+
   function fmtMD(s) {
     if (!s) return '';
     const f = v => { const m = v.match(/(\d{1,2})-(\d{1,2})$/); return m ? `${parseInt(m[1])}월${parseInt(m[2])}일` : v; };
@@ -585,10 +601,13 @@
     return f(s);
   }
   function fmtYearMD(s) {
-    if (!s) return { year:'', md:'' };
+    if (!s) return { year:'', md:'', dow:'', dowIdx:-1 };
     const m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
-    if (!m) return { year:'', md: fmtMD(s) };
-    return { year: `${m[1].slice(2)}년`, md: `${parseInt(m[2])}월${parseInt(m[3])}일` };
+    if (!m) return { year:'', md: fmtMD(s), dow:'', dowIdx:-1 };
+    const d = new Date(parseInt(m[1]), parseInt(m[2])-1, parseInt(m[3]));
+    const dowIdx = d.getDay();
+    const dowNames = ['일','월','화','수','목','금','토'];
+    return { year: `${m[1].slice(2)}년`, md: `${parseInt(m[2])}월${parseInt(m[3])}일`, dow: `(${dowNames[dowIdx]})`, dowIdx };
   }
 </script>
 

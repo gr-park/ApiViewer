@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>URL Viewer — URL호출현황</title>
+  <style>
+    :root {
+      --bg:#f4f6f9; --card:#fff; --primary:#3b82f6; --primary-hover:#2563eb;
+      --danger:#ef4444; --success:#22c55e; --purple:#8b5cf6; --warning:#f59e0b;
+      --text:#1e293b; --text-muted:#64748b; --border:#e2e8f0;
+      --shadow:0 1px 4px rgba(0,0,0,.08);
+    }
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);font-size:13px;}
+    .header{background:var(--card);border-bottom:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;gap:12px;box-shadow:var(--shadow);}
+    .header h1{font-size:18px;font-weight:700;color:var(--primary);}
+    .header-sub{font-size:12px;color:var(--text-muted);background:#f1f5f9;padding:3px 10px;border-radius:4px;font-weight:600;}
+    .header-right{margin-left:auto;display:flex;align-items:center;gap:6px;}
+    .nav-link{font-size:12px;color:var(--text-muted);font-weight:600;text-decoration:none;padding:6px 12px;border:1px solid var(--border);border-radius:6px;}
+    .nav-link:hover{background:#f1f5f9;}
+    .nav-active{color:var(--primary)!important;border-color:var(--primary)!important;}
+
+    .main{max-width:1400px;margin:0 auto;padding:20px 24px;}
+    .card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px 18px;margin-bottom:14px;box-shadow:var(--shadow);}
+    .card-title{font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px;display:flex;align-items:center;gap:8px;}
+    .dot{width:8px;height:8px;border-radius:50%;}
+    .dot-blue{background:var(--primary);} .dot-green{background:var(--success);} .dot-purple{background:var(--purple);} .dot-orange{background:var(--warning);}
+
+    /* 필터 바 */
+    .filter-bar{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;}
+    .field{display:flex;flex-direction:column;gap:3px;font-size:10px;color:var(--text-muted);font-weight:700;text-transform:uppercase;letter-spacing:.05em;}
+    .field input, .field select{padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;outline:none;background:var(--card);}
+    .field input:focus, .field select:focus{border-color:var(--primary);box-shadow:0 0 0 2px #3b82f620;}
+    .btn{padding:7px 16px;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;transition:background .15s;height:32px;}
+    .btn-blue{background:var(--primary);color:#fff;} .btn-blue:hover{background:var(--primary-hover);}
+    .btn-ghost{background:#f1f5f9;color:var(--text-muted);border:1px solid var(--border);} .btn-ghost:hover{background:#e2e8f0;}
+
+    /* 요약 카드 */
+    .summary-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px;}
+    .sum-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px 14px;box-shadow:var(--shadow);position:relative;overflow:hidden;}
+    .sum-card::before{content:'';position:absolute;top:0;left:0;width:4px;height:100%;border-radius:10px 0 0 10px;background:var(--primary);}
+    .sum-label{font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;}
+    .sum-value{font-size:22px;font-weight:800;color:var(--text);line-height:1;}
+    .sum-sub{font-size:10px;color:var(--text-muted);margin-top:6px;}
+    .sum-card.c-call::before{background:#22c55e;}
+    .sum-card.c-call .sum-value{color:#16a34a;}
+    .sum-card.c-err::before{background:#ef4444;}
+    .sum-card.c-err .sum-value{color:#dc2626;}
+    .sum-card.c-apis::before{background:#8b5cf6;}
+    .sum-card.c-apis .sum-value{color:#7c3aed;}
+    .sum-card.c-days::before{background:#f59e0b;}
+    .sum-card.c-days .sum-value{color:#d97706;}
+
+    /* 2열 그리드 */
+    .two-col{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+
+    /* 테이블 */
+    table{width:100%;border-collapse:collapse;font-size:12px;}
+    thead th{background:#f1f5f9;padding:8px 10px;text-align:left;font-weight:700;color:var(--text-muted);font-size:11px;text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--border);position:sticky;top:0;z-index:1;}
+    thead th.sortable{cursor:pointer;user-select:none;}
+    thead th.sortable:hover{background:#e2e8f0;}
+    thead th.sorted{background:#dbeafe;color:#1e40af;}
+    tbody td{padding:8px 10px;border-bottom:1px solid var(--border);vertical-align:middle;}
+    tbody tr:hover{background:#f8fafc;}
+    .num{text-align:right;font-variant-numeric:tabular-nums;font-weight:600;}
+    .api-path{font-family:'Consolas',monospace;font-size:11px;color:#1e40af;word-break:break-all;}
+    .repo-badge{display:inline-block;padding:2px 8px;background:#f1f5f9;color:var(--text-muted);border-radius:4px;font-size:10px;font-weight:600;}
+    .src-badge{display:inline-block;padding:1px 6px;border-radius:3px;font-size:10px;font-weight:600;}
+    .src-MOCK{background:#fef3c7;color:#92400e;}
+    .src-WHATAP{background:#dbeafe;color:#1e40af;}
+    .src-JENNIFER{background:#ede9fe;color:#6d28d9;}
+    .rank{display:inline-block;width:22px;height:22px;line-height:22px;text-align:center;border-radius:50%;background:#f1f5f9;color:var(--text-muted);font-weight:700;font-size:10px;}
+    .rank.r1{background:#fef3c7;color:#d97706;}
+    .rank.r2{background:#e5e7eb;color:#4b5563;}
+    .rank.r3{background:#fed7aa;color:#9a3412;}
+
+    /* 페이징 */
+    .pagination{display:flex;align-items:center;gap:8px;justify-content:flex-end;margin-top:10px;font-size:12px;}
+    .page-btn{padding:5px 10px;border:1px solid var(--border);border-radius:4px;background:var(--card);cursor:pointer;font-size:11px;color:var(--text);min-width:32px;}
+    .page-btn:hover{background:#f1f5f9;}
+    .page-btn.active{background:var(--primary);color:#fff;border-color:var(--primary);}
+    .page-btn:disabled{opacity:.5;cursor:not-allowed;}
+    .page-info{color:var(--text-muted);font-size:11px;}
+
+    /* 상세 모달 */
+    .modal-overlay{display:none;position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:100;align-items:center;justify-content:center;}
+    .modal{background:var(--card);border-radius:12px;width:900px;max-width:92%;max-height:90vh;overflow:auto;box-shadow:0 8px 32px rgba(0,0,0,.25);}
+    .modal-header{padding:14px 22px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:var(--card);z-index:1;}
+    .modal-header h3{font-size:14px;font-weight:700;}
+    .modal-body{padding:16px 22px;}
+    .tab-bar{display:flex;gap:4px;margin-bottom:12px;border-bottom:2px solid var(--border);}
+    .tab-btn{padding:8px 16px;background:none;border:none;font-size:12px;font-weight:600;color:var(--text-muted);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;}
+    .tab-btn.active{color:var(--primary);border-bottom-color:var(--primary);}
+
+    .loading{text-align:center;padding:40px;color:var(--text-muted);}
+    .empty{text-align:center;padding:40px;color:var(--text-muted);font-size:12px;}
+    .toast{position:fixed;bottom:24px;right:24px;padding:10px 18px;border-radius:8px;font-size:13px;color:#fff;z-index:9999;opacity:0;transition:opacity .3s;pointer-events:none;}
+    .toast.show{opacity:1;}
+    .toast.error{background:var(--danger);} .toast.success{background:var(--success);}
+  </style>
+</head>
+<body>
+<div class="header">
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+    <polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>
+  </svg>
+  <h1>URL Viewer</h1>
+  <span class="header-sub">URL호출현황</span>
+  <div class="header-right">
+    <a href="/"             class="nav-link">📊 대시보드</a>
+    <a href="/extract.html" class="nav-link">🔍 URL 분석</a>
+    <a href="/viewer.html"  class="nav-link">📋 URL분석현황</a>
+    <a href="/call-stats.html" class="nav-link nav-active">📈 URL호출현황</a>
+    <a href="/review.html"  class="nav-link">📝 현업 검토</a>
+    <a href="/settings.html" class="nav-link">⚙️ 설정</a>
+  </div>
+</div>
+
+<div class="main">
+  <!-- 필터 -->
+  <div class="card">
+    <div class="filter-bar">
+      <label class="field">시작일<input id="fromDate" type="date"></label>
+      <label class="field">종료일<input id="toDate" type="date"></label>
+      <label class="field">레포지토리
+        <select id="repoSelect" style="min-width:180px;">
+          <option value="">(전체)</option>
+        </select>
+      </label>
+      <label class="field">URL 검색
+        <input id="searchInput" type="text" placeholder="URL 경로 검색..." style="min-width:220px;">
+      </label>
+      <button class="btn btn-blue" onclick="loadAll()">조회</button>
+      <button class="btn btn-ghost" onclick="setPeriod(7)">최근 1주</button>
+      <button class="btn btn-ghost" onclick="setPeriod(30)">최근 1달</button>
+      <button class="btn btn-ghost" onclick="setPeriod(90)">최근 3달</button>
+      <button class="btn btn-ghost" onclick="setPeriod(365)">최근 1년</button>
+    </div>
+  </div>
+
+  <!-- 요약 카드 -->
+  <div class="summary-grid">
+    <div class="sum-card c-call">
+      <div class="sum-label">총 호출건수</div>
+      <div class="sum-value" id="sumCall">0</div>
+      <div class="sum-sub" id="sumPeriod">-</div>
+    </div>
+    <div class="sum-card c-err">
+      <div class="sum-label">총 에러건수</div>
+      <div class="sum-value" id="sumErr">0</div>
+      <div class="sum-sub" id="sumErrPct">-</div>
+    </div>
+    <div class="sum-card c-apis">
+      <div class="sum-label">조회된 API 수</div>
+      <div class="sum-value" id="sumApis">0</div>
+      <div class="sum-sub">레포 <span id="sumRepos">0</span>개</div>
+    </div>
+    <div class="sum-card c-days">
+      <div class="sum-label">APM 종류별 현황</div>
+      <div style="display:flex;flex-direction:column;gap:2px;margin-top:2px;" id="sumBySource"></div>
+    </div>
+  </div>
+
+  <!-- 2열: 레포별 요약 + TOP 10 -->
+  <div class="two-col">
+    <div class="card">
+      <div class="card-title"><span class="dot dot-purple"></span>레포별 호출 요약</div>
+      <div style="max-height:320px;overflow:auto;">
+        <table>
+          <thead><tr>
+            <th>레포지토리</th>
+            <th class="num">호출건수</th>
+            <th class="num">에러</th>
+            <th class="num">API수</th>
+          </tr></thead>
+          <tbody id="byRepoTbody"><tr><td colspan="4" class="empty">로딩 중...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title"><span class="dot dot-orange"></span>TOP 10 호출 URL (최근 1년)</div>
+      <div style="max-height:320px;overflow:auto;">
+        <table>
+          <thead><tr>
+            <th style="width:28px;">#</th>
+            <th>URL</th>
+            <th class="num">호출</th>
+            <th class="num">에러</th>
+          </tr></thead>
+          <tbody id="topTbody"><tr><td colspan="4" class="empty">로딩 중...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- URL별 집계 테이블 (페이징) -->
+  <div class="card">
+    <div class="card-title" style="display:flex;align-items:center;">
+      <span class="dot dot-blue"></span>URL별 집계
+      <span id="resultCount" style="margin-left:10px;font-size:11px;font-weight:400;color:var(--text-muted);text-transform:none;letter-spacing:0;"></span>
+    </div>
+    <table id="apiTable">
+      <thead><tr>
+        <th class="sortable" onclick="toggleSort('apiPath')">URL <span class="sort-icon" id="sort-apiPath"></span></th>
+        <th>레포</th>
+        <th class="num sortable" onclick="toggleSort('totalAll')">총 건수<br><span style="font-weight:400;font-size:9px;">(전체)</span> <span class="sort-icon" id="sort-totalAll"></span></th>
+        <th class="num sortable" onclick="toggleSort('totalYear')">1년 <span class="sort-icon" id="sort-totalYear">↓</span></th>
+        <th class="num sortable" onclick="toggleSort('totalMonth')">1달 <span class="sort-icon" id="sort-totalMonth"></span></th>
+        <th class="num sortable" onclick="toggleSort('totalWeek')">1주 <span class="sort-icon" id="sort-totalWeek"></span></th>
+        <th class="num sortable" onclick="toggleSort('totalError')">에러(전체) <span class="sort-icon" id="sort-totalError"></span></th>
+        <th class="num">상세</th>
+      </tr></thead>
+      <tbody id="apiTbody"><tr><td colspan="8" class="empty">조회 결과가 여기 표시됩니다.</td></tr></tbody>
+    </table>
+    <div class="pagination" id="pagination"></div>
+  </div>
+</div>
+
+<!-- 상세 모달 -->
+<div id="detailModal" class="modal-overlay" onclick="if(event.target===this)closeDetail()">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="detailTitle">URL 상세</h3>
+      <button class="btn btn-ghost" onclick="closeDetail()">닫기 ✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="tab-bar">
+        <button class="tab-btn active" id="tabDaily" onclick="switchDetailTab('daily')">일별</button>
+        <button class="tab-btn" id="tabMonthly" onclick="switchDetailTab('monthly')">월별</button>
+      </div>
+      <div id="detailBody">
+        <div class="loading">로딩 중...</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  let currentPage = 0, currentSize = 50, currentSort = 'totalYear', currentDir = 'desc';
+  let currentDetail = { repo:'', apiPath:'', tab:'daily' };
+
+  function showToast(msg, type='success') {
+    const t = document.getElementById('toast');
+    t.textContent = msg; t.className = `toast ${type} show`;
+    setTimeout(() => t.classList.remove('show'), 3000);
+  }
+  function esc(s) {
+    if (s == null) return '';
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+  function fmt(n) { return (n||0).toLocaleString(); }
+
+  async function init() {
+    // 기본 기간: 최근 1년
+    const today = new Date();
+    const from = new Date(today); from.setDate(today.getDate() - 365);
+    document.getElementById('toDate').value = today.toISOString().slice(0,10);
+    document.getElementById('fromDate').value = from.toISOString().slice(0,10);
+    // 레포 드롭다운
+    try {
+      const res = await fetch('/api/config/repos');
+      const repos = await res.json();
+      const sel = document.getElementById('repoSelect');
+      repos.forEach(r => {
+        const opt = document.createElement('option');
+        opt.value = r.repoName;
+        opt.textContent = r.businessName ? `${r.repoName} | ${r.businessName}` : r.repoName;
+        sel.appendChild(opt);
+      });
+    } catch(e) {}
+    await loadAll();
+  }
+
+  function setPeriod(days) {
+    const today = new Date();
+    const from = new Date(today); from.setDate(today.getDate() - days);
+    document.getElementById('toDate').value = today.toISOString().slice(0,10);
+    document.getElementById('fromDate').value = from.toISOString().slice(0,10);
+    loadAll();
+  }
+
+  function getParams() {
+    const params = new URLSearchParams();
+    const from = document.getElementById('fromDate').value;
+    const to   = document.getElementById('toDate').value;
+    const repo = document.getElementById('repoSelect').value;
+    const q    = document.getElementById('searchInput').value.trim();
+    if (from) params.append('from', from);
+    if (to)   params.append('to', to);
+    if (repo) params.append('repo', repo);
+    if (q)    params.append('q', q);
+    return params;
+  }
+
+  async function loadAll() {
+    currentPage = 0;
+    await Promise.all([loadSummary(), loadApis()]);
+  }
+
+  async function loadSummary() {
+    try {
+      const params = getParams();
+      params.set('topN', '10');
+      const res = await fetch(`/api/call-stats/summary?${params}`);
+      const d = await res.json();
+      document.getElementById('sumCall').textContent = fmt(d.totalCallCount);
+      document.getElementById('sumErr').textContent  = fmt(d.totalErrorCount);
+      const errPct = d.totalCallCount > 0 ? ((d.totalErrorCount / d.totalCallCount) * 100).toFixed(2) : '0.00';
+      document.getElementById('sumErrPct').textContent = `에러율 ${errPct}%`;
+      document.getElementById('sumPeriod').textContent = `${d.from} ~ ${d.to}`;
+      // API 수 = 유니크 URL 수 (bySource에는 중복 가능해서 byRepo에서 집계)
+      const apiCount = (d.byRepo || []).reduce((s, r) => s + r.apiCount, 0);
+      document.getElementById('sumApis').textContent = fmt(apiCount);
+      document.getElementById('sumRepos').textContent = (d.byRepo || []).length;
+      // Source별
+      const srcWrap = document.getElementById('sumBySource');
+      srcWrap.innerHTML = (d.bySource || []).map(s =>
+        `<div style="font-size:10px;"><span class="src-badge src-${s.source}">${esc(s.source)}</span> <b>${fmt(s.callCount)}</b>건</div>`
+      ).join('') || '<span style="font-size:10px;color:var(--text-muted);">데이터 없음</span>';
+      // 레포별
+      const repoTbody = document.getElementById('byRepoTbody');
+      if (!d.byRepo || d.byRepo.length === 0) {
+        repoTbody.innerHTML = '<tr><td colspan="4" class="empty">데이터 없음</td></tr>';
+      } else {
+        repoTbody.innerHTML = d.byRepo.map(r => `
+          <tr style="cursor:pointer;" onclick="filterByRepo('${esc(r.repoName)}')">
+            <td><span class="repo-badge">${esc(r.repoName)}</span></td>
+            <td class="num">${fmt(r.callCount)}</td>
+            <td class="num" style="color:${r.errorCount>0?'#dc2626':'inherit'};">${fmt(r.errorCount)}</td>
+            <td class="num">${fmt(r.apiCount)}</td>
+          </tr>`).join('');
+      }
+      // TOP 10
+      const topTbody = document.getElementById('topTbody');
+      if (!d.topApis || d.topApis.length === 0) {
+        topTbody.innerHTML = '<tr><td colspan="4" class="empty">데이터 없음</td></tr>';
+      } else {
+        topTbody.innerHTML = d.topApis.map((r, i) => {
+          const rankCls = i < 3 ? `rank r${i+1}` : 'rank';
+          return `<tr style="cursor:pointer;" onclick="openDetail('${esc(r.repoName)}','${esc(r.apiPath)}')">
+            <td><span class="${rankCls}">${i+1}</span></td>
+            <td><div class="api-path">${esc(r.apiPath)}</div><span class="repo-badge" style="font-size:9px;margin-top:2px;">${esc(r.repoName)}</span></td>
+            <td class="num">${fmt(r.callCount)}</td>
+            <td class="num" style="color:${r.errorCount>0?'#dc2626':'inherit'};">${fmt(r.errorCount)}</td>
+          </tr>`;
+        }).join('');
+      }
+    } catch(e) { showToast('요약 조회 실패: ' + e.message, 'error'); }
+  }
+
+  function filterByRepo(repoName) {
+    document.getElementById('repoSelect').value = repoName;
+    loadAll();
+  }
+
+  async function loadApis() {
+    try {
+      const params = getParams();
+      params.set('page', currentPage);
+      params.set('size', currentSize);
+      params.set('sort', currentSort);
+      params.set('dir', currentDir);
+      const res = await fetch(`/api/call-stats/apis?${params}`);
+      const d = await res.json();
+      const tbody = document.getElementById('apiTbody');
+      if (!d.items || d.items.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" class="empty">검색 결과가 없습니다.</td></tr>';
+      } else {
+        tbody.innerHTML = d.items.map(a => `
+          <tr>
+            <td><div class="api-path">${esc(a.apiPath)}</div></td>
+            <td><span class="repo-badge">${esc(a.repoName)}</span></td>
+            <td class="num">${fmt(a.totalAll)}</td>
+            <td class="num" style="font-weight:700;">${fmt(a.totalYear)}</td>
+            <td class="num">${fmt(a.totalMonth)}</td>
+            <td class="num">${fmt(a.totalWeek)}</td>
+            <td class="num" style="color:${a.totalError>0?'#dc2626':'inherit'};">${fmt(a.totalError)}</td>
+            <td class="num"><button class="btn btn-ghost" style="font-size:10px;padding:3px 10px;height:auto;" onclick="openDetail('${esc(a.repoName)}','${esc(a.apiPath)}')">상세</button></td>
+          </tr>`).join('');
+      }
+      document.getElementById('resultCount').textContent = `총 ${fmt(d.totalElements)}개 (페이지 ${d.page+1}/${d.totalPages||1})`;
+      renderPagination(d);
+    } catch(e) { showToast('목록 조회 실패: ' + e.message, 'error'); }
+  }
+
+  function renderPagination(data) {
+    const el = document.getElementById('pagination');
+    const total = data.totalPages || 1;
+    const cur = data.page || 0;
+    if (total <= 1) { el.innerHTML = ''; return; }
+    let html = `<span class="page-info">총 ${fmt(data.totalElements)}건 / ${total}페이지</span>`;
+    html += `<button class="page-btn" onclick="gotoPage(0)" ${cur===0?'disabled':''}>≪</button>`;
+    html += `<button class="page-btn" onclick="gotoPage(${cur-1})" ${cur===0?'disabled':''}>‹</button>`;
+    // 페이지 번호 (현재 ±3)
+    const start = Math.max(0, cur - 3);
+    const end   = Math.min(total - 1, cur + 3);
+    for (let i = start; i <= end; i++) {
+      html += `<button class="page-btn ${i===cur?'active':''}" onclick="gotoPage(${i})">${i+1}</button>`;
+    }
+    html += `<button class="page-btn" onclick="gotoPage(${cur+1})" ${cur>=total-1?'disabled':''}>›</button>`;
+    html += `<button class="page-btn" onclick="gotoPage(${total-1})" ${cur>=total-1?'disabled':''}>≫</button>`;
+    el.innerHTML = html;
+  }
+  function gotoPage(p) { currentPage = p; loadApis(); }
+
+  function toggleSort(key) {
+    if (currentSort === key) currentDir = (currentDir === 'desc') ? 'asc' : 'desc';
+    else { currentSort = key; currentDir = 'desc'; }
+    // 정렬 아이콘 업데이트
+    document.querySelectorAll('[id^=sort-]').forEach(el => el.textContent = '');
+    document.querySelectorAll('thead th').forEach(th => th.classList.remove('sorted'));
+    document.getElementById('sort-'+key).textContent = currentDir === 'desc' ? '↓' : '↑';
+    currentPage = 0;
+    loadApis();
+  }
+
+  async function openDetail(repo, apiPath) {
+    currentDetail.repo = repo;
+    currentDetail.apiPath = apiPath;
+    currentDetail.tab = 'daily';
+    document.getElementById('detailTitle').textContent = `${apiPath}  (${repo})`;
+    document.getElementById('detailModal').style.display = 'flex';
+    document.getElementById('tabDaily').classList.add('active');
+    document.getElementById('tabMonthly').classList.remove('active');
+    await loadDetail();
+  }
+  function closeDetail() { document.getElementById('detailModal').style.display = 'none'; }
+  function switchDetailTab(tab) {
+    currentDetail.tab = tab;
+    document.getElementById('tabDaily').classList.toggle('active', tab==='daily');
+    document.getElementById('tabMonthly').classList.toggle('active', tab==='monthly');
+    loadDetail();
+  }
+  async function loadDetail() {
+    document.getElementById('detailBody').innerHTML = '<div class="loading">로딩 중...</div>';
+    const params = new URLSearchParams();
+    params.set('repo', currentDetail.repo);
+    params.set('apiPath', currentDetail.apiPath);
+    const from = document.getElementById('fromDate').value;
+    const to   = document.getElementById('toDate').value;
+    if (from) params.set('from', from);
+    if (to)   params.set('to', to);
+    try {
+      const res = await fetch(`/api/call-stats/${currentDetail.tab}?${params}`);
+      const d = await res.json();
+      const rows = d.rows || [];
+      if (!rows.length) {
+        document.getElementById('detailBody').innerHTML = '<div class="empty">데이터 없음</div>';
+        return;
+      }
+      const labelKey = currentDetail.tab === 'daily' ? 'callDate' : 'month';
+      const labelTitle = currentDetail.tab === 'daily' ? '일자' : '월';
+      document.getElementById('detailBody').innerHTML = `
+        <table>
+          <thead><tr>
+            <th>${labelTitle}</th><th>APM 종류</th><th class="num">호출건수</th><th class="num">에러건수</th>
+          </tr></thead>
+          <tbody>${rows.map(r => `<tr>
+            <td>${esc(r[labelKey])}</td>
+            <td><span class="src-badge src-${r.source}">${esc(r.source)}</span></td>
+            <td class="num">${fmt(r.callCount)}</td>
+            <td class="num" style="color:${r.errorCount>0?'#dc2626':'inherit'};">${fmt(r.errorCount)}</td>
+          </tr>`).join('')}</tbody>
+        </table>`;
+    } catch(e) {
+      document.getElementById('detailBody').innerHTML = `<div class="empty">조회 실패: ${esc(e.message)}</div>`;
+    }
+  }
+
+  // Enter 키로 조회
+  document.getElementById('searchInput').addEventListener('keydown', e => { if (e.key === 'Enter') loadAll(); });
+
+  init();
+</script>
+</body>
+</html>

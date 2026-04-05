@@ -1,6 +1,7 @@
 package com.baek.viewer.service;
 
 import com.baek.viewer.job.ApmCollectJob;
+import com.baek.viewer.job.DbSnapshotJob;
 import com.baek.viewer.job.GitPullExtractJob;
 import com.baek.viewer.model.ScheduleConfig;
 import com.baek.viewer.repository.ScheduleConfigRepository;
@@ -41,6 +42,7 @@ public class ScheduleService {
     /** 기본 스케줄 설정이 없으면 생성 + 구 APM_DAILY/APM_WEEKLY → APM_COLLECT 통합 */
     private void ensureDefaultConfigs() {
         createIfAbsent("GIT_PULL_EXTRACT", "Git Pull & 소스 분석", "DAILY", "03:00", null);
+        createIfAbsentEnabled("DB_SNAPSHOT", "DB 파일 사이즈 일별 기록", "DAILY", "00:05", null);
 
         // APM 배치 통합: APM_DAILY/APM_WEEKLY 제거, APM_COLLECT 생성 (기본 수집범위 7일)
         boolean hasDaily = repository.findByJobType("APM_DAILY").isPresent();
@@ -67,13 +69,22 @@ public class ScheduleService {
     }
 
     private void createIfAbsent(String jobType, String desc, String scheduleType, String runTime, String jobParam) {
+        createIfAbsentInternal(jobType, desc, scheduleType, runTime, jobParam, false);
+    }
+
+    /** 기본 활성화된 시스템 배치용 (DB 스냅샷 등) */
+    private void createIfAbsentEnabled(String jobType, String desc, String scheduleType, String runTime, String jobParam) {
+        createIfAbsentInternal(jobType, desc, scheduleType, runTime, jobParam, true);
+    }
+
+    private void createIfAbsentInternal(String jobType, String desc, String scheduleType, String runTime, String jobParam, boolean enabled) {
         if (repository.findByJobType(jobType).isEmpty()) {
             ScheduleConfig c = new ScheduleConfig();
             c.setJobType(jobType);
             c.setDescription(desc);
             c.setScheduleType(scheduleType);
             c.setRunTime(runTime);
-            c.setEnabled(false);
+            c.setEnabled(enabled);
             c.setJobParam(jobParam);
             if ("WEEKLY".equals(scheduleType)) c.setRunDay("MON");
             repository.save(c);
@@ -136,6 +147,7 @@ public class ScheduleService {
         return switch (jobType) {
             case "GIT_PULL_EXTRACT" -> GitPullExtractJob.class;
             case "APM_COLLECT", "APM_DAILY", "APM_WEEKLY" -> ApmCollectJob.class;
+            case "DB_SNAPSHOT" -> DbSnapshotJob.class;
             default -> null;
         };
     }

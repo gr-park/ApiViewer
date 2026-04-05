@@ -149,7 +149,8 @@
   <div class="header-right">
     <a href="/"             class="nav-link nav-active">📊 대시보드</a>
     <a href="/extract.html" class="nav-link" id="navExtract" style="display:none;">🔍 URL 분석</a>
-    <a href="/viewer.html"  class="nav-link">📋 이력 조회</a>
+    <a href="/viewer.html"  class="nav-link">📋 URL분석현황</a>
+    <a href="/call-stats.html" class="nav-link">📈 URL호출현황</a>
     <a href="/review.html" class="nav-link">📝 현업 검토</a>
     <a href="/settings.html" class="nav-link" id="navSettings" style="display:none;">⚙️ 설정</a>
     <button class="nav-link" id="adminBtn" onclick="toggleAdmin()" style="background:none;cursor:pointer;">🔑 관리자</button>
@@ -302,6 +303,27 @@
       </div>
     </div>
 
+    <!-- ── URL 호출건수 TOP 10 (대시보드 하단) ── -->
+    <div class="two-col" style="margin-top:14px;">
+      <div class="card">
+        <div class="card-title"><span class="dot" style="background:#f59e0b;"></span>전체 URL 호출건수 TOP 10 <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text-muted);margin-left:6px;">(최근 1년)</span></div>
+        <div id="dashTopApisWrap" style="max-height:360px;overflow:auto;">
+          <div style="text-align:center;padding:20px;color:var(--text-muted);font-size:12px;">로딩 중...</div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title" style="display:flex;align-items:center;gap:8px;">
+          <span class="dot" style="background:#8b5cf6;"></span>레포별 TOP 5 호출건수 <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text-muted);font-size:10px;">(최근 1년)</span>
+          <select id="dashTopRepoSelect" onchange="loadTopApisByRepo()" style="margin-left:auto;padding:4px 8px;border:1px solid var(--border);border-radius:4px;font-size:11px;">
+            <option value="">(레포 선택)</option>
+          </select>
+        </div>
+        <div id="dashTopRepoApisWrap" style="max-height:360px;overflow:auto;">
+          <div style="text-align:center;padding:20px;color:var(--text-muted);font-size:12px;">레포를 선택하세요.</div>
+        </div>
+      </div>
+    </div>
+
   </div><!-- /dashContent -->
 </div>
 
@@ -311,6 +333,74 @@
   let stats = null;
 
   // ── 통계 로드 ─────────────────────────────────────────────
+  // ── URL 호출건수 TOP ────────────────────────────────────
+  function renderTopApisTable(items, wrapId) {
+    const wrap = document.getElementById(wrapId);
+    if (!items || items.length === 0) {
+      wrap.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-muted);font-size:12px;">데이터 없음</div>';
+      return;
+    }
+    wrap.innerHTML = `<table style="width:100%;border-collapse:collapse;font-size:11px;">
+      <thead><tr>
+        <th style="text-align:left;padding:6px 8px;background:#f1f5f9;color:var(--text-muted);font-size:10px;font-weight:700;width:26px;">#</th>
+        <th style="text-align:left;padding:6px 8px;background:#f1f5f9;color:var(--text-muted);font-size:10px;font-weight:700;">URL</th>
+        <th style="text-align:right;padding:6px 8px;background:#f1f5f9;color:var(--text-muted);font-size:10px;font-weight:700;">호출</th>
+        <th style="text-align:right;padding:6px 8px;background:#f1f5f9;color:var(--text-muted);font-size:10px;font-weight:700;">에러</th>
+      </tr></thead>
+      <tbody>${items.map((r,i) => {
+        const rank = i<3?`<span style="display:inline-block;width:22px;height:22px;line-height:22px;text-align:center;border-radius:50%;background:${['#fef3c7','#e5e7eb','#fed7aa'][i]};color:${['#d97706','#4b5563','#9a3412'][i]};font-weight:700;font-size:10px;">${i+1}</span>`:`<span style="display:inline-block;width:22px;text-align:center;color:var(--text-muted);font-weight:600;">${i+1}</span>`;
+        return `<tr style="border-bottom:1px solid var(--border);">
+          <td style="padding:6px 8px;">${rank}</td>
+          <td style="padding:6px 8px;"><div style="font-family:monospace;font-size:10px;color:#1e40af;word-break:break-all;">${esc(r.apiPath)}</div><span style="font-size:9px;color:var(--text-muted);">${esc(r.repoName)}</span></td>
+          <td style="text-align:right;padding:6px 8px;font-weight:700;font-variant-numeric:tabular-nums;">${(r.callCount||0).toLocaleString()}</td>
+          <td style="text-align:right;padding:6px 8px;color:${r.errorCount>0?'#dc2626':'inherit'};font-variant-numeric:tabular-nums;">${(r.errorCount||0).toLocaleString()}</td>
+        </tr>`;
+      }).join('')}</tbody></table>`;
+  }
+  async function loadTopApis() {
+    try {
+      const to = new Date().toISOString().slice(0,10);
+      const from = new Date(Date.now()-365*86400000).toISOString().slice(0,10);
+      const res = await fetch(`/api/call-stats/summary?from=${from}&to=${to}&topN=10`);
+      if (!res.ok) throw new Error();
+      const d = await res.json();
+      renderTopApisTable(d.topApis, 'dashTopApisWrap');
+    } catch(e) {
+      document.getElementById('dashTopApisWrap').innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-muted);font-size:12px;">조회 실패</div>';
+    }
+  }
+  async function loadTopRepos() {
+    try {
+      const res = await fetch('/api/config/repos');
+      const repos = await res.json();
+      const sel = document.getElementById('dashTopRepoSelect');
+      repos.forEach(r => {
+        const opt = document.createElement('option');
+        opt.value = r.repoName;
+        opt.textContent = r.businessName ? `${r.repoName} | ${r.businessName}` : r.repoName;
+        sel.appendChild(opt);
+      });
+      if (repos.length > 0) { sel.selectedIndex = 1; loadTopApisByRepo(); }
+    } catch(e) {}
+  }
+  async function loadTopApisByRepo() {
+    const repo = document.getElementById('dashTopRepoSelect').value;
+    if (!repo) {
+      document.getElementById('dashTopRepoApisWrap').innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-muted);font-size:12px;">레포를 선택하세요.</div>';
+      return;
+    }
+    try {
+      const to = new Date().toISOString().slice(0,10);
+      const from = new Date(Date.now()-365*86400000).toISOString().slice(0,10);
+      const res = await fetch(`/api/call-stats/summary?from=${from}&to=${to}&repo=${encodeURIComponent(repo)}&topN=5`);
+      if (!res.ok) throw new Error();
+      const d = await res.json();
+      renderTopApisTable(d.topApis, 'dashTopRepoApisWrap');
+    } catch(e) {
+      document.getElementById('dashTopRepoApisWrap').innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-muted);font-size:12px;">조회 실패</div>';
+    }
+  }
+
   async function loadStats() {
     document.getElementById('loadingArea').style.display = 'block';
     document.getElementById('dashContent').style.display = 'none';
@@ -616,6 +706,8 @@
   }
   applyAdminUI();
   loadStats();
+  loadTopApis();
+  loadTopRepos();
   // 관리자 페이지 접근 차단 시 안내
   if (new URLSearchParams(location.search).get('authRequired') === '1') {
     setTimeout(() => showToast('관리자 인증이 필요합니다. 상단 우측 🔑 관리자 버튼을 클릭하세요.', 'error'), 300);

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>URL Viewer — 저장 이력 조회</title>
+  <title>URL Viewer — URL분석현황</title>
   <style>
     :root {
       --bg: #f4f6f9; --card: #ffffff; --primary: #3b82f6; --primary-hover: #2563eb;
@@ -205,7 +205,7 @@
     #chartTooltip { position:fixed; background:#1e293b; color:#fff; font-size:11px; line-height:1.5; padding:6px 10px; border-radius:6px; white-space:pre; pointer-events:none; z-index:300; box-shadow:0 2px 8px rgba(0,0,0,.3); font-variant-numeric:tabular-nums; display:none; }
     .bar-call { background:#22c55e; width:100%; transition:background .15s; }
     .bar-err  { background:#ec4899; width:100%; transition:background .15s; }
-    .chart-xlabels { display:flex; padding:0 4px; margin-top:6px; min-height:28px; }
+    .chart-xlabels { display:flex; padding:0 4px; margin-top:6px; min-height:42px; }
     .chart-xlabel { font-size:9px; color:#64748b; text-align:center; white-space:nowrap; font-variant-numeric:tabular-nums; line-height:1.25; }
     .chart-xlabel .year { color:#94a3b8; font-size:8px; }
     .chart-xlabel .md { font-weight:600; color:#475569; }
@@ -231,11 +231,12 @@
     <polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>
   </svg>
   <h1>URL Viewer</h1>
-  <span class="header-sub">이력 조회</span>
+  <span class="header-sub">URL분석현황</span>
   <div class="header-right">
     <a href="/"             class="nav-link">📊 대시보드</a>
     <a href="/extract.html" class="nav-link" id="navExtract" style="display:none;">🔍 URL 분석</a>
-    <a href="/viewer.html"  class="nav-link nav-active">📋 이력 조회</a>
+    <a href="/viewer.html"  class="nav-link nav-active">📋 URL분석현황</a>
+    <a href="/call-stats.html" class="nav-link">📈 URL호출현황</a>
     <a href="/review.html" class="nav-link">📝 현업 검토</a>
     <a href="/settings.html" class="nav-link" id="navSettings" style="display:none;">⚙️ 설정</a>
     <button class="nav-link" id="adminBtn" onclick="toggleAdmin()" style="background:none;cursor:pointer;">🔑 관리자</button>
@@ -367,7 +368,7 @@
           <th class="hg-dev no-sort">최근변경</th>
           <th class="hg-dev" onclick="sortBy('isDeprecated')">Deprecated <span class="sort-icon">↕</span></th>
           <th class="hg-desc" onclick="sortBy('apiOperationValue')">관련 메뉴(또는 기능) <span class="sort-icon">↕</span></th>
-          <th class="hg-desc" style="min-width:120px;" onclick="sortBy('callCount')">총 호출건 <span class="sort-icon">↕</span></th>
+          <th class="hg-desc" style="min-width:120px;" onclick="sortBy('callCount')">1년 호출건 <span class="sort-icon">↕</span></th>
           <th class="hg-desc" style="min-width:110px;" onclick="sortBy('callCountMonth')">1달 호출건 <span class="sort-icon">↕</span></th>
           <th class="hg-desc" style="min-width:110px;" onclick="sortBy('callCountWeek')">1주 호출건 <span class="sort-icon">↕</span></th>
           <th class="hg-desc" onclick="sortBy('status')">상태 <span class="sort-icon">↕</span></th>
@@ -1185,7 +1186,7 @@
       '레포지토리','업무명','팀','담당자','URL 경로','Full URL',
       'HTTP Method','컨트롤러파일경로','컨트롤러','메소드명','프로그램ID',
       'ApiOperation','Description주석','메소드주석','컨트롤러주석','RequestProperty','컨트롤러RequestProperty',
-      '관련 메뉴(또는 기능)','Deprecated','총 호출건','1달 호출건','1주 호출건',
+      '관련 메뉴(또는 기능)','Deprecated','1년 호출건','1달 호출건','1주 호출건',
       '상태','차단기준','차단일자','차단근거',
       '비고','현업검토결과','현업검토의견',
       ...commitHeaders, '분석일시', '변경일시'
@@ -1415,19 +1416,18 @@
       return;
     }
 
-    // Y축 스케일 — 100 단위, 최소 1000
-    let yMax = 1000;
-    if (maxCall > yMax) yMax = Math.ceil(maxCall / 100) * 100;
-    // 눈금 간격 자동 조정 (너무 촘촘하지 않도록)
-    let tickStep = 100;
-    if (yMax > 3000) tickStep = 500;
-    else if (yMax > 1500) tickStep = 200;
+    // Y축 스케일 — 데이터 최대값에 맞춰 자동 조정 (저건수도 잘 보이도록)
+    const { yMax, tickStep } = calcYScale(maxCall);
     const ticks = [];
     for (let v = 0; v <= yMax; v += tickStep) ticks.push(v);
 
     const chartHeight = 260;
-    const barWidth = 28;         // 고정 폭 (넓게)
-    const barGap = 8;            // 막대 간격
+    // 막대 폭 동적 조정: 적은 버킷이면 넓게, 많으면 28px 유지
+    let barWidth, barGap;
+    if (buckets.length <= 7)       { barWidth = 70; barGap = 20; }  // 1주일
+    else if (buckets.length <= 14) { barWidth = 50; barGap = 14; }
+    else if (buckets.length <= 31) { barWidth = 34; barGap = 10; }  // 1달
+    else                            { barWidth = 28; barGap = 8;  }  // 3달/1년
     const colWidth = barWidth + barGap;
     const chartMinWidth = buckets.length * colWidth + 10;
 
@@ -1456,20 +1456,22 @@
       const errH  = (err / yMax) * chartHeight;
       const greenH = Math.max(0, callH - errH);
       const ym = fmtYearMD(b.label);
-      const tooltip = `${ym.year} ${ym.md}\n호출: ${call.toLocaleString()}건\n에러: ${(b.errorCount||0).toLocaleString()}건`;
+      const tooltip = `${ym.year} ${ym.md} ${ym.dow}\n호출: ${call.toLocaleString()}건\n에러: ${(b.errorCount||0).toLocaleString()}건`;
       return `<div class="chart-col" style="width:${barWidth}px;height:${chartHeight}px;margin-right:${barGap}px;" data-tip="${esc(tooltip)}">
         ${errH>0?`<div class="bar-err" style="height:${errH}px;"></div>`:''}
         ${greenH>0?`<div class="bar-call" style="height:${greenH}px;"></div>`:''}
       </div>`;
     }).join('');
 
-    // X축 레이블 (2줄: 연도 / 월일)
+    // X축 레이블 (3줄: 연도 / 월일 / 요일)
     const xLabels = buckets.map((b, i) => {
       const show = (i % labelSkip === 0) || i === buckets.length - 1;
       if (!show) return `<div class="chart-xlabel" style="width:${barWidth}px;margin-right:${barGap}px;"></div>`;
       const ym = fmtYearMD(b.label);
+      // 토=파랑(dowIdx=6), 일=빨강(dowIdx=0)
+      const dowColor = ym.dowIdx === 0 ? '#dc2626' : (ym.dowIdx === 6 ? '#2563eb' : '#64748b');
       return `<div class="chart-xlabel" style="width:${barWidth}px;margin-right:${barGap}px;">
-        <span class="year">${esc(ym.year)}</span><br><span class="md">${esc(ym.md)}</span>
+        <span class="year">${esc(ym.year)}</span><br><span class="md">${esc(ym.md)}</span><br><span style="font-size:9px;color:${dowColor};font-weight:600;">${esc(ym.dow)}</span>
       </div>`;
     }).join('');
 
@@ -1537,13 +1539,32 @@
     return f(s);
   }
 
-  // "YYYY-MM-DD" → { year: "26년", md: "4월5일" }
+  // 데이터 최대값에 맞춰 Y축 스케일 자동 계산 (1,2,5 × 10^n 단위)
+  function calcYScale(maxVal) {
+    if (maxVal <= 0) return { yMax: 10, tickStep: 1 };
+    // "nice number" 알고리즘: 1, 2, 5 × 10^n 중 적절한 tickStep 선택 (약 5~10개 tick)
+    const rough = maxVal / 8; // 약 8개 눈금 목표
+    const magnitude = Math.pow(10, Math.floor(Math.log10(rough)));
+    const normalized = rough / magnitude;
+    let tickStep;
+    if (normalized < 1.5)      tickStep = 1 * magnitude;
+    else if (normalized < 3)   tickStep = 2 * magnitude;
+    else if (normalized < 7)   tickStep = 5 * magnitude;
+    else                       tickStep = 10 * magnitude;
+    const yMax = Math.ceil(maxVal / tickStep) * tickStep;
+    return { yMax, tickStep };
+  }
+
+  // "YYYY-MM-DD" → { year: "26년", md: "4월5일", dow: "(월)", dowIdx: 1 }
   function fmtYearMD(s) {
-    if (!s) return { year:'', md:'' };
+    if (!s) return { year:'', md:'', dow:'', dowIdx:-1 };
     const m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
-    if (!m) return { year:'', md: fmtMD(s) };
+    if (!m) return { year:'', md: fmtMD(s), dow:'', dowIdx:-1 };
     const yr = m[1].slice(2);
-    return { year: `${yr}년`, md: `${parseInt(m[2])}월${parseInt(m[3])}일` };
+    const d = new Date(parseInt(m[1]), parseInt(m[2])-1, parseInt(m[3]));
+    const dowIdx = d.getDay(); // 0=일, 1=월, ..., 6=토
+    const dowNames = ['일','월','화','수','목','금','토'];
+    return { year: `${yr}년`, md: `${parseInt(m[2])}월${parseInt(m[3])}일`, dow: `(${dowNames[dowIdx]})`, dowIdx };
   }
 
   function renderDetailModal(r) {
@@ -1588,7 +1609,7 @@
         <div class="detail-section-title">상태 / 차단</div>
         <div class="detail-grid">
           <div class="detail-label">상태</div><div class="detail-value">${statusBadge(r.status)}${r.statusOverridden ? ' 🔒 수동설정' : ''}</div>
-          <div class="detail-label">총 호출건</div><div class="detail-value">${detailCallCell(r, 'total', r.callCount)}</div>
+          <div class="detail-label">1년 호출건</div><div class="detail-value">${detailCallCell(r, 'total', r.callCount)}</div>
           <div class="detail-label">최근 1달 호출건</div><div class="detail-value">${detailCallCell(r, 'month', r.callCountMonth)}</div>
           <div class="detail-label">최근 1주 호출건</div><div class="detail-value">${detailCallCell(r, 'week', r.callCountWeek)}</div>
           <div class="detail-label">차단일자</div><div class="detail-value">${esc(r.blockedDate || '-')}</div>

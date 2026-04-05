@@ -98,20 +98,22 @@ public class MockApmService {
             }
             lowCallDays.put(apiPath, days);
         }
+        // 기존 데이터 일괄 삭제 (재수집 시 중복 방지) — 단일 DELETE 쿼리
+        int deletedOld = apmRepo.deleteByRepoSourceAndDateRange(repoName, src, from, to);
+        if (deletedOld > 0) log.info("[APM 수동수집] 기존 {}건 선삭제 후 재수집", deletedOld);
+
+        // 모든 레코드를 메모리에 모아서 saveAll() 일괄 저장
+        List<ApmCallData> batch = new ArrayList<>();
         for (ApiRecord rec : records) {
+            boolean isBlocked = "차단완료".equals(rec.getStatus());
+            boolean noCall = noCallApis.contains(rec.getApiPath());
+            boolean isLowCall = lowCallApis.contains(rec.getApiPath());
             LocalDate d = from;
             while (!d.isAfter(to)) {
-                if (!apmRepo.findByRepositoryNameAndApiPathAndCallDateAndSource(repoName, rec.getApiPath(), d, src).isEmpty()) {
-                    d = d.plusDays(1); continue;
-                }
-                boolean isBlocked = "차단완료".equals(rec.getStatus());
-                boolean noCall = noCallApis.contains(rec.getApiPath());
-                boolean isLowCall = lowCallApis.contains(rec.getApiPath());
                 long callCount;
                 if (isBlocked || noCall) {
                     callCount = 0;
                 } else if (isLowCall) {
-                    // 미리 선정된 날에만 1건 발생
                     callCount = lowCallDays.get(rec.getApiPath()).contains(d) ? 1L : 0L;
                 } else {
                     callCount = ThreadLocalRandom.current().nextLong(0, 150);
@@ -128,12 +130,20 @@ public class MockApmService {
                 data.setErrorMessage(errorMsg);
                 data.setClassName(rec.getControllerName());
                 data.setSource(src);
-                apmRepo.save(data);
+                batch.add(data);
                 generated++;
                 d = d.plusDays(1);
+
+                // 1000건 단위로 flush (메모리 + 트랜잭션 부하 분산)
+                if (batch.size() >= 1000) {
+                    apmRepo.saveAll(batch);
+                    batch.clear();
+                }
             }
         }
-        log.info("[APM 수동수집] 완료: {}건 (source={})", generated, src);
+        if (!batch.isEmpty()) apmRepo.saveAll(batch);
+
+        log.info("[APM 수동수집] 완료: {}건 (source={}, 삭제후재생성)", generated, src);
         return Map.of("generated", generated, "apis", records.size(),
                 "from", from.toString(), "to", to.toString(), "source", src);
     }
@@ -232,19 +242,21 @@ public class MockApmService {
 
     /**
      * APM 데이터를 집계하여 ApiRecord의 callCount/callCountMonth/callCountWeek 업데이트.
+     * callCount = 최근 1년 합계 (상태 판단 로직의 기준).
      * 같은 (apiPath, date)에 여러 source 데이터가 있으면 MAX를 사용해 중복 집계 방지.
      */
     @Transactional
     public Map<String, Object> aggregateToRecords(String repoName) {
         log.info("[APM 집계] 시작: repo={}", repoName);
         LocalDate today = LocalDate.now();
+        LocalDate yearAgo = today.minusDays(365);
         LocalDate monthAgo = today.minusDays(30);
         LocalDate weekAgo = today.minusDays(7);
 
-        Map<String, long[]> totals = new HashMap<>(); // apiPath → [total, month, week]
-        accumulateMaxPerDate(apmRepo.sumByRepoAndDateRange(repoName, LocalDate.of(2000, 1, 1), today), totals, 0);
-        accumulateMaxPerDate(apmRepo.sumByRepoAndDateRange(repoName, monthAgo, today), totals, 1);
-        accumulateMaxPerDate(apmRepo.sumByRepoAndDateRange(repoName, weekAgo, today), totals, 2);
+        Map<String, long[]> totals = new HashMap<>(); // apiPath → [year, month, week]
+        accumulateMaxPerDate(apmRepo.sumByRepoAndDateRange(repoName, yearAgo, today), totals, 0);  // 1년
+        accumulateMaxPerDate(apmRepo.sumByRepoAndDateRange(repoName, monthAgo, today), totals, 1); // 1달
+        accumulateMaxPerDate(apmRepo.sumByRepoAndDateRange(repoName, weekAgo, today), totals, 2);  // 1주
 
         // ApiRecord 업데이트
         List<ApiRecord> records = apiRecordRepo.findByRepositoryName(repoName);

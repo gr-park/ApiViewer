@@ -139,7 +139,8 @@
   <div class="header-right">
     <a href="/"             class="nav-link">📊 대시보드</a>
     <a href="/extract.html" class="nav-link nav-active">🔍 URL 분석</a>
-    <a href="/viewer.html"  class="nav-link">📋 이력 조회</a>
+    <a href="/viewer.html"  class="nav-link">📋 URL분석현황</a>
+    <a href="/call-stats.html" class="nav-link">📈 URL호출현황</a>
     <a href="/review.html" class="nav-link">📝 현업 검토</a>
     <a href="/settings.html" class="nav-link">⚙️ 설정</a>
   </div>
@@ -844,7 +845,7 @@
     const viewerUrl = (selVal === 'all' || !repoName)
       ? '/viewer.html'
       : `/viewer.html?repo=${encodeURIComponent(repoName)}`;
-    actions.innerHTML = `<a class="link-viewer" href="${viewerUrl}">이력 조회 →</a>`;
+    actions.innerHTML = `<a class="link-viewer" href="${viewerUrl}">URL분석현황 →</a>`;
   }
 
   function hideResult() {
