@@ -189,17 +189,6 @@ public class ApiExtractorService {
                 addLog("INFO", "DB 저장 중 — 레포: " + repoName.trim());
                 savedCount = storageService.save(repoName.trim(), cachedApis, req.getClientIp());
                 addLog("OK", "DB 저장 완료 — " + savedCount + "개 저장/갱신");
-                // APM 호출건수 자동 집계 반영
-                try {
-                    var apmResult = mockApmService.aggregateToRecords(repoName.trim());
-                    int apmUpdated = ((Number) apmResult.get("updated")).intValue();
-                    if (apmUpdated > 0) {
-                        addLog("OK", "APM 호출건수 매핑 — " + apmUpdated + "개 API 반영");
-                        log.info("[APM 자동 집계] repo={}, 반영={}건", repoName.trim(), apmUpdated);
-                    }
-                } catch (Exception ae) {
-                    log.warn("[APM 자동 집계 실패] repo={}, {}", repoName.trim(), ae.getMessage());
-                }
             } catch (Exception e) {
                 savedCount = -1;
                 addLog("ERROR", "DB 저장 실패: " + e.getMessage());

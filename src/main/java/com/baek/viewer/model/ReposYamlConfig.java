@@ -17,13 +17,13 @@ public class ReposYamlConfig {
     public static class GlobalSection {
         private PeriodGlobal period;
         private Integer reviewThreshold;
-        private Boolean whatapMockEnabled;
-        private Boolean jenniferMockEnabled;
         private String password;
         private String gitBinPath;
         private Integer pageSize;
         private Integer pageNavSize;
         private List<String> teams;
+        private String whatapMockEnabled;
+        private String jenniferMockEnabled;
         private List<WhatapProfile> whatapProfiles;
         private List<JenniferProfile> jenniferProfiles;
 
@@ -31,10 +31,6 @@ public class ReposYamlConfig {
         public void setPeriod(PeriodGlobal period) { this.period = period; }
         public Integer getReviewThreshold() { return reviewThreshold; }
         public void setReviewThreshold(Integer reviewThreshold) { this.reviewThreshold = reviewThreshold; }
-        public Boolean getWhatapMockEnabled() { return whatapMockEnabled; }
-        public void setWhatapMockEnabled(Boolean whatapMockEnabled) { this.whatapMockEnabled = whatapMockEnabled; }
-        public Boolean getJenniferMockEnabled() { return jenniferMockEnabled; }
-        public void setJenniferMockEnabled(Boolean jenniferMockEnabled) { this.jenniferMockEnabled = jenniferMockEnabled; }
         public String getPassword() { return password; }
         public void setPassword(String password) { this.password = password; }
         public String getGitBinPath() { return gitBinPath; }
@@ -45,6 +41,10 @@ public class ReposYamlConfig {
         public void setPageNavSize(Integer pageNavSize) { this.pageNavSize = pageNavSize; }
         public List<String> getTeams() { return teams; }
         public void setTeams(List<String> teams) { this.teams = teams; }
+        public String getWhatapMockEnabled() { return whatapMockEnabled; }
+        public void setWhatapMockEnabled(String whatapMockEnabled) { this.whatapMockEnabled = whatapMockEnabled; }
+        public String getJenniferMockEnabled() { return jenniferMockEnabled; }
+        public void setJenniferMockEnabled(String jenniferMockEnabled) { this.jenniferMockEnabled = jenniferMockEnabled; }
         public List<WhatapProfile> getWhatapProfiles() { return whatapProfiles; }
         public void setWhatapProfiles(List<WhatapProfile> whatapProfiles) { this.whatapProfiles = whatapProfiles; }
         public List<JenniferProfile> getJenniferProfiles() { return jenniferProfiles; }
@@ -106,6 +106,8 @@ public class ReposYamlConfig {
         private String rootPath;
         private String gitBinPath;          // null이면 global.gitBinPath 사용
         private String gitPullEnabled = "Y";
+        private String analysisBatchEnabled = "Y";
+        private String apmBatchEnabled = "Y";
         private String teamName;
         private String managerName;
         private String businessName;
@@ -125,6 +127,10 @@ public class ReposYamlConfig {
         public void setGitBinPath(String gitBinPath) { this.gitBinPath = gitBinPath; }
         public String getGitPullEnabled() { return gitPullEnabled; }
         public void setGitPullEnabled(String gitPullEnabled) { this.gitPullEnabled = gitPullEnabled; }
+        public String getAnalysisBatchEnabled() { return analysisBatchEnabled; }
+        public void setAnalysisBatchEnabled(String v) { this.analysisBatchEnabled = v; }
+        public String getApmBatchEnabled() { return apmBatchEnabled; }
+        public void setApmBatchEnabled(String v) { this.apmBatchEnabled = v; }
         public String getTeamName() { return teamName; }
         public void setTeamName(String teamName) { this.teamName = teamName; }
         public String getManagerName() { return managerName; }

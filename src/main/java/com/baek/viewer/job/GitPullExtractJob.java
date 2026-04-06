@@ -9,7 +9,7 @@ import org.quartz.Job;
 import org.quartz.JobExecutionContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.stereotype.Component;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
@@ -20,21 +20,12 @@ import java.util.List;
  * Git Pull 후 전체 레포지토리 추출 배치.
  * 각 레포별로 git pull → 소스 분석 → DB 저장.
  */
-@Component
 public class GitPullExtractJob implements Job {
 
     private static final Logger log = LoggerFactory.getLogger(GitPullExtractJob.class);
-    private final ScheduleConfigRepository scheduleRepo;
-    private final RepoConfigRepository repoConfigRepo;
-    private final ApiExtractorService extractorService;
-
-    public GitPullExtractJob(ScheduleConfigRepository scheduleRepo,
-                             RepoConfigRepository repoConfigRepo,
-                             ApiExtractorService extractorService) {
-        this.scheduleRepo = scheduleRepo;
-        this.repoConfigRepo = repoConfigRepo;
-        this.extractorService = extractorService;
-    }
+    @Autowired private ScheduleConfigRepository scheduleRepo;
+    @Autowired private RepoConfigRepository repoConfigRepo;
+    @Autowired private ApiExtractorService extractorService;
 
     @Override
     public void execute(JobExecutionContext context) {
@@ -44,6 +35,10 @@ public class GitPullExtractJob implements Job {
         StringBuilder resultMsg = new StringBuilder();
 
         for (RepoConfig repo : repos) {
+            if (!"Y".equalsIgnoreCase(repo.getAnalysisBatchEnabled())) {
+                log.info("[배치] {} — 분석배치 비활성(N), 건너뜀", repo.getRepoName());
+                continue;
+            }
             if (repo.getRootPath() == null || repo.getRootPath().isBlank()) {
                 log.warn("[배치] {} — rootPath 없음, 건너뜀", repo.getRepoName());
                 continue;

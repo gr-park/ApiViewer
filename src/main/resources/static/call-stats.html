@@ -429,7 +429,11 @@
     html += `<button class="page-btn" onclick="gotoPage(${total-1})" ${cur>=total-1?'disabled':''}>≫</button>`;
     el.innerHTML = html;
   }
-  function gotoPage(p) { currentPage = p; loadApis(); }
+  function gotoPage(p) {
+    currentPage = p; loadApis();
+    const t = document.getElementById('apiTable');
+    if (t) t.scrollIntoView({behavior:'smooth', block:'start'});
+  }
 
   function toggleSort(key) {
     if (currentSort === key) currentDir = (currentDir === 'desc') ? 'asc' : 'desc';

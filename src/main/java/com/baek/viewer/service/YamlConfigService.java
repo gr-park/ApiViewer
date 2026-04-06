@@ -68,6 +68,13 @@ public class YamlConfigService {
         return processYamlConfig(config);
     }
 
+    /** Y/true/yes/N/false/no → "Y" 또는 "N" 정규화 (YAML Boolean 자동변환 대응) */
+    private String normalizeYN(String v) {
+        if (v == null) return "N";
+        String s = v.trim().toUpperCase();
+        return ("Y".equals(s) || "TRUE".equals(s) || "YES".equals(s) || "1".equals(s)) ? "Y" : "N";
+    }
+
     private Map<String, Object> processYamlConfig(ReposYamlConfig config) {
 
         int added = 0, updated = 0;
@@ -81,11 +88,18 @@ public class YamlConfigService {
                 if (g.getPeriod().getEndDate()   != null) gc.setEndDate(g.getPeriod().getEndDate());
             }
             if (g.getReviewThreshold() != null) gc.setReviewThreshold(g.getReviewThreshold());
-            if (g.getWhatapMockEnabled() != null) gc.setWhatapMockEnabled(g.getWhatapMockEnabled());
-            if (g.getJenniferMockEnabled() != null) gc.setJenniferMockEnabled(g.getJenniferMockEnabled());
             if (g.getPassword() != null) gc.setPassword(g.getPassword());
             if (g.getPageSize() != null) gc.setPageSize(g.getPageSize());
             if (g.getPageNavSize() != null) gc.setPageNavSize(g.getPageNavSize());
+
+            // mockEnabled: 글로벌 레벨에서 직접 읽기
+            // YAML에서 Y/true 모두 "Y"로 정규화 (SnakeYAML이 Y→Boolean true로 파싱)
+            if (g.getWhatapMockEnabled() != null) {
+                gc.setWhatapMockEnabled(normalizeYN(g.getWhatapMockEnabled()));
+            }
+            if (g.getJenniferMockEnabled() != null) {
+                gc.setJenniferMockEnabled(normalizeYN(g.getJenniferMockEnabled()));
+            }
 
             // teams, 와탭/제니퍼 공통 프로필 JSON 저장
             try {
@@ -138,6 +152,8 @@ public class YamlConfigService {
                 rc.setGitBinPath(entry.getGitBinPath() != null && !entry.getGitBinPath().isBlank()
                         ? entry.getGitBinPath() : globalGitBin);
                 rc.setGitPullEnabled(entry.getGitPullEnabled() != null ? entry.getGitPullEnabled() : "Y");
+                rc.setAnalysisBatchEnabled(entry.getAnalysisBatchEnabled() != null ? entry.getAnalysisBatchEnabled() : "Y");
+                rc.setApmBatchEnabled(entry.getApmBatchEnabled() != null ? entry.getApmBatchEnabled() : "Y");
                 rc.setTeamName(entry.getTeamName());
                 rc.setManagerName(entry.getManagerName());
                 rc.setBusinessName(entry.getBusinessName());

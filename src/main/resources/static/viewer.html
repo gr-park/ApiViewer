@@ -528,7 +528,11 @@
       } catch(e) {}
 
       // 팀/담당자 매핑 캐싱
-      cfgs.forEach(c => { repoConfigMap[c.repoName] = { team: c.teamName || '', manager: c.managerName || '', businessName: c.businessName || '' }; });
+      cfgs.forEach(c => {
+        let mappings = [];
+        try { if (c.managerMappings) mappings = JSON.parse(c.managerMappings); } catch(e) {}
+        repoConfigMap[c.repoName] = { team: c.teamName || '', manager: c.managerName || '', businessName: c.businessName || '', mappings };
+      });
 
       // 레포|업무명 통합 드롭다운
       const sel = document.getElementById('repoSelect');
@@ -749,6 +753,19 @@
   }
 
   let activeFilter = '';
+  // ── 담당자 매핑 해석 (managerOverride > programId매핑 > 팀 대표) ──
+  function resolveManager(a) {
+    if (a.managerOverride) return a.managerOverride;
+    const cfg = repoConfigMap[a.repositoryName] || {};
+    if (cfg.mappings && cfg.mappings.length > 0 && a.apiPath) {
+      const path = a.apiPath.toUpperCase();
+      for (const m of cfg.mappings) {
+        if (m.programId && path.includes(m.programId.toUpperCase())) return m.managerName;
+      }
+    }
+    return cfg.manager || '';
+  }
+
   // ── 페이징 ──────────────────────────────────────────────
   function renderViewerPagination(totalItems, totalPages) {
     const el = document.getElementById('viewerPagination');
@@ -769,7 +786,13 @@
     html += `<button class="page-btn" onclick="vGotoPage(${totalPages-1})" ${cur>=totalPages-1?'disabled':''} style="padding:4px 8px;border:1px solid var(--border);border-radius:4px;background:var(--card);cursor:pointer;font-size:11px;">≫</button>`;
     el.innerHTML = html;
   }
-  function vGotoPage(p) { vCurrentPage = Math.max(0, p); filterTable(); window.scrollTo({top:0, behavior:'smooth'}); }
+  function vGotoPage(p) {
+    vCurrentPage = Math.max(0, p);
+    filterTable();
+    // 테이블 영역으로 스크롤 (최상단이 아닌 테이블 시작점)
+    const table = document.getElementById('tbody');
+    if (table) table.closest('.table-wrap')?.scrollIntoView({behavior:'smooth', block:'start'});
+  }
 
   function setFilter(val) {
     vCurrentPage = 0; // 필터 변경 시 첫 페이지로
@@ -832,7 +855,7 @@
       const cfg = repoConfigMap[a.repositoryName] || {};
       const text = [a.apiPath, a.methodName, a.apiOperationValue, a.descriptionTag, a.memo].join(' ').toLowerCase();
       const team = (a.teamOverride || cfg.team || '').toLowerCase();
-      const mgr  = (a.managerOverride || cfg.manager || '').toLowerCase();
+      const mgr  = resolveManager(a).toLowerCase();
       let filterOk = true;
       // 기본 조회(필터 없음) 시 삭제건은 숨김 — "삭제" 필터 클릭 시에만 표시
       if (!activeFilter && a.status === '삭제') filterOk = false;
@@ -910,7 +933,7 @@
         <td class="sk" style="left:134px;min-width:110px;"><b style="font-size:12px;">${esc(a.repositoryName)}</b></td>
         <td class="sk" style="left:244px;min-width:100px;font-size:11px;color:var(--text-muted);">${esc(cfg.businessName || '')}</td>
         <td class="sk memo-cell" onclick="${(locked||isBlocked)?'':('editField(this,'+a.id+',&apos;teamOverride&apos;)')}" title="${(locked||isBlocked)?'수정불가':'클릭하여 편집'}" style="left:344px;min-width:80px;font-size:11px;color:var(--text-muted);white-space:nowrap;">${esc(a.teamOverride || cfg.team)}</td>
-        <td class="sk memo-cell" onclick="${(locked||isBlocked)?'':('editField(this,'+a.id+',&apos;managerOverride&apos;)')}" title="${(locked||isBlocked)?'수정불가':'클릭하여 편집'}" style="left:424px;min-width:70px;font-size:11px;color:var(--text-muted);white-space:nowrap;">${esc(a.managerOverride || cfg.manager)}</td>
+        <td class="sk memo-cell" onclick="${(locked||isBlocked)?'':('editField(this,'+a.id+',&apos;managerOverride&apos;)')}" title="${(locked||isBlocked)?'수정불가':'클릭하여 편집'}" style="left:424px;min-width:70px;font-size:11px;color:var(--text-muted);white-space:nowrap;">${esc(resolveManager(a))}</td>
         <td class="sk sk-last" style="left:494px;min-width:200px;"><div class="api-path">${esc(a.apiPath)}</div></td>
         <td>${a.fullUrl ? `<a href="${esc(a.fullUrl)}" target="_blank" style="font-size:11px;color:var(--primary);text-decoration:none;padding:2px 8px;border:1px solid var(--primary);border-radius:4px;white-space:nowrap;">열기 ↗</a>` : '<span style="color:#cbd5e1;font-size:11px;">-</span>'}</td>
         <td><span class="badge badge-${a.httpMethod||'REQUEST'}">${a.httpMethod||'?'}</span></td>
@@ -1157,7 +1180,7 @@
       '후순위 차단대상': ['호출 0건 + 소스변경1년경과(침해사고 로그조회)', 'IT담당자검토건', '기타'],
       '검토필요 차단대상': ['호출 0건 + 소스변경1년미만', `호출 1~${reviewThreshold}건 + 소스변경1년경과`, '기타']
     };
-  };
+  }
 
   function onBulkStatusChange() {
     const bt = document.getElementById('bulkStatus').value;
@@ -1284,7 +1307,7 @@
         a.repositoryName || '',
         cfg.businessName || '',
         a.teamOverride || cfg.team || '',
-        a.managerOverride || cfg.manager || '',
+        resolveManager(a),
         a.apiPath || '',
         a.fullUrl || '',
         a.httpMethod || '',
@@ -1658,7 +1681,7 @@
           <div class="detail-label">메소드명</div><div class="detail-value">${esc(r.methodName)}</div>
           <div class="detail-label">프로그램ID</div><div class="detail-value" style="font-family:monospace;">${esc(r.programId)}</div>
           <div class="detail-label">팀</div><div class="detail-value">${esc(r.teamOverride || cfg.team)}</div>
-          <div class="detail-label">담당자</div><div class="detail-value">${esc(r.managerOverride || cfg.manager)}</div>
+          <div class="detail-label">담당자</div><div class="detail-value">${esc(resolveManager(r))}</div>
         </div>
       </div>
       <div class="detail-section">

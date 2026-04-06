@@ -26,6 +26,14 @@ public class RepoConfig {
     @Column(name = "git_pull_enabled", length = 1)
     private String gitPullEnabled = "Y";
 
+    /** 분석 배치 수행 여부 (Y/N, 기본 Y) */
+    @Column(name = "analysis_batch_enabled", length = 1)
+    private String analysisBatchEnabled = "Y";
+
+    /** APM 수집 배치 수행 여부 (Y/N, 기본 Y) */
+    @Column(name = "apm_batch_enabled", length = 1)
+    private String apmBatchEnabled = "Y";
+
     @Column(name = "team_name")
     private String teamName;
 
@@ -104,6 +112,10 @@ public class RepoConfig {
     public void setGitBinPath(String gitBinPath) { this.gitBinPath = gitBinPath; }
     public String getGitPullEnabled() { return gitPullEnabled; }
     public void setGitPullEnabled(String gitPullEnabled) { this.gitPullEnabled = gitPullEnabled; }
+    public String getAnalysisBatchEnabled() { return analysisBatchEnabled != null ? analysisBatchEnabled : "Y"; }
+    public void setAnalysisBatchEnabled(String v) { this.analysisBatchEnabled = v; }
+    public String getApmBatchEnabled() { return apmBatchEnabled != null ? apmBatchEnabled : "Y"; }
+    public void setApmBatchEnabled(String v) { this.apmBatchEnabled = v; }
     public String getTeamName() { return teamName; }
     public void setTeamName(String teamName) { this.teamName = teamName; }
     public String getManagerName() { return managerName; }

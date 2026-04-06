@@ -3,10 +3,10 @@ package com.baek.viewer.model;
 import java.util.Map;
 
 public class WhatapResult {
-    private Map<String, Long> stats;  // API 경로 → 총 호출건수
-    private int segmentCount;
-    private int apiCount;
-    private String message;
+    private final Map<String, Long> stats;  // API 경로 → 총 호출건수
+    private final int segmentCount;
+    private final int apiCount;
+    private final String message;
 
     public WhatapResult(Map<String, Long> stats, int segmentCount, int apiCount, String message) {
         this.stats = stats;

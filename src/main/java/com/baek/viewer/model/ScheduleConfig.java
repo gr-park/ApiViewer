@@ -88,7 +88,7 @@ public class ScheduleConfig {
         int min = hm.length > 1 ? Integer.parseInt(hm[1]) : 0;
         if ("HOURLY".equals(scheduleType)) {
             int h = intervalHours != null && intervalHours > 0 ? intervalHours : 1;
-            return String.format("%d 0/%d * * * ?", min, h);
+            return String.format("0 %d 0/%d * * ?", min, h);
         }
         if ("WEEKLY".equals(scheduleType)) {
             String day = runDay != null ? runDay : "MON";

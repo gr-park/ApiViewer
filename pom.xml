@@ -42,8 +42,9 @@
             <scope>runtime</scope>
         </dependency>
         <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-quartz</artifactId>
+            <groupId>org.quartz-scheduler</groupId>
+            <artifactId>quartz</artifactId>
+            <version>2.3.2</version>
         </dependency>
         <!-- 개발 시 정적파일/클래스 변경 자동 리로드 (운영 JAR 빌드 시 자동 제외됨) -->
         <dependency>

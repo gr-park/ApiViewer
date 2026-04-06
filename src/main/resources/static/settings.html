@@ -182,6 +182,20 @@
         <input id="gPageNavSize" type="number" min="3" max="20" placeholder="10" style="width:120px;">
         <span class="field-hint">페이지 번호 표시 개수 (예: 10 = 1~10)</span>
       </label>
+      <label class="field">와탭 Mock
+        <select id="gWhatapMock" style="width:120px;">
+          <option value="N">N (실제 API)</option>
+          <option value="Y">Y (Mock 데이터)</option>
+        </select>
+        <span class="field-hint">실제 API 미연동 시 Y 설정</span>
+      </label>
+      <label class="field">제니퍼 Mock
+        <select id="gJenniferMock" style="width:120px;">
+          <option value="N">N (실제 API)</option>
+          <option value="Y">Y (Mock 데이터)</option>
+        </select>
+        <span class="field-hint">실제 API 미연동 시 Y 설정</span>
+      </label>
     </div>
 
     <!-- 팀 목록 -->
@@ -355,13 +369,23 @@
         </label>
       </div>
       <div class="field-row col3">
-        <label class="field">Git 실행 경로
-          <input id="f_gitBinPath" type="text" placeholder="git">
-        </label>
+        <input id="f_gitBinPath" type="hidden">
         <label class="field">분석 시 Git Pull
           <select id="f_gitPullEnabled">
             <option value="Y">Y (Pull 후 분석)</option>
             <option value="N">N (Pull 안 함)</option>
+          </select>
+        </label>
+        <label class="field">분석배치 수행
+          <select id="f_analysisBatchEnabled">
+            <option value="Y">Y</option>
+            <option value="N">N</option>
+          </select>
+        </label>
+        <label class="field">APM배치 수행
+          <select id="f_apmBatchEnabled">
+            <option value="Y">Y</option>
+            <option value="N">N</option>
           </select>
         </label>
         <label class="field">URL 경로 프리픽스
@@ -390,64 +414,46 @@
       <div id="mappingList" style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px;"></div>
       <button type="button" class="btn btn-ghost" style="font-size:11px;padding:4px 12px;height:auto;" onclick="addMappingRow()">+ 매핑 추가</button>
 
-      <div class="modal-section">Whatap APM 설정</div>
+      <div class="modal-section">APM 설정</div>
       <div class="field-row col3">
-        <label class="field">활성화
-          <select id="f_whatapEnabled">
-            <option value="N">N (비활성)</option>
-            <option value="Y">Y (활성)</option>
+        <label class="field">APM 종류
+          <select id="f_apmType" onchange="onApmTypeChange()">
+            <option value="NONE">미사용</option>
+            <option value="WHATAP">와탭</option>
+            <option value="JENNIFER">제니퍼</option>
           </select>
         </label>
-        <label class="field">공통 프로필 참조 (profileName)
-          <input id="f_whatapProfileName" type="text" placeholder="운영 / 개발 (공통설정 프로필명)">
+        <label class="field">프로필 선택
+          <select id="f_apmProfile" onchange="onApmProfileChange()">
+            <option value="">-- 선택 --</option>
+          </select>
         </label>
-        <label class="field">프로젝트 코드 (pcode)
+        <label class="field" id="f_pcodeWrap">프로젝트코드 (pcode)
           <input id="f_whatapPcode" type="number" placeholder="8">
         </label>
-      </div>
-      <div class="field-row col3">
-        <label class="field">서비스 필터 (filter)
-          <input id="f_whatapFilter" type="text" placeholder="/app, /api">
-        </label>
-        <label class="field">Agent OKINDS
-          <input id="f_whatapOkinds" type="text" placeholder="123, 456">
-        </label>
-        <label class="field">OKINDS 명칭
-          <input id="f_whatapOkindsName" type="text" placeholder="메인서버">
-        </label>
-      </div>
-      <div class="field-row col2">
-        <label class="field">URL (개별 지정 시만)
-          <input id="f_whatapUrl" type="text" placeholder="비워두면 공통 프로필 사용">
-        </label>
-        <label class="field">쿠키 (개별 지정 시만)
-          <input id="f_whatapCookie" type="text" placeholder="비워두면 공통 프로필 사용" style="font-family:monospace;font-size:11px;">
-        </label>
-      </div>
-
-      <div class="modal-section">Jennifer APM 설정</div>
-      <div class="field-row col3">
-        <label class="field">활성화
-          <select id="f_jenniferEnabled">
-            <option value="N">N (비활성)</option>
-            <option value="Y">Y (활성)</option>
-          </select>
-        </label>
-        <label class="field">공통 프로필 참조 (profileName)
-          <input id="f_jenniferProfileName" type="text" placeholder="운영 / 개발 (공통설정 프로필명)">
-        </label>
-        <label class="field">시스템 ID (sid)
+        <label class="field" id="f_sidWrap" style="display:none;">시스템 ID (sid)
           <input id="f_jenniferSid" type="number" placeholder="1001">
         </label>
       </div>
       <div class="field-row col3">
-        <label class="field">서비스 필터 (filter)
-          <input id="f_jenniferFilter" type="text" placeholder="">
+        <label class="field">서비스 필터
+          <input id="f_apmFilter" type="text" placeholder="/app, /api">
         </label>
-        <label class="field">URL (개별 지정 시만)
-          <input id="f_jenniferUrl" type="text" placeholder="비워두면 공통 프로필 사용">
+        <label class="field" id="f_okindsWrap">Agent OKINDS
+          <input id="f_whatapOkinds" type="text" placeholder="123, 456">
         </label>
-        <label class="field">Bearer Token (개별 지정 시만)
+        <label class="field" id="f_okindsNameWrap">OKINDS 명칭
+          <input id="f_whatapOkindsName" type="text" placeholder="메인서버">
+        </label>
+      </div>
+      <div class="field-row col2">
+        <label class="field">URL (개별 지정 시)
+          <input id="f_apmUrl" type="text" placeholder="비워두면 공통 프로필 사용">
+        </label>
+        <label class="field" id="f_cookieWrap">쿠키 (개별 지정 시)
+          <input id="f_whatapCookie" type="text" placeholder="비워두면 공통 프로필 사용" style="font-family:monospace;font-size:11px;">
+        </label>
+        <label class="field" id="f_tokenWrap" style="display:none;">Bearer Token (개별 지정 시)
           <input id="f_jenniferBearerToken" type="text" placeholder="비워두면 공통 프로필 사용" style="font-family:monospace;font-size:11px;">
         </label>
       </div>
@@ -476,6 +482,8 @@
       document.getElementById('gReviewThreshold').value  = g.reviewThreshold  ?? 3;
       document.getElementById('gPageSize').value         = g.pageSize         ?? 200;
       document.getElementById('gPageNavSize').value      = g.pageNavSize      ?? 10;
+      document.getElementById('gWhatapMock').value       = g.whatapMockEnabled || 'N';
+      document.getElementById('gJenniferMock').value     = g.jenniferMockEnabled || 'N';
       // 팀 목록 로드
       document.getElementById('teamsList').innerHTML = '';
       try {
@@ -531,6 +539,8 @@
       reviewThreshold: parseInt(document.getElementById('gReviewThreshold').value) || 3,
       pageSize: parseInt(document.getElementById('gPageSize').value) || 200,
       pageNavSize: parseInt(document.getElementById('gPageNavSize').value) || 10,
+      whatapMockEnabled: document.getElementById('gWhatapMock').value,
+      jenniferMockEnabled: document.getElementById('gJenniferMock').value,
       teams: (() => { const t = collectTeams(); return t.length ? JSON.stringify(t) : null; })(),
       whatapProfiles: wpList.length ? JSON.stringify(wpList) : null,
       jenniferProfiles: jpList.length ? JSON.stringify(jpList) : null
@@ -617,6 +627,8 @@
           ${r.businessName ? `<span>📝 ${esc(r.businessName)}</span>` : ''}
           ${r.apiPathPrefix ? `<span>🔗 prefix: ${esc(r.apiPathPrefix)}</span>` : ''}
           ${apmBadge(r)}
+          ${r.analysisBatchEnabled==='N'?'<span style="color:#dc2626;font-weight:600;">분석배치:OFF</span>':''}
+          ${r.apmBatchEnabled==='N'?'<span style="color:#dc2626;font-weight:600;">APM배치:OFF</span>':''}
         </div>
         <div class="repo-actions">
           <button class="btn btn-ghost" style="font-size:11px;padding:3px 10px;" onclick="openModal(${r.id})">편집</button>
@@ -704,17 +716,71 @@
     return arr.length ? JSON.stringify(arr) : null;
   }
 
+  // ── APM 통합 셀렉트 ─────────────────────────────────────
+  let apmProfiles = { whatap: [], jennifer: [] }; // 글로벌에서 로드
+
+  async function loadApmProfiles() {
+    try {
+      const res = await fetch('/api/config/global');
+      const g = await res.json();
+      apmProfiles.whatap = g.whatapProfiles ? JSON.parse(g.whatapProfiles) : [];
+      apmProfiles.jennifer = g.jenniferProfiles ? JSON.parse(g.jenniferProfiles) : [];
+    } catch(e) {}
+  }
+  loadApmProfiles(); // 페이지 로드 시 1회
+
+  function onApmTypeChange() {
+    const type = document.getElementById('f_apmType').value;
+    const profSel = document.getElementById('f_apmProfile');
+    const isW = type === 'WHATAP', isJ = type === 'JENNIFER', isNone = type === 'NONE';
+
+    // 프로필 드롭다운 갱신
+    const profiles = isW ? apmProfiles.whatap : isJ ? apmProfiles.jennifer : [];
+    profSel.innerHTML = '<option value="">-- 선택 --</option>' +
+      profiles.map(p => `<option value="${esc(p.name)}">${esc(p.name)}</option>`).join('');
+
+    // 와탭 전용 필드 토글
+    document.getElementById('f_pcodeWrap').style.display = isW ? '' : 'none';
+    document.getElementById('f_okindsWrap').style.display = isW ? '' : 'none';
+    document.getElementById('f_okindsNameWrap').style.display = isW ? '' : 'none';
+    document.getElementById('f_cookieWrap').style.display = isW ? '' : 'none';
+    // 제니퍼 전용 필드 토글
+    document.getElementById('f_sidWrap').style.display = isJ ? '' : 'none';
+    document.getElementById('f_tokenWrap').style.display = isJ ? '' : 'none';
+  }
+
+  function onApmProfileChange() {
+    const type = document.getElementById('f_apmType').value;
+    const profName = document.getElementById('f_apmProfile').value;
+    if (!profName) return;
+    const profiles = type === 'WHATAP' ? apmProfiles.whatap : apmProfiles.jennifer;
+    const prof = profiles.find(p => p.name === profName);
+    if (!prof) return;
+    // 프로필에서 URL 자동 채우기 (비어있으면)
+    const urlEl = document.getElementById('f_apmUrl');
+    if (!urlEl.value && prof.url) urlEl.value = prof.url;
+    if (type === 'WHATAP' && !document.getElementById('f_whatapCookie').value && prof.cookie) {
+      document.getElementById('f_whatapCookie').value = prof.cookie;
+    }
+    if (type === 'JENNIFER' && !document.getElementById('f_jenniferBearerToken').value && prof.bearerToken) {
+      document.getElementById('f_jenniferBearerToken').value = prof.bearerToken;
+    }
+  }
+
   function clearForm() {
     ['repoName','domain','rootPath','gitBinPath','teamName','managerName','businessName',
-     'apiPathPrefix','pathConstants','whatapProfileName','whatapUrl','whatapFilter','whatapOkinds',
-     'whatapOkindsName','whatapCookie','jenniferProfileName','jenniferUrl','jenniferFilter',
-     'jenniferBearerToken','jenniferSid'].forEach(k => {
+     'apiPathPrefix','pathConstants','whatapPcode','whatapFilter','whatapOkinds',
+     'whatapOkindsName','whatapCookie','jenniferSid','jenniferBearerToken',
+     'apmUrl','apmFilter'].forEach(k => {
        const el = document.getElementById('f_'+k); if (el) el.value = '';
      });
-    document.getElementById('f_whatapEnabled').value = 'N';
-    document.getElementById('f_jenniferEnabled').value = 'N';
     document.getElementById('f_gitPullEnabled').value = 'Y';
+    document.getElementById('f_analysisBatchEnabled').value = 'Y';
+    document.getElementById('f_apmBatchEnabled').value = 'Y';
+    document.getElementById('f_apmType').value = 'NONE';
+    document.getElementById('f_apmProfile').innerHTML = '<option value="">-- 선택 --</option>';
     document.getElementById('f_whatapPcode').value = '8';
+    onApmTypeChange();
     document.getElementById('mappingList').innerHTML = '';
   }
 
@@ -724,26 +790,32 @@
     document.getElementById('f_rootPath').value         = r.rootPath         || '';
     document.getElementById('f_gitBinPath').value       = r.gitBinPath       || '';
     document.getElementById('f_gitPullEnabled').value   = r.gitPullEnabled   || 'Y';
+    document.getElementById('f_analysisBatchEnabled').value = r.analysisBatchEnabled || 'Y';
+    document.getElementById('f_apmBatchEnabled').value = r.apmBatchEnabled || 'Y';
     document.getElementById('f_teamName').value         = r.teamName         || '';
     document.getElementById('f_managerName').value      = r.managerName      || '';
     document.getElementById('f_businessName').value     = r.businessName     || '';
     document.getElementById('f_apiPathPrefix').value    = r.apiPathPrefix    || '';
     document.getElementById('f_pathConstants').value    = r.pathConstants    || '';
     // Whatap
-    document.getElementById('f_whatapEnabled').value     = r.whatapEnabled     || 'N';
-    document.getElementById('f_whatapProfileName').value = r.whatapProfileName || '';
-    document.getElementById('f_whatapUrl').value         = r.whatapUrl         || '';
-    document.getElementById('f_whatapPcode').value       = r.whatapPcode       || 8;
-    document.getElementById('f_whatapFilter').value      = r.whatapFilter      || '';
-    document.getElementById('f_whatapOkinds').value      = r.whatapOkinds      || '';
-    document.getElementById('f_whatapOkindsName').value  = r.whatapOkindsName  || '';
-    document.getElementById('f_whatapCookie').value      = r.whatapCookie      || '';
-    // Jennifer
-    document.getElementById('f_jenniferEnabled').value     = r.jenniferEnabled     || 'N';
-    document.getElementById('f_jenniferProfileName').value = r.jenniferProfileName || '';
-    document.getElementById('f_jenniferUrl').value         = r.jenniferUrl         || '';
-    document.getElementById('f_jenniferSid').value         = r.jenniferSid         || '';
-    document.getElementById('f_jenniferFilter').value      = r.jenniferFilter      || '';
+    // APM 통합 셀렉트 세팅
+    const isW = r.whatapEnabled === 'Y';
+    const isJ = r.jenniferEnabled === 'Y';
+    document.getElementById('f_apmType').value = isW ? 'WHATAP' : isJ ? 'JENNIFER' : 'NONE';
+    onApmTypeChange();
+    // 프로필 선택
+    const profName = isW ? (r.whatapProfileName||'') : isJ ? (r.jenniferProfileName||'') : '';
+    if (profName) document.getElementById('f_apmProfile').value = profName;
+    // 공통 필드
+    document.getElementById('f_apmUrl').value = isW ? (r.whatapUrl||'') : isJ ? (r.jenniferUrl||'') : '';
+    document.getElementById('f_apmFilter').value = isW ? (r.whatapFilter||'') : isJ ? (r.jenniferFilter||'') : '';
+    // 와탭 전용
+    document.getElementById('f_whatapPcode').value = r.whatapPcode || 8;
+    document.getElementById('f_whatapOkinds').value = r.whatapOkinds || '';
+    document.getElementById('f_whatapOkindsName').value = r.whatapOkindsName || '';
+    document.getElementById('f_whatapCookie').value = r.whatapCookie || '';
+    // 제니퍼 전용
+    document.getElementById('f_jenniferSid').value = r.jenniferSid || '';
     document.getElementById('f_jenniferBearerToken').value = r.jenniferBearerToken || '';
     // 프로그램ID별 담당자 매핑 로드
     document.getElementById('mappingList').innerHTML = '';
@@ -766,24 +838,26 @@
       domain:           document.getElementById('f_domain').value.trim(),
       gitBinPath:       document.getElementById('f_gitBinPath').value.trim(),
       gitPullEnabled:   document.getElementById('f_gitPullEnabled').value,
+      analysisBatchEnabled: document.getElementById('f_analysisBatchEnabled').value,
+      apmBatchEnabled: document.getElementById('f_apmBatchEnabled').value,
       teamName:         document.getElementById('f_teamName').value.trim(),
       managerName:      document.getElementById('f_managerName').value.trim(),
       businessName:     document.getElementById('f_businessName').value.trim(),
       apiPathPrefix:    document.getElementById('f_apiPathPrefix').value.trim(),
       pathConstants:    document.getElementById('f_pathConstants').value.trim(),
-      whatapEnabled:      document.getElementById('f_whatapEnabled').value,
-      whatapProfileName:  document.getElementById('f_whatapProfileName').value.trim() || null,
-      whatapUrl:          document.getElementById('f_whatapUrl').value.trim(),
+      whatapEnabled:      document.getElementById('f_apmType').value === 'WHATAP' ? 'Y' : 'N',
+      whatapProfileName:  document.getElementById('f_apmType').value === 'WHATAP' ? (document.getElementById('f_apmProfile').value || null) : null,
+      whatapUrl:          document.getElementById('f_apmType').value === 'WHATAP' ? document.getElementById('f_apmUrl').value.trim() : '',
       whatapPcode:        parseInt(document.getElementById('f_whatapPcode').value) || 8,
-      whatapFilter:       document.getElementById('f_whatapFilter').value.trim(),
+      whatapFilter:       document.getElementById('f_apmType').value === 'WHATAP' ? document.getElementById('f_apmFilter').value.trim() : '',
       whatapOkinds:       document.getElementById('f_whatapOkinds').value.trim(),
       whatapOkindsName:   document.getElementById('f_whatapOkindsName').value.trim(),
       whatapCookie:       document.getElementById('f_whatapCookie').value.trim(),
-      jenniferEnabled:    document.getElementById('f_jenniferEnabled').value,
-      jenniferProfileName:document.getElementById('f_jenniferProfileName').value.trim() || null,
-      jenniferUrl:        document.getElementById('f_jenniferUrl').value.trim(),
+      jenniferEnabled:    document.getElementById('f_apmType').value === 'JENNIFER' ? 'Y' : 'N',
+      jenniferProfileName: document.getElementById('f_apmType').value === 'JENNIFER' ? (document.getElementById('f_apmProfile').value || null) : null,
+      jenniferUrl:        document.getElementById('f_apmType').value === 'JENNIFER' ? document.getElementById('f_apmUrl').value.trim() : '',
       jenniferSid:        parseInt(document.getElementById('f_jenniferSid').value) || null,
-      jenniferFilter:     document.getElementById('f_jenniferFilter').value.trim(),
+      jenniferFilter:     document.getElementById('f_apmType').value === 'JENNIFER' ? document.getElementById('f_apmFilter').value.trim() : '',
       jenniferBearerToken:document.getElementById('f_jenniferBearerToken').value.trim(),
       managerMappings: collectMappings()
     };

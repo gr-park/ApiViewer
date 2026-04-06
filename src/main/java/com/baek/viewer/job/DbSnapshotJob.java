@@ -6,7 +6,7 @@ import org.quartz.Job;
 import org.quartz.JobExecutionContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.stereotype.Component;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import java.time.LocalDateTime;
 
@@ -14,17 +14,11 @@ import java.time.LocalDateTime;
  * DB 파일 사이즈 일별 스냅샷 배치.
  * 매일 지정 시각에 db_size_history 테이블에 현재 DB 크기/레코드 수를 기록.
  */
-@Component
 public class DbSnapshotJob implements Job {
 
     private static final Logger log = LoggerFactory.getLogger(DbSnapshotJob.class);
-    private final DbMonitorService dbMonitorService;
-    private final ScheduleConfigRepository scheduleRepo;
-
-    public DbSnapshotJob(DbMonitorService dbMonitorService, ScheduleConfigRepository scheduleRepo) {
-        this.dbMonitorService = dbMonitorService;
-        this.scheduleRepo = scheduleRepo;
-    }
+    @Autowired private DbMonitorService dbMonitorService;
+    @Autowired private ScheduleConfigRepository scheduleRepo;
 
     @Override
     public void execute(JobExecutionContext context) {

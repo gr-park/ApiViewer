@@ -8,7 +8,7 @@ import org.quartz.Job;
 import org.quartz.JobExecutionContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.stereotype.Component;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -18,23 +18,13 @@ import java.util.List;
  * APM(Whatap/Jennifer) 호출건수 수집 배치 — 전체 레포 대상.
  * jobParam="days"만큼 과거 데이터를 각 레포의 활성화된 APM source별로 수집 후 집계 반영.
  * WHATAP 최대 365일, JENNIFER 최대 30일로 clamp됨.
- * 레포에 URL이 설정된 경우 실제 APM API 호출, 미설정 시 Mock 랜덤 데이터 생성.
  */
-@Component
 public class ApmCollectJob implements Job {
 
     private static final Logger log = LoggerFactory.getLogger(ApmCollectJob.class);
-    private final ScheduleConfigRepository scheduleRepo;
-    private final RepoConfigRepository repoConfigRepo;
-    private final MockApmService mockApmService;
-
-    public ApmCollectJob(ScheduleConfigRepository scheduleRepo,
-                         RepoConfigRepository repoConfigRepo,
-                         MockApmService mockApmService) {
-        this.scheduleRepo = scheduleRepo;
-        this.repoConfigRepo = repoConfigRepo;
-        this.mockApmService = mockApmService;
-    }
+    @Autowired private ScheduleConfigRepository scheduleRepo;
+    @Autowired private RepoConfigRepository repoConfigRepo;
+    @Autowired private MockApmService mockApmService;
 
     @Override
     public void execute(JobExecutionContext context) {
@@ -55,6 +45,10 @@ public class ApmCollectJob implements Job {
             int repoCount = 0;
             int skipped = 0;
             for (RepoConfig r : repos) {
+                if (!"Y".equalsIgnoreCase(r.getApmBatchEnabled())) {
+                    log.info("[APM_COLLECT]   - {} : 스킵 (APM배치 비활성)", r.getRepoName());
+                    skipped++; continue;
+                }
                 boolean whatap = "Y".equalsIgnoreCase(r.getWhatapEnabled());
                 boolean jennifer = "Y".equalsIgnoreCase(r.getJenniferEnabled());
                 if (!whatap && !jennifer) {

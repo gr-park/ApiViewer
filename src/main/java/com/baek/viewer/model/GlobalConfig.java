@@ -41,13 +41,13 @@ public class GlobalConfig {
     @Column(name = "jennifer_profiles", columnDefinition = "TEXT")
     private String jenniferProfiles;
 
-    /** Whatap 실제 API 대신 Whatap 응답 스키마 형태의 Mock 데이터 사용 여부 */
-    @Column(name = "whatap_mock_enabled")
-    private Boolean whatapMockEnabled = false;
+    /** Whatap Mock 사용 여부 (Y/N) */
+    @Column(name = "whatap_mock_enabled", length = 5)
+    private String whatapMockEnabled = "N";
 
-    /** Jennifer 실제 API 대신 Jennifer 응답 스키마 형태의 Mock 데이터 사용 여부 */
-    @Column(name = "jennifer_mock_enabled")
-    private Boolean jenniferMockEnabled = false;
+    /** Jennifer Mock 사용 여부 (Y/N) */
+    @Column(name = "jennifer_mock_enabled", length = 5)
+    private String jenniferMockEnabled = "N";
 
 
     public Long getId() { return id; }
@@ -69,8 +69,10 @@ public class GlobalConfig {
     public void setWhatapProfiles(String whatapProfiles) { this.whatapProfiles = whatapProfiles; }
     public String getJenniferProfiles() { return jenniferProfiles; }
     public void setJenniferProfiles(String jenniferProfiles) { this.jenniferProfiles = jenniferProfiles; }
-    public boolean isWhatapMockEnabled() { return Boolean.TRUE.equals(whatapMockEnabled); }
-    public void setWhatapMockEnabled(Boolean whatapMockEnabled) { this.whatapMockEnabled = whatapMockEnabled; }
-    public boolean isJenniferMockEnabled() { return Boolean.TRUE.equals(jenniferMockEnabled); }
-    public void setJenniferMockEnabled(Boolean jenniferMockEnabled) { this.jenniferMockEnabled = jenniferMockEnabled; }
+    public String getWhatapMockEnabled() { return whatapMockEnabled != null ? whatapMockEnabled : "N"; }
+    public void setWhatapMockEnabled(String v) { this.whatapMockEnabled = v; }
+    public boolean isWhatapMockEnabled() { return "Y".equalsIgnoreCase(getWhatapMockEnabled()); }
+    public String getJenniferMockEnabled() { return jenniferMockEnabled != null ? jenniferMockEnabled : "N"; }
+    public void setJenniferMockEnabled(String v) { this.jenniferMockEnabled = v; }
+    public boolean isJenniferMockEnabled() { return "Y".equalsIgnoreCase(getJenniferMockEnabled()); }
 }

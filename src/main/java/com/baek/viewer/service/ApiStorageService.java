@@ -3,8 +3,10 @@ package com.baek.viewer.service;
 import com.baek.viewer.model.ApiInfo;
 import com.baek.viewer.model.ApiRecord;
 import com.baek.viewer.model.GlobalConfig;
+import com.baek.viewer.model.RepoConfig;
 import com.baek.viewer.repository.ApiRecordRepository;
 import com.baek.viewer.repository.GlobalConfigRepository;
+import com.baek.viewer.repository.RepoConfigRepository;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
@@ -24,12 +26,15 @@ public class ApiStorageService {
 
     private final ApiRecordRepository repository;
     private final GlobalConfigRepository globalConfigRepository;
+    private final RepoConfigRepository repoConfigRepository;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     public ApiStorageService(ApiRecordRepository repository,
-                             GlobalConfigRepository globalConfigRepository) {
+                             GlobalConfigRepository globalConfigRepository,
+                             RepoConfigRepository repoConfigRepository) {
         this.repository = repository;
         this.globalConfigRepository = globalConfigRepository;
+        this.repoConfigRepository = repoConfigRepository;
     }
 
     private static final Pattern BLOCKED_DATE_PATTERN =
@@ -50,6 +55,9 @@ public class ApiStorageService {
         int reviewThreshold = getReviewThreshold();
         int saved = 0;
 
+        // 프로그램ID별 담당자 매핑 로드
+        List<Map<String, String>> managerMappings = loadManagerMappings(repositoryName);
+
         for (ApiInfo a : apis) {
             Optional<ApiRecord> existing = repository.findByRepositoryNameAndApiPathAndHttpMethod(
                     repositoryName, a.getApiPath(), a.getHttpMethod());
@@ -64,6 +72,8 @@ public class ApiStorageService {
                 r.setNew(false); // 재분석 시 신규 플래그 해제
                 String oldStatus = r.getStatus();
                 updateExtractedFields(r, a, now);
+                // 프로그램ID 매핑 → managerOverride 자동 설정 (수동 설정 안 된 경우만)
+                applyManagerMapping(r, managerMappings);
 
                 // status 재계산 + 변경 감지
                 if (!r.isStatusOverridden()) {
@@ -92,6 +102,7 @@ public class ApiStorageService {
                 r.setNew(true);
                 r.setDataSource("ANALYSIS");
                 updateExtractedFields(r, a, now);
+                applyManagerMapping(r, managerMappings);
                 r.setStatus(calculateStatus(r, reviewThreshold));
                 if ("차단완료".equals(r.getStatus())) {
                     r.setBlockedDate(parseBlockedDate(r.getFullComment()));
@@ -168,6 +179,42 @@ public class ApiStorageService {
     }
 
     /** 상태 변경 로그 추가 (기존 로그에 이어붙임) */
+    /** 레포설정의 managerMappings JSON 파싱 */
+    private List<Map<String, String>> loadManagerMappings(String repositoryName) {
+        try {
+            Optional<RepoConfig> opt = repoConfigRepository.findByRepoName(repositoryName);
+            if (opt.isPresent() && opt.get().getManagerMappings() != null) {
+                String json = opt.get().getManagerMappings().trim();
+                if (json.startsWith("[")) {
+                    return objectMapper.readValue(json, new TypeReference<List<Map<String, String>>>() {});
+                }
+            }
+        } catch (Exception e) {
+            log.warn("[매핑 로드 실패] repo={}: {}", repositoryName, e.getMessage());
+        }
+        return List.of();
+    }
+
+    /** 프로그램ID 매핑 → managerOverride 자동 설정 (수동 입력 안 된 경우만) */
+    private void applyManagerMapping(ApiRecord r, List<Map<String, String>> mappings) {
+        if (mappings.isEmpty()) return;
+        // 이미 수동으로 설정된 경우는 건드리지 않음 (단, 매핑 기반 자동설정은 재갱신)
+        String apiPath = r.getApiPath();
+        if (apiPath == null) return;
+        String pathUpper = apiPath.toUpperCase();
+        for (Map<String, String> m : mappings) {
+            String pid = m.get("programId");
+            String mgr = m.get("managerName");
+            if (pid != null && !pid.isBlank() && mgr != null && !mgr.isBlank()) {
+                if (pathUpper.contains(pid.toUpperCase())) {
+                    r.setManagerOverride(mgr);
+                    return;
+                }
+            }
+        }
+        // 매핑에 해당하지 않으면 기존 managerOverride 유지 (수동 설정 보호)
+    }
+
     private void appendChangeLog(ApiRecord r, String msg) {
         r.setStatusChanged(true);
         String existing = r.getStatusChangeLog();

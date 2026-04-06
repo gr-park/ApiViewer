@@ -250,7 +250,11 @@
       ]);
       const data = await dataRes.json();
       const cfgs = await cfgRes.json();
-      cfgs.forEach(c => { repoConfigMap[c.repoName] = { team:c.teamName||'', manager:c.managerName||'', businessName:c.businessName||'' }; });
+      cfgs.forEach(c => {
+        let mappings = [];
+        try { if (c.managerMappings) mappings = JSON.parse(c.managerMappings); } catch(e) {}
+        repoConfigMap[c.repoName] = { team:c.teamName||'', manager:c.managerName||'', businessName:c.businessName||'', mappings };
+      });
       // 팀 목록 datalist 채우기
       try {
         const g = await globalRes.json();
@@ -310,7 +314,7 @@
       const cfg = repoConfigMap[a.repositoryName]||{};
       const text = [a.apiPath,a.apiOperationValue,a.descriptionTag,a.memo].join(' ').toLowerCase();
       const teamText = [a.teamOverride||cfg.team,a.reviewTeam].join(' ').toLowerCase();
-      const mgrText  = [a.managerOverride||cfg.manager,a.reviewManager].join(' ').toLowerCase();
+      const mgrText  = [resolveManager(a),a.reviewManager].join(' ').toLowerCase();
       const rvOk = !rv||(rv==='미검토'?!a.reviewResult:a.reviewResult===rv);
       return (!q||text.includes(q))&&(!qTeam||teamText.includes(qTeam))&&(!qMgr||mgrText.includes(qMgr))&&(!bt||a.status===bt)&&rvOk;
     });
@@ -333,7 +337,7 @@
         <td class="cb-cell sk" style="left:0;min-width:36px;width:36px;"><input type="checkbox" data-id="${a.id}" ${checked} onchange="toggleRow(this)"></td>
         <td class="sk" style="left:36px;min-width:100px;font-size:12px;font-weight:700;">${esc(cfg.businessName || a.repositoryName)}</td>
         <td class="sk" style="left:136px;min-width:80px;font-size:11px;color:var(--text-muted);white-space:nowrap;">${esc(a.teamOverride || cfg.team)}</td>
-        <td class="sk" style="left:216px;min-width:70px;font-size:11px;color:var(--text-muted);white-space:nowrap;">${esc(a.managerOverride || cfg.manager)}</td>
+        <td class="sk" style="left:216px;min-width:70px;font-size:11px;color:var(--text-muted);white-space:nowrap;">${esc(resolveManager(a))}</td>
         <td class="sk sk-last" style="left:286px;min-width:200px;"><div class="api-path">${esc(a.apiPath)}</div></td>
         <td>${a.fullUrl ? `<a href="${esc(a.fullUrl)}" target="_blank" style="font-size:11px;color:var(--primary);text-decoration:none;padding:2px 6px;border:1px solid var(--primary);border-radius:4px;white-space:nowrap;">열기 ↗</a>` : '<span style="color:#cbd5e1;">-</span>'}</td>
         <td class="api-op" style="font-size:11px;max-width:160px;">${esc(desc)}</td>
@@ -423,6 +427,17 @@
     showToast(`${filteredApis.length}건 다운로드 완료`,'success');
   }
 
+  function resolveManager(a) {
+    if (a.managerOverride) return a.managerOverride;
+    const cfg = repoConfigMap[a.repositoryName] || {};
+    if (cfg.mappings && cfg.mappings.length > 0 && a.apiPath) {
+      const path = a.apiPath.toUpperCase();
+      for (const m of cfg.mappings) {
+        if (m.programId && path.includes(m.programId.toUpperCase())) return m.managerName;
+      }
+    }
+    return cfg.manager || '';
+  }
   function esc(s){if(!s)return'';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
   function showToast(msg,type='success'){const t=document.getElementById('toast');t.textContent=msg;t.className=`toast ${type} show`;setTimeout(()=>t.classList.remove('show'),3000);}
   function isAdmin(){return sessionStorage.getItem('isAdmin')==='true';}

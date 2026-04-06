@@ -205,8 +205,8 @@ public class ApiViewController {
                 if (opt.isPresent()) {
                     ApiRecord r = opt.get();
                     boolean changed = false;
-                    if (Boolean.TRUE.equals(r.isNew())) { r.setNew(false); changed = true; }
-                    if (Boolean.TRUE.equals(r.isStatusChanged())) {
+                    if (r.isNew()) { r.setNew(false); changed = true; }
+                    if (r.isStatusChanged()) {
                         r.setStatusChanged(false);
                         r.setStatusChangeLog(null);
                         changed = true;
@@ -271,7 +271,7 @@ public class ApiViewController {
 
             boolean anyChanged = false;
             boolean reviewChanged = false;
-            if (body.containsKey("isNew"))           { r.setNew(Boolean.FALSE.equals(body.get("isNew")) ? false : Boolean.parseBoolean(String.valueOf(body.get("isNew")))); }
+            if (body.containsKey("isNew"))           { r.setNew(!Boolean.FALSE.equals(body.get("isNew")) && Boolean.parseBoolean(String.valueOf(body.get("isNew")))); }
             if (body.containsKey("memo"))            { r.setMemo(body.get("memo") != null ? body.get("memo").toString() : null); anyChanged = true; }
             if (body.containsKey("teamOverride"))    { r.setTeamOverride(body.get("teamOverride") != null ? body.get("teamOverride").toString() : null); anyChanged = true; }
             if (body.containsKey("managerOverride")) { r.setManagerOverride(body.get("managerOverride") != null ? body.get("managerOverride").toString() : null); anyChanged = true; }

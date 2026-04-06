@@ -6,9 +6,7 @@
 # 공통 설정
 global:
   reviewThreshold: 3      # 호출건수 기준으로 차단대상 판단 시 1~최대 허용할수 있는 건수, 예) 1~3건은 차단대상으로 본다.
-  whatapMockEnabled: true  # true: Whatap 실제 API 대신 Whatap 응답 스키마 형태의 Mock 데이터 사용
-  jenniferMockEnabled: true # true: Jennifer 실제 API 대신 Jennifer 응답 스키마 형태의 Mock 데이터 사용
-  password: "lotte1!"
+  password: "123"
   gitBinPath: git
   pageSize: 200            # 페이지당 표시 건수 (URL호출현황 등)
   pageNavSize: 10          # 페이지 네비게이션 표시 개수
@@ -23,6 +21,10 @@ global:
     - 대출사업팀
     - 멤버십운영팀
     - 보안관리팀
+
+  # Mock 사용 여부 (Y: 실제 API 대신 Mock 데이터 사용 / N: 실제 API 호출)
+  whatapMockEnabled: "Y"
+  jenniferMockEnabled: "Y"
 
   # 와탭 공통 프로필 (URL/쿠키 공유, 레포에서 profileName으로 참조)
   whatapProfiles:
@@ -49,6 +51,8 @@ repositories:
     domain: https://api.petclinic.com
     rootPath: /Users/baegmyeongseon/Downloads/개발_코드/spring-petclinic
     gitPullEnabled: "N"
+    analysisBatchEnabled: "Y"   # 분석 배치 수행 여부 (Y/N)
+    apmBatchEnabled: "Y"        # APM 수집 배치 수행 여부 (Y/N)
     teamName: IT카드개발팀
     managerName: 백명선            # ← 팀 대표 담당자 (매핑에 없으면 이 사람)
     businessName: 펫클리닉

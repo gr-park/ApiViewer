@@ -945,6 +945,7 @@
       document.getElementById('progCount').textContent = '준비 중...';
       document.getElementById('progFile').textContent = '';
       document.getElementById('progStatus').textContent = '';
+      setTimeout(() => document.getElementById('workCard').scrollIntoView({behavior:'smooth', block:'start'}), 100);
     }
   }
 
