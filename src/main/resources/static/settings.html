@@ -173,62 +173,42 @@ function updateAdminBadge(valid) {
   <div class="settings-layout">
     <!-- 사이드바 탭 네비게이션 -->
     <aside class="settings-sidebar">
-      <button class="settings-tab active" data-tab="monitor">📊 DB 모니터링</button>
-      <button class="settings-tab" data-tab="global">⚙️ 공통 설정</button>
-      <button class="settings-tab" data-tab="repos">📦 레포지토리</button>
-      <button class="settings-tab" data-tab="schedule">⏱️ 배치 스케줄</button>
+      <button class="settings-tab active" data-tab="config">⚙️ 설정</button>
+      <button class="settings-tab" data-tab="batch">⏱️ 배치/관리</button>
       <button class="settings-tab" data-tab="logs">📄 로그</button>
-      <button class="settings-tab" data-tab="archive">📁 APM 아카이브</button>
-      <button class="settings-tab danger" data-tab="danger">🗑 데이터 삭제</button>
+      <button class="settings-tab" data-tab="data">📊 데이터관리</button>
       <div style="border-top:1px solid var(--border);margin:6px 0;"></div>
-      <button class="settings-tab" data-tab="extract">🔍 URL 분석 (추출)</button>
+      <button class="settings-tab" data-tab="extract">🔍 URL 분석</button>
     </aside>
 
     <!-- 메인 컨텐츠 (섹션별) -->
     <div class="settings-content">
 
-<section class="settings-section active" data-section="monitor">
-  <!-- DB 파일 사이즈 모니터링 -->
-  <div class="card">
-    <div class="card-title" style="margin-bottom:12px;">
-      <span class="dot" style="background:#0ea5e9;"></span>DB 파일 사이즈 모니터링
-      <span style="font-size:11px;font-weight:400;color:var(--text-muted);margin-left:6px;">파일 크기 · 디스크 사용량 · 일별 증가 추이</span>
-      <div style="margin-left:auto;display:flex;gap:6px;">
-        <button class="btn btn-ghost" style="height:28px;padding:4px 14px;font-size:12px;" onclick="loadDbMonitor()">🔄 새로고침</button>
-        <button class="btn btn-ghost" style="height:28px;padding:4px 14px;font-size:12px;" onclick="dbMonitorSnapshot()">📸 지금 기록</button>
-      </div>
-    </div>
-    <!-- 현재 상태 카드 -->
-    <div id="dbMonitorCurrent" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px;">
-      <div style="padding:10px 12px;color:var(--text-muted);font-size:12px;">로딩 중...</div>
-    </div>
-    <!-- 30일 증가 추이 차트 -->
-    <div>
-      <div style="font-size:11px;font-weight:700;color:var(--text-muted);margin-bottom:6px;text-transform:uppercase;">최근 30일 증가 추이</div>
-      <div id="dbMonitorChart" style="background:#fafbfc;border-radius:6px;padding:12px;"></div>
-    </div>
-    <!-- 파일 경로 / OS -->
-    <div id="dbMonitorFooter" style="margin-top:10px;font-size:10px;color:var(--text-muted);font-family:monospace;"></div>
-  </div>
-</section>
-
-<section class="settings-section" data-section="global">
+<!-- ═══ ⚙️ 설정 (공통설정 + 레포지토리) ═══ -->
+<section class="settings-section active" data-section="config">
   <!-- 공통 설정 -->
   <div class="card">
     <div class="card-title"><span class="dot dot-blue"></span>공통 설정 (모든 레포지토리에 적용)</div>
-    <div class="field-row" style="grid-template-columns:200px;margin-bottom:14px;">
+    <!-- 기본 설정 -->
+    <div style="font-size:11px;font-weight:700;color:var(--text-muted);margin-bottom:6px;letter-spacing:.05em;">기본 설정</div>
+    <div class="field-row col3" style="margin-bottom:14px;">
       <label class="field">차단검토 기준 호출건수
         <input id="gReviewThreshold" type="number" min="0" placeholder="3" style="width:120px;">
-        <span class="field-hint">이 값 이하이면서 소스변경 1년 초과 시 차단검토필요</span>
+        <span class="field-hint">이 값 이하 + 소스변경 1년 초과 시 차단검토</span>
       </label>
       <label class="field">페이지당 건수
         <input id="gPageSize" type="number" min="10" max="1000" placeholder="200" style="width:120px;">
-        <span class="field-hint">URL호출현황 등 목록 페이지당 표시 건수</span>
+        <span class="field-hint">URL호출현황 등 목록 페이지당 표시</span>
       </label>
       <label class="field">페이지 네비 개수
         <input id="gPageNavSize" type="number" min="3" max="20" placeholder="10" style="width:120px;">
-        <span class="field-hint">페이지 번호 표시 개수 (예: 10 = 1~10)</span>
+        <span class="field-hint">페이지 번호 표시 개수</span>
       </label>
+    </div>
+
+    <!-- APM 설정 -->
+    <div style="font-size:11px;font-weight:700;color:var(--text-muted);margin-bottom:6px;letter-spacing:.05em;">APM 설정</div>
+    <div class="field-row col3" style="margin-bottom:6px;">
       <label class="field">와탭 Mock
         <select id="gWhatapMock" style="width:120px;">
           <option value="N">N (실제 API)</option>
@@ -242,25 +222,31 @@ function updateAdminBadge(valid) {
           <option value="Y">Y (Mock 데이터)</option>
         </select>
       </label>
-      <label class="field">로그 Tail 줄수
-        <input id="gLogTailLines" type="number" min="0" step="100" style="width:80px;padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;">
-        <span class="field-hint">로그 조회 시 뒤에서 N줄 (0=전체)</span>
-      </label>
+    </div>
+    <div class="field-row col3" style="margin-bottom:14px;">
       <label class="field">와탭 ptotal
-        <input id="gWhatapPtotal" type="number" min="1" style="width:80px;padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;">
+        <input id="gWhatapPtotal" type="number" min="1" style="width:80px;">
         <span class="field-hint">전체 건수 상한 (기본 100)</span>
       </label>
       <label class="field">와탭 psize
-        <input id="gWhatapPsize" type="number" min="1" style="width:80px;padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;">
+        <input id="gWhatapPsize" type="number" min="1" style="width:80px;">
         <span class="field-hint">한 페이지 건수 (기본 10000)</span>
       </label>
+    </div>
+
+    <!-- 시스템 설정 -->
+    <div style="font-size:11px;font-weight:700;color:var(--text-muted);margin-bottom:6px;letter-spacing:.05em;">시스템 설정</div>
+    <div class="field-row col3" style="margin-bottom:14px;">
       <label class="field">로그 레벨
         <select id="gApmLogLevel" style="width:120px;">
           <option value="INFO">INFO (기본)</option>
           <option value="DEBUG">DEBUG (상세)</option>
         </select>
-        <span class="field-hint">DEBUG: API파싱 과정 + APM 요청/응답 전문</span>
-        <span class="field-hint">실제 API 미연동 시 Y 설정</span>
+        <span class="field-hint">DEBUG: API파싱 + APM 요청/응답 전문</span>
+      </label>
+      <label class="field">로그 Tail 줄수
+        <input id="gLogTailLines" type="number" min="0" step="100" style="width:80px;">
+        <span class="field-hint">로그 조회 시 뒤에서 N줄 (0=전체)</span>
       </label>
     </div>
 
@@ -298,9 +284,9 @@ function updateAdminBadge(valid) {
       <button class="btn btn-blue" onclick="saveGlobal()">공통 설정 저장</button>
     </div>
   </div>
-</section>
 
-<section class="settings-section" data-section="repos">
+  <div style="border-top:2px solid var(--border);margin:20px 0;"></div>
+
   <!-- 레포지토리 설정 -->
   <div class="card">
     <div class="card-title" style="margin-bottom:12px;">
@@ -315,7 +301,8 @@ function updateAdminBadge(valid) {
   </div>
 </section>
 
-<section class="settings-section" data-section="schedule">
+<!-- ═══ ⏱️ 배치/관리 (배치스케줄 + APM아카이브) ═══ -->
+<section class="settings-section" data-section="batch">
   <!-- 주기성 배치 스케줄 -->
   <div class="card">
     <div class="card-title" style="margin-bottom:12px;">
@@ -328,8 +315,11 @@ function updateAdminBadge(valid) {
     </div>
     <div id="scheduleList" style="display:flex;flex-direction:column;gap:12px;">로딩 중...</div>
   </div>
+
+  <div style="border-top:2px solid var(--border);margin:20px 0;"></div>
 </section>
 
+<!-- ═══ 📄 로그 ═══ -->
 <section class="settings-section" data-section="logs">
   <!-- 애플리케이션 로그 -->
   <div class="card">
@@ -358,10 +348,8 @@ function updateAdminBadge(valid) {
       날짜를 선택하고 조회를 클릭하세요.
     </div>
   </div>
-</section>
 
-<section class="settings-section" data-section="archive">
-  <!-- APM 호출이력 아카이브 -->
+  <!-- APM 호출이력 아카이브 (배치/관리 탭에 포함) -->
   <div class="card" style="border:1px solid #fcd34d;">
     <div class="card-title" style="margin-bottom:12px;">
       <span class="dot" style="background:#d97706;"></span>APM 호출이력 아카이브 (장기 보존)
@@ -384,7 +372,30 @@ function updateAdminBadge(valid) {
   </div>
 </section>
 
-<section class="settings-section" data-section="danger">
+<!-- ═══ 📊 데이터관리 (DB모니터링 + 데이터삭제) ═══ -->
+<section class="settings-section" data-section="data">
+  <!-- DB 파일 사이즈 모니터링 -->
+  <div class="card">
+    <div class="card-title" style="margin-bottom:12px;">
+      <span class="dot" style="background:#0ea5e9;"></span>DB 모니터링
+      <span style="font-size:11px;font-weight:400;color:var(--text-muted);margin-left:6px;">파일 크기 · 디스크 사용량 · 일별 증가 추이</span>
+      <div style="margin-left:auto;display:flex;gap:6px;">
+        <button class="btn btn-ghost" style="height:28px;padding:4px 14px;font-size:12px;" onclick="loadDbMonitor()">🔄 새로고침</button>
+        <button class="btn btn-ghost" style="height:28px;padding:4px 14px;font-size:12px;" onclick="dbMonitorSnapshot()">📸 지금 기록</button>
+      </div>
+    </div>
+    <div id="dbMonitorCurrent" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px;">
+      <div style="padding:10px 12px;color:var(--text-muted);font-size:12px;">로딩 중...</div>
+    </div>
+    <div>
+      <div style="font-size:11px;font-weight:700;color:var(--text-muted);margin-bottom:6px;">최근 30일 증가 추이</div>
+      <div id="dbMonitorChart" style="background:#fafbfc;border-radius:6px;padding:12px;"></div>
+    </div>
+    <div id="dbMonitorFooter" style="margin-top:10px;font-size:10px;color:var(--text-muted);font-family:monospace;"></div>
+  </div>
+
+  <div style="border-top:2px solid var(--border);margin:20px 0;"></div>
+
   <!-- 데이터 삭제 -->
   <div class="card" style="border:1px solid #fca5a5;">
     <div class="card-title" style="margin-bottom:12px;">
@@ -408,6 +419,7 @@ function updateAdminBadge(valid) {
   </div>
 </section>
 
+<!-- ═══ 🔍 URL 분석 ═══ -->
 <section class="settings-section" data-section="extract">
   <div id="extractContent"><div style="text-align:center;padding:40px;color:var(--text-muted);">탭을 클릭하면 로드됩니다.</div></div>
 </section>
