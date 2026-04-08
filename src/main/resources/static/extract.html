@@ -279,7 +279,8 @@
         <span style="font-size:13px;font-weight:700;color:var(--text);">레포별 수집</span>
         <span style="font-size:10px;color:var(--text-muted);">특정 레포 · APM 종류 · 기간을 지정하여 수집</span>
       </div>
-      <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;">
+      <!-- 1줄: 레포 + APM 종류 -->
+      <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:8px;">
         <label class="field">레포지토리
           <select id="apmCollectRepo" onchange="onApmRepoChange()" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;min-width:180px;"></select>
         </label>
@@ -290,20 +291,25 @@
             <option value="MOCK">MOCK (테스트)</option>
           </select>
         </label>
-        <label class="field">기간
-          <div style="display:flex;gap:4px;">
-            <button type="button" class="apm-range-btn" onclick="setApmRange(1)">1일전</button>
-            <button type="button" class="apm-range-btn" onclick="setApmRange(7)">1주일</button>
-            <button type="button" class="apm-range-btn" onclick="setApmRange(30)">1달</button>
-            <button type="button" class="apm-range-btn apm-range-year" onclick="setApmRange(365)">1년</button>
-          </div>
-        </label>
+      </div>
+      <!-- 2줄: 기간 바로가기 -->
+      <div style="display:flex;gap:4px;margin-bottom:8px;">
+        <button type="button" class="apm-range-btn" onclick="setApmRange(1)">1일전</button>
+        <button type="button" class="apm-range-btn" onclick="setApmRange(7)">1주일</button>
+        <button type="button" class="apm-range-btn" onclick="setApmRange(30)">1달</button>
+        <button type="button" class="apm-range-btn apm-range-year" onclick="setApmRange(365)">1년</button>
+      </div>
+      <!-- 3줄: 시작일 + 종료일 -->
+      <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:8px;">
         <label class="field">시작일
           <input id="apmCollectFrom" type="date" style="padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;">
         </label>
         <label class="field">종료일
           <input id="apmCollectTo" type="date" style="padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;">
         </label>
+      </div>
+      <!-- 4줄: 실행 버튼 -->
+      <div style="display:flex;gap:8px;">
         <button class="btn" id="apmCollectBtn" style="background:#0ea5e9;color:#fff;height:34px;" onclick="collectApm()">수집 실행</button>
         <button class="btn btn-blue" style="height:34px;" onclick="aggregateAfterCollect()">집계 반영</button>
       </div>
