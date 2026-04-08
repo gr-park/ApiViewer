@@ -121,7 +121,8 @@
 <div class="main">
   <!-- 필터 -->
   <div class="card">
-    <div class="filter-bar">
+    <!-- 1줄: 조건 -->
+    <div class="filter-bar" style="margin-bottom:8px;">
       <label class="field">시작일<input id="fromDate" type="date"></label>
       <label class="field">종료일<input id="toDate" type="date"></label>
       <label class="field">레포지토리
@@ -132,11 +133,15 @@
       <label class="field">URL 검색
         <input id="searchInput" type="text" placeholder="URL 경로 검색..." style="min-width:220px;">
       </label>
+    </div>
+    <!-- 2줄: 기간 바로가기 + 조회 -->
+    <div style="display:flex;gap:6px;align-items:center;">
+      <button class="btn btn-ghost" onclick="setPeriod(7)">1주</button>
+      <button class="btn btn-ghost" onclick="setPeriod(30)">1달</button>
+      <button class="btn btn-ghost" onclick="setPeriod(90)">3달</button>
+      <button class="btn btn-ghost" onclick="setPeriod(365)">1년</button>
+      <div style="width:1px;height:20px;background:var(--border);margin:0 4px;"></div>
       <button class="btn btn-blue" onclick="loadAll()">조회</button>
-      <button class="btn btn-ghost" onclick="setPeriod(7)">최근 1주</button>
-      <button class="btn btn-ghost" onclick="setPeriod(30)">최근 1달</button>
-      <button class="btn btn-ghost" onclick="setPeriod(90)">최근 3달</button>
-      <button class="btn btn-ghost" onclick="setPeriod(365)">최근 1년</button>
     </div>
   </div>
 

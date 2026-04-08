@@ -35,6 +35,8 @@
 
     /* ── 요약 카드 ── */
     .summary-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin-bottom:20px;}
+    @media(max-width:1200px){.summary-grid{grid-template-columns:repeat(4,1fr);}}
+    @media(max-width:768px){.summary-grid{grid-template-columns:repeat(3,1fr);}}
     .sum-card.c-bt-top::before{background:#dc2626;}
     .sum-card.c-bt-low::before{background:var(--target);}
     .sum-card.c-bt-top .sum-value{color:#dc2626;}
@@ -65,6 +67,7 @@
 
     /* ── 2단 그리드 ── */
     .two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+    @media(max-width:900px){.two-col{grid-template-columns:1fr;}}
 
     /* ── 상태 분포 바 ── */
     .status-dist{display:flex;height:24px;border-radius:6px;overflow:hidden;margin-bottom:8px;}

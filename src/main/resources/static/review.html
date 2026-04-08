@@ -137,21 +137,25 @@
   </div>
 </div>
 <div class="main">
-  <div class="guide-box">
-    <strong>차단대상 URL 현업 검토</strong>
-    차단대상으로 분류된 URL 목록입니다. 검토 후 <b>현업검토결과</b>와 <b>현업검토의견</b>을 입력해 주세요.<br>
-    차단이 부적절한 경우 "차단대상 제외"를 선택하고 사유를 기입해 주세요. 체크박스로 여러 건을 선택하여 일괄 변경할 수도 있습니다.
+  <!-- 가이드 (접기/펼치기) -->
+  <div class="guide-box" style="cursor:pointer;" onclick="this.querySelector('.guide-body').style.display=this.querySelector('.guide-body').style.display==='none'?'block':'none';">
+    <strong>차단대상 URL 현업 검토 <span style="font-weight:400;font-size:11px;color:#60a5fa;">▼ 클릭하여 접기/펼치기</span></strong>
+    <div class="guide-body">
+      차단대상으로 분류된 URL 목록입니다. 검토 후 <b>현업검토결과</b>와 <b>현업검토의견</b>을 입력해 주세요.<br>
+      차단이 부적절한 경우 "차단대상 제외"를 선택하고 사유를 기입해 주세요. 체크박스로 여러 건을 선택하여 일괄 변경할 수도 있습니다.
+    </div>
   </div>
 
   <div class="card" style="padding:12px 20px;">
-    <div style="display:flex;gap:12px;align-items:center;">
+    <!-- 1줄: 업무명 + 조회 + 엑셀 -->
+    <div style="display:flex;gap:12px;align-items:flex-end;margin-bottom:8px;">
       <label style="font-size:11px;color:var(--text-muted);font-weight:600;display:flex;flex-direction:column;gap:4px;">업무명
         <select id="bizSelect" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;outline:none;background:var(--card);min-width:160px;">
           <option value="">(전체)</option>
         </select>
       </label>
-      <button class="btn btn-blue" onclick="loadReviewData()" style="align-self:flex-end;">조회</button>
-      <button class="btn btn-green" id="excelBtn" onclick="downloadExcel()" style="display:none;align-self:flex-end;">⬇ 엑셀 다운로드</button>
+      <button class="btn btn-blue" onclick="loadReviewData()">조회</button>
+      <button class="btn btn-green" id="excelBtn" onclick="downloadExcel()" style="display:none;">⬇ 엑셀 다운로드</button>
     </div>
   </div>
 
@@ -164,24 +168,30 @@
     <div class="stat-pill"><span>미검토</span><strong id="rPending" style="color:var(--text-muted);">0</strong></div>
   </div>
 
-  <div class="filter-bar" id="filterBar" style="display:none">
-    <input type="text" id="searchInput" placeholder="URL, 메뉴명, 비고 검색" oninput="filterTable()" style="width:200px;">
-    <input type="text" id="searchTeam" placeholder="팀/현업팀 검색" oninput="filterTable()" style="width:120px;">
-    <input type="text" id="searchManager" placeholder="담당자/현업담당자 검색" oninput="filterTable()" style="width:140px;">
-    <select id="btFilter" onchange="filterTable()">
-      <option value="">전체 차단대상</option>
-      <option value="최우선 차단대상">최우선 차단대상</option>
-      <option value="후순위 차단대상">후순위 차단대상</option>
-      <option value="검토필요 차단대상">검토필요 차단대상</option>
-    </select>
-    <select id="rvFilter" onchange="filterTable()">
-      <option value="">전체 검토결과</option>
-      <option value="미검토">미검토</option>
-      <option value="차단대상 제외">차단대상 제외</option>
-      <option value="차단확정">차단확정</option>
-      <option value="판단불가">판단불가</option>
-    </select>
-    <span class="filter-count" id="filterCount"></span>
+  <div id="filterBar" style="display:none;margin-bottom:10px;">
+    <!-- 1줄: 드롭다운 필터 -->
+    <div class="filter-bar" style="margin-bottom:6px;">
+      <select id="btFilter" onchange="filterTable()" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;">
+        <option value="">전체 차단대상</option>
+        <option value="최우선 차단대상">최우선 차단대상</option>
+        <option value="후순위 차단대상">후순위 차단대상</option>
+        <option value="검토필요 차단대상">검토필요 차단대상</option>
+      </select>
+      <select id="rvFilter" onchange="filterTable()" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;">
+        <option value="">전체 검토결과</option>
+        <option value="미검토">미검토</option>
+        <option value="차단대상 제외">차단대상 제외</option>
+        <option value="차단확정">차단확정</option>
+        <option value="판단불가">판단불가</option>
+      </select>
+      <span class="filter-count" id="filterCount"></span>
+    </div>
+    <!-- 2줄: 텍스트 검색 -->
+    <div class="filter-bar">
+      <input type="text" id="searchInput" placeholder="URL, 메뉴명, 비고 검색" oninput="filterTable()" style="width:200px;padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;">
+      <input type="text" id="searchTeam" placeholder="팀/현업팀 검색" oninput="filterTable()" style="width:120px;padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;">
+      <input type="text" id="searchManager" placeholder="담당자/현업담당자 검색" oninput="filterTable()" style="width:140px;padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;">
+    </div>
   </div>
 
   <!-- 일괄 변경 바 -->
