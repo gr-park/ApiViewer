@@ -25,6 +25,7 @@ public class ReposYamlConfig {
         private String whatapMockEnabled;
         private String jenniferMockEnabled;
         private String apmLogLevel;
+        private Integer logTailLines;
         private Integer whatapPtotal;
         private Integer whatapPsize;
         private List<WhatapProfile> whatapProfiles;
@@ -50,6 +51,8 @@ public class ReposYamlConfig {
         public void setJenniferMockEnabled(String jenniferMockEnabled) { this.jenniferMockEnabled = jenniferMockEnabled; }
         public String getApmLogLevel() { return apmLogLevel; }
         public void setApmLogLevel(String apmLogLevel) { this.apmLogLevel = apmLogLevel; }
+        public Integer getLogTailLines() { return logTailLines; }
+        public void setLogTailLines(Integer v) { this.logTailLines = v; }
         public Integer getWhatapPtotal() { return whatapPtotal; }
         public void setWhatapPtotal(Integer v) { this.whatapPtotal = v; }
         public Integer getWhatapPsize() { return whatapPsize; }

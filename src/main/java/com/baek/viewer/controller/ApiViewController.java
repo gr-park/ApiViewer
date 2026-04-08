@@ -56,6 +56,13 @@ public class ApiViewController {
         this.authService = authService;
     }
 
+    /** 토큰 유효성 확인 (페이지 로드 시 자동 검증용) */
+    @GetMapping("/auth/check")
+    public ResponseEntity<?> checkAuth(@RequestHeader(value = "X-Admin-Token", required = false) String token) {
+        boolean valid = token != null && authService.isValid(token);
+        return ResponseEntity.ok(Map.of("valid", valid));
+    }
+
     /** 비밀번호 확인 → 토큰 발급 + 쿠키 설정 */
     @PostMapping("/verify-password")
     public ResponseEntity<?> verifyPassword(@RequestBody Map<String, String> body,
@@ -517,24 +524,46 @@ public class ApiViewController {
         }
     }
 
-    /** 특정 날짜의 로그 내용 조회 (type: system/business, quiet=true면 감사 로그 기록 안함) */
+    /**
+     * 특정 날짜의 로그 내용 조회 (type: system/business).
+     * tail: 뒤에서 N줄만 반환. 0이면 전체. 미지정 시 글로벌 설정(logTailLines) 사용.
+     */
     @GetMapping("/logs/view")
     public ResponseEntity<?> logView(@RequestParam String date,
                                       @RequestParam(defaultValue = "business") String type,
-                                      @RequestParam(defaultValue = "false") boolean quiet) {
+                                      @RequestParam(defaultValue = "false") boolean quiet,
+                                      @RequestParam(required = false) Integer tail) {
         String prefix = "system".equals(type) ? "system" : "business";
-        if (!quiet) log.info("[로그 조회] type={}, date={}", prefix, date);
+        // tail 미지정 시 글로벌 설정 사용
+        int tailLines = tail != null ? tail
+                : globalConfigRepository.findById(1L).map(g -> g.getLogTailLines()).orElse(1000);
+        if (!quiet) log.info("[로그 조회] type={}, date={}, tail={}", prefix, date, tailLines);
         try {
             Path logDir = Paths.get("./logs");
             String today = LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE);
             Path logFile = date.equals(today) ? logDir.resolve(prefix + ".log") : logDir.resolve(prefix + "-" + date + ".log");
             if (!Files.exists(logFile)) {
-                return ResponseEntity.ok(Map.of("date", date, "content", "로그 파일이 없습니다."));
+                return ResponseEntity.ok(Map.of("date", date, "content", "로그 파일이 없습니다.",
+                        "totalLines", 0, "shownLines", 0, "fileSizeBytes", 0, "truncated", false));
             }
-            String content = Files.readString(logFile);
-            return ResponseEntity.ok(Map.of("date", date, "content", content));
+            long fileSize = Files.size(logFile);
+            List<String> allLines = Files.readAllLines(logFile);
+            int totalLines = allLines.size();
+            boolean truncated = tailLines > 0 && totalLines > tailLines;
+            List<String> lines = truncated ? allLines.subList(totalLines - tailLines, totalLines) : allLines;
+            String content = String.join("\n", lines);
+
+            Map<String, Object> result = new java.util.LinkedHashMap<>();
+            result.put("date", date);
+            result.put("content", content);
+            result.put("totalLines", totalLines);
+            result.put("shownLines", lines.size());
+            result.put("fileSizeBytes", fileSize);
+            result.put("truncated", truncated);
+            return ResponseEntity.ok(result);
         } catch (IOException e) {
-            return ResponseEntity.ok(Map.of("date", date, "content", "로그 읽기 실패: " + e.getMessage()));
+            return ResponseEntity.ok(Map.of("date", date, "content", "로그 읽기 실패: " + e.getMessage(),
+                    "totalLines", 0, "shownLines", 0, "fileSizeBytes", 0, "truncated", false));
         }
     }
 

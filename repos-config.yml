@@ -29,6 +29,9 @@ global:
   # 로그 레벨 (INFO: 기본 / DEBUG: API파싱 과정 + APM 요청/응답 전문 + 전체 상세 로그)
   apmLogLevel: "INFO"
 
+  # 로그 조회 시 tail 줄 수 (기본 1000, 0이면 전체 — 대용량 시 브라우저 다운 주의)
+  logTailLines: 1000
+
   # 와탭 조회 파라미터 (ptotal: 전체 건수 상한, psize: 한 페이지 건수)
   whatapPtotal: 100
   whatapPsize: 10000

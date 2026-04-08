@@ -43,7 +43,8 @@ public class WebConfig implements WebMvcConfigurer {
                         "/api/upload/**"           // 엑셀 업로드
                 )
                 .excludePathPatterns(
-                        "/api/apm/chart"           // 차트 조회는 공개 (viewer.html)
+                        "/api/apm/chart",          // 차트 조회는 공개 (viewer.html)
+                        "/api/auth/**"             // 토큰 유효성 확인 (인증 전 호출)
                 );
 
         // 관리자 전용 HTML 페이지 보호 (adminToken 쿠키)

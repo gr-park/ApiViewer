@@ -53,6 +53,10 @@ public class GlobalConfig {
     @Column(name = "apm_log_level", length = 10)
     private String apmLogLevel = "INFO";
 
+    /** 로그 조회 시 tail 줄 수 (기본 1000, 0이면 전체) */
+    @Column(name = "log_tail_lines")
+    private Integer logTailLines = 1000;
+
     /** 와탭 조회 ptotal (전체 건수 상한, 기본 100) */
     @Column(name = "whatap_ptotal")
     private Integer whatapPtotal = 100;
@@ -90,6 +94,8 @@ public class GlobalConfig {
     public String getApmLogLevel() { return apmLogLevel != null ? apmLogLevel : "INFO"; }
     public void setApmLogLevel(String v) { this.apmLogLevel = v; }
     public boolean isApmDebug() { return "DEBUG".equalsIgnoreCase(getApmLogLevel()); }
+    public Integer getLogTailLines() { return logTailLines != null ? logTailLines : 1000; }
+    public void setLogTailLines(Integer v) { this.logTailLines = v; }
     public Integer getWhatapPtotal() { return whatapPtotal != null ? whatapPtotal : 100; }
     public void setWhatapPtotal(Integer v) { this.whatapPtotal = v; }
     public Integer getWhatapPsize() { return whatapPsize != null ? whatapPsize : 10000; }

@@ -110,16 +110,47 @@
 
 <script>
 (async function guard() {
-  if (sessionStorage.getItem('isAdmin') === 'true') return;
+  // 1. 기존 토큰이 있으면 서버에 유효성 확인
+  const savedToken = sessionStorage.getItem('adminToken');
+  if (savedToken) {
+    try {
+      const chk = await fetch('/api/auth/check', { headers: {'X-Admin-Token': savedToken} });
+      const chkData = await chk.json();
+      if (chkData.valid) {
+        sessionStorage.setItem('isAdmin', 'true');
+        updateAdminBadge(true);
+        return; // 유효 → 통과
+      }
+    } catch(e) {}
+    // 토큰 만료/서버 재시작 → 클리어
+    sessionStorage.removeItem('isAdmin');
+    sessionStorage.removeItem('adminToken');
+  }
+
+  // 2. 비밀번호 입력
   const pw = await customPrompt('관리자 비밀번호를 입력하세요:', {type:'password', title:'🔑 관리자 인증'});
   if (!pw) { location.href = '/'; return; }
   try {
     const res = await fetch('/api/verify-password', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({password:pw}) });
     const d = await res.json();
-    if (d.valid) { sessionStorage.setItem('isAdmin','true'); sessionStorage.setItem('adminToken',d.token); }
-    else { await customAlert('비밀번호가 일치하지 않습니다.', {title:'인증 실패'}); location.href = '/'; }
+    if (d.valid) {
+      sessionStorage.setItem('isAdmin','true');
+      sessionStorage.setItem('adminToken',d.token);
+      updateAdminBadge(true);
+    } else {
+      await customAlert('비밀번호가 일치하지 않습니다.', {title:'인증 실패'});
+      location.href = '/';
+    }
   } catch(e) { await customAlert('인증 실패', {title:'오류'}); location.href = '/'; }
 })();
+
+function updateAdminBadge(valid) {
+  const badge = document.getElementById('adminBadge');
+  if (badge) {
+    badge.style.display = valid ? 'inline-block' : 'none';
+    badge.textContent = valid ? '관리자 인증됨' : '';
+  }
+}
 </script>
 <div class="header">
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
@@ -128,6 +159,7 @@
   <h1>URL Viewer</h1>
   <span class="header-sub">설정 관리</span>
   <div class="header-right">
+    <span id="adminBadge" style="display:none;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:700;background:#dcfce7;color:#166534;border:1px solid #86efac;margin-right:8px;cursor:default;">관리자 인증됨</span>
     <a href="/"             class="nav-link">📊 대시보드</a>
     <a href="/viewer.html"  class="nav-link">📋 URL분석현황</a>
     <a href="/call-stats.html" class="nav-link">📈 URL호출현황</a>
@@ -209,6 +241,10 @@
           <option value="N">N (실제 API)</option>
           <option value="Y">Y (Mock 데이터)</option>
         </select>
+      </label>
+      <label class="field">로그 Tail 줄수
+        <input id="gLogTailLines" type="number" min="0" step="100" style="width:80px;padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;">
+        <span class="field-hint">로그 조회 시 뒤에서 N줄 (0=전체)</span>
       </label>
       <label class="field">와탭 ptotal
         <input id="gWhatapPtotal" type="number" min="1" style="width:80px;padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;">
@@ -309,10 +345,14 @@
       <label class="field">날짜 선택
         <input id="logDate" type="date" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;">
       </label>
+      <label class="field" style="min-width:auto;">Tail 줄수
+        <input id="logTailLines" type="number" min="0" step="100" style="width:70px;padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;" title="0이면 전체 (대용량 주의)">
+      </label>
       <button class="btn btn-blue" style="height:34px;" onclick="loadLog()">조회</button>
       <button class="btn btn-ghost" style="height:34px;" onclick="loadLogDates()">새로고침</button>
       <button class="btn btn-ghost" id="tailBtn" style="height:34px;" onclick="toggleTailing()">⚪ 실시간 OFF</button>
     </div>
+    <div id="logTruncInfo" style="display:none;margin-bottom:8px;padding:6px 12px;background:#fef3c7;border:1px solid #fcd34d;border-radius:6px;font-size:11px;color:#92400e;"></div>
     <div id="logDatesBar" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;"></div>
     <div id="logContent" style="background:#1e293b;color:#e2e8f0;border-radius:8px;padding:16px;font-family:'Consolas',monospace;font-size:11px;line-height:1.6;max-height:500px;overflow:auto;white-space:pre-wrap;word-break:break-all;">
       날짜를 선택하고 조회를 클릭하세요.
@@ -384,6 +424,23 @@
       <button class="modal-close" onclick="closeModal()">×</button>
     </div>
     <div class="modal-body">
+      <input id="f_gitBinPath" type="hidden">
+
+      <!-- ① Git 설정 -->
+      <div class="modal-section">Git 설정</div>
+      <div class="field-row col3">
+        <label class="field">Git 브랜치
+          <input id="f_gitBranch" type="text" placeholder="비워두면 현재 브랜치 유지">
+        </label>
+        <label class="field">분석 시 Git Pull
+          <select id="f_gitPullEnabled">
+            <option value="Y">Y (Pull 후 분석)</option>
+            <option value="N">N (Pull 안 함)</option>
+          </select>
+        </label>
+      </div>
+
+      <!-- ② 기본 정보 -->
       <div class="modal-section">기본 정보</div>
       <div class="field-row col2">
         <label class="field">레포지토리명 *
@@ -399,16 +456,17 @@
         </label>
       </div>
       <div class="field-row col3">
-        <input id="f_gitBinPath" type="hidden">
-        <label class="field">Git 브랜치
-          <input id="f_gitBranch" type="text" placeholder="비워두면 현재 브랜치 유지" style="width:120px;">
+        <label class="field">팀명
+          <input id="f_teamName" type="text" placeholder="IT개발팀">
         </label>
-        <label class="field">분석 시 Git Pull
-          <select id="f_gitPullEnabled">
-            <option value="Y">Y (Pull 후 분석)</option>
-            <option value="N">N (Pull 안 함)</option>
-          </select>
+        <label class="field">담당자
+          <input id="f_managerName" type="text" placeholder="홍길동">
         </label>
+        <label class="field">업무명
+          <input id="f_businessName" type="text" placeholder="카드회원관리">
+        </label>
+      </div>
+      <div class="field-row col3">
         <label class="field">분석배치 수행
           <select id="f_analysisBatchEnabled">
             <option value="Y">Y</option>
@@ -424,17 +482,8 @@
         <label class="field">URL 경로 프리픽스
           <input id="f_apiPathPrefix" type="text" placeholder="/APP">
         </label>
-        <label class="field">팀명
-          <input id="f_teamName" type="text" placeholder="IT개발팀">
-        </label>
       </div>
-      <div class="field-row col3">
-        <label class="field">담당자
-          <input id="f_managerName" type="text" placeholder="홍길동">
-        </label>
-        <label class="field">업무명
-          <input id="f_businessName" type="text" placeholder="카드회원관리">
-        </label>
+      <div class="field-row">
         <label class="field">상수 치환 (PATH_CONSTANTS)
           <input id="f_pathConstants" type="text" placeholder="Constants.BASE=/v1, ApiConst.ROOT=/api/v2">
         </label>
@@ -520,6 +569,10 @@
       document.getElementById('gApmLogLevel').value     = g.apmLogLevel || 'INFO';
       document.getElementById('gWhatapPtotal').value   = g.whatapPtotal ?? 100;
       document.getElementById('gWhatapPsize').value    = g.whatapPsize ?? 10000;
+      // 로그 tail 줄수 — 공통설정 + 로그조회 화면 모두 세팅
+      const tailVal = g.logTailLines ?? 1000;
+      document.getElementById('gLogTailLines').value   = tailVal;
+      document.getElementById('logTailLines').value    = tailVal;
       // 팀 목록 로드
       document.getElementById('teamsList').innerHTML = '';
       try {
@@ -578,6 +631,7 @@
       whatapMockEnabled: document.getElementById('gWhatapMock').value,
       jenniferMockEnabled: document.getElementById('gJenniferMock').value,
       apmLogLevel: document.getElementById('gApmLogLevel').value,
+      logTailLines: parseInt(document.getElementById('gLogTailLines').value) || 1000,
       whatapPtotal: parseInt(document.getElementById('gWhatapPtotal').value) || 100,
       whatapPsize: parseInt(document.getElementById('gWhatapPsize').value) || 10000,
       teams: (() => { const t = collectTeams(); return t.length ? JSON.stringify(t) : null; })(),
@@ -1030,16 +1084,25 @@
     if (!date) { if (!quiet) showToast('날짜를 선택하세요.', 'error'); return; }
     const el = document.getElementById('logContent');
     if (!quiet) el.textContent = '로그 조회 중...';
-    // 사용자가 바닥에 있었는지 확인 (이후 자동 스크롤 여부 결정)
     const atBottom = (el.scrollHeight - el.scrollTop - el.clientHeight) < 40;
+    const tailVal = parseInt(document.getElementById('logTailLines').value) || 0;
     try {
-      const res = await fetch(`/api/logs/view?date=${date}&type=${logType}&quiet=${quiet?'true':'false'}`, {headers:{'X-Admin-Token':sessionStorage.getItem('adminToken')||''}});
+      const url = `/api/logs/view?date=${date}&type=${logType}&quiet=${quiet?'true':'false'}` + (tailVal > 0 ? `&tail=${tailVal}` : '&tail=0');
+      const res = await fetch(url, {headers:{'X-Admin-Token':sessionStorage.getItem('adminToken')||''}});
       const data = await res.json();
       const newContent = data.content || '(빈 로그)';
       if (el.textContent !== newContent) {
         el.textContent = newContent;
       }
-      // 로그 영역 + 페이지 스크롤 모두 하단으로
+      // truncated 안내
+      const infoEl = document.getElementById('logTruncInfo');
+      if (data.truncated) {
+        const sizeMB = (data.fileSizeBytes / 1024 / 1024).toFixed(1);
+        infoEl.textContent = `전체 ${data.totalLines.toLocaleString()}줄 중 마지막 ${data.shownLines.toLocaleString()}줄만 표시 (파일 크기: ${sizeMB}MB). 전체 보기는 tail 값을 0으로 설정하세요.`;
+        infoEl.style.display = 'block';
+      } else {
+        infoEl.style.display = 'none';
+      }
       if (atBottom || !quiet) {
         el.scrollTop = el.scrollHeight;
         el.scrollIntoView({ behavior: 'smooth', block: 'end' });
