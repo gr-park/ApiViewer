@@ -34,12 +34,20 @@ public class ApiExtractorService {
     private final ApiStorageService storageService;
     private final MockApmService mockApmService;
     private final com.baek.viewer.repository.RepoConfigRepository repoConfigRepository;
+    private final com.baek.viewer.repository.GlobalConfigRepository globalConfigRepository;
 
     public ApiExtractorService(ApiStorageService storageService, MockApmService mockApmService,
-                               com.baek.viewer.repository.RepoConfigRepository repoConfigRepository) {
+                               com.baek.viewer.repository.RepoConfigRepository repoConfigRepository,
+                               com.baek.viewer.repository.GlobalConfigRepository globalConfigRepository) {
         this.storageService = storageService;
         this.mockApmService = mockApmService;
         this.repoConfigRepository = repoConfigRepository;
+        this.globalConfigRepository = globalConfigRepository;
+    }
+
+    private boolean isDebug() {
+        return globalConfigRepository.findById(1L)
+                .map(com.baek.viewer.model.GlobalConfig::isApmDebug).orElse(false);
     }
 
     private volatile List<ApiInfo> cachedApis = new ArrayList<>();
@@ -222,6 +230,7 @@ public class ApiExtractorService {
                                                  List<String[]> git,
                                                  String apiPathPrefix,
                                                  Map<String, String> pathConstantsMap) throws Exception {
+        boolean debug = isDebug();
         List<ApiInfo> apis = new ArrayList<>();
         String source = new String(Files.readAllBytes(filePath), StandardCharsets.UTF_8);
         CompilationUnit cu = StaticJavaParser.parse(source);
@@ -243,6 +252,12 @@ public class ApiExtractorService {
                 List<String> paths = getPathsFromAnn(classAnn.get(), pathConstantsMap);
                 if (!paths.isEmpty()) classPath = paths.get(0).trim();
             }
+            if (debug) {
+                log.debug("[파싱-JP] 클래스={}, @RequestMapping={}, comment={}, reqProp={}",
+                        cls.getNameAsString(), classPath.isEmpty() ? "(없음)" : classPath,
+                        controllerComment.length() > 40 ? controllerComment.substring(0, 40) + "..." : controllerComment,
+                        controllerRequestProperty);
+            }
         }
 
         for (MethodDeclaration method : cu.findAll(MethodDeclaration.class)) {
@@ -259,8 +274,18 @@ public class ApiExtractorService {
                     ApiInfo info = buildApiInfo(filePath, relPath, method, git,
                             finalPath, httpMethod, controllerComment, controllerRequestProperty);
                     apis.add(info);
+
+                    if (debug) {
+                        log.debug("[파싱-JP]   {} {} | method={} | deprecated={} | urlBlock={} | programId={} | apiOp={}",
+                                httpMethod, finalPath, method.getNameAsString(),
+                                info.getIsDeprecated(), info.getHasUrlBlock(), info.getProgramId(),
+                                info.getApiOperationValue());
+                    }
                 }
             }
+        }
+        if (debug) {
+            log.debug("[파싱-JP] {} 완료 — {}개 API 추출", filePath.getFileName(), apis.size());
         }
         return apis;
     }
@@ -273,6 +298,7 @@ public class ApiExtractorService {
                                             List<String[]> git,
                                             String apiPathPrefix,
                                             Map<String, String> pathConstantsMap) {
+        boolean debug = isDebug();
         List<ApiInfo> apis = new ArrayList<>();
         try {
             String raw = new String(Files.readAllBytes(filePath), StandardCharsets.UTF_8);
@@ -290,6 +316,10 @@ public class ApiExtractorService {
                         .replaceAll("\"\\s*\\+\\s*\"", "");
                 Matcher cp = Pattern.compile("\"([^\"]+)\"").matcher(cParams);
                 if (cp.find()) classPath = cp.group(1).trim();
+            }
+            if (debug) {
+                log.debug("[파싱-RX] 파일={}, @RequestMapping={}", filePath.getFileName(),
+                        classPath.isEmpty() ? "(없음)" : classPath);
             }
 
             Matcher mMatcher = Pattern.compile(
@@ -366,6 +396,10 @@ public class ApiExtractorService {
                     info.setRequestPropertyValue("-");
                     info.setControllerRequestPropertyValue("-");
                     apis.add(info);
+                    if (debug) {
+                        log.debug("[파싱-RX]   {} {} | method={} | deprecated={} | urlBlock={}",
+                                httpMethod, finalPath, methodName, info.getIsDeprecated(), info.getHasUrlBlock());
+                    }
                 }
 
                 if (!found) {
@@ -389,9 +423,16 @@ public class ApiExtractorService {
                     info.setRequestPropertyValue("-");
                     info.setControllerRequestPropertyValue("-");
                     apis.add(info);
+                    if (debug) {
+                        log.debug("[파싱-RX]   {} {} (빈매핑) | method={} | deprecated={}",
+                                httpMethod, info.getApiPath(), methodName, info.getIsDeprecated());
+                    }
                 }
             }
         } catch (Exception ignored) {}
+        if (debug) {
+            log.debug("[파싱-RX] {} 완료 — {}개 API 추출", filePath.getFileName(), apis.size());
+        }
         return apis;
     }
 

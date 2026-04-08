@@ -198,6 +198,8 @@ public class JenniferApmService {
 
     private Map<String, long[]> fetchRealDay(RepoConfig repo, String instanceId,
                                               long startTime, long endTime) throws Exception {
+        boolean debug = globalConfigRepo.findById(1L).map(GlobalConfig::isApmDebug).orElse(false);
+
         StringBuilder url = new StringBuilder(repo.getJenniferUrl())
                 .append("?domain_id=").append(repo.getJenniferSid())
                 .append("&start_time=").append(startTime)
@@ -209,6 +211,10 @@ public class JenniferApmService {
             url.append("&filter=").append(URLEncoder.encode(repo.getJenniferFilter(), StandardCharsets.UTF_8));
         }
 
+        if (debug) {
+            log.debug("[JENNIFER-REQ] GET {}", url);
+        }
+
         HttpRequest.Builder builder = HttpRequest.newBuilder()
                 .uri(URI.create(url.toString()))
                 .timeout(Duration.ofSeconds(30))
@@ -218,6 +224,12 @@ public class JenniferApmService {
         }
 
         HttpResponse<String> resp = httpClient.send(builder.build(), HttpResponse.BodyHandlers.ofString());
+
+        if (debug) {
+            log.debug("[JENNIFER-RES] HTTP {} | length={} | body={}", resp.statusCode(), resp.body().length(),
+                    resp.body().length() > 2000 ? resp.body().substring(0, 2000) + "...(truncated)" : resp.body());
+        }
+
         if (resp.statusCode() != 200) {
             throw new RuntimeException("HTTP " + resp.statusCode() + " — " + resp.body());
         }

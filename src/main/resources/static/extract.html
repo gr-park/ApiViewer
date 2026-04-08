@@ -113,6 +113,13 @@
     .log-msg.m-ERROR { color: #fca5a5; }
     .log-msg.m-WARN  { color: #fde68a; }
     .log-empty { color: #475569; padding: 20px; text-align: center; }
+
+    /* APM 기간 바로가기 버튼 */
+    .apm-range-btn { padding:4px 10px; border:1px solid var(--border); border-radius:6px; font-size:11px;
+      font-weight:600; background:#f1f5f9; color:#334155; cursor:pointer; white-space:nowrap; }
+    .apm-range-btn:hover { background:#e2e8f0; }
+    .apm-range-btn.active { background:var(--primary); color:#fff; border-color:var(--primary); }
+    .apm-range-btn.disabled { opacity:.4; pointer-events:none; }
   </style>
   <script src="/exceljs.min.js"></script>
   <script src="/js/dialog.js"></script>
@@ -283,6 +290,14 @@
             <option value="MOCK">MOCK (테스트)</option>
           </select>
         </label>
+        <label class="field">기간
+          <div style="display:flex;gap:4px;">
+            <button type="button" class="apm-range-btn" onclick="setApmRange(1)">1일전</button>
+            <button type="button" class="apm-range-btn" onclick="setApmRange(7)">1주일</button>
+            <button type="button" class="apm-range-btn" onclick="setApmRange(30)">1달</button>
+            <button type="button" class="apm-range-btn apm-range-year" onclick="setApmRange(365)">1년</button>
+          </div>
+        </label>
         <label class="field">시작일
           <input id="apmCollectFrom" type="date" style="padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;">
         </label>
@@ -390,6 +405,43 @@
     } catch(e) {}
   }
 
+  // APM 기간 바로가기 버튼
+  function setApmRange(days) {
+    const src = document.getElementById('apmCollectSource').value;
+    const maxDays = src === 'JENNIFER' ? 30 : 365;
+    if (days > maxDays) {
+      showToast(`${src}는 최대 ${maxDays}일까지 가능합니다.`, 'error');
+      return;
+    }
+    const to = new Date();
+    to.setDate(to.getDate() - 1); // 어제까지
+    const from = new Date(to.getTime() - (days - 1) * 86400000);
+    document.getElementById('apmCollectTo').value = to.toLocaleDateString('sv-SE');
+    document.getElementById('apmCollectFrom').value = from.toLocaleDateString('sv-SE');
+    // active 스타일 토글
+    document.querySelectorAll('.apm-range-btn').forEach(b => b.classList.remove('active'));
+    event.target.classList.add('active');
+    const label = days === 1 ? '1일전(어제)' : days === 7 ? '1주일' : days === 30 ? '1달' : '1년';
+    document.getElementById('apmCollectResult').innerHTML =
+      `<span style="color:var(--text-muted);">ℹ 기간 ${label} 선택 — ${from.toLocaleDateString('sv-SE')} ~ ${to.toLocaleDateString('sv-SE')} (${days}일)</span>`;
+    updateRangeButtons();
+  }
+
+  // APM source에 따라 1년 버튼 활성/비활성 처리
+  function updateRangeButtons() {
+    const src = document.getElementById('apmCollectSource').value;
+    const yearBtn = document.querySelector('.apm-range-year');
+    if (yearBtn) {
+      if (src === 'JENNIFER') {
+        yearBtn.classList.add('disabled');
+        yearBtn.title = 'JENNIFER는 최대 30일까지 가능';
+      } else {
+        yearBtn.classList.remove('disabled');
+        yearBtn.title = '';
+      }
+    }
+  }
+
   // APM 종류 변경 시: 기간 자동 세팅 (WHATAP=365일, JENNIFER=30일) + 가이드
   function onApmSourceChange(autoSetRange) {
     const src = document.getElementById('apmCollectSource').value;
@@ -402,6 +454,9 @@
       document.getElementById('apmCollectFrom').value = fromDate.toLocaleDateString('sv-SE');
       document.getElementById('apmCollectResult').innerHTML =
         `<span style="color:var(--text-muted);">ℹ ${src} 최대 기간 ${maxDays}일로 자동 세팅되었습니다.</span>`;
+      // 바로가기 버튼 active 초기화 + 1년 버튼 상태 업데이트
+      document.querySelectorAll('.apm-range-btn').forEach(b => b.classList.remove('active'));
+      updateRangeButtons();
       return;
     }
     // 수동 변경 시 경고 체크

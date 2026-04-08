@@ -49,6 +49,10 @@ public class GlobalConfig {
     @Column(name = "jennifer_mock_enabled", length = 5)
     private String jenniferMockEnabled = "N";
 
+    /** APM 로그 레벨 (INFO / DEBUG) — DEBUG 시 요청/응답 JSON 전문 기록 */
+    @Column(name = "apm_log_level", length = 10)
+    private String apmLogLevel = "INFO";
+
 
     public Long getId() { return id; }
     public String getStartDate() { return startDate; }
@@ -75,4 +79,7 @@ public class GlobalConfig {
     public String getJenniferMockEnabled() { return jenniferMockEnabled != null ? jenniferMockEnabled : "N"; }
     public void setJenniferMockEnabled(String v) { this.jenniferMockEnabled = v; }
     public boolean isJenniferMockEnabled() { return "Y".equalsIgnoreCase(getJenniferMockEnabled()); }
+    public String getApmLogLevel() { return apmLogLevel != null ? apmLogLevel : "INFO"; }
+    public void setApmLogLevel(String v) { this.apmLogLevel = v; }
+    public boolean isApmDebug() { return "DEBUG".equalsIgnoreCase(getApmLogLevel()); }
 }

@@ -100,6 +100,9 @@ public class YamlConfigService {
             if (g.getJenniferMockEnabled() != null) {
                 gc.setJenniferMockEnabled(normalizeYN(g.getJenniferMockEnabled()));
             }
+            if (g.getApmLogLevel() != null) {
+                gc.setApmLogLevel(g.getApmLogLevel().trim().toUpperCase());
+            }
 
             // teams, 와탭/제니퍼 공통 프로필 JSON 저장
             try {

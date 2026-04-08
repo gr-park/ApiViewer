@@ -4,6 +4,7 @@ logs/*.log
 .DS_Store
 *.class
 *.jar
+!lib/*.jar
 *.war
 *.ear
 .idea/workspace.xml

@@ -41,6 +41,14 @@
             <version>2.3.232</version>
             <scope>runtime</scope>
         </dependency>
+        <!-- PostgreSQL JDBC (lib 폴더 로컬 JAR — 망분리 환경) -->
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <version>42.7.4</version>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/lib/postgresql-42.7.4.jar</systemPath>
+        </dependency>
         <dependency>
             <groupId>org.quartz-scheduler</groupId>
             <artifactId>quartz</artifactId>
@@ -59,6 +67,10 @@
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
+                <configuration>
+                    <!-- system scope JAR (lib/) 포함하여 fat-jar 빌드 -->
+                    <includeSystemScope>true</includeSystemScope>
+                </configuration>
             </plugin>
         </plugins>
     </build>

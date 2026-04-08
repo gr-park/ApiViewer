@@ -55,7 +55,7 @@ public class RepoConfig {
     @Column(name = "whatap_profile_name", length = 50)
     private String whatapProfileName;
 
-    @Column(name = "whatap_url", length = 500)
+    @Column(name = "whatap_url", columnDefinition = "TEXT")
     private String whatapUrl;
 
     @Column(name = "whatap_pcode")
@@ -84,7 +84,7 @@ public class RepoConfig {
     @Column(name = "jennifer_profile_name", length = 50)
     private String jenniferProfileName;
 
-    @Column(name = "jennifer_url", length = 500)
+    @Column(name = "jennifer_url", columnDefinition = "TEXT")
     private String jenniferUrl;
 
     @Column(name = "jennifer_sid")

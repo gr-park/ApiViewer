@@ -204,6 +204,8 @@ public class WhatapApmService {
 
     private Map<String, long[]> fetchRealDay(RepoConfig repo, long stime, long etime,
                                               List<Integer> okinds, int psize) throws Exception {
+        boolean debug = globalConfigRepo.findById(1L).map(GlobalConfig::isApmDebug).orElse(false);
+
         Map<String, Object> params = new LinkedHashMap<>();
         params.put("stime", "");
         params.put("etime", "");
@@ -222,16 +224,28 @@ public class WhatapApmService {
         body.put("etime", etime);
         body.put("params", params);
 
+        String requestBody = objectMapper.writeValueAsString(body);
+
+        if (debug) {
+            log.debug("[WHATAP-REQ] POST {} | body={}", repo.getWhatapUrl(), requestBody);
+        }
+
         HttpRequest.Builder builder = HttpRequest.newBuilder()
                 .uri(URI.create(repo.getWhatapUrl()))
                 .timeout(Duration.ofSeconds(30))
                 .header("Content-Type", "application/json")
-                .POST(HttpRequest.BodyPublishers.ofString(objectMapper.writeValueAsString(body)));
+                .POST(HttpRequest.BodyPublishers.ofString(requestBody));
         if (repo.getWhatapCookie() != null && !repo.getWhatapCookie().isBlank()) {
             builder.header("Cookie", repo.getWhatapCookie());
         }
 
         HttpResponse<String> resp = httpClient.send(builder.build(), HttpResponse.BodyHandlers.ofString());
+
+        if (debug) {
+            log.debug("[WHATAP-RES] HTTP {} | length={} | body={}", resp.statusCode(), resp.body().length(),
+                    resp.body().length() > 2000 ? resp.body().substring(0, 2000) + "...(truncated)" : resp.body());
+        }
+
         if (resp.statusCode() != 200) {
             throw new RuntimeException("HTTP " + resp.statusCode() + " — " + resp.body());
         }

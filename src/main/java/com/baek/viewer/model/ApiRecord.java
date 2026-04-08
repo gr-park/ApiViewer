@@ -17,7 +17,7 @@ public class ApiRecord {
     @Column(name = "repository_name", nullable = false)
     private String repositoryName;
 
-    @Column(name = "api_path", nullable = false, length = 500)
+    @Column(name = "api_path", nullable = false, length = 2000)
     private String apiPath;
 
     @Column(name = "http_method", length = 20)
@@ -70,13 +70,13 @@ public class ApiRecord {
     @Column(name = "call_count_week")
     private Long callCountWeek;
 
-    @Column(name = "method_name")
+    @Column(name = "method_name", length = 500)
     private String methodName;
 
-    @Column(name = "controller_name")
+    @Column(name = "controller_name", length = 500)
     private String controllerName;
 
-    @Column(name = "repo_path", length = 500)
+    @Column(name = "repo_path", columnDefinition = "TEXT")
     private String repoPath;
 
     /** @Deprecated 어노테이션 여부 (상태 계산용, 내부 용도) */
@@ -87,13 +87,13 @@ public class ApiRecord {
     @Column(name = "has_url_block", length = 1)
     private String hasUrlBlock;
 
-    @Column(name = "program_id")
+    @Column(name = "program_id", length = 500)
     private String programId;
 
-    @Column(name = "api_operation_value", length = 500)
+    @Column(name = "api_operation_value", columnDefinition = "TEXT")
     private String apiOperationValue;
 
-    @Column(name = "description_tag", length = 500)
+    @Column(name = "description_tag", columnDefinition = "TEXT")
     private String descriptionTag;
 
     @Column(name = "full_comment", columnDefinition = "TEXT")
@@ -102,17 +102,17 @@ public class ApiRecord {
     @Column(name = "controller_comment", columnDefinition = "TEXT")
     private String controllerComment;
 
-    @Column(name = "request_property_value", length = 500)
+    @Column(name = "request_property_value", columnDefinition = "TEXT")
     private String requestPropertyValue;
 
-    @Column(name = "controller_request_property_value", length = 500)
+    @Column(name = "controller_request_property_value", columnDefinition = "TEXT")
     private String controllerRequestPropertyValue;
 
-    @Column(name = "full_url", length = 1000)
+    @Column(name = "full_url", columnDefinition = "TEXT")
     private String fullUrl;
 
     /** 컨트롤러 파일 풀패스 (/{repoName}/{repoPath}) */
-    @Column(name = "controller_file_path", length = 1000)
+    @Column(name = "controller_file_path", columnDefinition = "TEXT")
     private String controllerFilePath;
 
     /** 비고 (사용자 메모) */
@@ -152,7 +152,7 @@ public class ApiRecord {
     private Boolean statusChanged = false;
 
     /** 상태 변경 내역 로그 */
-    @Column(name = "status_change_log", length = 500)
+    @Column(name = "status_change_log", columnDefinition = "TEXT")
     private String statusChangeLog;
 
     /** 신규 추가 플래그 (분석 시 처음 발견) */
@@ -179,7 +179,9 @@ public class ApiRecord {
     public String getRepositoryName() { return repositoryName; }
     public void setRepositoryName(String repositoryName) { this.repositoryName = repositoryName; }
     public String getApiPath() { return apiPath; }
-    public void setApiPath(String apiPath) { this.apiPath = apiPath; }
+    public void setApiPath(String apiPath) {
+        this.apiPath = apiPath != null && apiPath.length() > 2000 ? apiPath.substring(0, 2000) : apiPath;
+    }
     public String getHttpMethod() { return httpMethod; }
     public void setHttpMethod(String httpMethod) { this.httpMethod = httpMethod; }
     public LocalDateTime getLastAnalyzedAt() { return lastAnalyzedAt; }

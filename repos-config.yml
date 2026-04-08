@@ -26,6 +26,9 @@ global:
   whatapMockEnabled: "Y"
   jenniferMockEnabled: "Y"
 
+  # APM 로그 레벨 (INFO: 일별 요약만 / DEBUG: 요청URL·요청Body·응답JSON 전문 기록)
+  apmLogLevel: "INFO"
+
   # 와탭 공통 프로필 (URL/쿠키 공유, 레포에서 profileName으로 참조)
   whatapProfiles:
     - name: "운영"

@@ -24,7 +24,9 @@ public class ApiInfo {
     private String hasUrlBlock = "N"; // 메소드 첫 줄에 UnsupportedOperationException throw 여부
 
     public String getApiPath() { return apiPath; }
-    public void setApiPath(String apiPath) { this.apiPath = apiPath; }
+    public void setApiPath(String apiPath) {
+        this.apiPath = apiPath != null && apiPath.length() > 2000 ? apiPath.substring(0, 2000) : apiPath;
+    }
 
     public String getFullUrl() { return fullUrl; }
     public void setFullUrl(String fullUrl) { this.fullUrl = fullUrl; }

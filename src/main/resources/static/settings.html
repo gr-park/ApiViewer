@@ -209,6 +209,13 @@
           <option value="N">N (실제 API)</option>
           <option value="Y">Y (Mock 데이터)</option>
         </select>
+      </label>
+      <label class="field">APM 로그 레벨
+        <select id="gApmLogLevel" style="width:120px;">
+          <option value="INFO">INFO (기본)</option>
+          <option value="DEBUG">DEBUG (요청/응답 전문)</option>
+        </select>
+        <span class="field-hint">DEBUG: 와탭/제니퍼 URL·요청·응답JSON 기록</span>
         <span class="field-hint">실제 API 미연동 시 Y 설정</span>
       </label>
     </div>
@@ -499,6 +506,7 @@
       document.getElementById('gPageNavSize').value      = g.pageNavSize      ?? 10;
       document.getElementById('gWhatapMock').value       = g.whatapMockEnabled || 'N';
       document.getElementById('gJenniferMock').value     = g.jenniferMockEnabled || 'N';
+      document.getElementById('gApmLogLevel').value     = g.apmLogLevel || 'INFO';
       // 팀 목록 로드
       document.getElementById('teamsList').innerHTML = '';
       try {
@@ -556,6 +564,7 @@
       pageNavSize: parseInt(document.getElementById('gPageNavSize').value) || 10,
       whatapMockEnabled: document.getElementById('gWhatapMock').value,
       jenniferMockEnabled: document.getElementById('gJenniferMock').value,
+      apmLogLevel: document.getElementById('gApmLogLevel').value,
       teams: (() => { const t = collectTeams(); return t.length ? JSON.stringify(t) : null; })(),
       whatapProfiles: wpList.length ? JSON.stringify(wpList) : null,
       jenniferProfiles: jpList.length ? JSON.stringify(jpList) : null

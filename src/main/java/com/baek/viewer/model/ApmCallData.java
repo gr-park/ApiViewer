@@ -22,7 +22,7 @@ public class ApmCallData {
     @Column(name = "repository_name", nullable = false)
     private String repositoryName;
 
-    @Column(name = "api_path", nullable = false, length = 500)
+    @Column(name = "api_path", nullable = false, length = 2000)
     private String apiPath;
 
     @Column(name = "call_date", nullable = false)
@@ -34,10 +34,10 @@ public class ApmCallData {
     @Column(name = "error_count")
     private long errorCount;
 
-    @Column(name = "error_message", length = 1000)
+    @Column(name = "error_message", columnDefinition = "TEXT")
     private String errorMessage;
 
-    @Column(name = "class_name", length = 300)
+    @Column(name = "class_name", columnDefinition = "TEXT")
     private String className;
 
     /** 데이터 소스: WHATAP, JENNIFER, MOCK */
@@ -49,7 +49,9 @@ public class ApmCallData {
     public String getRepositoryName() { return repositoryName; }
     public void setRepositoryName(String repositoryName) { this.repositoryName = repositoryName; }
     public String getApiPath() { return apiPath; }
-    public void setApiPath(String apiPath) { this.apiPath = apiPath; }
+    public void setApiPath(String apiPath) {
+        this.apiPath = apiPath != null && apiPath.length() > 2000 ? apiPath.substring(0, 2000) : apiPath;
+    }
     public LocalDate getCallDate() { return callDate; }
     public void setCallDate(LocalDate callDate) { this.callDate = callDate; }
     public long getCallCount() { return callCount; }

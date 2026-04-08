@@ -41,7 +41,25 @@ public class ConfigController {
     public ResponseEntity<?> saveGlobal(@RequestBody GlobalConfig config) {
         log.info("[공통설정 저장] PUT /api/config/global");
         config = globalRepo.save(config);
+        // APM 로그 레벨 동적 변경 (Logback)
+        applyApmLogLevel(config.getApmLogLevel());
         return ResponseEntity.ok(config);
+    }
+
+    /** Logback 로거 레벨을 동적으로 변경 (APM 서비스 패키지) */
+    private void applyApmLogLevel(String level) {
+        try {
+            ch.qos.logback.classic.Level lv = "DEBUG".equalsIgnoreCase(level)
+                    ? ch.qos.logback.classic.Level.DEBUG : ch.qos.logback.classic.Level.INFO;
+            ch.qos.logback.classic.LoggerContext ctx =
+                    (ch.qos.logback.classic.LoggerContext) LoggerFactory.getILoggerFactory();
+            ctx.getLogger("com.baek.viewer.service.WhatapApmService").setLevel(lv);
+            ctx.getLogger("com.baek.viewer.service.JenniferApmService").setLevel(lv);
+            ctx.getLogger("com.baek.viewer.service.ApiExtractorService").setLevel(lv);
+            log.info("[로그레벨 변경] APM/분석 서비스 → {}", lv);
+        } catch (Exception e) {
+            log.warn("[APM 로그레벨 변경 실패] {}", e.getMessage());
+        }
     }
 
     // ── 레포 설정 목록 ────────────────────────────────────
