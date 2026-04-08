@@ -92,14 +92,6 @@ public class YamlConfigService {
             if (g.getPageSize() != null) gc.setPageSize(g.getPageSize());
             if (g.getPageNavSize() != null) gc.setPageNavSize(g.getPageNavSize());
 
-            // mockEnabled: 글로벌 레벨에서 직접 읽기
-            // YAML에서 Y/true 모두 "Y"로 정규화 (SnakeYAML이 Y→Boolean true로 파싱)
-            if (g.getWhatapMockEnabled() != null) {
-                gc.setWhatapMockEnabled(normalizeYN(g.getWhatapMockEnabled()));
-            }
-            if (g.getJenniferMockEnabled() != null) {
-                gc.setJenniferMockEnabled(normalizeYN(g.getJenniferMockEnabled()));
-            }
             if (g.getApmLogLevel() != null) {
                 gc.setApmLogLevel(g.getApmLogLevel().trim().toUpperCase());
             }

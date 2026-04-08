@@ -22,10 +22,6 @@ global:
     - 멤버십운영팀
     - 보안관리팀
 
-  # Mock 사용 여부 (Y: 실제 API 대신 Mock 데이터 사용 / N: 실제 API 호출)
-  whatapMockEnabled: "Y"
-  jenniferMockEnabled: "Y"
-
   # 로그 레벨 (INFO: 기본 / DEBUG: API파싱 과정 + APM 요청/응답 전문 + 전체 상세 로그)
   apmLogLevel: "INFO"
 

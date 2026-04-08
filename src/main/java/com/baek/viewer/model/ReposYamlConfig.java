@@ -22,8 +22,6 @@ public class ReposYamlConfig {
         private Integer pageSize;
         private Integer pageNavSize;
         private List<String> teams;
-        private String whatapMockEnabled;
-        private String jenniferMockEnabled;
         private String apmLogLevel;
         private Integer logTailLines;
         private Integer whatapPtotal;
@@ -45,10 +43,6 @@ public class ReposYamlConfig {
         public void setPageNavSize(Integer pageNavSize) { this.pageNavSize = pageNavSize; }
         public List<String> getTeams() { return teams; }
         public void setTeams(List<String> teams) { this.teams = teams; }
-        public String getWhatapMockEnabled() { return whatapMockEnabled; }
-        public void setWhatapMockEnabled(String whatapMockEnabled) { this.whatapMockEnabled = whatapMockEnabled; }
-        public String getJenniferMockEnabled() { return jenniferMockEnabled; }
-        public void setJenniferMockEnabled(String jenniferMockEnabled) { this.jenniferMockEnabled = jenniferMockEnabled; }
         public String getApmLogLevel() { return apmLogLevel; }
         public void setApmLogLevel(String apmLogLevel) { this.apmLogLevel = apmLogLevel; }
         public Integer getLogTailLines() { return logTailLines; }

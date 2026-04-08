@@ -21,10 +21,8 @@ import java.time.ZoneId;
 import java.util.*;
 
 /**
- * Whatap APM 연동 서비스.
- *
- * whatapMockEnabled=true : Whatap 응답 스키마와 동일한 형태의 Mock 데이터 생성
- * whatapMockEnabled=false: 실제 Whatap API 호출 (URL 필수)
+ * Whatap APM 연동 서비스 — 실제 API 호출 전용.
+ * Mock 데이터가 필요하면 source=MOCK 사용 (MockApmService.doGenerate).
  *
  * 요청 형식 (POST JSON):
  * { type:"stat", path:"ap", pcode:N, stime:epochMs, etime:epochMs,

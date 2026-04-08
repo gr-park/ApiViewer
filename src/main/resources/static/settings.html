@@ -208,21 +208,6 @@ function updateAdminBadge(valid) {
 
     <!-- APM 설정 -->
     <div style="font-size:11px;font-weight:700;color:var(--text-muted);margin-bottom:6px;letter-spacing:.05em;">APM 설정</div>
-    <div class="field-row col3" style="margin-bottom:6px;">
-      <label class="field">와탭 Mock
-        <select id="gWhatapMock" style="width:120px;">
-          <option value="N">N (실제 API)</option>
-          <option value="Y">Y (Mock 데이터)</option>
-        </select>
-        <span class="field-hint">실제 API 미연동 시 Y 설정</span>
-      </label>
-      <label class="field">제니퍼 Mock
-        <select id="gJenniferMock" style="width:120px;">
-          <option value="N">N (실제 API)</option>
-          <option value="Y">Y (Mock 데이터)</option>
-        </select>
-      </label>
-    </div>
     <div class="field-row col3" style="margin-bottom:14px;">
       <label class="field">와탭 ptotal
         <input id="gWhatapPtotal" type="number" min="1" style="width:80px;">
@@ -576,8 +561,7 @@ function updateAdminBadge(valid) {
       document.getElementById('gReviewThreshold').value  = g.reviewThreshold  ?? 3;
       document.getElementById('gPageSize').value         = g.pageSize         ?? 200;
       document.getElementById('gPageNavSize').value      = g.pageNavSize      ?? 10;
-      document.getElementById('gWhatapMock').value       = g.whatapMockEnabled || 'N';
-      document.getElementById('gJenniferMock').value     = g.jenniferMockEnabled || 'N';
+      // whatapMockEnabled/jenniferMockEnabled 제거됨 (WHATAP/JENNIFER는 항상 실제 API)
       document.getElementById('gApmLogLevel').value     = g.apmLogLevel || 'INFO';
       document.getElementById('gWhatapPtotal').value   = g.whatapPtotal ?? 100;
       document.getElementById('gWhatapPsize').value    = g.whatapPsize ?? 10000;
@@ -640,8 +624,6 @@ function updateAdminBadge(valid) {
       reviewThreshold: parseInt(document.getElementById('gReviewThreshold').value) || 3,
       pageSize: parseInt(document.getElementById('gPageSize').value) || 200,
       pageNavSize: parseInt(document.getElementById('gPageNavSize').value) || 10,
-      whatapMockEnabled: document.getElementById('gWhatapMock').value,
-      jenniferMockEnabled: document.getElementById('gJenniferMock').value,
       apmLogLevel: document.getElementById('gApmLogLevel').value,
       logTailLines: parseInt(document.getElementById('gLogTailLines').value) || 1000,
       whatapPtotal: parseInt(document.getElementById('gWhatapPtotal').value) || 100,
