@@ -110,12 +110,12 @@ public interface ApmCallDataRepository extends JpaRepository<ApmCallData, Long> 
            "SUM(CASE WHEN a.callDate >= :weekAgo THEN a.callCount ELSE 0 END) " +
            "FROM ApmCallData a " +
            "WHERE (:repo IS NULL OR a.repositoryName = :repo) " +
-           "  AND (:q IS NULL OR LOWER(a.apiPath) LIKE LOWER(CONCAT('%', :q, '%'))) " +
+           "  AND (:q IS NULL OR LOWER(CAST(a.apiPath AS string)) LIKE LOWER(CONCAT('%', CAST(:q AS string), '%'))) " +
            "GROUP BY a.repositoryName, a.apiPath",
-           countQuery = "SELECT COUNT(DISTINCT CONCAT(a.repositoryName, '|', a.apiPath)) " +
+           countQuery = "SELECT COUNT(DISTINCT CONCAT(a.repositoryName, '|', CAST(a.apiPath AS string))) " +
            "FROM ApmCallData a " +
            "WHERE (:repo IS NULL OR a.repositoryName = :repo) " +
-           "  AND (:q IS NULL OR LOWER(a.apiPath) LIKE LOWER(CONCAT('%', :q, '%')))")
+           "  AND (:q IS NULL OR LOWER(CAST(a.apiPath AS string)) LIKE LOWER(CONCAT('%', CAST(:q AS string), '%')))")
     org.springframework.data.domain.Page<Object[]> aggregatePaged(
             @Param("yearAgo") LocalDate yearAgo,
             @Param("monthAgo") LocalDate monthAgo,

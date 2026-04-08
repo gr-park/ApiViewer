@@ -210,6 +210,14 @@
           <option value="Y">Y (Mock 데이터)</option>
         </select>
       </label>
+      <label class="field">와탭 ptotal
+        <input id="gWhatapPtotal" type="number" min="1" style="width:80px;padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;">
+        <span class="field-hint">전체 건수 상한 (기본 100)</span>
+      </label>
+      <label class="field">와탭 psize
+        <input id="gWhatapPsize" type="number" min="1" style="width:80px;padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;">
+        <span class="field-hint">한 페이지 건수 (기본 10000)</span>
+      </label>
       <label class="field">로그 레벨
         <select id="gApmLogLevel" style="width:120px;">
           <option value="INFO">INFO (기본)</option>
@@ -507,6 +515,8 @@
       document.getElementById('gWhatapMock').value       = g.whatapMockEnabled || 'N';
       document.getElementById('gJenniferMock').value     = g.jenniferMockEnabled || 'N';
       document.getElementById('gApmLogLevel').value     = g.apmLogLevel || 'INFO';
+      document.getElementById('gWhatapPtotal').value   = g.whatapPtotal ?? 100;
+      document.getElementById('gWhatapPsize').value    = g.whatapPsize ?? 10000;
       // 팀 목록 로드
       document.getElementById('teamsList').innerHTML = '';
       try {
@@ -565,6 +575,8 @@
       whatapMockEnabled: document.getElementById('gWhatapMock').value,
       jenniferMockEnabled: document.getElementById('gJenniferMock').value,
       apmLogLevel: document.getElementById('gApmLogLevel').value,
+      whatapPtotal: parseInt(document.getElementById('gWhatapPtotal').value) || 100,
+      whatapPsize: parseInt(document.getElementById('gWhatapPsize').value) || 10000,
       teams: (() => { const t = collectTeams(); return t.length ? JSON.stringify(t) : null; })(),
       whatapProfiles: wpList.length ? JSON.stringify(wpList) : null,
       jenniferProfiles: jpList.length ? JSON.stringify(jpList) : null

@@ -524,7 +524,8 @@ public class MockApmService {
                 : apiRecordRepo.findByRepositoryName(repoName);
         int reset = 0;
         for (var r : records) {
-            if (r.getCallCount() != 0 || r.getCallCountMonth() != 0 || r.getCallCountWeek() != 0) {
+            Long cc = r.getCallCount(), cm = r.getCallCountMonth(), cw = r.getCallCountWeek();
+            if ((cc != null && cc != 0) || (cm != null && cm != 0) || (cw != null && cw != 0)) {
                 r.setCallCount(0L);
                 r.setCallCountMonth(0L);
                 r.setCallCountWeek(0L);

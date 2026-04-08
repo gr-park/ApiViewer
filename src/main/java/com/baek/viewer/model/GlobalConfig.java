@@ -51,7 +51,15 @@ public class GlobalConfig {
 
     /** 시스템 로그 레벨 (INFO / DEBUG) — DEBUG 시 파싱 과정·APM 요청/응답 전문 기록 */
     @Column(name = "apm_log_level", length = 10)
-    private String apmLogLevel = "INFO";  // 컬럼명은 호환성 유지
+    private String apmLogLevel = "INFO";
+
+    /** 와탭 조회 ptotal (전체 건수 상한, 기본 100) */
+    @Column(name = "whatap_ptotal")
+    private Integer whatapPtotal = 100;
+
+    /** 와탭 조회 psize (한 페이지 건수, 기본 10000) */
+    @Column(name = "whatap_psize")
+    private Integer whatapPsize = 10000;
 
 
     public Long getId() { return id; }
@@ -82,4 +90,8 @@ public class GlobalConfig {
     public String getApmLogLevel() { return apmLogLevel != null ? apmLogLevel : "INFO"; }
     public void setApmLogLevel(String v) { this.apmLogLevel = v; }
     public boolean isApmDebug() { return "DEBUG".equalsIgnoreCase(getApmLogLevel()); }
+    public Integer getWhatapPtotal() { return whatapPtotal != null ? whatapPtotal : 100; }
+    public void setWhatapPtotal(Integer v) { this.whatapPtotal = v; }
+    public Integer getWhatapPsize() { return whatapPsize != null ? whatapPsize : 10000; }
+    public void setWhatapPsize(Integer v) { this.whatapPsize = v; }
 }

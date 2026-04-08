@@ -103,6 +103,8 @@ public class YamlConfigService {
             if (g.getApmLogLevel() != null) {
                 gc.setApmLogLevel(g.getApmLogLevel().trim().toUpperCase());
             }
+            if (g.getWhatapPtotal() != null) gc.setWhatapPtotal(g.getWhatapPtotal());
+            if (g.getWhatapPsize() != null) gc.setWhatapPsize(g.getWhatapPsize());
 
             // teams, 와탭/제니퍼 공통 프로필 JSON 저장
             try {

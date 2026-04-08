@@ -1,11 +1,9 @@
 package com.baek.viewer.service;
 
 import com.baek.viewer.model.ApmCallData;
-import com.baek.viewer.model.ApiRecord;
 import com.baek.viewer.model.GlobalConfig;
 import com.baek.viewer.model.RepoConfig;
 import com.baek.viewer.repository.ApmCallDataRepository;
-import com.baek.viewer.repository.ApiRecordRepository;
 import com.baek.viewer.repository.GlobalConfigRepository;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -21,7 +19,6 @@ import java.time.Duration;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.*;
-import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * Whatap APM 연동 서비스.
@@ -48,49 +45,34 @@ public class WhatapApmService {
             .build();
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final ApmCallDataRepository apmRepo;
-    private final ApiRecordRepository apiRecordRepo;
     private final GlobalConfigRepository globalConfigRepo;
 
-    public WhatapApmService(ApmCallDataRepository apmRepo, ApiRecordRepository apiRecordRepo,
-                             GlobalConfigRepository globalConfigRepo) {
+    public WhatapApmService(ApmCallDataRepository apmRepo, GlobalConfigRepository globalConfigRepo) {
         this.apmRepo = apmRepo;
-        this.apiRecordRepo = apiRecordRepo;
         this.globalConfigRepo = globalConfigRepo;
     }
-
-    /**
-     * 날짜 범위를 일별로 수집하여 ApmCallData 저장.
-     * whatapMockEnabled=true 이면 Mock, false 이면 실제 API (URL 필수).
-     * 트랜잭션은 호출자(MockApmService.generateMockDataByRange)가 관리.
-     */
     /**
      * @param logCallback UI 로그 콜백 (nullable) — MockApmService.addApmLog 전달용
      */
+    /**
+     * 실제 Whatap API 호출로 일별 데이터 수집. Mock 로직 없음.
+     * Mock 데이터가 필요하면 source=MOCK 사용 (MockApmService.doGenerate).
+     */
     public Map<String, Object> collect(RepoConfig repo, LocalDate from, LocalDate to,
                                         java.util.function.BiConsumer<String, String> logCallback) {
-        GlobalConfig gc = globalConfigRepo.findById(1L).orElse(new GlobalConfig());
-        boolean useMock = gc.isWhatapMockEnabled();
-        String mode = useMock ? "MOCK" : "실제API";
-
-        if (!useMock && (repo.getWhatapUrl() == null || repo.getWhatapUrl().isBlank())) {
+        if (repo.getWhatapUrl() == null || repo.getWhatapUrl().isBlank()) {
             throw new IllegalStateException(
-                    "WHATAP URL이 설정되지 않았고 whatapMockEnabled=false 입니다. " +
-                    "repos-config.yml의 global.whatapMockEnabled를 true로 설정하거나 Whatap URL을 입력하세요.");
+                    "WHATAP URL이 설정되지 않았습니다. " +
+                    "레포 설정에서 Whatap URL을 입력하거나, Mock 데이터가 필요하면 source=MOCK을 사용하세요.");
         }
 
-        List<ApiRecord> records = apiRecordRepo.findByRepositoryName(repo.getRepoName());
-
-        // Mock 모드에서만 records 필수 (Mock 데이터 생성 기반)
-        if (useMock && records.isEmpty()) {
-            emit(logCallback, "WARN", "WHATAP — API 없음, Mock 수집 건너뜀");
-            return Map.of("generated", 0, "message", "해당 레포에 분석된 API가 없습니다.");
-        }
-
+        GlobalConfig gc = globalConfigRepo.findById(1L).orElse(new GlobalConfig());
         List<Integer> okinds = parseOkinds(repo.getWhatapOkinds());
-        int psize = useMock ? Math.max(records.size(), 100) : 5000;
+        int ptotal = gc.getWhatapPtotal();
+        int psize = gc.getWhatapPsize();
 
-        emit(logCallback, "INFO", String.format("WHATAP(%s) 일별 수집 시작 — %s, pcode=%s",
-                mode, useMock ? "API " + records.size() + "개" : "응답 전체 적재", repo.getWhatapPcode()));
+        emit(logCallback, "INFO", String.format("WHATAP(실제API) 일별 수집 시작 — pcode=%s, ptotal=%d, psize=%d",
+                repo.getWhatapPcode(), ptotal, psize));
 
         int generated = 0;
         int dayCount = 0;
@@ -104,32 +86,19 @@ public class WhatapApmService {
             dayCount++;
 
             try {
-                Map<String, long[]> dayData = useMock
-                        ? buildMockDayData(records, stimeMs, etimeMs)
-                        : fetchRealDay(repo, stimeMs, etimeMs, okinds, psize);
+                Map<String, long[]> dayData = fetchRealDay(repo, stimeMs, etimeMs, okinds, ptotal, psize);
 
                 long dayTotal = dayData.values().stream().mapToLong(c -> c[0]).sum();
                 long dayErrors = dayData.values().stream().mapToLong(c -> c[1]).sum();
 
-                if (useMock) {
-                    // Mock: DB records 기반으로 매핑 (records에 있는 API만)
-                    for (ApiRecord rec : records) {
-                        long[] counts = dayData.getOrDefault(rec.getApiPath(), new long[]{0L, 0L});
-                        batch.add(buildEntry(repo.getRepoName(), rec.getApiPath(), rec.getControllerName(),
-                                cursor, counts[0], counts[1]));
-                        generated++;
-                        if (batch.size() >= 1000) { apmRepo.saveAll(batch); batch.clear(); }
-                    }
-                } else {
-                    // 실제 API: 와탭 응답 JSON 그대로 전체 적재
-                    for (var entry : dayData.entrySet()) {
-                        batch.add(buildEntry(repo.getRepoName(), entry.getKey(), null,
-                                cursor, entry.getValue()[0], entry.getValue()[1]));
-                        generated++;
-                        if (batch.size() >= 1000) { apmRepo.saveAll(batch); batch.clear(); }
-                    }
+                // 와탭 응답 JSON 그대로 전체 적재
+                for (var entry : dayData.entrySet()) {
+                    batch.add(buildEntry(repo.getRepoName(), entry.getKey(), null,
+                            cursor, entry.getValue()[0], entry.getValue()[1]));
+                    generated++;
+                    if (batch.size() >= 1000) { apmRepo.saveAll(batch); batch.clear(); }
                 }
-                // 일별 로그 + 샘플 3개 API 호출건수 (검증용)
+                // 일별 로그 + 샘플 3개 API 호출건수
                 StringBuilder sample = new StringBuilder();
                 int sc = 0;
                 for (var e : dayData.entrySet()) {
@@ -147,10 +116,10 @@ public class WhatapApmService {
         }
 
         if (!batch.isEmpty()) apmRepo.saveAll(batch);
-        emit(logCallback, "OK", String.format("WHATAP(%s) 수집 완료 — %,d건 저장 (%s~%s)",
-                mode, generated, from, to));
+        emit(logCallback, "OK", String.format("WHATAP(실제API) 수집 완료 — %,d건 저장 (%s~%s)",
+                generated, from, to));
         return Map.of("generated", generated, "from", from.toString(), "to", to.toString(),
-                "source", "WHATAP", "mock", useMock);
+                "source", "WHATAP", "mock", false);
     }
 
     /** logCallback 없이 호출하는 기존 호환 메서드 */
@@ -169,49 +138,16 @@ public class WhatapApmService {
         }
     }
 
-    /**
-     * Whatap 응답 스키마와 동일한 형태로 Mock 데이터 생성 후 동일 파서로 처리.
-     *
-     * 생성 스키마:
-     * { stime:N, etime:N, records:[{ service:"apiPath", count:N, error:N }] }
-     */
-    /**
-     * Whatap Mock: 요일별 가중치 + API별 기본부하 + 랜덤 변동으로 현실적인 데이터 생성.
-     * 주말=30%, 월요일=110%, 평일=80~120% 변동.
-     */
-    private Map<String, long[]> buildMockDayData(List<ApiRecord> records,
-                                                   long stime, long etime) {
-        // 요일별 가중치 (일~토: 0.3, 1.1, 1.0, 1.0, 0.95, 1.05, 0.3)
-        java.time.LocalDate date = java.time.Instant.ofEpochMilli(stime).atZone(KST).toLocalDate();
-        double[] dayWeight = {0.3, 1.1, 1.0, 1.0, 0.95, 1.05, 0.3};
-        double weight = dayWeight[date.getDayOfWeek().getValue() % 7];
-
-        Map<String, long[]> result = new HashMap<>();
-        for (ApiRecord rec : records) {
-            if ("차단완료".equals(rec.getStatus())) {
-                result.put(rec.getApiPath(), new long[]{0L, 0L});
-                continue;
-            }
-            // API별 기본부하(hash 기반) + 일별 랜덤 변동(±40%)
-            int baseLoad = Math.abs(rec.getApiPath().hashCode() % 120) + 10; // 10~129
-            double variation = 0.6 + ThreadLocalRandom.current().nextDouble() * 0.8; // 0.6~1.4
-            long count = Math.max(0, Math.round(baseLoad * weight * variation));
-            long error = count > 0 ? ThreadLocalRandom.current().nextLong(0, Math.max(1, count / 20)) : 0L;
-            result.put(rec.getApiPath(), new long[]{count, error});
-        }
-        return result;
-    }
-
     private Map<String, long[]> fetchRealDay(RepoConfig repo, long stime, long etime,
-                                              List<Integer> okinds, int psize) throws Exception {
+                                              List<Integer> okinds, int ptotal, int psize) throws Exception {
         boolean debug = globalConfigRepo.findById(1L).map(GlobalConfig::isApmDebug).orElse(false);
 
         Map<String, Object> params = new LinkedHashMap<>();
-        params.put("stime", "");
-        params.put("etime", "");
-        params.put("ptotal", 100);
+        params.put("stime", stime);       // 일별 시작 epoch ms
+        params.put("etime", etime);       // 일별 종료 epoch ms
+        params.put("ptotal", ptotal);     // 전체 건수 상한
         params.put("skip", 0);
-        params.put("psize", psize);
+        params.put("psize", psize);       // 한 페이지 조회 건수
         params.put("okinds", okinds);
         params.put("order", "countTotal");
         params.put("type", "service");
@@ -242,8 +178,8 @@ public class WhatapApmService {
         HttpResponse<String> resp = httpClient.send(builder.build(), HttpResponse.BodyHandlers.ofString());
 
         if (debug) {
-            log.debug("[WHATAP-RES] HTTP {} | length={} | body={}", resp.statusCode(), resp.body().length(),
-                    resp.body().length() > 2000 ? resp.body().substring(0, 2000) + "...(truncated)" : resp.body());
+            log.debug("[WHATAP-RES] HTTP {} | length={}", resp.statusCode(), resp.body().length());
+            log.debug("[WHATAP-RES-BODY] {}", resp.body());
         }
 
         if (resp.statusCode() != 200) {

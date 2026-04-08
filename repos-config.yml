@@ -29,6 +29,10 @@ global:
   # 로그 레벨 (INFO: 기본 / DEBUG: API파싱 과정 + APM 요청/응답 전문 + 전체 상세 로그)
   apmLogLevel: "INFO"
 
+  # 와탭 조회 파라미터 (ptotal: 전체 건수 상한, psize: 한 페이지 건수)
+  whatapPtotal: 100
+  whatapPsize: 10000
+
   # 와탭 공통 프로필 (URL/쿠키 공유, 레포에서 profileName으로 참조)
   whatapProfiles:
     - name: "운영"
