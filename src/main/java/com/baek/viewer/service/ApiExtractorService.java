@@ -658,6 +658,11 @@ public class ApiExtractorService {
 
     private String autoExtractProgramId(String path) {
         if (path == null || path.isEmpty() || "/".equals(path)) return "-";
+
+        // 7글자_4글자.확장자 패턴: LPMAIAA_V100.lc → MAI (앞2글자 스킵, 3~5번째가 프로그램ID)
+        Matcher pgm = Pattern.compile("(\\w{2})(\\w{3})\\w{2}_\\w{4}\\.\\w+").matcher(path);
+        if (pgm.find()) return pgm.group(2).toUpperCase();
+
         if (path.contains(".")) {
             String nameOnly = path.substring(path.lastIndexOf("/") + 1).split("\\.")[0];
             return nameOnly.contains("_") ? nameOnly.substring(0, nameOnly.lastIndexOf("_")) : nameOnly;
