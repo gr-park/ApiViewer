@@ -499,6 +499,37 @@ function updateAdminBadge(valid) {
   </div><!-- /settings-layout -->
 </div>
 
+<!-- 서식 편집 모달 -->
+<div class="modal-overlay" id="tplModalOverlay" style="display:none;">
+  <div class="modal" style="width:600px;">
+    <div class="modal-header">
+      <span class="modal-title" id="tplModalTitle">서식 추가</span>
+      <button class="modal-close" onclick="closeTplModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <div style="margin-bottom:12px;">
+        <label class="field">서식명 *
+          <input id="tpl_name" type="text" placeholder="예: 차단 안내 메일">
+        </label>
+      </div>
+      <div style="margin-bottom:12px;">
+        <label class="field">제목
+          <input id="tpl_subject" type="text" placeholder="메일 제목">
+        </label>
+      </div>
+      <div style="margin-bottom:12px;">
+        <label class="field">본문
+          <textarea id="tpl_body" rows="10" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;resize:vertical;font-family:inherit;" placeholder="메일 본문을 입력하세요."></textarea>
+        </label>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeTplModal()">취소</button>
+      <button class="btn btn-blue" onclick="saveTplModal()">저장</button>
+    </div>
+  </div>
+</div>
+
 <!-- 레포 편집 모달 -->
 <div class="modal-overlay" id="modalOverlay">
   <div class="modal">
@@ -1710,27 +1741,37 @@ function updateAdminBadge(valid) {
     }
   }
 
+  let editingTplId = null;
+
   function openTplModal(tpl) {
-    const name = tpl ? tpl.templateName : '';
-    const subj = tpl ? tpl.subject : '';
-    const body = tpl ? tpl.body : '';
-    const id = tpl ? tpl.id : null;
-    customPrompt('서식명:', {title: id ? '서식 편집' : '서식 추가', defaultValue: name}).then(async nm => {
-      if (!nm) return;
-      const sj = await customPrompt('제목:', {title:'메일 제목', defaultValue: subj});
-      if (sj === null) return;
-      const bd = await customPrompt('본문:', {title:'메일 본문', defaultValue: body, multiline: true});
-      if (bd === null) return;
-      try {
-        if (id) {
-          await adminFetch(`/api/mail/templates/${id}`, {method:'PUT', body:JSON.stringify({templateName:nm, subject:sj, body:bd})});
-        } else {
-          await adminFetch('/api/mail/templates', {method:'POST', body:JSON.stringify({templateName:nm, subject:sj, body:bd})});
-        }
-        showToast(id ? '서식 수정 완료' : '서식 추가 완료','success');
-        loadTemplates();
-      } catch(e) { showToast('저장 실패','error'); }
-    });
+    editingTplId = tpl ? tpl.id : null;
+    document.getElementById('tplModalTitle').textContent = editingTplId ? '서식 편집' : '서식 추가';
+    document.getElementById('tpl_name').value = tpl ? tpl.templateName : '';
+    document.getElementById('tpl_subject').value = tpl ? (tpl.subject || '') : '';
+    document.getElementById('tpl_body').value = tpl ? (tpl.body || '') : '';
+    document.getElementById('tplModalOverlay').style.display = 'flex';
+  }
+
+  function closeTplModal() {
+    document.getElementById('tplModalOverlay').style.display = 'none';
+    editingTplId = null;
+  }
+
+  async function saveTplModal() {
+    const nm = document.getElementById('tpl_name').value.trim();
+    const sj = document.getElementById('tpl_subject').value.trim();
+    const bd = document.getElementById('tpl_body').value;
+    if (!nm) { showToast('서식명을 입력하세요.','error'); return; }
+    try {
+      if (editingTplId) {
+        await adminFetch(`/api/mail/templates/${editingTplId}`, {method:'PUT', body:JSON.stringify({templateName:nm, subject:sj, body:bd})});
+      } else {
+        await adminFetch('/api/mail/templates', {method:'POST', body:JSON.stringify({templateName:nm, subject:sj, body:bd})});
+      }
+      showToast(editingTplId ? '서식 수정 완료' : '서식 추가 완료','success');
+      closeTplModal();
+      loadTemplates();
+    } catch(e) { showToast('저장 실패','error'); }
   }
 
   function editTpl(id) {
