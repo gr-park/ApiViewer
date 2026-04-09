@@ -361,6 +361,8 @@
       }).join('')}</tbody></table>`;
   }
   async function loadTopApis() {
+    const wrap = document.getElementById('dashTopApisWrap');
+    wrap.innerHTML = '<div style="text-align:center;padding:20px;"><div class="spinner"></div><br><span style="color:var(--text-muted);font-size:11px;">조회 중...</span></div>';
     try {
       const to = new Date().toLocaleDateString('sv-SE');
       const from = new Date(Date.now()-365*86400000).toLocaleDateString('sv-SE');
@@ -369,7 +371,7 @@
       const d = await res.json();
       renderTopApisTable(d.topApis, 'dashTopApisWrap');
     } catch(e) {
-      document.getElementById('dashTopApisWrap').innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-muted);font-size:12px;">조회 실패</div>';
+      wrap.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-muted);font-size:12px;">조회 실패</div>';
     }
   }
   async function loadTopRepos() {
@@ -388,10 +390,12 @@
   }
   async function loadTopApisByRepo() {
     const repo = document.getElementById('dashTopRepoSelect').value;
+    const wrap = document.getElementById('dashTopRepoApisWrap');
     if (!repo) {
-      document.getElementById('dashTopRepoApisWrap').innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-muted);font-size:12px;">레포를 선택하세요.</div>';
+      wrap.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-muted);font-size:12px;">레포를 선택하세요.</div>';
       return;
     }
+    wrap.innerHTML = '<div style="text-align:center;padding:20px;"><div class="spinner"></div><br><span style="color:var(--text-muted);font-size:11px;">조회 중...</span></div>';
     try {
       const to = new Date().toLocaleDateString('sv-SE');
       const from = new Date(Date.now()-365*86400000).toLocaleDateString('sv-SE');
@@ -400,7 +404,7 @@
       const d = await res.json();
       renderTopApisTable(d.topApis, 'dashTopRepoApisWrap');
     } catch(e) {
-      document.getElementById('dashTopRepoApisWrap').innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-muted);font-size:12px;">조회 실패</div>';
+      wrap.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-muted);font-size:12px;">조회 실패</div>';
     }
   }
 
