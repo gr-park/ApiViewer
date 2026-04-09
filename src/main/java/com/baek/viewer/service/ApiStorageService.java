@@ -356,7 +356,7 @@ public class ApiStorageService {
         }
 
         Long call = r.getCallCount();
-        boolean callZero = (call != null && call == 0);
+        boolean callZero = (call == null || call == 0);  // null도 0건으로 간주
         boolean callLow  = (call != null && call >= 1 && call <= reviewThreshold);
         boolean commitOld = areAllCommitsOlderThanOneYear(r.getGitHistory());
 
