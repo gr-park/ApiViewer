@@ -23,6 +23,12 @@ public class ReposYamlConfig {
         private Integer pageNavSize;
         private List<String> teams;
         private String apmLogLevel;
+        private String smtpHost;
+        private Integer smtpPort;
+        private String smtpUsername;
+        private String smtpPassword;
+        private String mailFrom;
+        private String mailTo;
         private Integer logTailLines;
         private Integer whatapPtotal;
         private Integer whatapPsize;
@@ -45,6 +51,18 @@ public class ReposYamlConfig {
         public void setTeams(List<String> teams) { this.teams = teams; }
         public String getApmLogLevel() { return apmLogLevel; }
         public void setApmLogLevel(String apmLogLevel) { this.apmLogLevel = apmLogLevel; }
+        public String getSmtpHost() { return smtpHost; }
+        public void setSmtpHost(String v) { this.smtpHost = v; }
+        public Integer getSmtpPort() { return smtpPort; }
+        public void setSmtpPort(Integer v) { this.smtpPort = v; }
+        public String getSmtpUsername() { return smtpUsername; }
+        public void setSmtpUsername(String v) { this.smtpUsername = v; }
+        public String getSmtpPassword() { return smtpPassword; }
+        public void setSmtpPassword(String v) { this.smtpPassword = v; }
+        public String getMailFrom() { return mailFrom; }
+        public void setMailFrom(String v) { this.mailFrom = v; }
+        public String getMailTo() { return mailTo; }
+        public void setMailTo(String v) { this.mailTo = v; }
         public Integer getLogTailLines() { return logTailLines; }
         public void setLogTailLines(Integer v) { this.logTailLines = v; }
         public Integer getWhatapPtotal() { return whatapPtotal; }

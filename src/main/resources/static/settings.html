@@ -178,6 +178,7 @@ function updateAdminBadge(valid) {
       <button class="settings-tab" data-tab="batch">⏱️ 배치/관리</button>
       <button class="settings-tab" data-tab="logs">📄 로그</button>
       <button class="settings-tab" data-tab="data">📊 데이터관리</button>
+      <button class="settings-tab" data-tab="notify">📧 알림</button>
       <div style="border-top:1px solid var(--border);margin:6px 0;"></div>
       <button class="settings-tab" data-tab="extract">🔍 URL 분석</button>
     </aside>
@@ -403,6 +404,89 @@ function updateAdminBadge(valid) {
       <b>호출이력</b>: APM 수집 데이터 (apm_call_data, MOCK/WHATAP/JENNIFER 모두)
     </div>
     <div id="delResult" style="margin-top:8px;font-size:12px;"></div>
+  </div>
+</section>
+
+<!-- ═══ 📧 알림 (메일 발송) ═══ -->
+<section class="settings-section" data-section="notify">
+  <!-- SMTP 설정 (글로벌에서 로드) -->
+  <div class="card">
+    <div class="card-title"><span class="dot" style="background:#0ea5e9;"></span>메일 서버 설정</div>
+    <div class="field-row col3" style="margin-bottom:10px;">
+      <label class="field">SMTP 서버
+        <input id="nSmtpHost" type="text" placeholder="smtp.company.com">
+      </label>
+      <label class="field">포트
+        <input id="nSmtpPort" type="number" placeholder="25" style="width:80px;">
+      </label>
+      <label class="field">발신자
+        <input id="nMailFrom" type="text" placeholder="apiviewer@company.com">
+      </label>
+    </div>
+    <div class="field-row col3" style="margin-bottom:10px;">
+      <label class="field">SMTP 계정 (선택)
+        <input id="nSmtpUser" type="text" placeholder="계정 없으면 빈값">
+      </label>
+      <label class="field">SMTP 비밀번호
+        <input id="nSmtpPass" type="password" placeholder="••••">
+      </label>
+    </div>
+    <div class="field-row" style="margin-bottom:10px;">
+      <label class="field">기본 수신자 (쉼표 구분)
+        <input id="nMailTo" type="text" placeholder="admin@company.com, team@company.com" style="width:100%;">
+      </label>
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button class="btn btn-blue" onclick="saveMailConfig()">메일 설정 저장</button>
+      <button class="btn btn-ghost" onclick="testMailSend()">테스트 발송</button>
+    </div>
+    <div id="mailConfigResult" style="margin-top:8px;font-size:12px;"></div>
+  </div>
+
+  <div style="border-top:2px solid var(--border);margin:20px 0;"></div>
+
+  <!-- 서식 관리 -->
+  <div class="card">
+    <div class="card-title" style="margin-bottom:12px;">
+      <span class="dot dot-green"></span>메일 서식 관리
+      <div style="margin-left:auto;">
+        <button class="btn btn-blue" style="height:28px;padding:4px 14px;font-size:12px;" onclick="openTplModal()">+ 서식 추가</button>
+      </div>
+    </div>
+    <div id="tplList" style="display:flex;flex-direction:column;gap:8px;">
+      <div style="color:var(--text-muted);font-size:12px;">로딩 중...</div>
+    </div>
+  </div>
+
+  <div style="border-top:2px solid var(--border);margin:20px 0;"></div>
+
+  <!-- 메일 발송 -->
+  <div class="card">
+    <div class="card-title"><span class="dot" style="background:#f59e0b;"></span>메일 발송</div>
+    <div class="field-row col2" style="margin-bottom:10px;">
+      <label class="field">서식 선택
+        <select id="sendTplSelect" onchange="onTplSelect()" style="min-width:200px;">
+          <option value="">-- 직접 입력 --</option>
+        </select>
+      </label>
+      <label class="field">수신자 (쉼표 구분)
+        <input id="sendTo" type="text" placeholder="기본 수신자 자동 로드">
+      </label>
+    </div>
+    <div style="margin-bottom:10px;">
+      <label class="field">제목
+        <input id="sendSubject" type="text" placeholder="메일 제목">
+      </label>
+    </div>
+    <div style="margin-bottom:10px;">
+      <label class="field">본문
+        <textarea id="sendBody" rows="8" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;resize:vertical;font-family:inherit;"></textarea>
+      </label>
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button class="btn" style="background:#f59e0b;color:#fff;height:34px;" onclick="sendMail()">📧 발송</button>
+    </div>
+    <div id="sendResult" style="margin-top:8px;font-size:12px;"></div>
   </div>
 </section>
 
@@ -1524,8 +1608,165 @@ function updateAdminBadge(valid) {
     loadSchedules();
     loadDelRepoOptions();
     loadDbMonitor();
+    loadMailConfig();
+    loadTemplates();
   }
   startApp();
+
+  // ── 메일 설정 ────────────────────────────────────────────
+  async function loadMailConfig() {
+    try {
+      const res = await fetch('/api/config/global', {headers:{'X-Admin-Token':sessionStorage.getItem('adminToken')||''}});
+      const g = await res.json();
+      document.getElementById('nSmtpHost').value = g.smtpHost || '';
+      document.getElementById('nSmtpPort').value = g.smtpPort ?? 25;
+      document.getElementById('nSmtpUser').value = g.smtpUsername || '';
+      document.getElementById('nSmtpPass').value = g.smtpPassword || '';
+      document.getElementById('nMailFrom').value = g.mailFrom || '';
+      document.getElementById('nMailTo').value   = g.mailTo || '';
+      document.getElementById('sendTo').value    = g.mailTo || '';
+    } catch(e) {}
+  }
+
+  async function saveMailConfig() {
+    try {
+      // 현재 글로벌 설정 가져와서 메일 필드만 업데이트
+      const gRes = await adminFetch('/api/config/global', {method:'GET'});
+      const gc = await gRes.json();
+      gc.smtpHost = document.getElementById('nSmtpHost').value.trim() || null;
+      gc.smtpPort = parseInt(document.getElementById('nSmtpPort').value) || 25;
+      gc.smtpUsername = document.getElementById('nSmtpUser').value.trim() || null;
+      gc.smtpPassword = document.getElementById('nSmtpPass').value.trim() || null;
+      gc.mailFrom = document.getElementById('nMailFrom').value.trim() || null;
+      gc.mailTo = document.getElementById('nMailTo').value.trim() || null;
+      const res = await adminFetch('/api/config/global', {method:'PUT', body:JSON.stringify(gc)});
+      if (!res.ok) throw new Error();
+      document.getElementById('mailConfigResult').innerHTML = '<span style="color:var(--success);">메일 설정 저장 완료</span>';
+      document.getElementById('sendTo').value = gc.mailTo || '';
+      showToast('메일 설정 저장', 'success');
+    } catch(e) {
+      document.getElementById('mailConfigResult').innerHTML = '<span style="color:var(--danger);">저장 실패</span>';
+    }
+  }
+
+  async function testMailSend() {
+    const to = document.getElementById('nMailTo').value.trim();
+    if (!to) { showToast('기본 수신자를 입력하세요.','error'); return; }
+    try {
+      const res = await adminFetch('/api/mail/send', {method:'POST', body:JSON.stringify({
+        to, subject:'[URL Viewer] 테스트 메일', body:'메일 발송 테스트입니다. 이 메일이 수신되면 SMTP 설정이 정상입니다.'
+      })});
+      const data = await res.json();
+      if (data.success) {
+        document.getElementById('mailConfigResult').innerHTML = '<span style="color:var(--success);">테스트 메일 발송 성공</span>';
+        showToast('테스트 메일 발송 완료','success');
+      } else {
+        document.getElementById('mailConfigResult').innerHTML = `<span style="color:var(--danger);">${esc(data.error)}</span>`;
+        showToast(data.error,'error');
+      }
+    } catch(e) { showToast('발송 실패','error'); }
+  }
+
+  // ── 서식 관리 ────────────────────────────────────────────
+  let allTemplates = [];
+
+  async function loadTemplates() {
+    try {
+      const res = await adminFetch('/api/mail/templates', {method:'GET'});
+      allTemplates = await res.json();
+      renderTemplates();
+      renderTplSelect();
+    } catch(e) {}
+  }
+
+  function renderTemplates() {
+    const el = document.getElementById('tplList');
+    if (!allTemplates.length) { el.innerHTML = '<div style="color:var(--text-muted);font-size:12px;">등록된 서식이 없습니다.</div>'; return; }
+    el.innerHTML = allTemplates.map(t => `
+      <div style="border:1px solid var(--border);border-radius:6px;padding:10px 14px;display:flex;align-items:center;gap:12px;">
+        <div style="flex:1;">
+          <b style="font-size:13px;">${esc(t.templateName)}</b>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">제목: ${esc(t.subject||'-')}</div>
+        </div>
+        <button class="btn btn-ghost" style="height:26px;padding:2px 10px;font-size:11px;" onclick="editTpl(${t.id})">편집</button>
+        <button class="btn btn-ghost" style="height:26px;padding:2px 10px;font-size:11px;color:var(--danger);" onclick="deleteTpl(${t.id},'${esc(t.templateName)}')">삭제</button>
+      </div>
+    `).join('');
+  }
+
+  function renderTplSelect() {
+    const sel = document.getElementById('sendTplSelect');
+    sel.innerHTML = '<option value="">-- 직접 입력 --</option>' +
+      allTemplates.map(t => `<option value="${t.id}">${esc(t.templateName)}</option>`).join('');
+  }
+
+  function onTplSelect() {
+    const id = document.getElementById('sendTplSelect').value;
+    if (!id) { document.getElementById('sendSubject').value=''; document.getElementById('sendBody').value=''; return; }
+    const t = allTemplates.find(x => x.id == id);
+    if (t) {
+      document.getElementById('sendSubject').value = t.subject || '';
+      document.getElementById('sendBody').value = t.body || '';
+    }
+  }
+
+  function openTplModal(tpl) {
+    const name = tpl ? tpl.templateName : '';
+    const subj = tpl ? tpl.subject : '';
+    const body = tpl ? tpl.body : '';
+    const id = tpl ? tpl.id : null;
+    customPrompt('서식명:', {title: id ? '서식 편집' : '서식 추가', defaultValue: name}).then(async nm => {
+      if (!nm) return;
+      const sj = await customPrompt('제목:', {title:'메일 제목', defaultValue: subj});
+      if (sj === null) return;
+      const bd = await customPrompt('본문:', {title:'메일 본문', defaultValue: body, multiline: true});
+      if (bd === null) return;
+      try {
+        if (id) {
+          await adminFetch(`/api/mail/templates/${id}`, {method:'PUT', body:JSON.stringify({templateName:nm, subject:sj, body:bd})});
+        } else {
+          await adminFetch('/api/mail/templates', {method:'POST', body:JSON.stringify({templateName:nm, subject:sj, body:bd})});
+        }
+        showToast(id ? '서식 수정 완료' : '서식 추가 완료','success');
+        loadTemplates();
+      } catch(e) { showToast('저장 실패','error'); }
+    });
+  }
+
+  function editTpl(id) {
+    const t = allTemplates.find(x => x.id === id);
+    if (t) openTplModal(t);
+  }
+
+  async function deleteTpl(id, name) {
+    if (!await customConfirm(`"${name}" 서식을 삭제하시겠습니까?`)) return;
+    try {
+      await adminFetch(`/api/mail/templates/${id}`, {method:'DELETE'});
+      showToast('서식 삭제 완료','success');
+      loadTemplates();
+    } catch(e) { showToast('삭제 실패','error'); }
+  }
+
+  // ── 메일 발송 ────────────────────────────────────────────
+  async function sendMail() {
+    const to = document.getElementById('sendTo').value.trim();
+    const subject = document.getElementById('sendSubject').value.trim();
+    const body = document.getElementById('sendBody').value;
+    if (!to) { showToast('수신자를 입력하세요.','error'); return; }
+    if (!subject) { showToast('제목을 입력하세요.','error'); return; }
+    if (!await customConfirm(`${to.split(/[,;\\s]+/).length}명에게 메일을 발송하시겠습니까?\n제목: ${subject}`)) return;
+    try {
+      const res = await adminFetch('/api/mail/send', {method:'POST', body:JSON.stringify({to, subject, body})});
+      const data = await res.json();
+      if (data.success) {
+        document.getElementById('sendResult').innerHTML = `<span style="color:var(--success);">발송 완료 — 수신자 ${data.recipients}명</span>`;
+        showToast('메일 발송 완료','success');
+      } else {
+        document.getElementById('sendResult').innerHTML = `<span style="color:var(--danger);">${esc(data.error)}</span>`;
+        showToast(data.error,'error');
+      }
+    } catch(e) { showToast('발송 실패','error'); }
+  }
 
   // 사이드 탭 전환
   document.querySelectorAll('.settings-tab').forEach(tab => {

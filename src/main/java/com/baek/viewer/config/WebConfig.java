@@ -40,7 +40,8 @@ public class WebConfig implements WebMvcConfigurer {
                         "/api/logs/**",            // 로그 조회
                         "/api/schedule/**",        // 스케줄 관리
                         "/api/apm/**",             // APM 데이터 관리
-                        "/api/upload/**"           // 엑셀 업로드
+                        "/api/upload/**",          // 엑셀 업로드
+                        "/api/mail/**"             // 메일 발송/서식 관리
                 )
                 .excludePathPatterns(
                         "/api/apm/chart",          // 차트 조회는 공개 (viewer.html)

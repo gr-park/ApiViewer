@@ -57,6 +57,25 @@ public class GlobalConfig {
     @Column(name = "log_tail_lines")
     private Integer logTailLines = 1000;
 
+    // ── 메일 발송 설정 ──
+    @Column(name = "smtp_host")
+    private String smtpHost;
+
+    @Column(name = "smtp_port")
+    private Integer smtpPort = 25;
+
+    @Column(name = "smtp_username")
+    private String smtpUsername;
+
+    @Column(name = "smtp_password")
+    private String smtpPassword;
+
+    @Column(name = "mail_from")
+    private String mailFrom;
+
+    @Column(name = "mail_to", columnDefinition = "TEXT")
+    private String mailTo;  // 쉼표 구분 수신자 목록
+
     /** 와탭 조회 ptotal (전체 건수 상한, 기본 100) */
     @Column(name = "whatap_ptotal")
     private Integer whatapPtotal = 100;
@@ -96,6 +115,18 @@ public class GlobalConfig {
     public boolean isApmDebug() { return "DEBUG".equalsIgnoreCase(getApmLogLevel()); }
     public Integer getLogTailLines() { return logTailLines != null ? logTailLines : 1000; }
     public void setLogTailLines(Integer v) { this.logTailLines = v; }
+    public String getSmtpHost() { return smtpHost; }
+    public void setSmtpHost(String v) { this.smtpHost = v; }
+    public Integer getSmtpPort() { return smtpPort != null ? smtpPort : 25; }
+    public void setSmtpPort(Integer v) { this.smtpPort = v; }
+    public String getSmtpUsername() { return smtpUsername; }
+    public void setSmtpUsername(String v) { this.smtpUsername = v; }
+    public String getSmtpPassword() { return smtpPassword; }
+    public void setSmtpPassword(String v) { this.smtpPassword = v; }
+    public String getMailFrom() { return mailFrom; }
+    public void setMailFrom(String v) { this.mailFrom = v; }
+    public String getMailTo() { return mailTo; }
+    public void setMailTo(String v) { this.mailTo = v; }
     public Integer getWhatapPtotal() { return whatapPtotal != null ? whatapPtotal : 100; }
     public void setWhatapPtotal(Integer v) { this.whatapPtotal = v; }
     public Integer getWhatapPsize() { return whatapPsize != null ? whatapPsize : 10000; }

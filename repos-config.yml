@@ -22,6 +22,14 @@ global:
     - 멤버십운영팀
     - 보안관리팀
 
+  # 메일 발송 설정
+  smtpHost: ""                    # SMTP 서버 (예: smtp.company.com)
+  smtpPort: 25                    # SMTP 포트 (25, 587 등)
+  smtpUsername: ""                # SMTP 인증 계정 (없으면 빈값)
+  smtpPassword: ""                # SMTP 인증 비밀번호
+  mailFrom: "apiviewer@company.com"  # 발신자 메일주소
+  mailTo: "admin@company.com"     # 기본 수신자 (쉼표 구분 복수 가능)
+
   # 로그 레벨 (INFO: 기본 / DEBUG: API파싱 과정 + APM 요청/응답 전문 + 전체 상세 로그)
   apmLogLevel: "INFO"
 

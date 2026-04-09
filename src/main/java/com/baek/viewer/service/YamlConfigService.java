@@ -92,6 +92,13 @@ public class YamlConfigService {
             if (g.getPageSize() != null) gc.setPageSize(g.getPageSize());
             if (g.getPageNavSize() != null) gc.setPageNavSize(g.getPageNavSize());
 
+            // 메일 설정
+            if (g.getSmtpHost() != null) gc.setSmtpHost(g.getSmtpHost());
+            if (g.getSmtpPort() != null) gc.setSmtpPort(g.getSmtpPort());
+            if (g.getSmtpUsername() != null) gc.setSmtpUsername(g.getSmtpUsername());
+            if (g.getSmtpPassword() != null) gc.setSmtpPassword(g.getSmtpPassword());
+            if (g.getMailFrom() != null) gc.setMailFrom(g.getMailFrom());
+            if (g.getMailTo() != null) gc.setMailTo(g.getMailTo());
             if (g.getApmLogLevel() != null) {
                 gc.setApmLogLevel(g.getApmLogLevel().trim().toUpperCase());
             }
