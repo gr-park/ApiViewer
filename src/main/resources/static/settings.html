@@ -237,18 +237,6 @@ function updateAdminBadge(valid) {
       </label>
     </div>
 
-    <!-- 팀 목록 -->
-    <div style="margin-top:10px;padding-top:10px;border-top:1px dashed var(--border);">
-      <div style="font-size:11px;font-weight:700;color:var(--text-muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em;">
-        팀 목록 <span style="font-weight:400;text-transform:none;">(담당자/현업검토 입력 시 자동완성용)</span>
-      </div>
-      <div id="teamsList" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px;"></div>
-      <div style="display:flex;gap:6px;align-items:center;">
-        <input type="text" id="newTeamInput" placeholder="팀명 입력 후 Enter" style="flex:1;max-width:260px;padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;" onkeydown="if(event.key==='Enter'){event.preventDefault();addTeam();}">
-        <button type="button" class="btn btn-ghost" style="font-size:11px;padding:4px 12px;height:auto;" onclick="addTeam()">+ 추가</button>
-      </div>
-    </div>
-
     <!-- 와탭 공통 프로필 -->
     <div style="margin-top:10px;padding-top:10px;border-top:1px dashed var(--border);">
       <div style="font-size:11px;font-weight:700;color:var(--text-muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em;">
@@ -265,6 +253,18 @@ function updateAdminBadge(valid) {
       </div>
       <div id="jenniferProfileList" style="display:flex;flex-direction:column;gap:6px;margin-bottom:6px;"></div>
       <button type="button" class="btn btn-ghost" style="font-size:11px;padding:4px 12px;height:auto;" onclick="addJenniferProfileRow()">+ 제니퍼 프로필 추가</button>
+    </div>
+
+    <!-- 팀 목록 -->
+    <div style="margin-top:10px;padding-top:10px;border-top:1px dashed var(--border);">
+      <div style="font-size:11px;font-weight:700;color:var(--text-muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em;">
+        팀 목록 <span style="font-weight:400;text-transform:none;">(담당자/현업검토 입력 시 자동완성용)</span>
+      </div>
+      <div id="teamsList" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px;"></div>
+      <div style="display:flex;gap:6px;align-items:center;">
+        <input type="text" id="newTeamInput" placeholder="팀명 입력 후 Enter" style="flex:1;max-width:260px;padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;" onkeydown="if(event.key==='Enter'){event.preventDefault();addTeam();}">
+        <button type="button" class="btn btn-ghost" style="font-size:11px;padding:4px 12px;height:auto;" onclick="addTeam()">+ 추가</button>
+      </div>
     </div>
 
     <div style="display:flex;justify-content:flex-end;margin-top:14px;">
@@ -1366,7 +1366,16 @@ function updateAdminBadge(valid) {
     try {
       await adminFetch(`/api/schedule/${id}`, { method:'PUT', body:JSON.stringify(body) });
       showToast(enabled?'스케줄 활성화':'스케줄 비활성화','success');
-      loadSchedules();
+      // 전체 리렌더링 대신 해당 카드만 스타일 변경 (스크롤 유지)
+      const card = document.getElementById('sch-'+id);
+      if (card) {
+        card.style.borderColor = enabled ? '#86efac' : 'var(--border)';
+        card.style.background = enabled ? '#f0fdf4' : '#fff';
+        const dot = card.querySelector('span[style*="border-radius:50%"]');
+        if (dot) dot.style.background = enabled ? '#22c55e' : '#d1d5db';
+        const label = card.querySelector('span[style*="font-size:10px"]');
+        if (label) { label.textContent = enabled ? '활성' : '비활성'; label.style.color = enabled ? '#16a34a' : '#94a3b8'; label.style.fontWeight = enabled ? '600' : '400'; }
+      }
     } catch(e) { showToast('변경 실패','error'); }
   }
 
