@@ -285,7 +285,30 @@
         sel.appendChild(opt);
       });
     } catch(e) {}
-    await loadAll();
+    // 자동 조회 제거 — 사용자가 조회 버튼을 누를 때만 데이터 로드
+    showEmptyState();
+  }
+
+  function showEmptyState() {
+    const msg = '<span style="color:var(--text-muted);font-size:11px;">조회 버튼을 클릭하세요</span>';
+    document.getElementById('sumCall').innerHTML = '-';
+    document.getElementById('sumErr').innerHTML = '-';
+    document.getElementById('sumApis').innerHTML = '-';
+    document.getElementById('sumPeriod').textContent = '-';
+    document.getElementById('sumErrPct').textContent = '-';
+    document.getElementById('sumRepos').textContent = '-';
+    document.getElementById('sumBySource').innerHTML = msg;
+    document.getElementById('byRepoTbody').innerHTML = '<tr><td colspan="4" class="empty">조회 버튼을 클릭하세요</td></tr>';
+    document.getElementById('topTbody').innerHTML = '<tr><td colspan="4" class="empty">조회 버튼을 클릭하세요</td></tr>';
+    document.getElementById('apiTbody').innerHTML = '<tr><td colspan="6" class="empty">조회 버튼을 클릭하세요</td></tr>';
+    document.getElementById('resultCount').textContent = '';
+  }
+
+  function spinnerCell(colspan) {
+    return `<tr><td colspan="${colspan}" style="text-align:center;padding:30px;"><div class="spinner" style="display:inline-block;width:20px;height:20px;border:2px solid var(--border);border-top-color:var(--primary);border-radius:50%;animation:spin .7s linear infinite;"></div><br><span style="color:var(--text-muted);font-size:11px;">조회 중...</span></td></tr>`;
+  }
+  function spinnerInline() {
+    return '<div class="spinner" style="display:inline-block;width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--primary);border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;"></div>';
   }
 
   function setPeriod(days) {
@@ -311,11 +334,19 @@
 
   async function loadAll() {
     currentPage = 0;
-    // 스피너 표시
-    document.getElementById('sumCall').textContent = '...';
-    document.getElementById('sumErr').textContent = '...';
-    document.getElementById('sumApis').textContent = '...';
-    document.getElementById('apiTbody').innerHTML = '<tr><td colspan="6" style="text-align:center;padding:30px;"><div class="spinner" style="display:inline-block;width:20px;height:20px;border:2px solid var(--border);border-top-color:var(--primary);border-radius:50%;animation:spin .7s linear infinite;"></div><br><span style="color:var(--text-muted);font-size:11px;">조회 중...</span></td></tr>';
+    // 4개 영역 모두 스피너 표시
+    document.getElementById('sumCall').innerHTML = spinnerInline();
+    document.getElementById('sumErr').innerHTML = spinnerInline();
+    document.getElementById('sumApis').innerHTML = spinnerInline();
+    document.getElementById('sumPeriod').textContent = '조회 중...';
+    document.getElementById('sumErrPct').textContent = '';
+    document.getElementById('sumRepos').textContent = '-';
+    document.getElementById('sumBySource').innerHTML = spinnerInline();
+    document.getElementById('byRepoTbody').innerHTML = spinnerCell(4);
+    document.getElementById('topTbody').innerHTML = spinnerCell(4);
+    document.getElementById('apiTbody').innerHTML = spinnerCell(6);
+    document.getElementById('resultCount').textContent = '조회 중...';
+    // 응답 도착 순서대로 화면 갱신 (Promise.all로 병렬 실행)
     await Promise.all([loadSummary(), loadApis()]);
   }
 
@@ -383,6 +414,8 @@
   }
 
   async function loadApis() {
+    // 페이징 시에도 스피너 표시 (loadAll에서 이미 표시됐어도 안전)
+    document.getElementById('apiTbody').innerHTML = spinnerCell(6);
     try {
       const params = getParams();
       params.set('page', currentPage);
