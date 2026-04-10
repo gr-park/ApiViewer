@@ -10,7 +10,9 @@ set JAR=target\api-viewer-1.0.0.jar
 
 cd /d "%~dp0"
 
-if "%1"=="--no-build" goto skip_build
+:: 기본은 빌드 없이 실행 (운영 환경 — 빌드 환경 미지원)
+:: 빌드까지 같이 하려면: run.bat --build
+if not "%1"=="--build" goto skip_build
 
 echo [INFO] 빌드 중...
 if exist mvnw.cmd (
@@ -26,9 +28,9 @@ if errorlevel 1 (
 
 :skip_build
 if not exist "%JAR%" (
-    echo [ERROR] JAR 파일이 없습니다.
-    echo         run.bat           : 빌드 후 실행
-    echo         run.bat --no-build: JAR만 실행
+    echo [ERROR] JAR 파일이 없습니다: %JAR%
+    echo         run.bat         : JAR만 실행 (기본)
+    echo         run.bat --build : 빌드 후 실행
     pause
     exit /b 1
 )
