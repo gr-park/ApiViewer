@@ -1389,10 +1389,22 @@ function updateAdminBadge(valid) {
       cronExpression: document.getElementById('schCron-'+id)?.value || null,
       jobParam: document.getElementById('schParam-'+id)?.value || null
     };
+    // 스크롤 위치 보존을 위해 현재 스크롤 좌표 저장
+    const sx = window.scrollX, sy = window.scrollY;
     try {
       await adminFetch(`/api/schedule/${id}`, { method:'PUT', body:JSON.stringify(body) });
       showToast('스케줄 저장 완료','success');
-      loadSchedules();
+      // 전체 리렌더링은 하지 않음 (현재 카드의 입력값이 곧 최신 상태)
+      // 시각적 피드백: 카드 잠시 강조
+      const card = document.getElementById('sch-'+id);
+      if (card) {
+        const orig = card.style.boxShadow;
+        card.style.transition = 'box-shadow .3s';
+        card.style.boxShadow = '0 0 0 3px #3b82f6';
+        setTimeout(() => { card.style.boxShadow = orig; }, 600);
+      }
+      // 만약 브라우저가 스크롤을 살짝 움직였다면 복원
+      window.scrollTo(sx, sy);
     } catch(e) { showToast('저장 실패','error'); }
   }
 
