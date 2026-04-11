@@ -34,6 +34,8 @@ public class WebConfig implements WebMvcConfigurer {
                 .addPathPatterns(
                         "/api/extract",           // 추출
                         "/api/db/delete-all",      // 데이터 삭제
+                        "/api/db/backup/**",       // 데이터 백업
+                        "/api/db/restore/**",      // 데이터 복구
                         "/api/db/purge-deleted",   // 삭제건 영구 삭제
                         "/api/db/records",         // 선택 레코드 강제 삭제
                         "/api/db/monitor/**",      // DB 모니터링

@@ -873,9 +873,12 @@
         if (result.error) {
           showResult('fail', `추출 오류: ${result.error}`);
         } else {
-          const msg = result.savedCount >= 0
+          let msg = result.savedCount >= 0
             ? `추출 완료 — ${result.savedCount}개 URL 저장`
             : `추출 완료`;
+          if ((result.statusRevertedCount || 0) > 0) {
+            msg += `, 차단대상→사용 전환 ${result.statusRevertedCount}건 (현업검토결과=차단대상 제외)`;
+          }
           showResult('ok', msg);
         }
       } catch(e) {
@@ -906,7 +909,7 @@
             if (!p.extracting) {
               clearInterval(progressTimer); progressTimer = null;
               updateProgress(p); // 마지막 로그 반영
-              resolve({ savedCount: p.savedCount, error: p.error });
+              resolve({ savedCount: p.savedCount, statusRevertedCount: p.statusRevertedCount, error: p.error });
             }
           } catch(e) {
             clearInterval(progressTimer); progressTimer = null;

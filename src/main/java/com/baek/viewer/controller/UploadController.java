@@ -143,6 +143,15 @@ public class UploadController {
 
             if (row.containsKey("blockCriteria")) r.setBlockCriteria(str(row, "blockCriteria"));
             if (row.containsKey("memo"))          r.setMemo(str(row, "memo"));
+            if (row.containsKey("cboScheduledDate")) {
+                String ds = str(row, "cboScheduledDate");
+                r.setCboScheduledDate(ds == null || ds.isBlank() ? null : java.time.LocalDate.parse(ds));
+            }
+            if (row.containsKey("deployScheduledDate")) {
+                String ds = str(row, "deployScheduledDate");
+                r.setDeployScheduledDate(ds == null || ds.isBlank() ? null : java.time.LocalDate.parse(ds));
+            }
+            if (row.containsKey("deployCsr")) r.setDeployCsr(str(row, "deployCsr"));
             String rv = str(row, "reviewResult");
             if (row.containsKey("reviewResult"))  r.setReviewResult(rv == null || rv.isBlank() ? null : rv);
             if (row.containsKey("reviewOpinion")) r.setReviewOpinion(str(row, "reviewOpinion"));

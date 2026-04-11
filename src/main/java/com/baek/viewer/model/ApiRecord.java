@@ -146,6 +146,18 @@ public class ApiRecord {
     @Column(name = "review_opinion", length = 500)
     private String reviewOpinion;
 
+    /** CBO 예정일자 */
+    @Column(name = "cbo_scheduled_date")
+    private java.time.LocalDate cboScheduledDate;
+
+    /** 배포 예정일자 */
+    @Column(name = "deploy_scheduled_date")
+    private java.time.LocalDate deployScheduledDate;
+
+    /** 배포 CSR */
+    @Column(name = "deploy_csr", length = 50)
+    private String deployCsr;
+
     /** 현업 팀 */
     @Column(name = "review_team", length = 100)
     private String reviewTeam;
@@ -260,6 +272,12 @@ public class ApiRecord {
     public void setReviewResult(String reviewResult) { this.reviewResult = reviewResult; }
     public String getReviewOpinion() { return reviewOpinion; }
     public void setReviewOpinion(String reviewOpinion) { this.reviewOpinion = reviewOpinion; }
+    public java.time.LocalDate getCboScheduledDate() { return cboScheduledDate; }
+    public void setCboScheduledDate(java.time.LocalDate v) { this.cboScheduledDate = v; }
+    public java.time.LocalDate getDeployScheduledDate() { return deployScheduledDate; }
+    public void setDeployScheduledDate(java.time.LocalDate v) { this.deployScheduledDate = v; }
+    public String getDeployCsr() { return deployCsr; }
+    public void setDeployCsr(String v) { this.deployCsr = v; }
     public LocalDate getBlockedDate() { return blockedDate; }
     public void setBlockedDate(LocalDate blockedDate) { this.blockedDate = blockedDate; }
     public String getBlockedReason() { return blockedReason; }

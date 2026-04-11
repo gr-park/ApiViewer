@@ -91,6 +91,13 @@ public class GlobalConfig {
     @Column(name = "review_target_statuses", columnDefinition = "TEXT")
     private String reviewTargetStatuses;
 
+    /**
+     * 데이터 백업 메타 정보 JSON
+     * {"analysis":{"at":"...","count":0},"callHistory":{"at":"...","count":0}}
+     */
+    @Column(name = "last_backup_meta", columnDefinition = "TEXT")
+    private String lastBackupMeta;
+
 
     public Long getId() { return id; }
     public String getStartDate() { return startDate; }
@@ -143,4 +150,6 @@ public class GlobalConfig {
                : "최우선 차단대상,후순위 차단대상,추가검토필요 차단대상";
     }
     public void setReviewTargetStatuses(String v) { this.reviewTargetStatuses = v; }
+    public String getLastBackupMeta() { return lastBackupMeta; }
+    public void setLastBackupMeta(String v) { this.lastBackupMeta = v; }
 }

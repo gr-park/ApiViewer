@@ -53,6 +53,7 @@ public class ApiExtractorService {
     private volatile String currentFile = "";
     private volatile String lastError = null;
     private volatile int savedCount = -1; // -1 = 미저장, 0 이상 = 저장 건수
+    private volatile int statusRevertedCount = 0; // 차단대상→사용(차단대상 제외) 전환 건수
     private final List<String> extractLogs = Collections.synchronizedList(new ArrayList<>());
 
     private void addLog(String level, String msg) {
@@ -78,12 +79,14 @@ public class ApiExtractorService {
         p.put("percent", totalFiles > 0 ? (processedFiles * 100 / totalFiles) : 0);
         p.put("error", lastError);
         p.put("savedCount", savedCount);
+        p.put("statusRevertedCount", statusRevertedCount);
         p.put("logs", new ArrayList<>(extractLogs));
         return p;
     }
 
     public void startExtractAsync(ExtractRequest req) {
         savedCount = -1;
+        statusRevertedCount = 0;
         extractLogs.clear();
         new Thread(() -> extract(req)).start();
     }
@@ -208,8 +211,12 @@ public class ApiExtractorService {
         if (repoName != null && !repoName.isBlank()) {
             try {
                 addLog("INFO", "DB 저장 중 — 레포: " + repoName.trim());
-                savedCount = storageService.save(repoName.trim(), cachedApis, req.getClientIp());
-                addLog("OK", "DB 저장 완료 — " + savedCount + "개 저장/갱신");
+                int[] saveResult = storageService.save(repoName.trim(), cachedApis, req.getClientIp());
+                savedCount = saveResult[0];
+                statusRevertedCount = saveResult[1];
+                String saveMsg = "DB 저장 완료 — " + savedCount + "개 저장/갱신";
+                if (statusRevertedCount > 0) saveMsg += ", 차단대상→사용 전환 " + statusRevertedCount + "건 (현업검토결과=차단대상 제외)";
+                addLog("OK", saveMsg);
             } catch (Exception e) {
                 savedCount = -1;
                 addLog("ERROR", "DB 저장 실패: " + e.getMessage());

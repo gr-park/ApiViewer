@@ -53,7 +53,8 @@ public class ApiStorageService {
      *  - 수집 후 saveAll() 벌크 저장 (JDBC batch_size 500 활용)
      */
     @Transactional
-    public int save(String repositoryName, List<ApiInfo> apis, String clientIp) {
+    /** @return [saved, revertedToUsed] — revertedToUsed: "차단대상→사용(차단대상 제외)" 전환 건수 */
+    public int[] save(String repositoryName, List<ApiInfo> apis, String clientIp) {
         log.info("[DB 저장 시작] repo={}, 건수={}, ip={}", repositoryName, apis.size(), clientIp);
         java.time.LocalDateTime now = java.time.LocalDateTime.now();
         int reviewThreshold = getReviewThreshold();
@@ -70,6 +71,7 @@ public class ApiStorageService {
 
         List<ApiRecord> toInsert = new ArrayList<>();
         List<ApiRecord> toUpdate = new ArrayList<>();
+        int revertedToUsed = 0;
 
         for (ApiInfo a : apis) {
             String key = a.getApiPath() + "|" + a.getHttpMethod();
@@ -89,7 +91,14 @@ public class ApiStorageService {
                     String newStatus = calculateStatus(existing, reviewThreshold);
                     if (!Objects.equals(oldStatus, newStatus)) {
                         if (!"차단완료".equals(newStatus)) {
-                            appendChangeLog(existing, oldStatus + " → " + newStatus);
+                            String logMsg = oldStatus + " → " + newStatus;
+                            if ("사용".equals(newStatus) && "차단대상 제외".equals(existing.getReviewResult())) {
+                                logMsg += " (현업검토결과=차단대상 제외)";
+                                revertedToUsed++;
+                                log.info("[차단대상→사용 전환] id={} repo={} path={}",
+                                        existing.getId(), repositoryName, existing.getApiPath());
+                            }
+                            appendChangeLog(existing, logMsg);
                         }
                     }
                     existing.setStatus(newStatus);
@@ -142,9 +151,9 @@ public class ApiStorageService {
         if (!toMarkDeleted.isEmpty()) repository.saveAll(toMarkDeleted);
 
         int saved = toInsert.size() + toUpdate.size();
-        log.info("[DB 저장 완료] repo={}, 신규={}, 갱신={}, 삭제표시={}", repositoryName,
-                toInsert.size(), toUpdate.size(), toMarkDeleted.size());
-        return saved;
+        log.info("[DB 저장 완료] repo={}, 신규={}, 갱신={}, 삭제표시={}, 차단→사용전환={}", repositoryName,
+                toInsert.size(), toUpdate.size(), toMarkDeleted.size(), revertedToUsed);
+        return new int[]{saved, revertedToUsed};
     }
 
     /** 추출로 갱신해도 되는 필드만 업데이트 (수동 설정 필드는 건드리지 않음) */
@@ -364,6 +373,10 @@ public class ApiStorageService {
     // ── 상태 계산 ────────────────────────────────────────────────────────────
 
     String calculateStatus(ApiRecord r, int reviewThreshold) {
+        // 0. 현업검토결과 "차단대상 제외" → 차단 조건과 무관하게 "사용" 강제
+        if ("차단대상 제외".equals(r.getReviewResult())) {
+            return "사용";
+        }
         // 1. 차단완료: 3가지 모두 충족 (①@Deprecated ②[URL차단작업] ③UnsupportedOperationException)
         if ("Y".equals(r.getIsDeprecated())
                 && containsBlockText(r.getFullComment())

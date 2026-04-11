@@ -402,6 +402,50 @@ function updateAdminBadge(valid) {
 
   <div style="border-top:2px solid var(--border);margin:20px 0;"></div>
 
+  <!-- 데이터 백업 -->
+  <div class="card" style="border:1px solid #93c5fd;">
+    <div class="card-title" style="margin-bottom:12px;">
+      <span class="dot" style="background:#3b82f6;"></span>데이터 백업
+      <span style="font-size:11px;font-weight:400;color:var(--text-muted);margin-left:6px;">현재 데이터를 백업 테이블에 스냅샷으로 저장 (단일 스냅샷, 덮어쓰기)</span>
+    </div>
+    <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:10px;">
+      <label class="field" style="min-width:220px;">대상 레포지토리
+        <select id="bkpRepoSelect" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;">
+          <option value="ALL">(전체 레포)</option>
+        </select>
+      </label>
+      <button class="btn" style="background:#3b82f6;color:#fff;height:34px;" onclick="backupAnalysisData()">💾 분석데이터 백업</button>
+      <button class="btn" style="background:#2563eb;color:#fff;height:34px;" onclick="backupCallHistoryData()">💾 호출이력 백업</button>
+    </div>
+    <div style="margin-top:4px;font-size:11px;color:var(--text-muted);">
+      분석데이터: <span id="bkpAnalysisInfo" style="color:var(--text);">-</span>
+      &nbsp;·&nbsp;
+      호출이력: <span id="bkpCallInfo" style="color:var(--text);">-</span>
+    </div>
+    <div id="bkpResult" style="margin-top:8px;font-size:12px;"></div>
+  </div>
+
+  <!-- 데이터 복구 -->
+  <div class="card" style="border:1px solid #fcd34d;margin-top:12px;">
+    <div class="card-title" style="margin-bottom:12px;">
+      <span class="dot" style="background:#f59e0b;"></span>데이터 복구
+      <span style="font-size:11px;font-weight:400;color:#d97706;margin-left:6px;">백업 스냅샷으로 현재 데이터를 덮어씁니다 — 되돌릴 수 없습니다.</span>
+    </div>
+    <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;">
+      <label class="field" style="min-width:220px;">대상 레포지토리
+        <select id="restoreRepoSelect" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;">
+          <option value="ALL">(전체 레포)</option>
+        </select>
+      </label>
+      <button class="btn" style="background:#f59e0b;color:#fff;height:34px;" onclick="restoreAnalysisData()">♻️ 분석데이터 복구</button>
+      <button class="btn" style="background:#d97706;color:#fff;height:34px;" onclick="restoreCallHistoryData()">♻️ 호출이력 복구</button>
+    </div>
+    <div style="margin-top:8px;font-size:11px;color:var(--text-muted);">복구 시 현재 데이터가 백업본으로 교체됩니다. 백업 없이 복구하면 오류가 발생합니다.</div>
+    <div id="restoreResult" style="margin-top:8px;font-size:12px;"></div>
+  </div>
+
+  <div style="border-top:2px solid var(--border);margin:20px 0;"></div>
+
   <!-- 데이터 삭제 -->
   <div class="card" style="border:1px solid #fca5a5;">
     <div class="card-title" style="margin-bottom:12px;">
@@ -1479,14 +1523,125 @@ function updateAdminBadge(valid) {
     try {
       const res = await fetch('/api/config/repos');
       const repos = await res.json();
-      const sel = document.getElementById('delRepoSelect');
-      repos.forEach(r => {
-        const opt = document.createElement('option');
-        opt.value = r.repoName;
-        opt.textContent = r.businessName ? `${r.repoName} | ${r.businessName}` : r.repoName;
-        sel.appendChild(opt);
+      ['delRepoSelect','bkpRepoSelect','restoreRepoSelect'].forEach(selId => {
+        const sel = document.getElementById(selId);
+        if (!sel) return;
+        // 기존 ALL 옵션만 남기고 초기화
+        while (sel.options.length > 1) sel.remove(1);
+        repos.forEach(r => {
+          const opt = document.createElement('option');
+          opt.value = r.repoName;
+          opt.textContent = r.businessName ? `${r.repoName} | ${r.businessName}` : r.repoName;
+          sel.appendChild(opt);
+        });
       });
     } catch(e) {}
+    await loadBackupStatus();
+  }
+
+  // ── 데이터 백업 ────────────────────────────────────────────
+  async function loadBackupStatus() {
+    try {
+      const res = await adminFetch('/api/db/backup/status');
+      if (!res.ok) return;
+      const data = await res.json();
+      let meta = {};
+      if (data.raw) {
+        try { meta = JSON.parse(data.raw); } catch(e) {}
+      } else {
+        meta = data;
+      }
+      const fmt = (obj) => {
+        if (!obj || !obj.at) return '백업 없음';
+        return `${obj.at.replace('T',' ').substring(0,16)} (${(obj.count||0).toLocaleString()}건)`;
+      };
+      const ai = document.getElementById('bkpAnalysisInfo');
+      const ci = document.getElementById('bkpCallInfo');
+      if (ai) ai.textContent = fmt(meta.analysis);
+      if (ci) ci.textContent = fmt(meta.callHistory);
+    } catch(e) {}
+  }
+
+  async function backupAnalysisData() {
+    const repoName = document.getElementById('bkpRepoSelect').value;
+    const scope = repoName === 'ALL' ? '전체 레포' : `"${repoName}"`;
+    if (!await customConfirm(`${scope}의 분석데이터를 백업하시겠습니까?\n기존 백업이 있으면 덮어씁니다.`)) return;
+    if (!await verifyPwPrompt()) return;
+    showDelProgress(`분석데이터 백업 중... (${scope})`);
+    try {
+      const url = `/api/db/backup/analysis?repoName=${encodeURIComponent(repoName)}`;
+      const res = await adminFetch(url, { method:'POST' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || '백업 실패');
+      document.getElementById('bkpResult').innerHTML =
+        `<span style="color:var(--success);">✓ 분석데이터 ${data.backed.toLocaleString()}건 백업 완료 (${scope})</span>`;
+      showToast(`분석데이터 ${data.backed.toLocaleString()}건 백업 완료`, 'success');
+      await loadBackupStatus();
+    } catch(e) {
+      document.getElementById('bkpResult').innerHTML = `<span style="color:var(--danger);">${esc(e.message)}</span>`;
+      showToast(e.message || '백업 실패', 'error');
+    } finally { hideDelProgress(); }
+  }
+
+  async function backupCallHistoryData() {
+    const repoName = document.getElementById('bkpRepoSelect').value;
+    const scope = repoName === 'ALL' ? '전체 레포' : `"${repoName}"`;
+    if (!await customConfirm(`${scope}의 호출이력 데이터를 백업하시겠습니까?\n기존 백업이 있으면 덮어씁니다.`)) return;
+    if (!await verifyPwPrompt()) return;
+    showDelProgress(`호출이력 백업 중... (${scope})`);
+    try {
+      const url = `/api/db/backup/call-history?repoName=${encodeURIComponent(repoName)}`;
+      const res = await adminFetch(url, { method:'POST' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || '백업 실패');
+      document.getElementById('bkpResult').innerHTML =
+        `<span style="color:var(--success);">✓ 호출이력 ${data.backed.toLocaleString()}건 백업 완료 (${scope})</span>`;
+      showToast(`호출이력 ${data.backed.toLocaleString()}건 백업 완료`, 'success');
+      await loadBackupStatus();
+    } catch(e) {
+      document.getElementById('bkpResult').innerHTML = `<span style="color:var(--danger);">${esc(e.message)}</span>`;
+      showToast(e.message || '백업 실패', 'error');
+    } finally { hideDelProgress(); }
+  }
+
+  async function restoreAnalysisData() {
+    const repoName = document.getElementById('restoreRepoSelect').value;
+    const scope = repoName === 'ALL' ? '전체 레포' : `"${repoName}"`;
+    if (!await customConfirm(`${scope}의 분석데이터를 백업본으로 복구하시겠습니까?\n현재 데이터가 백업본으로 교체됩니다. 되돌릴 수 없습니다.`)) return;
+    if (!await verifyPwPrompt()) return;
+    showDelProgress(`분석데이터 복구 중... (${scope})`);
+    try {
+      const url = `/api/db/restore/analysis?repoName=${encodeURIComponent(repoName)}`;
+      const res = await adminFetch(url, { method:'POST' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || '복구 실패');
+      document.getElementById('restoreResult').innerHTML =
+        `<span style="color:var(--success);">✓ 분석데이터 ${data.restored.toLocaleString()}건 복구 완료 (${scope})</span>`;
+      showToast(`분석데이터 ${data.restored.toLocaleString()}건 복구 완료`, 'success');
+    } catch(e) {
+      document.getElementById('restoreResult').innerHTML = `<span style="color:var(--danger);">${esc(e.message)}</span>`;
+      showToast(e.message || '복구 실패', 'error');
+    } finally { hideDelProgress(); }
+  }
+
+  async function restoreCallHistoryData() {
+    const repoName = document.getElementById('restoreRepoSelect').value;
+    const scope = repoName === 'ALL' ? '전체 레포' : `"${repoName}"`;
+    if (!await customConfirm(`${scope}의 호출이력을 백업본으로 복구하시겠습니까?\n현재 데이터가 백업본으로 교체됩니다. 되돌릴 수 없습니다.`)) return;
+    if (!await verifyPwPrompt()) return;
+    showDelProgress(`호출이력 복구 중... (${scope})`);
+    try {
+      const url = `/api/db/restore/call-history?repoName=${encodeURIComponent(repoName)}`;
+      const res = await adminFetch(url, { method:'POST' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || '복구 실패');
+      document.getElementById('restoreResult').innerHTML =
+        `<span style="color:var(--success);">✓ 호출이력 ${data.restored.toLocaleString()}건 복구 완료 (${scope})</span>`;
+      showToast(`호출이력 ${data.restored.toLocaleString()}건 복구 완료`, 'success');
+    } catch(e) {
+      document.getElementById('restoreResult').innerHTML = `<span style="color:var(--danger);">${esc(e.message)}</span>`;
+      showToast(e.message || '복구 실패', 'error');
+    } finally { hideDelProgress(); }
   }
 
   async function verifyPwPrompt() {

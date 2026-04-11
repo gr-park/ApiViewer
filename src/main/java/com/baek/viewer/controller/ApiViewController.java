@@ -426,6 +426,9 @@ public class ApiViewController {
         m.put("memo",               r.getMemo());
         m.put("reviewResult",       r.getReviewResult());
         m.put("reviewOpinion",      r.getReviewOpinion());
+        m.put("cboScheduledDate",   r.getCboScheduledDate());
+        m.put("deployScheduledDate", r.getDeployScheduledDate());
+        m.put("deployCsr",          r.getDeployCsr());
         m.put("reviewTeam",         r.getReviewTeam());
         m.put("reviewManager",      r.getReviewManager());
         m.put("reviewedAt",         r.getReviewedAt());
@@ -637,6 +640,15 @@ public class ApiViewController {
             if (body.containsKey("managerOverride")) { r.setManagerOverride(body.get("managerOverride") != null ? body.get("managerOverride").toString() : null); anyChanged = true; }
             if (body.containsKey("reviewResult"))    { r.setReviewResult(body.get("reviewResult") != null ? body.get("reviewResult").toString() : null); anyChanged = true; reviewChanged = true; }
             if (body.containsKey("reviewOpinion"))   { r.setReviewOpinion(body.get("reviewOpinion") != null ? body.get("reviewOpinion").toString() : null); anyChanged = true; reviewChanged = true; }
+            if (body.containsKey("cboScheduledDate")) {
+                String ds = body.get("cboScheduledDate") != null ? body.get("cboScheduledDate").toString().trim() : "";
+                r.setCboScheduledDate(ds.isEmpty() ? null : java.time.LocalDate.parse(ds)); anyChanged = true;
+            }
+            if (body.containsKey("deployScheduledDate")) {
+                String ds = body.get("deployScheduledDate") != null ? body.get("deployScheduledDate").toString().trim() : "";
+                r.setDeployScheduledDate(ds.isEmpty() ? null : java.time.LocalDate.parse(ds)); anyChanged = true;
+            }
+            if (body.containsKey("deployCsr")) { r.setDeployCsr(body.get("deployCsr") != null ? body.get("deployCsr").toString() : null); anyChanged = true; }
             if (body.containsKey("reviewTeam"))      { r.setReviewTeam(body.get("reviewTeam") != null ? body.get("reviewTeam").toString() : null); anyChanged = true; reviewChanged = true; }
             if (body.containsKey("reviewManager"))   { r.setReviewManager(body.get("reviewManager") != null ? body.get("reviewManager").toString() : null); anyChanged = true; reviewChanged = true; }
 
