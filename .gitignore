@@ -2,6 +2,7 @@ target/
 data/
 logs/*.log
 .DS_Store
+.claude/worktrees/
 *.class
 *.jar
 !lib/*.jar
