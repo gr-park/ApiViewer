@@ -167,13 +167,15 @@ class MockApmServiceTest {
     // ═══════════════════ deleteMockData ═══════════════════
 
     @Test
-    @DisplayName("deleteMockData — repo/source ALL 이면 bulkDeleteAll")
+    @DisplayName("deleteMockData — repo/source ALL 이면 bulkDeleteAll (TRUNCATE)")
     void deleteMockData_all_callsBulkDeleteAll() {
-        when(apmRepo.bulkDeleteAll()).thenReturn(1000);
+        when(apmRepo.count()).thenReturn(1000L);
+        org.mockito.Mockito.doNothing().when(apmRepo).bulkDeleteAll();
 
         Map<String, Object> result = service.deleteMockData("ALL", "ALL");
 
         assertThat(result).containsEntry("deleted", 1000);
+        verify(apmRepo).count();
         verify(apmRepo).bulkDeleteAll();
     }
 

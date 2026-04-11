@@ -522,7 +522,8 @@ public class MockApmService {
 
         int deleted;
         if (allRepos && allSources) {
-            deleted = apmRepo.bulkDeleteAll();
+            deleted = (int) apmRepo.count();
+            apmRepo.bulkDeleteAll();
         } else if (allRepos) {
             deleted = apmRepo.bulkDeleteBySource(normalizeSource(source));
         } else if (allSources) {
@@ -530,7 +531,7 @@ public class MockApmService {
         } else {
             deleted = apmRepo.bulkDeleteByRepoAndSource(repoName, normalizeSource(source));
         }
-        log.info("[APM 데이터 삭제 완료] {}건 (bulk DELETE)", deleted);
+        log.info("[APM 데이터 삭제 완료] {}건 ({})", deleted, (allRepos && allSources) ? "TRUNCATE" : "bulk DELETE");
         return Map.of("deleted", deleted);
     }
 

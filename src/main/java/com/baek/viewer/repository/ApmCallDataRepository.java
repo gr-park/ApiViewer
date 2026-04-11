@@ -43,11 +43,11 @@ public interface ApmCallDataRepository extends JpaRepository<ApmCallData, Long> 
 
     void deleteByRepositoryNameAndSource(String repositoryName, String source);
 
-    /** 전체 TRUNCATE 대용 — JPQL bulk DELETE (JPA deleteAll()보다 훨씬 빠름) */
+    /** 전체 TRUNCATE (네이티브) — WAL/undo 최소, bulk DELETE 대비 빠름 */
     @org.springframework.transaction.annotation.Transactional
     @org.springframework.data.jpa.repository.Modifying
-    @Query("DELETE FROM ApmCallData a")
-    int bulkDeleteAll();
+    @Query(value = "TRUNCATE TABLE apm_call_data", nativeQuery = true)
+    void bulkDeleteAll();
 
     /** 레포 전체 bulk DELETE */
     @org.springframework.transaction.annotation.Transactional

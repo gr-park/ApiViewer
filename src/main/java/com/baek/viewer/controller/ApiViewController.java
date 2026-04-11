@@ -1019,12 +1019,14 @@ public class ApiViewController {
     public ResponseEntity<?> deleteAllRecords(@RequestParam(required = false) String repoName) {
         log.warn("[분석데이터 삭제] DELETE /api/db/delete-all repoName={}", repoName);
         int deleted;
-        if (repoName == null || repoName.isBlank() || "ALL".equalsIgnoreCase(repoName)) {
-            deleted = recordRepository.bulkDeleteAll();
+        boolean allRepos = repoName == null || repoName.isBlank() || "ALL".equalsIgnoreCase(repoName);
+        if (allRepos) {
+            deleted = (int) recordRepository.count();
+            recordRepository.bulkDeleteAll();
         } else {
             deleted = recordRepository.bulkDeleteByRepo(repoName);
         }
-        log.info("[분석데이터 삭제 완료] {}건 삭제 (bulk DELETE)", deleted);
+        log.info("[분석데이터 삭제 완료] {}건 삭제 ({})", deleted, allRepos ? "TRUNCATE" : "bulk DELETE");
         return ResponseEntity.ok(Map.of("deleted", deleted));
     }
 

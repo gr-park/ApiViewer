@@ -60,7 +60,7 @@ public class BackupController {
             ensureBackupTable("api_record", "api_record_backup");
             int backed;
             if (repoName == null || repoName.isBlank() || "ALL".equalsIgnoreCase(repoName)) {
-                em.createNativeQuery("DELETE FROM api_record_backup").executeUpdate();
+                em.createNativeQuery("TRUNCATE TABLE api_record_backup").executeUpdate();
                 backed = em.createNativeQuery("INSERT INTO api_record_backup SELECT * FROM api_record")
                         .executeUpdate();
                 log.info("[분석데이터 백업] 전체 {} 건, ip={}", backed, getIp(req));
@@ -89,7 +89,7 @@ public class BackupController {
             ensureBackupTable("apm_call_data", "apm_call_data_backup");
             int backed;
             if (repoName == null || repoName.isBlank() || "ALL".equalsIgnoreCase(repoName)) {
-                em.createNativeQuery("DELETE FROM apm_call_data_backup").executeUpdate();
+                em.createNativeQuery("TRUNCATE TABLE apm_call_data_backup").executeUpdate();
                 backed = em.createNativeQuery("INSERT INTO apm_call_data_backup SELECT * FROM apm_call_data")
                         .executeUpdate();
                 log.info("[호출이력 백업] 전체 {} 건, ip={}", backed, getIp(req));

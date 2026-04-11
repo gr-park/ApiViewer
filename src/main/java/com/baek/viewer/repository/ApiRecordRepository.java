@@ -31,11 +31,11 @@ public interface ApiRecordRepository extends JpaRepository<ApiRecord, Long>,
     @org.springframework.data.jpa.repository.Modifying
     void deleteByRepositoryName(String repositoryName);
 
-    /** 전체 bulk DELETE (JPA deleteAll()보다 훨씬 빠름) */
+    /** 전체 TRUNCATE (네이티브) — WAL/undo 최소, bulk DELETE 대비 빠름 */
     @org.springframework.transaction.annotation.Transactional
     @org.springframework.data.jpa.repository.Modifying
-    @Query("DELETE FROM ApiRecord a")
-    int bulkDeleteAll();
+    @Query(value = "TRUNCATE TABLE api_record", nativeQuery = true)
+    void bulkDeleteAll();
 
     /** 레포 전체 bulk DELETE */
     @org.springframework.transaction.annotation.Transactional

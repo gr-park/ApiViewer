@@ -153,7 +153,7 @@ class ApiStorageServiceTest {
         info.setIsDeprecated("N");
         info.setHasUrlBlock("N");
 
-        int saved = service.save("repo", List.of(info), "127.0.0.1");
+        int saved = service.save("repo", List.of(info), "127.0.0.1")[0];
 
         assertThat(saved).isEqualTo(1);
         verify(repository, atLeastOnce()).saveAll(anyList());
@@ -178,7 +178,7 @@ class ApiStorageServiceTest {
         info.setIsDeprecated("Y");
         info.setHasUrlBlock("Y");
 
-        int saved = service.save("repo", List.of(info), "127.0.0.1");
+        int saved = service.save("repo", List.of(info), "127.0.0.1")[0];
 
         // 차단완료 건은 save 건너뜀
         assertThat(saved).isEqualTo(0);
