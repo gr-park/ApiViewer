@@ -191,7 +191,7 @@ Spring Boot 기반 웹 애플리케이션. Controller 소스를 파싱하여 URL
 ```
 workflow.html
 ├─ 1. 관리자 업무     (스윔레인: 소스추출→배치설정→레포매핑→상태확정)
-├─ 2. 자동 배치       (스윔레인: GIT_PULL_EXTRACT→APM_DAILY/WEEKLY→상태재계산)
+├─ 2. 자동 배치       (스윔레인: GIT_PULL_EXTRACT→APM_DAILY/WEEKLY→상태재계산→DATA_BACKUP)
 ├─ 3. 상태 판정 로직  (5가지 상태 카드 그리드)
 ├─ 4. 사용자·검토자   (스윔레인: 대시보드→URL현황→호출현황→현업검토)
 ├─ 5. URL 라이프사이클 (6단계 타임라인)

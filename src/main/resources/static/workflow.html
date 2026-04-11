@@ -449,6 +449,12 @@
         <div class="step-desc"><b>statusOverridden=false</b> 대상만 자동 재계산. 확정(true)·차단완료 건은 재계산 제외.</div>
         <span class="step-tag locked">🔄 재계산 대상 필터</span>
       </div>
+      <div class="arrow">›</div>
+      <div class="step">
+        <div class="step-head"><span class="step-num">4</span>DATA_BACKUP</div>
+        <div class="step-desc">매일 02:30 api_record·apm_call_data를 백업 테이블로 단일 스냅샷 덮어쓰기. 복구는 설정 > 데이터관리에서 수행.</div>
+        <a href="/settings.html#data" class="step-tag">💾 /settings.html</a>
+      </div>
     </div>
   </div>
 
@@ -614,7 +620,7 @@
         </div>
         <ul class="auth-list">
           <li><b>/extract.html</b> — Git Pull·추출 실행</li>
-          <li><b>/settings.html</b> — 배치·레포·로그·데이터 관리</li>
+          <li><b>/settings.html</b> — 배치·레포·로그·URL분석/검토·데이터 관리</li>
           <li><b>/h2-console</b> — H2 DB 콘솔</li>
           <li>상태확정·차단 반영·엑셀 업로드</li>
         </ul>

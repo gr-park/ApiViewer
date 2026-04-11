@@ -1,6 +1,7 @@
 package com.baek.viewer.service;
 
 import com.baek.viewer.job.ApmCollectJob;
+import com.baek.viewer.job.DataBackupJob;
 import com.baek.viewer.job.DbSnapshotJob;
 import com.baek.viewer.job.GitPullExtractJob;
 import com.baek.viewer.model.ScheduleConfig;
@@ -66,6 +67,7 @@ public class ScheduleService {
             });
         }
         createIfAbsent("APM_COLLECT", "APM 호출건수 수집 (와탭/제니퍼)", "DAILY", "06:00", "7");
+        createIfAbsent("DATA_BACKUP", "분석데이터·호출이력 자동 백업", "DAILY", "02:30", null);
     }
 
     private void createIfAbsent(String jobType, String desc, String scheduleType, String runTime, String jobParam) {
@@ -148,6 +150,7 @@ public class ScheduleService {
             case "GIT_PULL_EXTRACT" -> GitPullExtractJob.class;
             case "APM_COLLECT", "APM_DAILY", "APM_WEEKLY" -> ApmCollectJob.class;
             case "DB_SNAPSHOT" -> DbSnapshotJob.class;
+            case "DATA_BACKUP" -> DataBackupJob.class;
             default -> null;
         };
     }
