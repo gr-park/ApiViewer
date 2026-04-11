@@ -973,6 +973,35 @@ public class ApiViewController {
         }
     }
 
+    /**
+     * 선택 레코드 강제 삭제 (관리자 전용).
+     * Body: { "ids": [1,2,3] } — 상태 무관하게 지정된 id들을 물리 삭제.
+     */
+    @DeleteMapping("/db/records")
+    public ResponseEntity<?> deleteRecords(@RequestBody Map<String, Object> body) {
+        try {
+            @SuppressWarnings("unchecked")
+            List<Integer> rawIds = (List<Integer>) body.get("ids");
+            if (rawIds == null || rawIds.isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of("error", "ids가 비어 있습니다."));
+            }
+            int deleted = 0, skipped = 0;
+            for (Integer rawId : rawIds) {
+                if (recordRepository.existsById(rawId.longValue())) {
+                    recordRepository.deleteById(rawId.longValue());
+                    deleted++;
+                } else {
+                    skipped++;
+                }
+            }
+            log.warn("[레코드 강제삭제] 대상={}건, 삭제={}건, 스킵={}건 (ID없음)", rawIds.size(), deleted, skipped);
+            return ResponseEntity.ok(Map.of("deleted", deleted, "skipped", skipped));
+        } catch (Exception e) {
+            log.error("[레코드 강제삭제 실패] {}", e.getMessage(), e);
+            return ResponseEntity.internalServerError().body(Map.of("error", e.getMessage()));
+        }
+    }
+
     /** managerMappings JSON → List<Map<programId, managerName>> 파싱 (실패 시 빈 리스트) */
     @SuppressWarnings("unchecked")
     private List<Map<String, String>> parseManagerMappings(String json) {
