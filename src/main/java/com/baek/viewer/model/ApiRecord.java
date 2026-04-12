@@ -16,7 +16,10 @@ import java.time.LocalDateTime;
         @Index(name = "idx_status_overridden",  columnList = "status_overridden"),
         @Index(name = "idx_block_target",       columnList = "block_target"),
         @Index(name = "idx_is_new",             columnList = "is_new"),
-        @Index(name = "idx_status_changed",     columnList = "status_changed")
+        @Index(name = "idx_status_changed",     columnList = "status_changed"),
+        @Index(name = "idx_review_stage",      columnList = "review_stage"),
+        @Index(name = "idx_jira_issue_key",    columnList = "jira_issue_key"),
+        @Index(name = "idx_jira_epic_key",     columnList = "jira_epic_key")
     })
 public class ApiRecord {
 
@@ -206,6 +209,38 @@ public class ApiRecord {
     @Column(name = "git_history", columnDefinition = "TEXT")
     private String gitHistory; // JSON: [{"date":"...","author":"...","message":"..."},...]
 
+    /** Jira 검토 단계 */
+    @Column(name = "review_stage", length = 30)
+    private String reviewStage;
+
+    /** IT 내부 1차 검토자 */
+    @Column(name = "internal_reviewer", length = 50)
+    private String internalReviewer;
+
+    /** IT 내부 검토 일시 */
+    @Column(name = "internal_reviewed_at")
+    private LocalDateTime internalReviewedAt;
+
+    /** IT 내부 메모 (오탐 사유 등) */
+    @Column(name = "internal_memo", columnDefinition = "TEXT")
+    private String internalMemo;
+
+    /** Jira Epic 키 */
+    @Column(name = "jira_epic_key", length = 50)
+    private String jiraEpicKey;
+
+    /** Jira Story 티켓 키 */
+    @Column(name = "jira_issue_key", length = 50)
+    private String jiraIssueKey;
+
+    /** Jira 웹 링크 */
+    @Column(name = "jira_issue_url", length = 500)
+    private String jiraIssueUrl;
+
+    /** Jira 마지막 동기화 일시 */
+    @Column(name = "jira_synced_at")
+    private LocalDateTime jiraSyncedAt;
+
     public Long getId() { return id; }
     public String getRepositoryName() { return repositoryName; }
     public void setRepositoryName(String repositoryName) { this.repositoryName = repositoryName; }
@@ -306,4 +341,20 @@ public class ApiRecord {
     public void setBlockCriteria(String blockCriteria) { this.blockCriteria = blockCriteria; }
     public String getGitHistory() { return gitHistory; }
     public void setGitHistory(String gitHistory) { this.gitHistory = gitHistory; }
+    public String getReviewStage() { return reviewStage; }
+    public void setReviewStage(String reviewStage) { this.reviewStage = reviewStage; }
+    public String getInternalReviewer() { return internalReviewer; }
+    public void setInternalReviewer(String internalReviewer) { this.internalReviewer = internalReviewer; }
+    public LocalDateTime getInternalReviewedAt() { return internalReviewedAt; }
+    public void setInternalReviewedAt(LocalDateTime v) { this.internalReviewedAt = v; }
+    public String getInternalMemo() { return internalMemo; }
+    public void setInternalMemo(String internalMemo) { this.internalMemo = internalMemo; }
+    public String getJiraEpicKey() { return jiraEpicKey; }
+    public void setJiraEpicKey(String jiraEpicKey) { this.jiraEpicKey = jiraEpicKey; }
+    public String getJiraIssueKey() { return jiraIssueKey; }
+    public void setJiraIssueKey(String jiraIssueKey) { this.jiraIssueKey = jiraIssueKey; }
+    public String getJiraIssueUrl() { return jiraIssueUrl; }
+    public void setJiraIssueUrl(String jiraIssueUrl) { this.jiraIssueUrl = jiraIssueUrl; }
+    public LocalDateTime getJiraSyncedAt() { return jiraSyncedAt; }
+    public void setJiraSyncedAt(LocalDateTime v) { this.jiraSyncedAt = v; }
 }

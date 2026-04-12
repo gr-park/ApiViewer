@@ -49,4 +49,8 @@ public interface ApiRecordSummary {
     String getTeamOverride();
     String getManagerOverride();
     String getGitHistory();
+    String getReviewStage();
+    String getJiraIssueKey();
+    String getJiraIssueUrl();
+    LocalDateTime getJiraSyncedAt();
 }

@@ -181,6 +181,7 @@ function updateAdminBadge(valid) {
       <button class="settings-tab" data-tab="logs">📄 로그</button>
       <button class="settings-tab" data-tab="data">📊 데이터관리</button>
       <button class="settings-tab" data-tab="notify">📧 알림</button>
+      <button class="settings-tab" data-tab="jira">🔗 Jira 연동</button>
       <div style="border-top:1px solid var(--border);margin:6px 0;"></div>
       <button class="settings-tab" data-tab="extract">🔍 URL분석/검토</button>
     </aside>
@@ -572,6 +573,102 @@ function updateAdminBadge(valid) {
   </div>
 </section>
 
+<!-- ═══ 🔗 Jira 연동 ═══ -->
+<section class="settings-section" data-section="jira">
+
+  <!-- Jira 서버 설정 -->
+  <div class="card">
+    <div class="card-title"><span class="dot" style="background:var(--purple);"></span>Jira 서버 설정</div>
+    <div class="field-row col2">
+      <label class="field">Jira URL
+        <input id="jiraBaseUrl" type="text" placeholder="https://jira.company.com">
+      </label>
+      <label class="field">프로젝트 키
+        <input id="jiraProjectKey" type="text" placeholder="URLB">
+      </label>
+    </div>
+    <div class="field-row col2">
+      <label class="field">서비스 계정 ID
+        <input id="jiraServiceAccount" type="text" placeholder="svc-urlviewer">
+      </label>
+      <label class="field">API 토큰
+        <input id="jiraApiToken" type="password" placeholder="토큰 입력">
+      </label>
+    </div>
+    <div class="field-row col2">
+      <label class="field">URLViewer ID 커스텀 필드
+        <input id="jiraCustomFieldId" type="text" placeholder="customfield_10100">
+        <span class="field-hint">Jira 이슈에 URLViewer 레코드 ID를 저장할 커스텀 필드</span>
+      </label>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;margin-top:14px;">
+      <button class="btn btn-ghost" onclick="testJiraConnection()">🔗 연결 테스트</button>
+      <span id="jiraTestResult" style="font-size:12px;"></span>
+    </div>
+    <div style="display:flex;justify-content:flex-end;margin-top:14px;">
+      <button class="btn btn-blue" onclick="saveJiraConfig()">Jira 설정 저장</button>
+    </div>
+  </div>
+
+  <!-- 자동 동기화 설정 -->
+  <div class="card">
+    <div class="card-title"><span class="dot" style="background:var(--purple);"></span>자동 동기화 설정</div>
+    <div class="field-row col3">
+      <label class="field">동기화 활성화
+        <div style="display:flex;align-items:center;gap:8px;margin-top:4px;">
+          <label style="display:flex;align-items:center;gap:4px;font-size:12px;cursor:pointer;">
+            <input type="radio" name="jiraSyncEnabled" id="jiraSyncOn" value="true"> ON
+          </label>
+          <label style="display:flex;align-items:center;gap:4px;font-size:12px;cursor:pointer;">
+            <input type="radio" name="jiraSyncEnabled" id="jiraSyncOff" value="false" checked> OFF
+          </label>
+        </div>
+      </label>
+      <label class="field">동기화 주기 (분)
+        <input id="jiraSyncInterval" type="number" min="1" value="60" style="width:100px;">
+      </label>
+      <label class="field">마지막 동기화
+        <span id="jiraLastSync" style="font-size:12px;color:var(--text-muted);margin-top:6px;">-</span>
+      </label>
+    </div>
+  </div>
+
+  <!-- 수동 동기화 -->
+  <div class="card">
+    <div class="card-title"><span class="dot" style="background:var(--purple);"></span>수동 동기화</div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+      <button class="btn" style="background:var(--purple);color:#fff;" onclick="syncAllToJira()">🔗 전체 Jira 발행</button>
+      <button class="btn btn-ghost" onclick="pullAllFromJira()">🔄 전체 역방향 동기화</button>
+    </div>
+    <div id="jiraSyncResult" style="margin-top:10px;font-size:12px;"></div>
+  </div>
+
+  <!-- 담당자 매핑 -->
+  <div class="card">
+    <div class="card-title"><span class="dot" style="background:var(--purple);"></span>담당자 매핑 (URLViewer → Jira)</div>
+    <div style="font-size:11px;color:var(--text-muted);margin-bottom:10px;">
+      URLViewer 담당자명과 Jira 계정을 매핑합니다. 매핑이 없는 담당자는 Jira 이슈 생성 시 담당자 미지정 상태로 발행됩니다.
+    </div>
+    <table style="width:100%;border-collapse:collapse;font-size:12px;" id="jiraMappingTable">
+      <thead>
+        <tr style="background:#f8fafc;">
+          <th style="padding:8px 10px;text-align:left;border-bottom:2px solid var(--border);font-weight:700;color:var(--text-muted);font-size:11px;">URLViewer 담당자명</th>
+          <th style="padding:8px 10px;text-align:left;border-bottom:2px solid var(--border);font-weight:700;color:var(--text-muted);font-size:11px;">Jira 계정 ID</th>
+          <th style="padding:8px 10px;text-align:left;border-bottom:2px solid var(--border);font-weight:700;color:var(--text-muted);font-size:11px;">Jira 표시명</th>
+          <th style="padding:8px 10px;text-align:center;border-bottom:2px solid var(--border);width:60px;font-weight:700;color:var(--text-muted);font-size:11px;">삭제</th>
+        </tr>
+      </thead>
+      <tbody id="jiraMappingBody"></tbody>
+    </table>
+    <div style="display:flex;gap:8px;margin-top:10px;">
+      <button class="btn btn-ghost" style="font-size:11px;padding:4px 12px;height:auto;" onclick="addJiraMappingRow()">+ 행 추가</button>
+      <div style="flex:1;"></div>
+      <button class="btn btn-blue" onclick="saveJiraMappings()">매핑 저장</button>
+    </div>
+  </div>
+
+</section>
+
 <!-- ═══ 🔍 URL분석/검토 ═══ -->
 <section class="settings-section" data-section="extract">
   <!-- 현업검토 화면 설정 (공통설정에서 이동) -->
@@ -683,7 +780,7 @@ function updateAdminBadge(valid) {
           <input id="f_businessName" type="text" placeholder="카드회원관리">
         </label>
       </div>
-      <div class="field-row col3">
+      <div class="field-row col4">
         <label class="field">분석배치 수행
           <select id="f_analysisBatchEnabled">
             <option value="Y">Y</option>
@@ -694,6 +791,12 @@ function updateAdminBadge(valid) {
           <select id="f_apmBatchEnabled">
             <option value="Y">Y</option>
             <option value="N">N</option>
+          </select>
+        </label>
+        <label class="field">앱 유형
+          <select id="f_appType">
+            <option value="APP">앱</option>
+            <option value="WEB">홈페이지</option>
           </select>
         </label>
         <label class="field">URL 경로 프리픽스
@@ -1112,6 +1215,7 @@ function updateAdminBadge(valid) {
     document.getElementById('f_gitPullEnabled').value = 'Y';
     document.getElementById('f_analysisBatchEnabled').value = 'Y';
     document.getElementById('f_apmBatchEnabled').value = 'Y';
+    document.getElementById('f_appType').value = 'APP';
     document.getElementById('f_apmType').value = 'NONE';
     document.getElementById('f_apmProfile').innerHTML = '<option value="">-- 선택 --</option>';
     document.getElementById('f_whatapPcode').value = '8';
@@ -1128,6 +1232,7 @@ function updateAdminBadge(valid) {
     document.getElementById('f_gitPullEnabled').value   = r.gitPullEnabled   || 'Y';
     document.getElementById('f_analysisBatchEnabled').value = r.analysisBatchEnabled || 'Y';
     document.getElementById('f_apmBatchEnabled').value = r.apmBatchEnabled || 'Y';
+    document.getElementById('f_appType').value          = r.appType || 'APP';
     document.getElementById('f_teamName').value         = r.teamName         || '';
     document.getElementById('f_managerName').value      = r.managerName      || '';
     document.getElementById('f_businessName').value     = r.businessName     || '';
@@ -1177,6 +1282,7 @@ function updateAdminBadge(valid) {
       gitPullEnabled:   document.getElementById('f_gitPullEnabled').value,
       analysisBatchEnabled: document.getElementById('f_analysisBatchEnabled').value,
       apmBatchEnabled: document.getElementById('f_apmBatchEnabled').value,
+      appType:          document.getElementById('f_appType').value,
       teamName:         document.getElementById('f_teamName').value.trim(),
       managerName:      document.getElementById('f_managerName').value.trim(),
       businessName:     document.getElementById('f_businessName').value.trim(),
@@ -2127,6 +2233,7 @@ function updateAdminBadge(valid) {
       document.querySelectorAll('.settings-section').forEach(s => s.classList.toggle('active', s.dataset.section === target));
       // extract 탭 lazy-load (fetch → DOM 직접 삽입, iframe 미사용)
       if (target === 'extract') loadExtractContent();
+      if (target === 'jira') loadJiraConfig();
       history.replaceState({}, '', '#' + target);
     });
   });
@@ -2189,6 +2296,147 @@ function updateAdminBadge(valid) {
       wrap.innerHTML = `<div style="text-align:center;padding:40px;color:var(--danger);">로드 실패: ${e.message}</div>`;
     }
   }
+
+  // ── Jira 연동 ───────────────────────────────────────────────
+  let jiraConfigLoaded = false;
+
+  async function loadJiraConfig() {
+    if (jiraConfigLoaded) return;
+    try {
+      const res = await adminFetch('/api/jira/config');
+      if (res.ok) {
+        const c = await res.json();
+        document.getElementById('jiraBaseUrl').value        = c.jiraBaseUrl || '';
+        document.getElementById('jiraProjectKey').value     = c.projectKey || '';
+        document.getElementById('jiraServiceAccount').value = c.serviceAccount || '';
+        document.getElementById('jiraApiToken').value       = c.apiToken || '';
+        document.getElementById('jiraCustomFieldId').value  = c.customFieldId || '';
+        if (c.syncEnabled) document.getElementById('jiraSyncOn').checked = true;
+        else document.getElementById('jiraSyncOff').checked = true;
+        document.getElementById('jiraSyncInterval').value   = c.syncInterval || 60;
+        document.getElementById('jiraLastSync').textContent = c.lastSyncedAt ? fmtDt(c.lastSyncedAt) : '-';
+      }
+    } catch(e) { /* 설정 없음 — 초기 상태 유지 */ }
+    await loadJiraMappings();
+    jiraConfigLoaded = true;
+  }
+
+  async function saveJiraConfig() {
+    const config = {
+      jiraBaseUrl:    document.getElementById('jiraBaseUrl').value.trim(),
+      projectKey:     document.getElementById('jiraProjectKey').value.trim(),
+      serviceAccount: document.getElementById('jiraServiceAccount').value.trim(),
+      apiToken:       document.getElementById('jiraApiToken').value.trim(),
+      customFieldId:  document.getElementById('jiraCustomFieldId').value.trim(),
+      syncEnabled:    document.getElementById('jiraSyncOn').checked,
+      syncInterval:   parseInt(document.getElementById('jiraSyncInterval').value) || 60
+    };
+    try {
+      const res = await adminFetch('/api/jira/config', { method: 'PUT', body: JSON.stringify(config) });
+      if (!res.ok) { const d = await res.json().catch(()=>({})); throw new Error(d.error || '저장 실패'); }
+      showToast('Jira 설정 저장 완료', 'success');
+    } catch(e) { showToast(e.message, 'error'); }
+  }
+
+  async function testJiraConnection() {
+    const resultEl = document.getElementById('jiraTestResult');
+    resultEl.innerHTML = '<span style="color:var(--text-muted);">테스트 중...</span>';
+    try {
+      const res = await adminFetch('/api/jira/config/test', { method: 'POST' });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        resultEl.innerHTML = `<span style="display:inline-block;padding:3px 10px;border-radius:6px;background:#dcfce7;color:#166534;font-weight:600;">연결 성공: ${esc(data.displayName || '')}</span>`;
+      } else {
+        resultEl.innerHTML = `<span style="display:inline-block;padding:3px 10px;border-radius:6px;background:#fee2e2;color:#991b1b;font-weight:600;">${esc(data.error || '연결 실패')}</span>`;
+      }
+    } catch(e) {
+      resultEl.innerHTML = `<span style="display:inline-block;padding:3px 10px;border-radius:6px;background:#fee2e2;color:#991b1b;font-weight:600;">연결 실패: ${esc(e.message)}</span>`;
+    }
+  }
+
+  async function syncAllToJira() {
+    if (!await customConfirm('전체 차단대상을 Jira로 발행하시겠습니까?')) return;
+    showToast('Jira 발행 중...', 'info');
+    const resultEl = document.getElementById('jiraSyncResult');
+    resultEl.innerHTML = '<span style="color:var(--text-muted);">처리 중...</span>';
+    try {
+      const res = await adminFetch('/api/jira/sync/all', { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || '발행 실패');
+      resultEl.innerHTML = `<span style="color:var(--success);font-weight:600;">완료: 생성 ${data.created || 0}건, 갱신 ${data.updated || 0}건, 실패 ${data.failed || 0}건</span>`;
+      showToast('전체 Jira 발행 완료', 'success');
+    } catch(e) {
+      resultEl.innerHTML = `<span style="color:var(--danger);font-weight:600;">실패: ${esc(e.message)}</span>`;
+      showToast('발행 실패: ' + e.message, 'error');
+    }
+  }
+
+  async function pullAllFromJira() {
+    if (!await customConfirm('Jira에서 전체 역방향 동기화하시겠습니까?')) return;
+    showToast('역방향 동기화 중...', 'info');
+    const resultEl = document.getElementById('jiraSyncResult');
+    resultEl.innerHTML = '<span style="color:var(--text-muted);">처리 중...</span>';
+    try {
+      const res = await adminFetch('/api/jira/pull/all', { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || '동기화 실패');
+      resultEl.innerHTML = `<span style="color:var(--success);font-weight:600;">동기화 완료: ${data.synced || 0}건</span>`;
+      showToast('전체 역방향 동기화 완료', 'success');
+    } catch(e) {
+      resultEl.innerHTML = `<span style="color:var(--danger);font-weight:600;">실패: ${esc(e.message)}</span>`;
+      showToast('동기화 실패: ' + e.message, 'error');
+    }
+  }
+
+  // ── Jira 담당자 매핑 ────────────────────────────────────────
+  async function loadJiraMappings() {
+    try {
+      const res = await adminFetch('/api/jira/mappings');
+      if (!res.ok) return;
+      const list = await res.json();
+      const tbody = document.getElementById('jiraMappingBody');
+      tbody.innerHTML = '';
+      (list || []).forEach(m => addJiraMappingRow(m.id, m.urlviewerName, m.jiraAccountId, m.jiraDisplayName));
+    } catch(e) { /* 매핑 없음 */ }
+  }
+
+  function addJiraMappingRow(id, urlviewerName, jiraAccountId, jiraDisplayName) {
+    const tbody = document.getElementById('jiraMappingBody');
+    const tr = document.createElement('tr');
+    tr.dataset.mappingId = id || '';
+    tr.innerHTML = `
+      <td style="padding:6px 10px;border-bottom:1px solid var(--border);"><input type="text" value="${esc(urlviewerName||'')}" placeholder="홍길동" class="jm-name" style="width:100%;padding:5px 8px;border:1px solid var(--border);border-radius:4px;font-size:12px;"></td>
+      <td style="padding:6px 10px;border-bottom:1px solid var(--border);"><input type="text" value="${esc(jiraAccountId||'')}" placeholder="5f1a2b3c4d5e6f" class="jm-account" style="width:100%;padding:5px 8px;border:1px solid var(--border);border-radius:4px;font-size:12px;font-family:monospace;"></td>
+      <td style="padding:6px 10px;border-bottom:1px solid var(--border);"><input type="text" value="${esc(jiraDisplayName||'')}" placeholder="Hong Gildong" class="jm-display" style="width:100%;padding:5px 8px;border:1px solid var(--border);border-radius:4px;font-size:12px;"></td>
+      <td style="padding:6px 10px;border-bottom:1px solid var(--border);text-align:center;"><button class="btn btn-ghost" style="padding:2px 8px;font-size:16px;height:auto;color:var(--danger);" onclick="this.closest('tr').remove()">×</button></td>`;
+    tbody.appendChild(tr);
+  }
+
+  async function saveJiraMappings() {
+    const rows = document.querySelectorAll('#jiraMappingBody tr');
+    const mappings = [];
+    rows.forEach(tr => {
+      const name = tr.querySelector('.jm-name').value.trim();
+      const account = tr.querySelector('.jm-account').value.trim();
+      const display = tr.querySelector('.jm-display').value.trim();
+      if (name && account) {
+        mappings.push({
+          id: tr.dataset.mappingId ? parseInt(tr.dataset.mappingId) : null,
+          urlviewerName: name,
+          jiraAccountId: account,
+          jiraDisplayName: display
+        });
+      }
+    });
+    try {
+      const res = await adminFetch('/api/jira/mappings', { method: 'POST', body: JSON.stringify(mappings) });
+      if (!res.ok) { const d = await res.json().catch(()=>({})); throw new Error(d.error || '저장 실패'); }
+      showToast('담당자 매핑 저장 완료', 'success');
+      jiraConfigLoaded = false; // 다음 탭 전환 시 재로드
+      await loadJiraMappings();
+    } catch(e) { showToast(e.message, 'error'); }
+  }
+
 </script>
 </body>
 </html>
