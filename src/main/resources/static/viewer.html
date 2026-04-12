@@ -251,6 +251,10 @@
     .toast.error   { background:var(--danger); }
     .toast.success { background:var(--success); }
     .toast.info    { background:var(--purple); }
+
+    /* Jira 배지 */
+    .jira-badge { display:inline-block; padding:2px 8px; border-radius:4px; background:#ede9fe; color:var(--purple); font-size:11px; font-weight:600; text-decoration:none; border:1px solid #c4b5fd; }
+    .jira-badge:hover { background:#ddd6fe; }
   </style>
   <script src="/exceljs.min.js"></script>
   <script src="/js/dialog.js"></script>
@@ -292,6 +296,8 @@
       <button class="btn btn-green" id="excelBtn" onclick="downloadExcel()" style="display:none;">⬇ 엑셀 다운로드</button>
       <button class="btn" id="excelUploadBtn" onclick="triggerExcelUpload()" style="display:none;background:#7c3aed;color:#fff;border-color:#7c3aed;">⬆ 엑셀 업로드</button>
       <input type="file" id="excelUploadInput" accept=".xlsx" style="display:none;" onchange="handleExcelUpload(event)">
+      <button class="btn btn-sm btn-ghost" id="repoJiraSync" onclick="repoSyncToJira()" style="display:none;" title="선택 레포의 차단대상을 Jira로 발행">🔗 Jira 발행</button>
+      <button class="btn btn-sm btn-ghost" id="repoJiraPull" onclick="repoSyncFromJira()" style="display:none;" title="선택 레포의 Jira 상태를 역방향 동기화">🔄 Jira 동기화</button>
     </div>
 
     <div class="db-meta" id="dbMeta" style="display:none">
@@ -423,6 +429,7 @@
     <button class="btn-apply" id="bulkUnblockBtn" onclick="bulkUnblock()" style="background:#64748b;display:none;" title="선택한 차단완료 건을 '사용'으로 해제 (관리자)">🔓 차단완료 해제</button>
     <button class="btn-apply" id="bulkDeleteBtn" onclick="bulkDeleteRecords()" style="background:#b91c1c;display:none;" title="선택한 레코드를 DB에서 완전 삭제 (관리자, 비밀번호 필요)">🗑 선택 삭제</button>
     <button class="btn-apply" id="bulkPurgeBtn" onclick="bulkPurgeDeleted()" style="background:#7c2d12;display:none;">🗑 영구삭제</button>
+    <button class="btn-apply" id="bulkJiraSyncBtn" onclick="bulkSyncToJira()" style="background:var(--purple);display:none;">🔗 Jira 발행</button>
     <button class="btn-cancel" onclick="clearSelection()">취소</button>
   </div>
 
@@ -457,6 +464,7 @@
           <th class="hg-block no-sort">비고(입력가능)</th>
           <th class="hg-block" onclick="sortBy('reviewResult')">현업검토결과 <span class="sort-icon">↕</span></th>
           <th class="hg-block no-sort">현업검토의견</th>
+          <th class="hg-block no-sort">Jira</th>
           <th class="hg-deploy" onclick="sortBy('cboScheduledDate')">CBO예정일자 <span class="sort-icon">↕</span></th>
           <th class="hg-deploy" onclick="sortBy('deployScheduledDate')">배포예정일자 <span class="sort-icon">↕</span></th>
           <th class="hg-deploy no-sort">배포CSR</th>
@@ -465,7 +473,7 @@
         </tr>
       </thead>
       <tbody id="tbody">
-        <tr><td colspan="26"><div class="state-box">레포지토리를 선택하고 <b>조회</b>를 클릭하세요.</div></td></tr>
+        <tr><td colspan="28"><div class="state-box">레포지토리를 선택하고 <b>조회</b>를 클릭하세요.</div></td></tr>
       </tbody>
     </table>
   </div>
@@ -1280,7 +1288,7 @@
     const off = startOffset || 0;
     const tbody = document.getElementById('tbody');
     if (!list.length) {
-      tbody.innerHTML = '<tr><td colspan="27"><div class="state-box">검색 결과가 없습니다.</div></td></tr>';
+      tbody.innerHTML = '<tr><td colspan="28"><div class="state-box">검색 결과가 없습니다.</div></td></tr>';
       return;
     }
     tbody.innerHTML = list.map((a, idx) => {
@@ -1323,6 +1331,7 @@
         <td class="${(locked||isBlocked)?'':'memo-editable'}" onclick="${(locked||isBlocked)?'':('editField(this,'+a.id+',&apos;memo&apos;)')}" title="${(locked||isBlocked)?'수정불가':'클릭하여 입력'}" style="font-size:11px;">${esc(a.memo || '')}</td>
         <td>${reviewResultBadge(a.reviewResult)}</td>
         <td style="font-size:11px;color:var(--text-muted);max-width:140px;">${esc(a.reviewOpinion || '')}</td>
+        <td>${a.jiraIssueKey ? `<a href="${esc(a.jiraIssueUrl)}" target="_blank" class="jira-badge" title="Jira 티켓 바로가기">${esc(a.jiraIssueKey)}</a>` : '<span style="color:#cbd5e1;font-size:11px;">-</span>'}</td>
         <td class="${(locked||isBlocked)?'':'memo-editable'}" onclick="${(locked||isBlocked)?'':('editField(this,'+a.id+',&apos;cboScheduledDate&apos;)')}" title="${(locked||isBlocked)?'수정불가':'클릭하여 날짜 선택'}" style="font-size:11px;white-space:nowrap;">${esc(a.cboScheduledDate || '')}</td>
         <td class="${(locked||isBlocked)?'':'memo-editable'}" onclick="${(locked||isBlocked)?'':('editField(this,'+a.id+',&apos;deployScheduledDate&apos;)')}" title="${(locked||isBlocked)?'수정불가':'클릭하여 날짜 선택'}" style="font-size:11px;white-space:nowrap;">${esc(a.deployScheduledDate || '')}</td>
         <td class="${(locked||isBlocked)?'':'memo-editable'}" onclick="${(locked||isBlocked)?'':('editField(this,'+a.id+',&apos;deployCsr&apos;)')}" title="${(locked||isBlocked)?'수정불가':'클릭하여 입력'}" style="font-size:11px;">${esc(a.deployCsr || '')}</td>
@@ -1723,7 +1732,9 @@
     // 메뉴      Deprecated  총호출건  1달호출건   1주호출건
     // 22    23       24                    25      26      27      28    29        30
     // 상태  상태확정 침해사고 로그 제외대상  차단기준 차단일자 차단근거 비고  검토결과  검토의견
-    // 31~45 변경이력1~5(각3열)  46  47
+    // 31  32            33        34        35
+    // Jira 검토단계     CBO예정   배포예정   배포CSR
+    // 36~50 변경이력1~5(각3열)  51  52
     //                       분석 변경
     const headers = [
       '레포지토리','업무명','팀','담당자','URL 경로','Full URL',
@@ -1731,10 +1742,13 @@
       'ApiOperation','Description주석','메소드주석','컨트롤러주석','RequestProperty','컨트롤러RequestProperty',
       '관련 메뉴(또는 기능)','Deprecated','1년 호출건','1달 호출건','1주 호출건',
       '상태','상태확정','침해사고 로그 제외대상','차단기준','차단일자','차단근거',
-      '비고','현업검토결과','현업검토의견','CBO예정일자','배포예정일자','배포CSR',
+      '비고','현업검토결과','현업검토의견',
+      'Jira 티켓','검토단계',
+      'CBO예정일자','배포예정일자','배포CSR',
       ...commitHeaders, '분석일시', '변경일시'
     ];
     const blue='E0F2FE', yellow='FEF3C7', purple='E0E7FF', pink='FFE4E6';
+    const jiraPurple='EDE9FE';
     const g1='D1FAE5', g2='DCFCE7', g3='ECFDF5', g4='F0FDF4', g5='F5FFF9';
     const headerColors = [
       blue,blue,blue,blue,blue,blue,   // 0~5: 레포~FullURL
@@ -1744,12 +1758,14 @@
       purple,purple,purple,purple,purple, // 17~21: 메뉴~1주호출건
       pink,pink,                         // 22~23: 상태,상태확정 ★유효성검증컬럼
       pink,pink,pink,pink,               // 24~27: 침해사고,차단기준,차단일자,차단근거
-      pink,pink,pink,pink,pink,pink,     // 28~33: 비고,검토결과,검토의견,CBO예정일자,배포예정일자,배포CSR ★유효성검증컬럼
-      g1,g1,g1, g2,g2,g2, g3,g3,g3, g4,g4,g4, g5,g5,g5, // 34~48: 변경이력1~5
-      blue,blue                          // 49~50: 분석/변경일시
+      pink,pink,pink,                    // 28~30: 비고,검토결과,검토의견
+      jiraPurple,jiraPurple,             // 31~32: Jira 티켓, 검토단계
+      pink,pink,pink,                    // 33~35: CBO예정일자,배포예정일자,배포CSR
+      g1,g1,g1, g2,g2,g2, g3,g3,g3, g4,g4,g4, g5,g5,g5, // 36~50: 변경이력1~5
+      blue,blue                          // 51~52: 분석/변경일시
     ];
-    // 색 변경 경계: Method|파일경로(6), 참고용끝|메뉴(16), 1주호출건|상태(21), 배포CSR|커밋(33), 변경이력간(36,39,42,45), 변경이력5|분석(48)
-    const groupBorders = new Set([6, 16, 21, 33, 36, 39, 42, 45, 48]);
+    // 색 변경 경계
+    const groupBorders = new Set([6, 16, 21, 30, 32, 35, 38, 41, 44, 47, 50]);
     // 데이터 유효성 검증: 0-based 컬럼 인덱스 → 허용 값 목록
     const validations = [
       { colIdx:18, values:['Y','N'] },                                                                       // Deprecated
@@ -1794,6 +1810,8 @@
         a.memo || '',
         a.reviewResult || '',
         a.reviewOpinion || '',
+        a.jiraIssueKey || '',
+        a.reviewStage || '',
         a.cboScheduledDate ? String(a.cboScheduledDate) : '',
         a.deployScheduledDate ? String(a.deployScheduledDate) : '',
         a.deployCsr || '',
@@ -2211,6 +2229,23 @@
         </div>
       </div>
       <div class="detail-section">
+        <div class="detail-section-title">🔗 Jira 연동</div>
+        <div class="detail-grid">
+          <div class="detail-label">Jira 티켓</div>
+          <div class="detail-value">${r.jiraIssueKey
+            ? `<a href="${esc(r.jiraIssueUrl)}" target="_blank" class="jira-badge">${esc(r.jiraIssueKey)}</a>`
+            : '<span style="color:#94a3b8;">미발행</span>'}</div>
+          <div class="detail-label">검토 단계</div>
+          <div class="detail-value">${reviewStageBadge(r.reviewStage)}</div>
+          <div class="detail-label">마지막 동기화</div>
+          <div class="detail-value">${r.jiraSyncedAt ? fmtDt(r.jiraSyncedAt) : '-'}</div>
+        </div>
+        <div style="margin-top:10px;display:flex;gap:8px;">
+          <button class="btn btn-sm" style="background:var(--purple);color:#fff;" onclick="syncSingleToJira(${r.id})">🔗 Jira 발행</button>
+          ${r.jiraIssueKey ? `<button class="btn btn-sm btn-ghost" onclick="pullSingleFromJira(${r.id})">🔄 역방향 동기화</button>` : ''}
+        </div>
+      </div>
+      <div class="detail-section">
         <div class="detail-section-title">소스 변경 이력 (최근 5개)</div>
         <table class="detail-git-table">
           <thead><tr><th>#</th><th>날짜</th><th>변경자</th><th>내용</th></tr></thead>
@@ -2225,6 +2260,96 @@
         </div>
       </div>
     `;
+  }
+
+  // ── adminFetch 헬퍼 (X-Admin-Token 자동 포함) ─────────────
+  async function adminFetch(url, options = {}) {
+    options.headers = Object.assign({
+      'Content-Type': 'application/json',
+      'X-Admin-Token': sessionStorage.getItem('adminToken') || ''
+    }, options.headers || {});
+    return fetch(url, options);
+  }
+
+  // ── Jira 연동 ───────────────────────────────────────────────
+  function reviewStageBadge(stage) {
+    if (!stage) return '<span style="color:#94a3b8;">-</span>';
+    const map = {
+      'INTERNAL_PENDING':   { label: 'IT검토대기', cls: 'bt-rev' },
+      'INTERNAL_CONFIRMED': { label: 'IT확정', cls: 'bt-top' },
+      'INTERNAL_EXCLUDED':  { label: 'IT제외', cls: 'st-use' },
+      'JIRA_ISSUED':        { label: 'Jira발행', cls: '' },
+      'JIRA_APPROVED':      { label: '현업승인', cls: 'st-done' },
+      'JIRA_REJECTED':      { label: '현업제외', cls: 'st-use' },
+      'BLOCKED':            { label: '차단완료', cls: 'st-done' },
+    };
+    const m = map[stage] || { label: stage, cls: '' };
+    if (stage === 'JIRA_ISSUED') return `<span class="status-badge" style="background:#ede9fe;color:var(--purple);border-color:#c4b5fd;">${m.label}</span>`;
+    return `<span class="status-badge ${m.cls}">${m.label}</span>`;
+  }
+
+  async function syncSingleToJira(id) {
+    try {
+      const res = await adminFetch(`/api/jira/sync/record/${id}`, { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || '발행 실패');
+      showToast(`Jira 발행 완료: ${data.issueKey || ''}`, 'success');
+      openDetail(id);
+    } catch(e) { showToast('발행 실패: ' + e.message, 'error'); }
+  }
+
+  async function pullSingleFromJira(id) {
+    try {
+      const res = await adminFetch(`/api/jira/pull/record/${id}`, { method: 'POST' });
+      if (!res.ok) { const d = await res.json().catch(()=>({})); throw new Error(d.error || '동기화 실패'); }
+      showToast('역방향 동기화 완료', 'success');
+      openDetail(id);
+    } catch(e) { showToast('동기화 실패: ' + e.message, 'error'); }
+  }
+
+  async function bulkSyncToJira() {
+    if (!selectedIds.size) { showToast('선택된 항목이 없습니다.', 'error'); return; }
+    if (!await customConfirm(`${selectedIds.size}개 항목을 Jira로 발행하시겠습니까?`)) return;
+    showBulkProgress('Jira 발행 중...', selectedIds.size);
+    let success = 0, fail = 0;
+    for (const id of selectedIds) {
+      try {
+        await adminFetch(`/api/jira/sync/record/${id}`, { method: 'POST' });
+        success++;
+        updateBulkProgress(success + fail);
+      } catch(e) { fail++; }
+    }
+    hideBulkProgress();
+    showToast(`Jira 발행 완료: 성공 ${success}건, 실패 ${fail}건`, success > 0 ? 'success' : 'error');
+    clearSelection();
+    await refreshAll();
+  }
+
+  async function repoSyncToJira() {
+    const repo = document.getElementById('repoSelect').value;
+    if (!repo) { showToast('레포를 선택해 주세요.', 'error'); return; }
+    if (!await customConfirm(`${repo} 레포의 차단대상을 Jira로 발행하시겠습니까?`)) return;
+    showToast('Jira 발행 중...', 'info');
+    try {
+      const res = await adminFetch(`/api/jira/sync/repo/${encodeURIComponent(repo)}`, { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || '발행 실패');
+      showToast(`완료: 생성 ${data.created || 0}건, 갱신 ${data.updated || 0}건, 실패 ${data.failed || 0}건`, 'success');
+      await refreshAll();
+    } catch(e) { showToast('발행 실패: ' + e.message, 'error'); }
+  }
+
+  async function repoSyncFromJira() {
+    const repo = document.getElementById('repoSelect').value;
+    if (!repo) { showToast('레포를 선택해 주세요.', 'error'); return; }
+    if (!await customConfirm(`${repo} 레포의 Jira 상태를 동기화하시겠습니까?`)) return;
+    try {
+      const res = await adminFetch(`/api/jira/pull/repo/${encodeURIComponent(repo)}`, { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || '동기화 실패');
+      showToast(`동기화 완료: ${data.synced || 0}건`, 'success');
+      await refreshAll();
+    } catch(e) { showToast('동기화 실패: ' + e.message, 'error'); }
   }
 
   function showBulkProgress(msg, count) {
@@ -2287,6 +2412,9 @@
     const _ub = document.getElementById('bulkUnblockBtn'); if(_ub) _ub.style.display = admin ? 'inline-block' : 'none';
     const _db = document.getElementById('bulkDeleteBtn'); if(_db) _db.style.display = admin ? 'inline-block' : 'none';
     const _eu = document.getElementById('excelUploadBtn'); if(_eu) _eu.style.display = admin ? 'inline-block' : 'none';
+    const _rjs = document.getElementById('repoJiraSync'); if(_rjs) _rjs.style.display = admin ? 'inline-block' : 'none';
+    const _rjp = document.getElementById('repoJiraPull'); if(_rjp) _rjp.style.display = admin ? 'inline-block' : 'none';
+    const _bjs = document.getElementById('bulkJiraSyncBtn'); if(_bjs) _bjs.style.display = admin ? 'inline-block' : 'none';
     if (typeof renderRows === 'function' && filteredApis.length) renderRows(filteredApis);
   }
   async function toggleAdmin() {

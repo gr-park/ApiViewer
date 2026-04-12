@@ -81,6 +81,10 @@ public class RepoConfig {
     @Column(name = "manager_mappings", columnDefinition = "TEXT")
     private String managerMappings;
 
+    /** 앱 유형: APP(앱) / WEB(홈페이지) */
+    @Column(name = "app_type", length = 20)
+    private String appType;
+
     // ── 제니퍼 설정 ──
     @Column(name = "jennifer_enabled", length = 1)
     private String jenniferEnabled = "N";
@@ -150,6 +154,8 @@ public class RepoConfig {
     public void setWhatapCookie(String whatapCookie) { this.whatapCookie = whatapCookie; }
     public String getManagerMappings() { return managerMappings; }
     public void setManagerMappings(String managerMappings) { this.managerMappings = managerMappings; }
+    public String getAppType() { return appType; }
+    public void setAppType(String appType) { this.appType = appType; }
     public String getJenniferEnabled() { return jenniferEnabled; }
     public void setJenniferEnabled(String jenniferEnabled) { this.jenniferEnabled = jenniferEnabled; }
     public String getJenniferProfileName() { return jenniferProfileName; }

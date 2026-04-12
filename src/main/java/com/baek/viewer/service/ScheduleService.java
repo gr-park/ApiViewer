@@ -4,6 +4,7 @@ import com.baek.viewer.job.ApmCollectJob;
 import com.baek.viewer.job.DataBackupJob;
 import com.baek.viewer.job.DbSnapshotJob;
 import com.baek.viewer.job.GitPullExtractJob;
+import com.baek.viewer.job.JiraSyncJob;
 import com.baek.viewer.model.ScheduleConfig;
 import com.baek.viewer.repository.ScheduleConfigRepository;
 import jakarta.annotation.PostConstruct;
@@ -68,6 +69,7 @@ public class ScheduleService {
         }
         createIfAbsent("APM_COLLECT", "APM 호출건수 수집 (와탭/제니퍼)", "DAILY", "06:00", "7");
         createIfAbsent("DATA_BACKUP", "분석데이터·호출이력 자동 백업", "DAILY", "02:30", null);
+        createIfAbsent("JIRA_SYNC", "Jira 동기화 (정방향+역방향)", "HOURLY", "00:00", null);
     }
 
     private void createIfAbsent(String jobType, String desc, String scheduleType, String runTime, String jobParam) {
@@ -151,6 +153,7 @@ public class ScheduleService {
             case "APM_COLLECT", "APM_DAILY", "APM_WEEKLY" -> ApmCollectJob.class;
             case "DB_SNAPSHOT" -> DbSnapshotJob.class;
             case "DATA_BACKUP" -> DataBackupJob.class;
+            case "JIRA_SYNC" -> JiraSyncJob.class;
             default -> null;
         };
     }

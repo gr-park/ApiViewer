@@ -19,6 +19,8 @@ public interface ApiRecordRepository extends JpaRepository<ApiRecord, Long>,
 
     List<ApiRecord> findByRepositoryName(String repositoryName);
 
+    Optional<ApiRecord> findByJiraIssueKey(String jiraIssueKey);
+
     Optional<ApiRecord> findByRepositoryNameAndApiPathAndHttpMethod(
             String repositoryName, String apiPath, String httpMethod);
 
