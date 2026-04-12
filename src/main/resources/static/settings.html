@@ -155,6 +155,22 @@
     [data-theme="dark"] span[style*="background:#e0e7ff"] { background:#2e1065 !important; color:#a78bfa !important; }
     [data-theme="dark"] tr[style*="background:#f1f5f9"] { background:#293548 !important; }
     [data-theme="dark"] th[style] { background:#293548 !important; color:#94a3b8 !important; }
+    /* 인라인 스타일 다크모드 보편 오버라이드 */
+    [data-theme="dark"] [style*="color:#92400e"] { color:#fbbf24 !important; }
+    [data-theme="dark"] [style*="color:#1e40af"] { color:#93c5fd !important; }
+    [data-theme="dark"] [style*="color:#3730a3"] { color:#a5b4fc !important; }
+    [data-theme="dark"] [style*="color:#7c3aed"] { color:#c4b5fd !important; }
+    [data-theme="dark"] [style*="color:#6d28d9"] { color:#c4b5fd !important; }
+    [data-theme="dark"] [style*="color:#6366f1"] { color:#a5b4fc !important; }
+    [data-theme="dark"] [style*="color:#9a3412"] { color:#fb923c !important; }
+    [data-theme="dark"] [style*="color:#d97706"] { color:#fbbf24 !important; }
+    [data-theme="dark"] [style*="color:#ca8a04"] { color:#fbbf24 !important; }
+    [data-theme="dark"] [style*="color:#16a34a"] { color:#4ade80 !important; }
+    [data-theme="dark"] [style*="background:#dbeafe"] { background:#1e3a5f !important; }
+    [data-theme="dark"] [style*="background:#eff6ff"] { background:#1e3a5f !important; }
+    [data-theme="dark"] [style*="background:#fffbeb"] { background:#1c1408 !important; }
+    [data-theme="dark"] [style*="background:#ede9fe"] { background:#2d1b69 !important; }
+    [data-theme="dark"] div[style*="background:#e2e8f0"] { background:#334155 !important; }
   </style>
   <script src="/js/dialog.js"></script>
   <script src="/js/darkmode.js"></script>
@@ -878,11 +894,12 @@ function updateAdminBadge(valid) {
 
   // ── 팀 목록 관리 ────────────────────────────────────────
   function renderTeamTag(name) {
+    const _dark = document.documentElement.getAttribute('data-theme') === 'dark';
     const list = document.getElementById('teamsList');
     const tag = document.createElement('span');
     tag.className = 'team-tag';
-    tag.style.cssText = 'display:inline-flex;align-items:center;gap:4px;padding:4px 8px 4px 10px;background:#e0e7ff;border:1px solid #c7d2fe;border-radius:12px;font-size:11px;color:#3730a3;font-weight:600;';
-    tag.innerHTML = `<span>${esc(name)}</span><button type="button" style="background:none;border:none;color:#6366f1;cursor:pointer;font-size:14px;padding:0 2px;line-height:1;" onclick="this.parentElement.remove()">×</button>`;
+    tag.style.cssText = `display:inline-flex;align-items:center;gap:4px;padding:4px 8px 4px 10px;background:${_dark?'#1e1b4b':'#e0e7ff'};border:1px solid ${_dark?'#4c1d95':'#c7d2fe'};border-radius:12px;font-size:11px;color:${_dark?'#a78bfa':'#3730a3'};font-weight:600;`;
+    tag.innerHTML = `<span>${esc(name)}</span><button type="button" style="background:none;border:none;color:${_dark?'#a78bfa':'#6366f1'};cursor:pointer;font-size:14px;padding:0 2px;line-height:1;" onclick="this.parentElement.remove()">×</button>`;
     tag.dataset.name = name;
     list.appendChild(tag);
   }
@@ -1482,7 +1499,7 @@ function updateAdminBadge(valid) {
             ${statusDot}
             <input type="checkbox" id="schChk-${s.id}" ${s.enabled?'checked':''} onclick="event.stopPropagation();toggleSchedule(${s.id},this.checked)" style="width:16px;height:16px;cursor:pointer;">
             <span style="font-size:13px;font-weight:700;">${esc(s.description||s.jobType)}</span>
-            ${s.enabled ? '<span style="font-size:10px;color:#16a34a;font-weight:600;">활성</span>' : '<span style="font-size:10px;color:#94a3b8;">비활성</span>'}
+            ${s.enabled ? `<span style="font-size:10px;color:${document.documentElement.getAttribute('data-theme')==='dark'?'#4ade80':'#16a34a'};font-weight:600;">활성</span>` : '<span style="font-size:10px;color:#94a3b8;">비활성</span>'}
           </div>
           <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;">
             <label class="field" style="min-width:100px;">실행 주기
@@ -1568,7 +1585,7 @@ function updateAdminBadge(valid) {
         const dot = card.querySelector('span[style*="border-radius:50%"]');
         if (dot) dot.style.background = enabled ? '#22c55e' : '#d1d5db';
         const label = card.querySelector('span[style*="font-size:10px"]');
-        if (label) { label.textContent = enabled ? '활성' : '비활성'; label.style.color = enabled ? '#16a34a' : '#94a3b8'; label.style.fontWeight = enabled ? '600' : '400'; }
+        if (label) { label.textContent = enabled ? '활성' : '비활성'; label.style.color = enabled ? (_dark ? '#4ade80' : '#16a34a') : '#94a3b8'; label.style.fontWeight = enabled ? '600' : '400'; }
       }
     } catch(e) { showToast('변경 실패','error'); }
   }

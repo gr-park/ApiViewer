@@ -519,3 +519,20 @@ input:focus::placeholder { color: var(--border); }
 [data-theme="dark"] .notice-danger  { background: #450a0a !important; border-color: #991b1b !important; color: #fca5a5 !important; }
 [data-theme="dark"] .notice-success { background: #052e16 !important; border-color: #166534 !important; color: #4ade80 !important; }
 [data-theme="dark"] .notice-deleted { background: #431407 !important; border-color: #7c2d12 !important; color: #fb923c !important; }
+
+/* 인라인 스타일 다크모드 보편 오버라이드 */
+[data-theme="dark"] [style*="color:#92400e"] { color:#fbbf24 !important; }
+[data-theme="dark"] [style*="color:#1e40af"] { color:#93c5fd !important; }
+[data-theme="dark"] [style*="color:#3730a3"] { color:#a5b4fc !important; }
+[data-theme="dark"] [style*="color:#7c3aed"] { color:#c4b5fd !important; }
+[data-theme="dark"] [style*="color:#6d28d9"] { color:#c4b5fd !important; }
+[data-theme="dark"] [style*="color:#6366f1"] { color:#a5b4fc !important; }
+[data-theme="dark"] [style*="color:#9a3412"] { color:#fb923c !important; }
+[data-theme="dark"] [style*="color:#d97706"] { color:#fbbf24 !important; }
+[data-theme="dark"] [style*="color:#ca8a04"] { color:#fbbf24 !important; }
+[data-theme="dark"] [style*="color:#16a34a"] { color:#4ade80 !important; }
+[data-theme="dark"] [style*="background:#dbeafe"] { background:#1e3a5f !important; }
+[data-theme="dark"] [style*="background:#eff6ff"] { background:#1e3a5f !important; }
+[data-theme="dark"] [style*="background:#fffbeb"] { background:#1c1408 !important; }
+[data-theme="dark"] [style*="background:#e0e7ff"] { background:#1e1b4b !important; }
+[data-theme="dark"] [style*="background:#ede9fe"] { background:#2d1b69 !important; }
