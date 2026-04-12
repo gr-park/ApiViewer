@@ -100,6 +100,9 @@ a { color: inherit; text-decoration: none; }
   z-index: 50;
 }
 .header h1 { font-size: 18px; font-weight: 700; color: var(--primary); }
+.header a:has(h1){color:inherit;text-decoration:none;}
+.header a:has(h1):hover h1{opacity:.75;}
+.header a:has(h1) h1{transition:opacity .15s;}
 .header-sub {
   font-size: var(--fs-base);
   color: var(--text-muted);
