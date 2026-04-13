@@ -129,6 +129,59 @@ class ApiExtractorServiceTest {
     }
 
     @Test
+    @DisplayName("extract — 메서드 경로가 빈 문자열이면 trailing slash 없이 저장")
+    void extract_emptyMethodPath_noTrailingSlash(@TempDir Path tmp) throws Exception {
+        when(globalConfigRepository.findById(1L)).thenReturn(Optional.empty());
+        Path javaFile = tmp.resolve("BenefitsController.java");
+        Files.writeString(javaFile, """
+                package test;
+                import org.springframework.web.bind.annotation.*;
+                @RestController
+                @RequestMapping("/api/family-card/benefits")
+                public class BenefitsController {
+                    @GetMapping("")
+                    public String list() { return ""; }
+                }
+                """);
+
+        ExtractRequest req = new ExtractRequest();
+        req.setRootPath(tmp.toString());
+        req.setDomain("http://example.com");
+
+        List<ApiInfo> result = service.extract(req);
+
+        assertThat(result).isNotEmpty();
+        assertThat(result.get(0).getApiPath()).isEqualTo("/api/family-card/benefits");
+        assertThat(result.get(0).getApiPath()).doesNotEndWith("/");
+    }
+
+    @Test
+    @DisplayName("extract — 클래스/메서드 경로에 trailing slash 가 있어도 정규화")
+    void extract_trailingSlashInDeclaration_normalized(@TempDir Path tmp) throws Exception {
+        when(globalConfigRepository.findById(1L)).thenReturn(Optional.empty());
+        Path javaFile = tmp.resolve("FooController.java");
+        Files.writeString(javaFile, """
+                package test;
+                import org.springframework.web.bind.annotation.*;
+                @RestController
+                @RequestMapping("/api/foo/")
+                public class FooController {
+                    @GetMapping("/bar/")
+                    public String bar() { return ""; }
+                }
+                """);
+
+        ExtractRequest req = new ExtractRequest();
+        req.setRootPath(tmp.toString());
+        req.setDomain("http://example.com");
+
+        List<ApiInfo> result = service.extract(req);
+
+        assertThat(result).isNotEmpty();
+        assertThat(result.get(0).getApiPath()).isEqualTo("/api/foo/bar");
+    }
+
+    @Test
     @DisplayName("extract — 추출 중에 다시 호출하면 IllegalStateException — 호출 후엔 다시 가능")
     void extract_subsequentCallOk(@TempDir Path tmp) {
         when(globalConfigRepository.findById(1L)).thenReturn(Optional.empty());

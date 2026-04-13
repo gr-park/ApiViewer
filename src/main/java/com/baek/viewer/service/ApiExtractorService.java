@@ -736,7 +736,11 @@ public class ApiExtractorService {
     // ======================================================
 
     private String normalizePath(String path) {
+        if (path == null) return "/";
         String result = path.replaceAll("/+", "/");
+        if (result.length() > 1 && result.endsWith("/")) {
+            result = result.substring(0, result.length() - 1);
+        }
         if (result.isEmpty()) return "/";
         return result;
     }
