@@ -39,3 +39,17 @@ description: 카드사 시니어 개발자 — Java/Spring/Oracle 기반 카드 
 - 한도/잔액 계산은 반드시 락(SELECT FOR UPDATE)으로 동시성 처리
 - 운영 DB에는 절대 직접 UPDATE/DELETE 금지, 반드시 절차 준수
 - 코드성 변경은 공통 작업 시간(주말 새벽) 외 불가
+
+---
+
+## 이 프로젝트 (ApiViewer) DB 환경
+
+| 구분 | DB | 비고 |
+|------|-----|------|
+| 개발 | H2 2.3.232 (파일 모드) | 로컬 개발·테스트 |
+| 운영 | **PostgreSQL** (내부망 반입) | **우선 고려 대상** |
+
+- JPQL/Spring Data를 우선 사용해 양쪽 호환 유지
+- 네이티브 SQL 작성 시 H2·PostgreSQL 양쪽 동작하는 문법 선택
+- `GenerationType.IDENTITY`, `Pageable`, `CONCAT('%',:q,'%')` 패턴 사용 (양쪽 호환)
+- DDL: 개발은 `ddl-auto=update` 자동생성, 운영은 별도 스크립트 적용

@@ -28,7 +28,8 @@ Spring Boot 기반 웹 애플리케이션. Controller 소스를 파싱하여 URL
 | Java | 17 |
 | Spring Boot | 3.4.0 |
 | ORM | Spring Data JPA |
-| DB | H2 2.3.232 (파일 모드 `./data/api-viewer-db`) |
+| DB (개발) | H2 2.3.232 (파일 모드 `./data/api-viewer-db`) |
+| DB (운영) | PostgreSQL (내부망 반입 시 사용, **우선 고려 대상**) |
 | Parser | JavaParser 3.25.10 + Regex 폴백 |
 | 배치 | Spring Quartz |
 | 엑셀 | ExcelJS (로컬 번들, CDN 사용 금지) |
@@ -43,6 +44,28 @@ Spring Boot 기반 웹 애플리케이션. Controller 소스를 파싱하여 URL
 | 네트워크 | 망분리 환경, 외부 CDN/인터넷 접근 불가 |
 | 라이브러리 | 로컬 번들 또는 내부 Maven 저장소만 사용 |
 | ExcelJS | `/exceljs.min.js` 로컬 파일 사용 (CDN 절대 금지) |
+
+---
+
+# DB 환경 (개발 vs 운영)
+
+| 구분 | DB | 용도 |
+|------|-----|------|
+| 개발 | H2 2.3.232 (인메모리/파일 모드) | 로컬 개발·테스트 |
+| 운영 | PostgreSQL (내부망 반입 시) | **실제 서비스 환경, 우선 고려 대상** |
+
+## 코드 작성 시 주의사항
+
+- **JPQL 우선**: 네이티브 SQL 대신 JPQL/Spring Data를 사용해 양쪽 DB 모두 호환 유지
+- **네이티브 쿼리**: 불가피하게 작성 시 H2·PostgreSQL 양쪽에서 동작하는 문법 사용
+  - `TRUNCATE TABLE`은 양쪽 모두 지원 (현재 사용 중)
+  - `LIKE` 패턴: JPQL `CONCAT('%', :q, '%')` 방식 사용 (양쪽 호환)
+  - `CAST(x AS string)`: JPQL에서 양쪽 호환 (현재 사용 중)
+- **DDL**: H2 자동생성(`ddl-auto=update`)으로 개발, 운영은 별도 DDL 스크립트 적용
+- **시퀀스/AUTO_INCREMENT**: `GenerationType.IDENTITY` 사용 (H2·PostgreSQL 모두 지원)
+- **대소문자**: PostgreSQL은 컬럼명 대소문자 구분 없음 — snake_case 유지
+- **페이지네이션**: Spring Data `Pageable` 사용 시 양쪽 자동 변환됨 (LIMIT/OFFSET)
+- **Boolean**: JPA `boolean` 타입 매핑 — H2는 BOOLEAN, PostgreSQL은 BOOLEAN (동일)
 
 ---
 
@@ -221,8 +244,13 @@ workflow.html
 
 | 항목 | 내용 |
 |------|------|
-
-| 제외 대상 | `target/`, `.git/`, `.idea/`, `.claude/`, `data/`, `logs/`, `.sh`, `.bat`, `mvnw`, `*.jar` (lib/*.jar 포함) |
+| 제외 대상 | `target/`, `.git/`, `.idea/`, `.claude/`, `data/`, `logs/`, `.sh`, `.bat`, `mvnw`, `*.jar` (lib/*.jar 포함), `application.properties` |
 | 출력 경로 | `/Users/baegmyeongseon/Downloads/ApiViewer.zip` (절대 경로 사용) |
 | 실행 위치 | `cd /Users/baegmyeongseon/LP_DEV` 후 `zip -r 출력경로 ApiViewer --exclude "ApiViewer/..."` |
 | 기존 파일 | 기존 zip 존재 시 반드시 먼저 삭제 후 재생성 (업데이트 모드 방지) |
+
+## application.properties 포함 여부 규칙
+
+- **기본: 제외** — `application.properties`는 DB URL, 포트, 비밀번호 등 환경별 설정이 달라 기본 제외
+- **변경 시: 사용자에게 먼저 확인** — 압축 직전 `git diff`로 변경 여부를 체크하고, 변경이 있으면 포함 여부를 사용자에게 물어본 후 결정
+- 확인 메시지 예시: "`application.properties`가 변경되었습니다. 압축에 포함할까요? (포함 시 DB 접속 정보 등이 노출될 수 있습니다.)"

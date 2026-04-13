@@ -60,7 +60,6 @@ global:
 
 # 레포지토리별 설정
 repositories:
-
   - repoName: spring-petclinic
     domain: https://api.petclinic.com
     rootPath: /Users/baegmyeongseon/Downloads/개발_코드/spring-petclinic
@@ -250,9 +249,7 @@ repositories:
 jira:
   baseUrl: ""                          # Jira 서버 URL (예: https://jira.company.com)
   projectKey: ""                       # Jira 프로젝트 키 (예: CARD)
-  serviceAccount: ""                   # Jira API 호출 계정 (이메일 또는 아이디)
-  apiToken: ""                         # Jira API 토큰 (Cloud: API Token, Server: 패스워드)
-  customFieldId: ""                    # 업무명 커스텀 필드 ID (예: customfield_10001)
+  apiToken: ""                         # Jira Bearer 토큰 (Jira Server REST API v2)
 
   # 담당자 매핑 기본값 (YAML 가져오기 시 미존재 항목만 DB에 추가)
   userMappings:
