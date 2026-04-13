@@ -32,15 +32,15 @@ public class ApiExtractorService {
     private String defaultGitBinPath;
 
     private final ApiStorageService storageService;
-    private final MockApmService mockApmService;
+    private final ApmCollectionService apmCollectionService;
     private final com.baek.viewer.repository.RepoConfigRepository repoConfigRepository;
     private final com.baek.viewer.repository.GlobalConfigRepository globalConfigRepository;
 
-    public ApiExtractorService(ApiStorageService storageService, MockApmService mockApmService,
+    public ApiExtractorService(ApiStorageService storageService, ApmCollectionService apmCollectionService,
                                com.baek.viewer.repository.RepoConfigRepository repoConfigRepository,
                                com.baek.viewer.repository.GlobalConfigRepository globalConfigRepository) {
         this.storageService = storageService;
-        this.mockApmService = mockApmService;
+        this.apmCollectionService = apmCollectionService;
         this.repoConfigRepository = repoConfigRepository;
         this.globalConfigRepository = globalConfigRepository;
     }
@@ -224,7 +224,7 @@ public class ApiExtractorService {
 
             // APM 호출건수 자동 집계 (데이터가 있을 때만)
             try {
-                var result = mockApmService.aggregateToRecords(repoName.trim());
+                var result = apmCollectionService.aggregateToRecords(repoName.trim());
                 int aggUpdated = ((Number) result.get("updated")).intValue();
                 if (aggUpdated > 0) {
                     addLog("OK", "호출건수 자동 집계 — " + aggUpdated + "개 API 반영");
@@ -526,7 +526,9 @@ public class ApiExtractorService {
     // ======================================================
 
     private List<String> getPathsFromAnn(AnnotationExpr ann, Map<String, String> constantsMap) {
-        List<String> paths = new ArrayList<>();
+        // LinkedHashSet: 삽입 순서 유지 + 어노테이션 배열 내 중복값 자동 제거
+        // ex) @RequestMapping({"aaa.lc", "bbb.lc", "aaa.lc"}) → ["aaa.lc", "bbb.lc"]
+        Set<String> seen = new LinkedHashSet<>();
         Expression value = null;
         if (ann instanceof SingleMemberAnnotationExpr se) {
             value = se.getMemberValue();
@@ -539,13 +541,13 @@ public class ApiExtractorService {
         if (value instanceof ArrayInitializerExpr ae) {
             for (Expression expr : ae.getValues()) {
                 String eval = evaluateExpression(expr, constantsMap);
-                if (!eval.isEmpty()) paths.add(eval);
+                if (!eval.isEmpty()) seen.add(eval);
             }
         } else if (value != null) {
             String eval = evaluateExpression(value, constantsMap);
-            if (!eval.isEmpty()) paths.add(eval);
+            if (!eval.isEmpty()) seen.add(eval);
         }
-        return paths;
+        return new ArrayList<>(seen);
     }
 
     private String evaluateExpression(Expression expr, Map<String, String> constantsMap) {
@@ -734,7 +736,11 @@ public class ApiExtractorService {
     // ======================================================
 
     private String normalizePath(String path) {
+        if (path == null) return "/";
         String result = path.replaceAll("/+", "/");
+        if (result.length() > 1 && result.endsWith("/")) {
+            result = result.substring(0, result.length() - 1);
+        }
         if (result.isEmpty()) return "/";
         return result;
     }

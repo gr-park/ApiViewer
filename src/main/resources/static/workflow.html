@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>URL Viewer — 업무 플로우</title>
+  <title>URL Viewer — 업무 흐름</title>
   <link rel="stylesheet" href="/css/common.css">
   <style>
     /* ═══════════════════════════════════════════════════════════════
@@ -402,15 +402,15 @@
     <polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>
   </svg>
   <a href="/" style="text-decoration:none;"><h1>URL Viewer</h1></a>
-  <span class="header-sub">업무 플로우</span>
+  <span class="header-sub">업무 흐름</span>
   <div class="header-right">
     <button class="dark-toggle" onclick="toggleDarkMode()">🌙 다크모드</button>
     <a href="/"               class="nav-link">📊 대시보드</a>
     <a href="/viewer.html"    class="nav-link">📋 URL분석현황</a>
     <a href="/call-stats.html" class="nav-link">📈 URL호출현황</a>
     <a href="/review.html"    class="nav-link">📝 현업 검토</a>
-    <a href="/workflow.html"  class="nav-link nav-active">🗺️ 업무 플로우</a>
-    <a href="/proposal-jira.html" class="nav-link">🧩 추가개선안</a>
+    <a href="/workflow.html"  class="nav-link nav-active">🗺️ 업무 흐름</a>
+
     <a href="/settings.html"  class="nav-link" id="navSettings" style="display:none;">⚙️ 설정</a>
     <button class="nav-link" id="adminBtn" onclick="toggleAdmin()" style="background:none;cursor:pointer;">🔑 관리자</button>
   </div>
@@ -420,102 +420,107 @@
 
   <!-- 인트로 + 범례 -->
   <div class="card">
-    <div class="card-title"><span class="dot dot-blue"></span>URLViewer 업무 플로우 개요</div>
+    <div class="card-title"><span class="dot dot-blue"></span>URLViewer 업무 흐름 개요</div>
+    <div style="background:linear-gradient(90deg,#1e40af 0%,#1d4ed8 100%);border-radius:8px;padding:10px 16px;margin-bottom:12px;display:flex;align-items:center;gap:10px;">
+      <span style="font-size:16px;">🏆</span>
+      <span style="font-size:12px;color:#fff;line-height:1.6;font-weight:500;">
+        <strong style="color:#93c5fd;">IT카드개발팀(IT개발실)</strong>이 전체 프로세스를 주도하며,
+        분석 → 차단 확정 → 배포 → 모니터링까지 <strong style="color:#93c5fd;">책임감을 갖고</strong> 이끌어 갑니다.
+        이 흐름은 <strong style="color:#bfdbfe;">1~3개월마다 반복</strong> 수행됩니다.
+      </span>
+    </div>
     <div class="intro">
       <div class="intro-text">
-        <strong>URLViewer</strong>는 Spring Boot Controller 소스에서 URL을 자동 추출하고,
-        <strong>APM 호출건수</strong>와 <strong>Git 커밋 이력</strong>을 결합해 차단 대상 여부를 판정하는 내부 도구입니다.
-        아래 플로우는 <strong>관리자</strong>가 소스를 추출·설정하고, 시스템 <strong>배치</strong>가 주기적으로 데이터를 수집하며,
-        <strong>상태 판정 로직</strong>이 자동 계산한 결과를 <strong>현업 검토자</strong>가 최종 확인하는 흐름을 보여줍니다.
+        <strong>URLViewer</strong>는 시스템에 등록된 URL을 자동으로 수집·분석하고,
+        실제 사용 여부와 변경 이력을 종합하여 <strong>차단 대상 여부를 판정</strong>하는 내부 관리 도구입니다.
+        아래 흐름은 <strong>관리자(IT카드개발팀)</strong>가 수집·설정하고, <strong>자동 처리</strong>가 주기적으로 데이터를 갱신하며,
+        판정 결과를 <strong>현업 검토자</strong>가 최종 확인하는 전체 업무 흐름을 보여줍니다.
       </div>
       <div class="legend">
-        <span class="legend-item"><span class="legend-dot lg-admin"></span>관리자</span>
-        <span class="legend-item"><span class="legend-dot lg-batch"></span>자동 배치</span>
+        <span class="legend-item"><span class="legend-dot lg-admin"></span>관리자(IT카드개발팀)</span>
+        <span class="legend-item"><span class="legend-dot lg-batch"></span>자동 처리</span>
         <span class="legend-item"><span class="legend-dot lg-status"></span>상태 판정</span>
         <span class="legend-item"><span class="legend-dot lg-user"></span>사용자·검토</span>
       </div>
     </div>
   </div>
 
-  <!-- 스윔레인 1: 관리자 -->
-  <div class="section-title">1. 관리자 업무</div>
+  <!-- 스윔레인 1: 관리자(IT카드개발팀) -->
+  <div class="section-title">1. 관리자(IT카드개발팀) 업무</div>
   <div class="swimlane lane-admin">
     <div class="lane-label">
-      <span class="lane-sub">ROLE · ADMIN</span>
-      관리자
+      관리자<br><span style="font-size:10px;opacity:.8;font-weight:500;">IT카드개발팀</span>
     </div>
     <div class="steps">
       <div class="step">
-        <div class="step-head"><span class="step-num">1</span>소스 추출</div>
-        <div class="step-desc">Git Pull 후 JavaParser로 Controller 클래스를 파싱. URL·HTTP 메소드·어노테이션·커밋 이력을 DB에 저장.</div>
-        <a href="/extract.html" class="step-tag">🔍 /extract.html</a>
+        <div class="step-head"><span class="step-num">1</span>URL 수집 · 분석</div>
+        <div class="step-desc">시스템 소스를 분석하여 등록된 URL 목록을 자동으로 추출하고 데이터베이스에 저장합니다.</div>
+        <a href="/extract.html" class="step-tag">🔍 URL 수집 화면</a>
       </div>
       <div class="arrow">›</div>
       <div class="step">
-        <div class="step-head"><span class="step-num">2</span>배치 설정</div>
-        <div class="step-desc">Quartz Job 3종 (GIT_PULL_EXTRACT, APM_DAILY, APM_WEEKLY)의 스케줄·활성화를 관리.</div>
-        <a href="/settings.html" class="step-tag">⚙️ /settings.html</a>
+        <div class="step-head"><span class="step-num">2</span>자동 수집 일정 설정</div>
+        <div class="step-desc">URL 수집·호출건수 집계 등 자동 작업의 실행 주기와 활성화 여부를 관리합니다.</div>
+        <a href="/settings.html" class="step-tag">⚙️ 설정 화면</a>
       </div>
       <div class="arrow">›</div>
       <div class="step">
-        <div class="step-head"><span class="step-num">3</span>레포지토리 매핑</div>
-        <div class="step-desc">팀·담당자·프로그램ID 매핑(repo_config.manager_mappings)으로 차단 책임자를 지정.</div>
-        <a href="/settings.html" class="step-tag">⚙️ /settings.html</a>
+        <div class="step-head"><span class="step-num">3</span>담당자 매핑</div>
+        <div class="step-desc">시스템별 담당 팀과 책임자를 지정하여 차단 처리 권한과 연락체계를 설정합니다.</div>
+        <a href="/settings.html" class="step-tag">⚙️ 설정 화면</a>
       </div>
       <div class="arrow">›</div>
       <div class="step">
-        <div class="step-head"><span class="step-num">4</span>상태 확정 / 차단 반영</div>
-        <div class="step-desc">자동 판정 결과를 검토 후 <b>상태확정(statusOverridden=true)</b>으로 고정. 차단 대상은 소스에 @Deprecated + 주석 + UnsupportedOperationException 반영.</div>
-        <a href="/viewer.html" class="step-tag">📋 /viewer.html</a>
+        <div class="step-head"><span class="step-num">4</span>상태 확정 · 차단 반영</div>
+        <div class="step-desc">자동 판정 결과를 검토한 후 최종 상태를 확정합니다. 차단 결정된 URL은 개발팀에 전달하여 소스에 반영합니다.</div>
+        <a href="/viewer.html" class="step-tag">📋 URL 분석현황</a>
       </div>
     </div>
   </div>
 
-  <!-- 스윔레인 2: 자동 배치 -->
-  <div class="section-title">2. 자동 배치 (Quartz)</div>
+  <!-- 스윔레인 2: 자동 처리 -->
+  <div class="section-title">2. 자동 처리</div>
   <div class="swimlane lane-batch">
     <div class="lane-label">
-      <span class="lane-sub">ROLE · SYSTEM</span>
-      자동 배치
+      자동 처리
     </div>
     <div class="steps">
       <div class="step">
-        <div class="step-head"><span class="step-num">1</span>GIT_PULL_EXTRACT</div>
-        <div class="step-desc">설정된 스케줄에 Git Pull → 전체 레포 Controller 재파싱. 신규 URL 발견·삭제 URL 감지.</div>
-        <span class="step-tag locked">🕑 관리자 설정 스케줄</span>
+        <div class="step-head"><span class="step-num">1</span>소스 자동 수집</div>
+        <div class="step-desc">정기적으로 시스템 소스를 수집하여 URL 목록을 최신 상태로 유지합니다. 신규 URL 추가·제거를 자동으로 감지합니다.</div>
+        <span class="step-tag locked">🕑 담당자 설정 주기</span>
       </div>
       <div class="arrow">›</div>
       <div class="step">
-        <div class="step-head"><span class="step-num">2</span>APM_DAILY / WEEKLY</div>
-        <div class="step-desc">APM 서버에서 URL별 호출건수(총·1달·1주)를 수집하여 api_record.call_count* 컬럼에 반영.</div>
-        <span class="step-tag locked">📈 호출건수 수집</span>
+        <div class="step-head"><span class="step-num">2</span>호출건수 자동 수집</div>
+        <div class="step-desc">각 URL의 실제 사용 건수(전체·1개월·1주)를 주기적으로 수집하여 반영합니다.</div>
+        <span class="step-tag locked">📈 사용 현황 집계</span>
       </div>
       <div class="arrow">›</div>
       <div class="step">
-        <div class="step-head"><span class="step-num">3</span>상태 자동 재계산</div>
-        <div class="step-desc"><b>statusOverridden=false</b> 대상만 자동 재계산. 확정(true)·차단완료 건은 재계산 제외.</div>
-        <span class="step-tag locked">🔄 재계산 대상 필터</span>
+        <div class="step-head"><span class="step-num">3</span>상태 자동 재판정</div>
+        <div class="step-desc">미확정 URL의 차단 여부를 자동으로 재판정합니다. 이미 확정 처리된 건과 차단 완료 건은 재판정에서 제외됩니다.</div>
+        <span class="step-tag locked">🔄 미확정 대상만 적용</span>
       </div>
       <div class="arrow">›</div>
       <div class="step">
-        <div class="step-head"><span class="step-num">4</span>JIRA_SYNC</div>
-        <div class="step-desc">Jira REST API로 차단 대상 URL을 Story 발행(PUSH)하고, Jira 결재 결과를 역동기화(PULL).</div>
-        <span class="step-tag locked">🔗 Jira 양방향 동기화</span>
+        <div class="step-head"><span class="step-num">4</span>SmartWay 자동 동기화</div>
+        <div class="step-desc">차단 대상 URL을 SmartWay에 자동으로 발행하고, 결재 결과를 역방향으로 가져와 반영합니다.</div>
+        <span class="step-tag locked">🔗 SmartWay 양방향 연동</span>
       </div>
       <div class="arrow">›</div>
       <div class="step">
-        <div class="step-head"><span class="step-num">5</span>DATA_BACKUP</div>
-        <div class="step-desc">매일 02:30 api_record·apm_call_data를 백업 테이블로 단일 스냅샷 덮어쓰기. 복구는 설정 > 데이터관리에서 수행.</div>
-        <a href="/settings.html#data" class="step-tag">💾 /settings.html</a>
+        <div class="step-head"><span class="step-num">5</span>자동 백업</div>
+        <div class="step-desc">매일 새벽 2시 30분에 전체 URL 데이터와 호출 이력을 자동으로 백업합니다. 필요 시 설정 화면에서 복구할 수 있습니다.</div>
+        <a href="/settings.html#data" class="step-tag">💾 설정 화면</a>
       </div>
     </div>
   </div>
 
   <!-- 스윔레인 3: 상태 판정 로직 -->
-  <div class="section-title">3. 상태 판정 로직 (5가지 상태)</div>
+  <div class="section-title">3. 상태 판정 기준 (5가지 상태)</div>
   <div class="swimlane lane-status">
     <div class="lane-label">
-      <span class="lane-sub">RULE · DECISION</span>
       상태 판정
     </div>
     <div class="status-grid">
@@ -525,8 +530,8 @@
           <span class="status-badge st-done">차단완료</span>
         </div>
         <div class="status-card-rule">
-          <b>@Deprecated</b> + <b>[URL차단작업]</b> 주석 + <b>UnsupportedOperationException</b><br>
-          3가지 조건 모두 AND. 모든 수정 불가.
+          소스에 <b>폐기 표시·차단 주석·차단 처리 코드</b>가 모두 반영된 상태.<br>
+          3가지 조건 모두 충족. 모든 수정 불가.
         </div>
         <div class="status-card-meta">자동 · 변경불가</div>
       </div>
@@ -536,7 +541,7 @@
           <span class="status-badge bt-top">최우선</span>
         </div>
         <div class="status-card-rule">
-          <b>호출 0건</b> + <b>커밋 1년 경과</b>. 가장 시급히 차단을 검토해야 할 대상.
+          <b>실제 사용 이력 없음</b> + <b>1년 이상 미수정</b>. 가장 시급히 차단을 검토해야 할 대상.
         </div>
         <div class="status-card-meta">자동</div>
       </div>
@@ -546,7 +551,7 @@
           <span class="status-badge bt-low">후순위</span>
         </div>
         <div class="status-card-rule">
-          침해사고 로그·IT담당자 검토건 등 <b>수동 설정</b> 대상. 현업 협의 후 처리.
+          침해사고 이력·IT개발실 검토건 등 <b>수동 지정</b> 대상. 현업 협의 후 처리.
         </div>
         <div class="status-card-meta">수동 지정</div>
       </div>
@@ -556,7 +561,7 @@
           <span class="status-badge bt-rev">검토필요</span>
         </div>
         <div class="status-card-rule">
-          호출 0건+커밋 1년 미만 <b>또는</b> 호출 1~N건+커밋 1년 경과. 추가 검토 필요.
+          사용 이력 없음 + 1년 미만 미수정 <b>또는</b> 사용 이력 있음 + 1년 이상 미수정. 추가 검토 필요.
         </div>
         <div class="status-card-meta">자동</div>
       </div>
@@ -577,56 +582,242 @@
   <div class="section-title">4. 일반 사용자 · 현업 검토자</div>
   <div class="swimlane lane-user">
     <div class="lane-label">
-      <span class="lane-sub">ROLE · USER · REVIEWER</span>
-      사용자 / 검토
+      사용자 / 검토자
     </div>
     <div class="steps">
       <div class="step">
         <div class="step-head"><span class="step-num">1</span>대시보드 확인</div>
-        <div class="step-desc">상태별 전체 통계, 최근 변동 현황, 레포별 요약을 한눈에 확인.</div>
-        <a href="/" class="step-tag">📊 /</a>
+        <div class="step-desc">상태별 전체 통계, 최근 변동 현황, 시스템별 요약을 한눈에 확인합니다.</div>
+        <a href="/" class="step-tag">📊 대시보드</a>
       </div>
       <div class="arrow">›</div>
       <div class="step">
         <div class="step-head"><span class="step-num">2</span>URL 분석현황 조회</div>
-        <div class="step-desc">전체 URL 이력 조회·필터·엑셀 다운로드. 차단 이력·Git 커밋 내역 열람.</div>
-        <a href="/viewer.html" class="step-tag">📋 /viewer.html</a>
+        <div class="step-desc">전체 URL 목록 조회·필터·엑셀 다운로드. 차단 이력 및 변경 내역을 확인합니다.</div>
+        <a href="/viewer.html" class="step-tag">📋 URL 분석현황</a>
       </div>
       <div class="arrow">›</div>
       <div class="step">
         <div class="step-head"><span class="step-num">3</span>호출현황 분석</div>
-        <div class="step-desc">일/주 단위 호출 추이 차트. 급감·정체 패턴으로 차단 후보 식별.</div>
-        <a href="/call-stats.html" class="step-tag">📈 /call-stats.html</a>
+        <div class="step-desc">일/주 단위 사용량 추이 차트. 급감·정체 패턴으로 차단 후보를 식별합니다.</div>
+        <a href="/call-stats.html" class="step-tag">📈 URL 호출현황</a>
       </div>
       <div class="arrow">›</div>
       <div class="step">
         <div class="step-head"><span class="step-num">4</span>현업 검토 입력</div>
-        <div class="step-desc">차단대상 URL만 노출. 검토결과(<b>차단대상 제외 / 차단확정 / 판단불가</b>)와 의견 작성.</div>
-        <a href="/review.html" class="step-tag">📝 /review.html</a>
+        <div class="step-desc">차단대상 URL만 표시. 검토결과(<b>차단대상 제외 / 차단확정 / 판단불가</b>)와 의견을 작성합니다.</div>
+        <a href="/review.html" class="step-tag">📝 현업 검토</a>
       </div>
     </div>
   </div>
 
+  <!-- 섹션 5: 현업 검토 + SmartWay 연동 + 배포 + 모니터링 전체 흐름 -->
+  <div class="section-title">5. 차단 확정 · 배포 · 모니터링 전체 흐름</div>
+  <div class="card" style="padding:16px 20px;">
+    <div style="font-size:12px;color:#64748b;margin-bottom:14px;line-height:1.6;">
+      현업 검토결과를 <b>메일로 취합</b>하여 IT개발실이 일괄 업로드하고, SmartWay 결재 → 개발 · 배포 → 운영 모니터링까지
+      <b>IT카드개발팀이 주도</b>하는 전체 운영 흐름입니다.
+    </div>
+
+    <!-- 흐름 카드 -->
+    <div style="display:flex;flex-direction:column;gap:8px;">
+
+      <!-- 분석·검토 단계 구분선 -->
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:2px;">
+        <div style="flex:1;height:1px;background:#e2e8f0;"></div>
+        <span style="font-size:10px;font-weight:700;color:#64748b;white-space:nowrap;padding:2px 10px;background:#f1f5f9;border-radius:999px;border:1px solid #e2e8f0;">분석 · 검토 단계</span>
+        <div style="flex:1;height:1px;background:#e2e8f0;"></div>
+      </div>
+
+      <!-- 1단계: 차단 대상 확정 -->
+      <div style="display:flex;align-items:stretch;gap:8px;">
+        <div style="width:90px;min-width:90px;background:#dbeafe;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#1d4ed8;text-align:center;padding:6px;">👤<br>IT개발실</div>
+        <div style="flex:1;background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:10px 14px;">
+          <div style="font-size:11px;font-weight:700;color:#0369a1;margin-bottom:4px;">STEP 1 · 차단 대상 확정</div>
+          <div style="font-size:12px;color:#334155;line-height:1.6;">
+            URL 분석현황 화면에서 차단 대상 URL을 필터링하고 <b>상태를 확정</b>합니다.<br>
+            차단 대상 목록을 <b>엑셀로 다운로드</b>하여 현업 검토 요청용 자료로 활용합니다.
+          </div>
+        </div>
+      </div>
+
+      <div style="text-align:center;font-size:18px;color:#94a3b8;line-height:1;">↓</div>
+
+      <!-- 2단계: 현업 검토 요청·회신 -->
+      <div style="display:flex;align-items:stretch;gap:8px;">
+        <div style="width:90px;min-width:90px;background:#fef9c3;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#854d0e;text-align:center;padding:6px;">📋<br>협조전<br>+ 메일<br>+ SmartWay</div>
+        <div style="flex:1;background:#fefce8;border:1px solid #fde68a;border-radius:8px;padding:10px 14px;">
+          <div style="font-size:11px;font-weight:700;color:#b45309;margin-bottom:6px;">STEP 2 · 현업 검토 요청 / 회신</div>
+          <div style="font-size:12px;color:#334155;line-height:1.7;">
+            ① IT개발실이 <b>협조전을 상신</b>하여 공식 검토 요청을 진행합니다.<br>
+            ② 엑셀(URL 목록)을 첨부하여 <b>메일로 검토 요청</b>을 추가 발송합니다.<br>
+            ③ 차단확정 대상은 <b>SmartWay 티켓</b>을 통해서도 현업 담당자에게 검토를 요청합니다.<br>
+            <span style="display:inline-block;margin-top:4px;padding:4px 10px;background:#fde68a;border-radius:6px;font-size:11px;color:#78350f;font-weight:600;">
+              현업 담당자 회신: 차단대상 제외 / 차단확정 / 판단불가
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div style="text-align:center;font-size:18px;color:#94a3b8;line-height:1;">↓</div>
+
+      <!-- 3단계: 엑셀 업로드 -->
+      <div style="display:flex;align-items:stretch;gap:8px;">
+        <div style="width:90px;min-width:90px;background:#dbeafe;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#1d4ed8;text-align:center;padding:6px;">👤<br>IT개발실</div>
+        <div style="flex:1;background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:10px 14px;">
+          <div style="font-size:11px;font-weight:700;color:#0369a1;margin-bottom:4px;">STEP 3 · 검토결과 엑셀 업로드</div>
+          <div style="font-size:12px;color:#334155;line-height:1.6;">
+            회신받은 검토결과를 엑셀에 정리한 뒤 현업 검토 또는 URL 분석현황 화면에서 <b>엑셀 업로드</b>합니다.<br>
+            검토결과가 일괄 반영되어 각 URL의 상태에 적용됩니다.
+          </div>
+        </div>
+      </div>
+
+      <div style="text-align:center;font-size:18px;color:#94a3b8;line-height:1;">↓</div>
+
+      <!-- 4단계: SmartWay 발행 -->
+      <div style="display:flex;align-items:stretch;gap:8px;">
+        <div style="width:90px;min-width:90px;background:#ede9fe;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#6d28d9;text-align:center;padding:6px;">🔗<br>SmartWay</div>
+        <div style="flex:1;background:#faf5ff;border:1px solid #d8b4fe;border-radius:8px;padding:10px 14px;">
+          <div style="font-size:11px;font-weight:700;color:#7c3aed;margin-bottom:4px;">STEP 4 · SmartWay 티켓 발행</div>
+          <div style="font-size:12px;color:#334155;line-height:1.6;">
+            URL 분석현황 화면에서 대상 URL을 선택 후 <b>SmartWay 발행</b> 버튼을 클릭합니다.<br>
+            SmartWay에 업무 티켓이 생성되며 티켓 번호가 자동으로 저장됩니다.<br>
+            SmartWay에서 현업 담당자의 결재·승인이 진행됩니다.
+          </div>
+        </div>
+      </div>
+
+      <div style="text-align:center;font-size:18px;color:#94a3b8;line-height:1;">↓</div>
+
+      <!-- 5단계: 역방향 동기화 -->
+      <div style="display:flex;align-items:stretch;gap:8px;">
+        <div style="width:90px;min-width:90px;background:#ede9fe;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#6d28d9;text-align:center;padding:6px;">🔄<br>SmartWay</div>
+        <div style="flex:1;background:#faf5ff;border:1px solid #d8b4fe;border-radius:8px;padding:10px 14px;">
+          <div style="font-size:11px;font-weight:700;color:#7c3aed;margin-bottom:4px;">STEP 5 · SmartWay 결재 결과 동기화</div>
+          <div style="font-size:12px;color:#334155;line-height:1.6;">
+            SmartWay 결재 완료 후 <b>SmartWay 동기화</b> 버튼을 클릭하여 결재 결과를 URLViewer로 가져옵니다.<br>
+            승인(Done) 또는 반려(Won't Do) 결과가 각 URL의 검토 단계에 자동으로 반영됩니다.
+          </div>
+        </div>
+      </div>
+
+      <div style="text-align:center;font-size:18px;color:#94a3b8;line-height:1;">↓</div>
+
+      <!-- 6단계: 최종 확정 -->
+      <div style="display:flex;align-items:stretch;gap:8px;">
+        <div style="width:90px;min-width:90px;background:#dbeafe;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#1d4ed8;text-align:center;padding:6px;">👤<br>IT개발실</div>
+        <div style="flex:1;background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:10px 14px;">
+          <div style="font-size:11px;font-weight:700;color:#0369a1;margin-bottom:4px;">STEP 6 · 최종 상태 확정</div>
+          <div style="font-size:12px;color:#334155;line-height:1.6;">
+            URL 분석현황 화면에서 결재 결과를 최종 확인하고 <b>일괄 확정</b>합니다.<br>
+            차단 대상 목록을 개발팀에 전달하여 소스 수정을 요청합니다.
+          </div>
+        </div>
+      </div>
+
+      <!-- 배포 구간 구분선 -->
+      <div style="display:flex;align-items:center;gap:8px;margin:4px 0;">
+        <div style="flex:1;height:1px;background:#e2e8f0;"></div>
+        <span style="font-size:10px;font-weight:700;color:#64748b;white-space:nowrap;padding:2px 10px;background:#f1f5f9;border-radius:999px;border:1px solid #e2e8f0;">개발 · 배포 단계</span>
+        <div style="flex:1;height:1px;background:#e2e8f0;"></div>
+      </div>
+
+      <div style="text-align:center;font-size:18px;color:#94a3b8;line-height:1;">↓</div>
+
+      <!-- 7단계: 개발 및 테스트 -->
+      <div style="display:flex;align-items:stretch;gap:8px;">
+        <div style="width:90px;min-width:90px;background:#e0f2fe;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#0369a1;text-align:center;padding:6px;">💻🧪<br>개발팀</div>
+        <div style="flex:1;background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:10px 14px;">
+          <div style="font-size:11px;font-weight:700;color:#0369a1;margin-bottom:6px;">STEP 7 · 개발 및 테스트</div>
+          <div style="font-size:12px;color:#334155;line-height:1.7;">
+            차단 확정된 URL에 대해 아래 <b>3가지 조건을 모두 소스에 반영</b>합니다.<br>
+            <div style="margin:6px 0 8px 0;display:flex;flex-direction:column;gap:3px;">
+              <span style="padding:3px 10px;background:#dbeafe;border-radius:5px;font-size:11px;color:#1e40af;font-weight:600;">① @Deprecated 어노테이션 추가 (폐기 표시)</span>
+              <span style="padding:3px 10px;background:#dbeafe;border-radius:5px;font-size:11px;color:#1e40af;font-weight:600;">② [URL차단작업] 주석 삽입 (차단 근거 명시)</span>
+              <span style="padding:3px 10px;background:#dbeafe;border-radius:5px;font-size:11px;color:#1e40af;font-weight:600;">③ UnsupportedOperationException throw 처리 (실제 차단)</span>
+            </div>
+            소스 수정 완료 후 <b>단위 테스트 및 통합 검증</b>을 수행합니다.<br>
+            차단 URL 호출 시 정상 차단되는지, 기존 기능에 영향은 없는지 확인합니다.
+          </div>
+        </div>
+      </div>
+
+      <div style="text-align:center;font-size:18px;color:#94a3b8;line-height:1;">↓</div>
+
+      <!-- 9단계: CBO 배포 -->
+      <div style="display:flex;align-items:stretch;gap:8px;">
+        <div style="width:90px;min-width:90px;background:#fef3c7;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#92400e;text-align:center;padding:6px;">🚀<br>CBO 배포</div>
+        <div style="flex:1;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:10px 14px;">
+          <div style="font-size:11px;font-weight:700;color:#b45309;margin-bottom:4px;">STEP 8 · CBO 배포 <span style="font-size:10px;background:#fde68a;color:#92400e;padding:1px 7px;border-radius:999px;margin-left:4px;">약 1주</span></div>
+          <div style="font-size:12px;color:#334155;line-height:1.6;">
+            CBO 환경에 배포 후 <b>약 1주간 운영</b>하며 이상 여부를 확인합니다.<br>
+            문제 발생 시 즉시 롤백하고 원인을 분석합니다. 이상 없으면 운영 배포를 진행합니다.
+          </div>
+        </div>
+      </div>
+
+      <div style="text-align:center;font-size:18px;color:#94a3b8;line-height:1;">↓</div>
+
+      <!-- 10단계: 운영 배포 -->
+      <div style="display:flex;align-items:stretch;gap:8px;">
+        <div style="width:90px;min-width:90px;background:#dcfce7;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#166534;text-align:center;padding:6px;">✅<br>운영 배포</div>
+        <div style="flex:1;background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:10px 14px;">
+          <div style="font-size:11px;font-weight:700;color:#166534;margin-bottom:4px;">STEP 9 · 운영 배포</div>
+          <div style="font-size:12px;color:#334155;line-height:1.6;">
+            CBO 검증이 완료된 소스를 <b>운영 환경에 배포</b>합니다.<br>
+            배포 완료 후 URLViewer 다음 소스 수집 시 해당 URL이 <b>차단완료</b> 상태로 자동 전환됩니다.
+          </div>
+        </div>
+      </div>
+
+      <div style="text-align:center;font-size:18px;color:#94a3b8;line-height:1;">↓</div>
+
+      <!-- 11단계: 모니터링 -->
+      <div style="display:flex;align-items:stretch;gap:8px;">
+        <div style="width:90px;min-width:90px;background:#f1f5f9;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#334155;text-align:center;padding:6px;">📡<br>모니터링</div>
+        <div style="flex:1;background:#f8fafc;border:1px solid #cbd5e1;border-radius:8px;padding:10px 14px;">
+          <div style="font-size:11px;font-weight:700;color:#334155;margin-bottom:4px;">STEP 10 · 배포 후 모니터링 <span style="font-size:10px;background:#e2e8f0;color:#475569;padding:1px 7px;border-radius:999px;margin-left:4px;">약 1주</span></div>
+          <div style="font-size:12px;color:#334155;line-height:1.6;">
+            운영 배포 후 <b>약 1주간 모니터링 시스템</b>을 통해 차단된 URL로 <b>실제 인입이 있는지</b> 확인합니다.<br>
+            인입이 감지되면 원인을 분석하여 즉시 대응합니다. 이상 없으면 차단 작업을 <b>최종 완료</b>로 처리합니다.
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- 반복 주기 배너 -->
+    <div style="margin-top:16px;background:linear-gradient(90deg,#0f172a 0%,#1e293b 100%);border-radius:8px;padding:10px 16px;display:flex;align-items:center;gap:10px;">
+      <span style="font-size:18px;">🔁</span>
+      <div style="font-size:12px;color:#e2e8f0;line-height:1.6;">
+        <strong style="color:#7dd3fc;">전체 흐름(STEP 1~10)은 1~3개월마다 반복 수행</strong>합니다.
+        IT카드개발팀이 주기를 설정하고, 분석 → 검토 → 배포 → 모니터링 사이클을 지속적으로 운영합니다.
+      </div>
+    </div>
+
+  </div>
+
   <!-- URL 1건 라이프사이클 -->
-  <div class="section-title">5. URL 1건의 라이프사이클</div>
+  <div class="section-title">6. URL 1건의 라이프사이클</div>
   <div class="card" style="padding: 0;">
     <div class="lifecycle">
       <div class="lc-step">
         <div class="lc-num">1</div>
-        <span class="lc-title">소스 추출</span>
-        <span class="lc-desc">Git Pull + JavaParser 파싱</span>
+        <span class="lc-title">소스 수집</span>
+        <span class="lc-desc">소스 자동 수집 · 분석</span>
       </div>
       <div class="lc-arrow">›</div>
       <div class="lc-step">
         <div class="lc-num">2</div>
-        <span class="lc-title">자동 상태 계산</span>
-        <span class="lc-desc">@Deprecated·주석·커밋 이력 분석</span>
+        <span class="lc-title">상태 자동 판정</span>
+        <span class="lc-desc">소스 상태·변경 이력 분석</span>
       </div>
       <div class="lc-arrow">›</div>
       <div class="lc-step">
         <div class="lc-num">3</div>
-        <span class="lc-title">APM 호출건수 반영</span>
-        <span class="lc-desc">call_count / month / week</span>
+        <span class="lc-title">사용 현황 반영</span>
+        <span class="lc-desc">전체·1개월·1주 기준</span>
       </div>
       <div class="lc-arrow">›</div>
       <div class="lc-step">
@@ -637,26 +828,44 @@
       <div class="lc-arrow">›</div>
       <div class="lc-step" style="border-color:#c4b5fd;background:#f5f3ff;">
         <div class="lc-num" style="background:var(--purple);">5</div>
-        <span class="lc-title" style="color:var(--purple-hover);">Jira 발행/결재</span>
+        <span class="lc-title" style="color:var(--purple-hover);">SmartWay 발행/결재</span>
         <span class="lc-desc">PUSH → 현업 결재 → PULL</span>
       </div>
       <div class="lc-arrow">›</div>
       <div class="lc-step">
         <div class="lc-num">6</div>
-        <span class="lc-title">관리자 확정</span>
-        <span class="lc-desc">statusOverridden=true</span>
+        <span class="lc-title">최종 확정</span>
+        <span class="lc-desc">IT개발실 확정 처리</span>
       </div>
       <div class="lc-arrow">›</div>
       <div class="lc-step">
         <div class="lc-num">7</div>
-        <span class="lc-title">소스 차단 반영</span>
-        <span class="lc-desc">3조건 AND · 차단완료</span>
+        <span class="lc-title">개발 · 테스트</span>
+        <span class="lc-desc">소스 차단 코드 작성 · 검증</span>
+      </div>
+      <div class="lc-arrow">›</div>
+      <div class="lc-step" style="border-color:#fde68a;background:#fffbeb;">
+        <div class="lc-num" style="background:#d97706;">8</div>
+        <span class="lc-title">CBO 배포</span>
+        <span class="lc-desc">약 1주 운영 확인</span>
+      </div>
+      <div class="lc-arrow">›</div>
+      <div class="lc-step" style="border-color:#86efac;background:#f0fdf4;">
+        <div class="lc-num" style="background:var(--success);">9</div>
+        <span class="lc-title">운영 배포</span>
+        <span class="lc-desc">차단완료 자동 전환</span>
+      </div>
+      <div class="lc-arrow">›</div>
+      <div class="lc-step" style="border-color:#cbd5e1;background:#f8fafc;">
+        <div class="lc-num" style="background:#475569;">10</div>
+        <span class="lc-title">모니터링</span>
+        <span class="lc-desc">1주 · 인입 여부 확인</span>
       </div>
     </div>
   </div>
 
   <!-- 페이지별 권한 -->
-  <div class="section-title">6. 페이지별 접근 권한</div>
+  <div class="section-title">7. 페이지별 접근 권한</div>
   <div class="card" style="padding: 0;">
     <div class="auth-grid">
       <div class="auth-card">
@@ -669,20 +878,18 @@
           <li><b>/viewer.html</b> URL분석현황 — 전체 조회·엑셀 다운로드</li>
           <li><b>/call-stats.html</b> URL호출현황 — 차트·추이 분석</li>
           <li><b>/review.html</b> 현업 검토 — 차단대상 검토 입력</li>
-          <li><b>/workflow.html</b> 업무 플로우 — (이 페이지)</li>
+          <li><b>/workflow.html</b> 업무 흐름 — (이 페이지)</li>
         </ul>
       </div>
       <div class="auth-card">
         <div class="auth-head">
-          <span class="auth-title">관리자 전용</span>
+          <span class="auth-title">IT카드개발팀 전용</span>
           <span class="auth-label auth-adm">Admin</span>
         </div>
         <ul class="auth-list">
-          <li><b>/extract.html</b> — Git Pull·추출 실행</li>
-          <li><b>/settings.html</b> — 배치·레포·로그·URL분석/검토·데이터 관리</li>
-          <li><b>/proposal-jira.html</b> — Jira 연동 구현 문서</li>
-          <li><b>/h2-console</b> — H2 DB 콘솔</li>
-          <li>상태확정·차단 반영·엑셀 업로드</li>
+          <li><b>URL 수집 화면</b> — 소스 수집 실행</li>
+          <li><b>설정 화면</b> — 자동 처리·시스템·로그·데이터 관리</li>
+          <li>상태 확정·차단 반영·엑셀 업로드</li>
         </ul>
       </div>
       <div class="auth-card">
@@ -691,28 +898,208 @@
           <span class="auth-label auth-adm">Token</span>
         </div>
         <ul class="auth-list">
-          <li>서버 측 UUID 토큰 (AuthService)</li>
-          <li>TTL 8시간, <b>POST /api/verify-password</b>로 발급</li>
-          <li>요청 시 <b>X-Admin-Token</b> 헤더에 포함</li>
-          <li>AdminInterceptor가 보호 경로 검증</li>
+          <li>비밀번호 입력으로 IT카드개발팀 인증 발급</li>
+          <li>유효시간 8시간, 만료 시 재인증 필요</li>
+          <li>인증 후 IT카드개발팀 전용 기능 자동 활성화</li>
+          <li>보호 기능은 토큰 검증 후 접근 허용</li>
         </ul>
       </div>
     </div>
   </div>
 
-  <!-- 섹션 7: URL 상태 판정 플로우차트 -->
-  <div class="section-title">7. URL 상태 판정 플로우차트</div>
+  <!-- 섹션 8: URL 차단 여부 판정 기준 -->
+  <div class="section-title">8. URL 차단 여부 판정 기준</div>
+  <div class="card" style="padding:16px 20px;">
+    <div style="font-size:12px;color:#64748b;margin-bottom:16px;line-height:1.6;">
+      소스 수집 시 <b>각 URL</b>에 대해 아래 순서대로 판정이 수행됩니다. 앞 단계에서 확정되면 이후 단계는 건너뜁니다.
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px;">
+
+      <div style="display:flex;align-items:stretch;gap:8px;">
+        <div style="width:36px;min-width:36px;background:#e2e8f0;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#475569;">1</div>
+        <div style="flex:1;background:#fee2e2;border:1px solid #fca5a5;border-radius:8px;padding:10px 14px;">
+          <div style="font-size:12px;font-weight:700;color:#991b1b;margin-bottom:3px;">이미 차단완료된 URL</div>
+          <div style="font-size:12px;color:#334155;line-height:1.6;">소스에 차단 처리가 완료된 URL — 상태 변경 없이 건너뜁니다.</div>
+        </div>
+      </div>
+
+      <div style="text-align:left;padding-left:18px;font-size:18px;color:#94a3b8;line-height:1;">↓ 아니면</div>
+
+      <div style="display:flex;align-items:stretch;gap:8px;">
+        <div style="width:36px;min-width:36px;background:#e2e8f0;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#475569;">2</div>
+        <div style="flex:1;background:#e0e7ff;border:1px solid #a5b4fc;border-radius:8px;padding:10px 14px;">
+          <div style="font-size:12px;font-weight:700;color:#3730a3;margin-bottom:3px;">담당자가 상태를 확정한 URL</div>
+          <div style="font-size:12px;color:#334155;line-height:1.6;">확정 처리된 URL — 기존 상태를 유지하며 자동 재판정에서 제외됩니다.</div>
+        </div>
+      </div>
+
+      <div style="text-align:left;padding-left:18px;font-size:18px;color:#94a3b8;line-height:1;">↓ 아니면</div>
+
+      <div style="display:flex;align-items:stretch;gap:8px;">
+        <div style="width:36px;min-width:36px;background:#e2e8f0;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#475569;">3</div>
+        <div style="flex:1;background:#dcfce7;border:1px solid #86efac;border-radius:8px;padding:10px 14px;">
+          <div style="font-size:12px;font-weight:700;color:#166534;margin-bottom:3px;">현업 검토 결과 '차단 제외'로 확정된 URL</div>
+          <div style="font-size:12px;color:#334155;line-height:1.6;">'차단대상 제외'로 검토 완료된 URL — <b>사용</b> 상태로 유지됩니다.</div>
+        </div>
+      </div>
+
+      <div style="text-align:left;padding-left:18px;font-size:18px;color:#94a3b8;line-height:1;">↓ 아니면 → 자동 판정 실행</div>
+
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px;">
+        <div style="background:#fee2e2;border:1px solid #fca5a5;border-radius:8px;padding:10px 12px;">
+          <div style="font-size:11px;font-weight:700;color:#991b1b;margin-bottom:4px;">🔴 차단완료</div>
+          <div style="font-size:11px;color:#334155;line-height:1.6;">소스에 폐기 표시·차단 주석·차단 처리 코드가 모두 반영된 경우</div>
+        </div>
+        <div style="background:#ffedd5;border:1px solid #fdba74;border-radius:8px;padding:10px 12px;">
+          <div style="font-size:11px;font-weight:700;color:#9a3412;margin-bottom:4px;">🟠 최우선 차단대상</div>
+          <div style="font-size:11px;color:#334155;line-height:1.6;">실제 사용 이력 없음 + 1년 이상 미수정</div>
+        </div>
+        <div style="background:#fef9c3;border:1px solid #fde047;border-radius:8px;padding:10px 12px;">
+          <div style="font-size:11px;font-weight:700;color:#713f12;margin-bottom:4px;">🟡 검토필요 차단대상</div>
+          <div style="font-size:11px;color:#334155;line-height:1.6;">사용 이력 있음 + 1년↑ 미수정<br>또는 사용 없음 + 1년 미만</div>
+        </div>
+        <div style="background:#dcfce7;border:1px solid #86efac;border-radius:8px;padding:10px 12px;">
+          <div style="font-size:11px;font-weight:700;color:#166534;margin-bottom:4px;">🟢 사용</div>
+          <div style="font-size:11px;color:#334155;line-height:1.6;">위 조건에 해당하지 않는 기본 상태. 정상 운영 중.</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- 섹션 9: 역할별 Use Case -->
+  <div class="section-title">9. 역할별 Use Case</div>
+  <div class="card" style="padding:18px 20px;">
+
+    <!-- 시스템 관계 요약 바 -->
+    <div style="display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:4px;margin-bottom:20px;">
+      <span style="background:#1e293b;color:#94a3b8;font-size:11px;font-weight:600;padding:5px 11px;border-radius:20px;">👤 관리자(IT카드개발팀)</span>
+      <span style="background:#1e293b;color:#94a3b8;font-size:11px;font-weight:600;padding:5px 11px;border-radius:20px;">🤖 배치 시스템</span>
+      <span style="color:#94a3b8;font-size:18px;line-height:1;margin:0 2px;">→</span>
+      <span style="background:#dbeafe;color:#1d4ed8;font-size:11px;font-weight:700;padding:5px 13px;border-radius:20px;border:1.5px solid #93c5fd;">◈ URLViewer</span>
+      <span style="color:#94a3b8;font-size:18px;line-height:1;margin:0 2px;">↔</span>
+      <span style="background:#f1f5f9;color:#334155;font-size:11px;font-weight:700;padding:5px 13px;border-radius:20px;border:1.5px dashed #94a3b8;">👤 IT개발실</span>
+      <span style="color:#94a3b8;font-size:18px;line-height:1;margin:0 2px;">↔</span>
+      <span style="background:#ede9fe;color:#6d28d9;font-size:11px;font-weight:700;padding:5px 13px;border-radius:20px;border:1.5px solid #c4b5fd;">◈ SmartWay</span>
+      <span style="color:#94a3b8;font-size:18px;line-height:1;margin:0 2px;">←</span>
+      <span style="background:#1e293b;color:#94a3b8;font-size:11px;font-weight:600;padding:5px 11px;border-radius:20px;">👤 현업 담당자</span>
+    </div>
+
+    <!-- 역할 카드 그리드 -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;">
+
+      <!-- 관리자(IT카드개발팀) -->
+      <div style="border-radius:10px;overflow:hidden;border:1.5px solid #bfdbfe;">
+        <div style="background:#1e40af;color:#fff;padding:10px 12px;text-align:center;">
+          <div style="font-size:20px;line-height:1;">👤</div>
+          <div style="font-size:12px;font-weight:700;margin-top:5px;">관리자(IT카드개발팀)</div>
+          <div style="font-size:9px;opacity:.7;margin-top:3px;letter-spacing:.01em;">시스템운영관리 &amp; 차단작업 총괄</div>
+        </div>
+        <div style="padding:11px 13px;background:#f8faff;">
+          <div style="font-size:10px;font-weight:700;color:#1d4ed8;text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px;padding-bottom:4px;border-bottom:1px solid #bfdbfe;">URLViewer</div>
+          <ul style="list-style:none;padding:0;margin:0 0 10px;font-size:11px;color:#1e293b;line-height:1.8;">
+            <li>URL 수집 · 시스템 설정</li>
+            <li>자동 처리 관리 · 상태 확정</li>
+            <li>데이터 관리 · 복구</li>
+            <li>전체 조회 · 엑셀</li>
+          </ul>
+          <div style="font-size:10px;font-weight:700;color:#6d28d9;text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px;padding-bottom:4px;border-bottom:1px solid #ddd6fe;">SmartWay</div>
+          <ul style="list-style:none;padding:0;margin:0;font-size:11px;color:#1e293b;line-height:1.8;">
+            <li>티켓 발행</li>
+            <li>티켓 동기화</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- IT개발실 -->
+      <div style="border-radius:10px;overflow:hidden;border:1.5px solid #93c5fd;">
+        <div style="background:#2563eb;color:#fff;padding:10px 12px;text-align:center;">
+          <div style="font-size:20px;line-height:1;">👤</div>
+          <div style="font-size:12px;font-weight:700;margin-top:5px;">IT개발실</div>
+          <div style="font-size:10px;opacity:.75;margin-top:2px;">차단대상분석 및 선별</div>
+        </div>
+        <div style="padding:11px 13px;background:#f0f7ff;">
+          <div style="font-size:10px;font-weight:700;color:#1d4ed8;text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px;padding-bottom:4px;border-bottom:1px solid #bfdbfe;">URLViewer</div>
+          <ul style="list-style:none;padding:0;margin:0 0 10px;font-size:11px;color:#1e293b;line-height:1.8;">
+            <li>대시보드 · URL 현황</li>
+            <li>호출현황 분석</li>
+            <li>엑셀 다운로드 · 업로드</li>
+            <li>차단 확정 · 배포 요청</li>
+            <li>배포 후 모니터링</li>
+          </ul>
+          <div style="font-size:10px;font-weight:700;color:#6d28d9;text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px;padding-bottom:4px;border-bottom:1px solid #ddd6fe;">SmartWay</div>
+          <ul style="list-style:none;padding:0;margin:0;font-size:11px;color:#1e293b;line-height:1.8;">
+            <li>티켓 발행</li>
+            <li>티켓 동기화</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- 배치 시스템 -->
+      <div style="border-radius:10px;overflow:hidden;border:1.5px solid #cbd5e1;">
+        <div style="background:#475569;color:#fff;padding:10px 12px;text-align:center;">
+          <div style="font-size:20px;line-height:1;">🤖</div>
+          <div style="font-size:12px;font-weight:700;margin-top:5px;">배치 시스템</div>
+          <div style="font-size:10px;opacity:.75;margin-top:2px;">자동 수행</div>
+        </div>
+        <div style="padding:11px 13px;background:#f8fafc;">
+          <div style="font-size:10px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px;padding-bottom:4px;border-bottom:1px solid #cbd5e1;">URLViewer</div>
+          <ul style="list-style:none;padding:0;margin:0 0 10px;font-size:11px;color:#1e293b;line-height:1.8;">
+            <li>소스 자동 수집 · 분석</li>
+            <li>사용 현황 자동 집계</li>
+            <li>상태 자동 재판정</li>
+            <li>데이터 자동 백업</li>
+          </ul>
+          <div style="font-size:10px;font-weight:700;color:#6d28d9;text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px;padding-bottom:4px;border-bottom:1px solid #ddd6fe;">SmartWay</div>
+          <ul style="list-style:none;padding:0;margin:0;font-size:11px;color:#1e293b;line-height:1.8;">
+            <li>티켓 발행</li>
+            <li>티켓 동기화</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- 현업 담당자 -->
+      <div style="border-radius:10px;overflow:hidden;border:1.5px solid #a7f3d0;">
+        <div style="background:#065f46;color:#fff;padding:10px 12px;text-align:center;">
+          <div style="font-size:20px;line-height:1;">👤</div>
+          <div style="font-size:12px;font-weight:700;margin-top:5px;">현업 담당자</div>
+          <div style="font-size:10px;opacity:.75;margin-top:2px;">최종검토 및 승인</div>
+        </div>
+        <div style="padding:11px 13px;background:#f0fdf4;">
+          <div style="font-size:10px;font-weight:700;color:#6d28d9;text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px;padding-bottom:4px;border-bottom:1px solid #ddd6fe;">SmartWay</div>
+          <ul style="list-style:none;padding:0;margin:0;font-size:11px;color:#1e293b;line-height:1.8;">
+            <li>티켓 검토 · 결재</li>
+            <li>승인 / 반려</li>
+          </ul>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- 개발자 참고용 구분선 -->
+  <div style="display:flex;align-items:center;gap:12px;margin:24px 0 16px;">
+    <div style="flex:1;height:2px;background:repeating-linear-gradient(90deg,#f59e0b 0px,#f59e0b 8px,transparent 8px,transparent 16px);"></div>
+    <div style="display:flex;align-items:center;gap:8px;background:#fffbeb;border:2px solid #f59e0b;border-radius:8px;padding:7px 18px;white-space:nowrap;">
+      <span style="font-size:16px;">🛠️</span>
+      <span style="font-size:13px;font-weight:800;color:#92400e;letter-spacing:.04em;">개발자 참고용</span>
+    </div>
+    <div style="flex:1;height:2px;background:repeating-linear-gradient(90deg,#f59e0b 0px,#f59e0b 8px,transparent 8px,transparent 16px);"></div>
+  </div>
+
+  <!-- 섹션 10: URL 차단여부 플로우차트 (개발자 참고용) -->
+  <div class="section-title" style="margin-top:0;">
+    10. URL 차단여부 플로우차트
+  </div>
   <div class="card diagram-card">
     <div class="diagram-note">
-      소스 추출 시 <b>각 URL 1건</b>이 거치는 상태 판정 전체 흐름입니다.
-      <b>차단완료</b>·<b>상태확정(statusOverridden)</b>·<b>현업검토결과(reviewResult)</b> 순으로 우선 확인한 뒤,
-      해당하지 않는 경우에만 자동 조건 계산이 실행됩니다. 테이블명은 영문, 조건 필드는 <code>필드명(한글설명)</code> 형식으로 표기합니다.
+      소스 수집 시 <b>각 URL 1건</b>이 거치는 상태 판정 전체 흐름입니다.
+      <b>차단완료</b> 여부 → <b>상태확정(statusOverridden)</b> 여부 → <b>현업검토결과(reviewResult)</b> 순으로 우선 확인한 뒤,
+      해당하지 않는 경우에만 자동 조건 계산이 실행됩니다.
     </div>
     <div class="mermaid">
 flowchart TD
-    START(["🔍 소스 추출 시작"]) --> PULL["① Git Pull\n최신 소스 동기화\nrepo_config 참조"]
-    PULL --> PARSE["② JavaParser\nController 클래스 파싱\nrepo_config.root_path 기준"]
-    PARSE --> EACH["③ 각 URL에 대해 반복 처리\n→ api_record 대상"]
+    START(["🔍 소스 수집 시작"]) --> EACH["각 URL에 대해 반복 처리\n→ api_record 대상"]
 
     EACH --> IS_NEW{"신규 URL?\napi_record 존재 확인"}
     IS_NEW -->|"Yes — 처음 발견"| CREATE["신규 레코드 생성\napi_record INSERT"]
@@ -728,9 +1115,9 @@ flowchart TD
     CHK_RVW -->|"No"| CALC["자동 상태 계산\napi_record 조건 평가"]
     CREATE --> CALC
 
-    CALC --> R1{"isDeprecated(deprecated 여부) = Y\n+ hasUrlBlock(URL차단 주석) = Y\n+ UnsupportedOpEx throw\n─ 3가지 모두 AND?"}
+    CALC --> R1{"isDeprecated = Y\n+ hasUrlBlock = Y\n+ UnsupportedOpEx throw\n─ 3가지 모두 AND?"}
     R1 -->|"AND 충족"| ST_DONE["🔴 차단완료"]
-    R1 -->|"미충족"| R2{"callCount(총호출건수) = 0\n+ gitHistory(최근커밋일) 1년 경과?"}
+    R1 -->|"미충족"| R2{"callCount = 0\n+ 최근커밋 1년 경과?"}
     R2 -->|"Yes"| ST_TOP["🟠 최우선 차단대상"]
     R2 -->|"No"| R3{"callCount ≥ 1 + 최근커밋 1년↑\nOR callCount = 0 + 최근커밋 1년 미만?"}
     R3 -->|"Yes"| ST_REV["🟡 검토필요 차단대상"]
@@ -745,7 +1132,7 @@ flowchart TD
     ST_USE --> SAVE
     SKIP --> EACH
     SAVE --> EACH
-    EACH -->|"모든 URL 처리 완료"| END(["✅ 추출 완료"])
+    EACH -->|"모든 URL 처리 완료"| END(["✅ 수집 완료"])
 
     style START fill:#dbeafe,stroke:#93c5fd,color:#1e40af
     style END   fill:#dcfce7,stroke:#86efac,color:#166534
@@ -759,57 +1146,8 @@ flowchart TD
     </div>
   </div>
 
-  <!-- 섹션 8: 역할별 Use Case -->
-  <div class="section-title">8. 역할별 Use Case</div>
-  <div class="card diagram-card">
-    <div class="diagram-note">
-      URLViewer를 사용하는 <b>4가지 역할</b>(관리자·IT담당자·현업 검토자·배치 시스템)과
-      각 역할이 수행할 수 있는 <b>Use Case</b>의 범위를 나타냅니다.
-      <b>왼쪽</b>: IT담당자·현업 검토자(공개 기능 사용), <b>오른쪽</b>: 관리자·배치 시스템(전용 기능).
-    </div>
-    <div class="mermaid">
-graph LR
-    IT(["👤\nIT담당자"])
-    REV(["👤\n현업 검토자"])
-
-    subgraph SYS["◈  URLViewer 시스템  ◈"]
-        direction TB
-        subgraph ADMIN_UC["🔒 관리자 전용"]
-            UC1(["URL 소스 추출"])
-            UC2(["레포지토리 설정"])
-            UC3(["배치 스케줄 관리"])
-            UC4(["상태 확정 · 강제 변경"])
-            UC5(["데이터 백업 · 복구"])
-        end
-        subgraph PUBLIC_UC["🌐 공개 기능"]
-            UC6(["대시보드 조회"])
-            UC7(["URL 분석현황 조회"])
-            UC8(["호출현황 분석"])
-            UC9(["엑셀 다운로드"])
-            UC10(["현업 검토 입력"])
-        end
-        subgraph BATCH_UC["⚙️ 시스템 자동"]
-            UC11(["Git Pull + 파싱"])
-            UC12(["APM 호출건수 수집"])
-            UC13(["상태 자동 재계산"])
-            UC14(["데이터 자동 백업"])
-        end
-    end
-
-    ADM(["👤\n관리자"])
-    BOT(["🤖\n배치 시스템"])
-
-    IT --> UC6 & UC7 & UC8 & UC9
-    REV --> UC7 & UC10
-
-    UC1 & UC2 & UC3 & UC4 & UC5 --> ADM
-    UC6 & UC7 & UC8 & UC9 --> ADM
-    UC11 & UC12 & UC13 & UC14 --> BOT
-    </div>
-  </div>
-
-  <!-- 섹션 9: 테이블/컬럼 명세서 -->
-  <div class="section-title">9. 테이블 / 컬럼 명세서</div>
+  <!-- 섹션 11: 테이블/컬럼 명세서 -->
+  <div class="section-title">11. 테이블 / 컬럼 명세서</div>
 
   <!-- api_record -->
   <div class="card" style="margin-bottom:14px;">
@@ -841,9 +1179,9 @@ graph LR
         <tr><td style="padding:5px 10px;border:1px solid #e2e8f0;font-family:monospace;">blocked_reason</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">차단근거</td><td style="padding:5px 10px;border:1px solid #e2e8f0;white-space:nowrap;">TEXT</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">CSR 번호 등 fullComment 파싱</td></tr>
         <tr style="background:#f8fafc;"><td style="padding:5px 10px;border:1px solid #e2e8f0;font-family:monospace;">review_result</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">현업검토결과</td><td style="padding:5px 10px;border:1px solid #e2e8f0;white-space:nowrap;">VARCHAR(50)</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">차단대상 제외 / 차단확정 / 판단불가</td></tr>
         <tr><td style="padding:5px 10px;border:1px solid #e2e8f0;font-family:monospace;">review_opinion</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">현업검토의견</td><td style="padding:5px 10px;border:1px solid #e2e8f0;white-space:nowrap;">VARCHAR(500)</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">자유 텍스트</td></tr>
-        <tr style="background:#f5f3ff;"><td style="padding:5px 10px;border:1px solid #e2e8f0;font-family:monospace;">review_stage</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">Jira 검토 단계</td><td style="padding:5px 10px;border:1px solid #e2e8f0;white-space:nowrap;">VARCHAR(30)</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">INTERNAL_PENDING → JIRA_ISSUED → JIRA_APPROVED/REJECTED → BLOCKED</td></tr>
-        <tr style="background:#ede9fe;"><td style="padding:5px 10px;border:1px solid #e2e8f0;font-family:monospace;">jira_issue_key</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">Jira 티켓 키</td><td style="padding:5px 10px;border:1px solid #e2e8f0;white-space:nowrap;">VARCHAR(50)</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">예: CARD-1234. 발행 성공 시 저장.</td></tr>
-        <tr style="background:#f5f3ff;"><td style="padding:5px 10px;border:1px solid #e2e8f0;font-family:monospace;">jira_synced_at</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">Jira 마지막 동기화 일시</td><td style="padding:5px 10px;border:1px solid #e2e8f0;white-space:nowrap;">DATETIME</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">PUSH/PULL 시마다 갱신</td></tr>
+        <tr style="background:#f5f3ff;"><td style="padding:5px 10px;border:1px solid #e2e8f0;font-family:monospace;">review_stage</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">SmartWay 검토 단계</td><td style="padding:5px 10px;border:1px solid #e2e8f0;white-space:nowrap;">VARCHAR(30)</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">INTERNAL_PENDING → JIRA_ISSUED → JIRA_APPROVED/REJECTED → BLOCKED</td></tr>
+        <tr style="background:#ede9fe;"><td style="padding:5px 10px;border:1px solid #e2e8f0;font-family:monospace;">jira_issue_key</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">SmartWay 티켓 키</td><td style="padding:5px 10px;border:1px solid #e2e8f0;white-space:nowrap;">VARCHAR(50)</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">예: CARD-1234. 발행 성공 시 저장.</td></tr>
+        <tr style="background:#f5f3ff;"><td style="padding:5px 10px;border:1px solid #e2e8f0;font-family:monospace;">jira_synced_at</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">SmartWay 마지막 동기화 일시</td><td style="padding:5px 10px;border:1px solid #e2e8f0;white-space:nowrap;">DATETIME</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">PUSH/PULL 시마다 갱신</td></tr>
         <tr style="background:#f8fafc;"><td style="padding:5px 10px;border:1px solid #e2e8f0;font-family:monospace;">review_team</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">현업팀</td><td style="padding:5px 10px;border:1px solid #e2e8f0;white-space:nowrap;">VARCHAR(100)</td><td style="padding:5px 10px;border:1px solid #e2e8f0;"></td></tr>
         <tr><td style="padding:5px 10px;border:1px solid #e2e8f0;font-family:monospace;">review_manager</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">현업담당자</td><td style="padding:5px 10px;border:1px solid #e2e8f0;white-space:nowrap;">VARCHAR(100)</td><td style="padding:5px 10px;border:1px solid #e2e8f0;"></td></tr>
         <tr style="background:#f8fafc;"><td style="padding:5px 10px;border:1px solid #e2e8f0;font-family:monospace;">reviewed_at</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">현업검토일시</td><td style="padding:5px 10px;border:1px solid #e2e8f0;white-space:nowrap;">DATETIME</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">검토 저장 시 자동 갱신</td></tr>
@@ -1008,8 +1346,8 @@ graph LR
     </div>
 
     <div class="card">
-      <div class="card-title" style="margin-bottom:10px;"><span class="dot" style="background:var(--purple);"></span>jira_config — Jira 연동 설정</div>
-      <div style="font-size:11px;color:#64748b;margin-bottom:8px;">단일 레코드 (0~1행). settings.html Jira 탭에서 관리. <code>repos-config.yml</code> 가져오기 시 빈 값만 자동 시딩.</div>
+      <div class="card-title" style="margin-bottom:10px;"><span class="dot" style="background:var(--purple);"></span>jira_config — SmartWay 연동 설정</div>
+      <div style="font-size:11px;color:#64748b;margin-bottom:8px;">단일 레코드 (0~1행). settings.html SmartWay 탭에서 관리. <code>repos-config.yml</code> 가져오기 시 빈 값만 자동 시딩.</div>
       <div style="overflow-x:auto;">
       <table style="width:100%;border-collapse:collapse;font-size:12px;">
         <thead><tr style="background:#f5f3ff;">
@@ -1019,22 +1357,22 @@ graph LR
         </tr></thead>
         <tbody>
           <tr><td style="padding:5px 10px;border:1px solid #e2e8f0;font-family:monospace;">id</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">식별자</td><td style="padding:5px 10px;border:1px solid #e2e8f0;"><span style="background:#fef3c7;color:#92400e;padding:1px 5px;border-radius:3px;font-size:11px;">PK</span> AUTO</td></tr>
-          <tr style="background:#f8fafc;"><td style="padding:5px 10px;border:1px solid #e2e8f0;font-family:monospace;">jira_base_url</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">Jira 서버 URL</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">예: https://jira.company.com</td></tr>
-          <tr><td style="padding:5px 10px;border:1px solid #e2e8f0;font-family:monospace;">project_key</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">Jira 프로젝트 키</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">예: CARD</td></tr>
+          <tr style="background:#f8fafc;"><td style="padding:5px 10px;border:1px solid #e2e8f0;font-family:monospace;">jira_base_url</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">SmartWay 서버 URL</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">예: https://jira.company.com</td></tr>
+          <tr><td style="padding:5px 10px;border:1px solid #e2e8f0;font-family:monospace;">project_key</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">SmartWay 프로젝트 키</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">예: CARD</td></tr>
           <tr style="background:#f8fafc;"><td style="padding:5px 10px;border:1px solid #e2e8f0;font-family:monospace;">service_account</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">서비스 계정</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">Basic Auth 이메일/아이디</td></tr>
           <tr><td style="padding:5px 10px;border:1px solid #e2e8f0;font-family:monospace;">api_token</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">API 토큰</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">Cloud: API Token, Server: 비밀번호</td></tr>
           <tr style="background:#f8fafc;"><td style="padding:5px 10px;border:1px solid #e2e8f0;font-family:monospace;">custom_field_id</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">URLViewer ID 커스텀 필드</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">예: customfield_10100 (멱등성 보장용)</td></tr>
           <tr><td style="padding:5px 10px;border:1px solid #e2e8f0;font-family:monospace;">sync_enabled</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">자동 동기화 여부</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">BOOLEAN, 배치 JIRA_SYNC로 관리</td></tr>
           <tr style="background:#f8fafc;"><td style="padding:5px 10px;border:1px solid #e2e8f0;font-family:monospace;">last_synced_at</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">마지막 동기화 일시</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">DATETIME</td></tr>
-          <tr><td style="padding:5px 10px;border:1px solid #e2e8f0;font-family:monospace;">status_mappings</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">Jira 상태 매핑 JSON</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">Jira Resolution → reviewStage 매핑</td></tr>
+          <tr><td style="padding:5px 10px;border:1px solid #e2e8f0;font-family:monospace;">status_mappings</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">SmartWay 상태 매핑 JSON</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">SmartWay Resolution → reviewStage 매핑</td></tr>
         </tbody>
       </table>
       </div>
     </div>
 
     <div class="card">
-      <div class="card-title" style="margin-bottom:10px;"><span class="dot" style="background:var(--purple);"></span>jira_user_mapping — Jira 담당자 매핑</div>
-      <div style="font-size:11px;color:#64748b;margin-bottom:8px;">URLViewer 담당자명 ↔ Jira accountId 매핑. 복합 UNIQUE: <code>(team_name, urlviewer_name)</code>. <code>repos-config.yml</code> 가져오기 시 미존재 항목 자동 시딩.</div>
+      <div class="card-title" style="margin-bottom:10px;"><span class="dot" style="background:var(--purple);"></span>jira_user_mapping — SmartWay 담당자 매핑</div>
+      <div style="font-size:11px;color:#64748b;margin-bottom:8px;">URLViewer 담당자명 ↔ SmartWay accountId 매핑. 복합 UNIQUE: <code>(team_name, urlviewer_name)</code>. <code>repos-config.yml</code> 가져오기 시 미존재 항목 자동 시딩.</div>
       <div style="overflow-x:auto;">
       <table style="width:100%;border-collapse:collapse;font-size:12px;">
         <thead><tr style="background:#f5f3ff;">
@@ -1046,8 +1384,8 @@ graph LR
           <tr><td style="padding:5px 10px;border:1px solid #e2e8f0;font-family:monospace;">id</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">식별자</td><td style="padding:5px 10px;border:1px solid #e2e8f0;"><span style="background:#fef3c7;color:#92400e;padding:1px 5px;border-radius:3px;font-size:11px;">PK</span> AUTO</td></tr>
           <tr style="background:#f8fafc;"><td style="padding:5px 10px;border:1px solid #e2e8f0;font-family:monospace;">team_name</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">팀명</td><td style="padding:5px 10px;border:1px solid #e2e8f0;"><span style="background:#ede9fe;color:#5b21b6;padding:1px 5px;border-radius:3px;font-size:11px;">UNIQUE(복합)</span> VARCHAR(100)</td></tr>
           <tr><td style="padding:5px 10px;border:1px solid #e2e8f0;font-family:monospace;">urlviewer_name</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">URLViewer 담당자명</td><td style="padding:5px 10px;border:1px solid #e2e8f0;"><span style="background:#ede9fe;color:#5b21b6;padding:1px 5px;border-radius:3px;font-size:11px;">UNIQUE(복합)</span> VARCHAR(100)</td></tr>
-          <tr style="background:#f8fafc;"><td style="padding:5px 10px;border:1px solid #e2e8f0;font-family:monospace;">jira_account_id</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">Jira 계정 ID</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">Jira Cloud: uuid 형식 accountId</td></tr>
-          <tr><td style="padding:5px 10px;border:1px solid #e2e8f0;font-family:monospace;">jira_display_name</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">Jira 표시명</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">예: 홍길동 (Gildong Hong)</td></tr>
+          <tr style="background:#f8fafc;"><td style="padding:5px 10px;border:1px solid #e2e8f0;font-family:monospace;">jira_account_id</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">SmartWay 계정 ID</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">SmartWay Cloud: uuid 형식 accountId</td></tr>
+          <tr><td style="padding:5px 10px;border:1px solid #e2e8f0;font-family:monospace;">jira_display_name</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">SmartWay 표시명</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">예: 홍길동 (Gildong Hong)</td></tr>
         </tbody>
       </table>
       </div>
@@ -1088,7 +1426,6 @@ graph LR
   function applyAdminUI() {
     const admin = isAdmin();
     const ns = document.getElementById('navSettings'); if (ns) ns.style.display = admin ? '' : 'none';
-    const _np = document.getElementById('navProposal'); if (_np) _np.style.display = admin ? '' : 'none';
     const ab = document.getElementById('adminBtn'); if (ab) ab.textContent = admin ? '🔓 관리자 해제' : '🔑 관리자';
   }
   async function toggleAdmin() {

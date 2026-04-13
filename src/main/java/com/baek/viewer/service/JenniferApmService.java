@@ -24,7 +24,7 @@ import java.util.*;
 
 /**
  * Jennifer APM 연동 서비스 — 실제 API 호출 전용 (최대 30일).
- * Mock 데이터가 필요하면 source=MOCK 사용 (MockApmService.doGenerate).
+ * Mock 데이터가 필요하면 source=MOCK 사용 (ApmCollectionService.doGenerate).
  *
  * 요청 형식 (GET):
  * {url}?domain_id={sid}&instance_id={oid1,oid2,...}&start_time={epochMs}&end_time={epochMs}
@@ -51,11 +51,11 @@ public class JenniferApmService {
         this.globalConfigRepo = globalConfigRepo;
     }
     /**
-     * @param logCallback UI 로그 콜백 (nullable) — MockApmService.addApmLog 전달용
+     * @param logCallback UI 로그 콜백 (nullable) — ApmCollectionService.addApmLog 전달용
      */
     /**
      * 실제 Jennifer API 호출로 일별 데이터 수집. Mock 로직 없음.
-     * Mock 데이터가 필요하면 source=MOCK 사용 (MockApmService.doGenerate).
+     * Mock 데이터가 필요하면 source=MOCK 사용 (ApmCollectionService.doGenerate).
      */
     public Map<String, Object> collect(RepoConfig repo, LocalDate from, LocalDate to,
                                         java.util.function.BiConsumer<String, String> logCallback) {

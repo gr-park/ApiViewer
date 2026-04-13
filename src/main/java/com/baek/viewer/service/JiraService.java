@@ -48,15 +48,14 @@ public class JiraService {
     // ========================================================================
 
     /**
-     * Basic Auth (serviceAccount:apiToken) + JSON Content-Type 인터셉터 적용
+     * Bearer Token + JSON Content-Type 인터셉터 적용 (Jira Server REST API v2)
      */
     private RestTemplate buildRestTemplate(JiraConfig config) {
         RestTemplate rt = new RestTemplate();
-        String credentials = config.getServiceAccount() + ":" + config.getApiToken();
-        String encoded = Base64.getEncoder().encodeToString(credentials.getBytes());
+        String token = config.getApiToken();
 
         ClientHttpRequestInterceptor authInterceptor = (request, body, execution) -> {
-            request.getHeaders().set(HttpHeaders.AUTHORIZATION, "Basic " + encoded);
+            request.getHeaders().set(HttpHeaders.AUTHORIZATION, "Bearer " + token);
             request.getHeaders().setContentType(MediaType.APPLICATION_JSON);
             request.getHeaders().setAccept(List.of(MediaType.APPLICATION_JSON));
             return execution.execute(request, body);
@@ -242,19 +241,7 @@ public class JiraService {
         String issueKey = record.getJiraIssueKey();
         boolean wasNew = (issueKey == null || issueKey.isBlank());
 
-        if (issueKey == null || issueKey.isBlank()) {
-            // 커스텀 필드로 기존 티켓 검색
-            if (cfg.getCustomFieldId() != null && !cfg.getCustomFieldId().isBlank()) {
-                String cfNum = cfg.getCustomFieldId().replace("customfield_", "");
-                String jql = "project = " + cfg.getProjectKey()
-                        + " AND cf[" + cfNum + "] = " + record.getId();
-                List<Map<String, Object>> existing = searchByJql(rt, cfg, jql, 1);
-                if (!existing.isEmpty()) {
-                    issueKey = (String) existing.get(0).get("key");
-                    wasNew = false;
-                }
-            }
-        }
+        // jiraIssueKey 없으면 바로 신규 생성 (커스텀 필드 검색 불필요)
 
         if (issueKey != null && !issueKey.isBlank()) {
             updateIssue(rt, cfg, issueKey, fields);
@@ -563,14 +550,9 @@ public class JiraService {
             fields.put("components", List.of(Map.of("id", String.valueOf(component.get("id")))));
         }
 
-        // Assignee
+        // Assignee (Jira Server: name 방식)
         if (assigneeAccountId != null) {
-            fields.put("assignee", Map.of("accountId", assigneeAccountId));
-        }
-
-        // 커스텀 필드: URLViewer ID
-        if (cfg.getCustomFieldId() != null && !cfg.getCustomFieldId().isBlank()) {
-            fields.put(cfg.getCustomFieldId(), record.getId());
+            fields.put("assignee", Map.of("name", assigneeAccountId));
         }
 
         return fields;

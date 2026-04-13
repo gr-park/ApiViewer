@@ -1,9 +1,11 @@
 package com.baek.viewer.service;
 
 import com.baek.viewer.model.ApmCallData;
+import com.baek.viewer.model.ApmUrlStat;
 import com.baek.viewer.model.ApiRecord;
 import com.baek.viewer.model.RepoConfig;
 import com.baek.viewer.repository.ApmCallDataRepository;
+import com.baek.viewer.repository.ApmUrlStatRepository;
 import com.baek.viewer.repository.ApiRecordRepository;
 import com.baek.viewer.repository.RepoConfigRepository;
 import org.slf4j.Logger;
@@ -15,16 +17,18 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.stream.Collectors;
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 
 @Service
-public class MockApmService {
+public class ApmCollectionService {
 
-    private static final Logger log = LoggerFactory.getLogger(MockApmService.class);
+    private static final Logger log = LoggerFactory.getLogger(ApmCollectionService.class);
 
     private final ApmCallDataRepository apmRepo;
+    private final ApmUrlStatRepository apmUrlStatRepo;
     private final ApiRecordRepository apiRecordRepo;
     private final RepoConfigRepository repoConfigRepo;
     private final WhatapApmService whatapApmService;
@@ -49,12 +53,14 @@ public class MockApmService {
 
     /** 자기 자신 프록시 — 내부 @Transactional 메서드 호출 시 새 트랜잭션 생성용 */
     @Autowired @Lazy
-    private MockApmService self;
+    private ApmCollectionService self;
 
-    public MockApmService(ApmCallDataRepository apmRepo, ApiRecordRepository apiRecordRepo,
+    public ApmCollectionService(ApmCallDataRepository apmRepo, ApmUrlStatRepository apmUrlStatRepo,
+                          ApiRecordRepository apiRecordRepo,
                           RepoConfigRepository repoConfigRepo,
                           WhatapApmService whatapApmService, JenniferApmService jenniferApmService) {
         this.apmRepo = apmRepo;
+        this.apmUrlStatRepo = apmUrlStatRepo;
         this.apiRecordRepo = apiRecordRepo;
         this.repoConfigRepo = repoConfigRepo;
         this.whatapApmService = whatapApmService;
@@ -72,8 +78,10 @@ public class MockApmService {
      * WHATAP/JENNIFER: 각 서비스 내부에서 mockEnabled 여부에 따라 Mock 또는 실제 API 결정.
      * MOCK: 직접 랜덤 데이터 생성 (source="MOCK" 명시 요청 시).
      * source별 최대 기간: WHATAP=365일, JENNIFER=30일, MOCK=365일.
+     *
+     * ⚠ @Transactional 미적용 — 하루치마다 self-proxy로 REQUIRES_NEW 트랜잭션 생성.
+     *   중간 실패 시 해당 날짜만 롤백/스킵하고, 이미 커밋된 날짜는 유지.
      */
-    @Transactional
     public Map<String, Object> generateMockDataByRange(String repoName, LocalDate from, LocalDate to, String source) {
         final String src = normalizeSource(source);
         if (from == null || to == null) throw new IllegalArgumentException("from/to 날짜가 필요합니다.");
@@ -87,28 +95,54 @@ public class MockApmService {
         if (isOuterCall) apmCollecting = true;
         addApmLog("INFO", String.format("수집 시작 — repo=%s, source=%s, 기간=%s~%s (%d일)", repoName, src, from, to, spanDays));
 
-        // 기존 데이터 삭제 (재수집 전 공통 처리)
-        int deletedOld = apmRepo.deleteByRepoSourceAndDateRange(repoName, src, from, to);
-        if (deletedOld > 0) addApmLog("INFO", String.format("기존 %d건 선삭제 완료", deletedOld));
-
         try {
-            java.util.function.BiConsumer<String, String> logCb = this::addApmLog;
-            Map<String, Object> result;
-            if ("WHATAP".equals(src)) {
-                RepoConfig repo = repoConfigRepo.findByRepoName(repoName).orElseThrow(
-                        () -> new IllegalArgumentException("레포 설정 없음: " + repoName));
-                result = whatapApmService.collect(repo, from, to, logCb);
-            } else if ("JENNIFER".equals(src)) {
-                RepoConfig repo = repoConfigRepo.findByRepoName(repoName).orElseThrow(
-                        () -> new IllegalArgumentException("레포 설정 없음: " + repoName));
-                result = jenniferApmService.collect(repo, from, to, logCb);
+            int totalGenerated = 0;
+            int failDays = 0;
+
+            if ("MOCK".equals(src)) {
+                // MOCK: 컨텍스트 1회 산출 후 일자별 독립 커밋
+                MockDayContext ctx = buildMockDayContext(repoName, from, to);
+                if (ctx == null) {
+                    return Map.of("generated", 0, "message", "해당 레포에 분석된 API가 없습니다.");
+                }
+                addApmLog("INFO", String.format("MOCK 데이터 생성 시작 — API %d개, 기간 %d일",
+                        ctx.records.size(), ctx.totalDays));
+                int dayNum = 0;
+                LocalDate d = from;
+                while (!d.isAfter(to)) {
+                    dayNum++;
+                    try {
+                        totalGenerated += self.generateOneDayMock(repoName, d, src, ctx, dayNum);
+                    } catch (Exception e) {
+                        addApmLog("WARN", String.format("MOCK %s 일자 실패 (스킵): %s", d, e.getMessage()));
+                        failDays++;
+                    }
+                    d = d.plusDays(1);
+                }
             } else {
-                // source="MOCK" 명시 요청: 랜덤 데이터 직접 생성
-                result = doGenerate(repoName, from, to, src);
+                // WHATAP / JENNIFER: 일자별 외부 API 호출 + 독립 커밋
+                java.util.function.BiConsumer<String, String> logCb = this::addApmLog;
+                int dayNum = 0;
+                LocalDate d = from;
+                while (!d.isAfter(to)) {
+                    dayNum++;
+                    final LocalDate day = d;
+                    try {
+                        Map<String, Object> dayResult = self.generateOneDayExternal(repoName, day, src, logCb);
+                        Object gen = dayResult.get("generated");
+                        if (gen instanceof Number n) totalGenerated += n.intValue();
+                    } catch (Exception e) {
+                        addApmLog("WARN", String.format("%s %s 일자 실패 (스킵): %s", src, day, e.getMessage()));
+                        failDays++;
+                    }
+                    d = d.plusDays(1);
+                }
             }
-            Object gen = result.get("generated");
-            addApmLog("OK", String.format("수집 완료 — repo=%s, source=%s, %s건 저장", repoName, src, gen));
-            return result;
+
+            addApmLog("OK", String.format("수집 완료 — repo=%s, source=%s, %,d건 저장%s",
+                    repoName, src, totalGenerated,
+                    failDays > 0 ? String.format(" (실패 %d일 스킵)", failDays) : ""));
+            return Map.of("generated", totalGenerated, "from", from.toString(), "to", to.toString(), "source", src);
         } catch (Exception e) {
             addApmLog("ERROR", String.format("수집 실패 - repo=%s, source=%s: %s", repoName, src, e.getMessage()));
             throw e;
@@ -117,22 +151,39 @@ public class MockApmService {
         }
     }
 
-    /** 실제 mock 생성 로직 (지정 날짜 범위 기반) */
-    private Map<String, Object> doGenerate(String repoName, LocalDate from, LocalDate to, String src) {
+    /** MOCK 생성 시 루프 바깥에서 1회 산출하는 컨텍스트 (재계산 방지) */
+    public static class MockDayContext {
+        public final List<ApiRecord> records;
+        public final Set<String> noCallApis;
+        public final Set<String> lowCallApis;
+        public final Map<String, Set<LocalDate>> lowCallDays;
+        public final String[] errorMessages;
+        public final long totalDays;
+
+        MockDayContext(List<ApiRecord> records, Set<String> noCallApis, Set<String> lowCallApis,
+                       Map<String, Set<LocalDate>> lowCallDays, String[] errorMessages, long totalDays) {
+            this.records = records;
+            this.noCallApis = noCallApis;
+            this.lowCallApis = lowCallApis;
+            this.lowCallDays = lowCallDays;
+            this.errorMessages = errorMessages;
+            this.totalDays = totalDays;
+        }
+    }
+
+    /** MOCK 컨텍스트 생성 (레포 API 목록, noCall/lowCall 선정, lowCallDays 배분) */
+    private MockDayContext buildMockDayContext(String repoName, LocalDate from, LocalDate to) {
         List<ApiRecord> records = apiRecordRepo.findByRepositoryName(repoName);
         if (records.isEmpty()) {
             log.warn("[APM 수동수집] 레포에 API 없음: {}", repoName);
-            return Map.of("generated", 0, "message", "해당 레포에 분석된 API가 없습니다.");
+            return null;
         }
-        int generated = 0;
         String[] errorMessages = {
             null, null, null, null, null,
             "NullPointerException", "IllegalArgumentException",
             "SQLException: Connection timeout", "HttpClientErrorException: 404",
             "TimeoutException: Read timed out"
         };
-        // 일부 API는 호출이력 없음 (테스트용): 랜덤 3개 선택
-        // 일부 API는 저사용(1~3건) 테스트용: 랜덤 3개 선택 — 검토필요 차단대상 후보
         Set<String> noCallApis = new HashSet<>();
         Set<String> lowCallApis = new HashSet<>();
         List<ApiRecord> candidates = records.stream()
@@ -145,11 +196,10 @@ public class MockApmService {
         for (int i = 3; i < Math.min(6, candidates.size()); i++) {
             lowCallApis.add(candidates.get(i).getApiPath());
         }
-        // 각 lowCall API에 대해 전체 기간에서 1~3건 정도만 발생하도록 호출 발생 날짜 미리 선정
         Map<String, Set<LocalDate>> lowCallDays = new HashMap<>();
         long totalDays = java.time.temporal.ChronoUnit.DAYS.between(from, to) + 1;
         for (String apiPath : lowCallApis) {
-            int numCalls = ThreadLocalRandom.current().nextInt(1, 4); // 1~3건
+            int numCalls = ThreadLocalRandom.current().nextInt(1, 4);
             Set<LocalDate> days = new HashSet<>();
             for (int j = 0; j < numCalls; j++) {
                 long offset = ThreadLocalRandom.current().nextLong(0, totalDays);
@@ -157,61 +207,78 @@ public class MockApmService {
             }
             lowCallDays.put(apiPath, days);
         }
-        addApmLog("INFO", String.format("MOCK 데이터 생성 시작 — API %d개, 기간 %d일", records.size(), totalDays));
+        return new MockDayContext(records, noCallApis, lowCallApis, lowCallDays, errorMessages, totalDays);
+    }
 
-        // 일별로 생성하면서 진행 로그
+    /**
+     * 하루치 MOCK 데이터 생성 + 저장. REQUIRES_NEW 트랜잭션으로 해당 날짜만 커밋.
+     * 실패 시 이 날짜만 롤백, 이미 저장된 다른 날짜는 영향 없음.
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public int generateOneDayMock(String repoName, LocalDate day, String src, MockDayContext ctx, int dayNum) {
+        apmRepo.deleteByRepoSourceAndDateRange(repoName, src, day, day);
         List<ApmCallData> batch = new ArrayList<>();
-        int dayCount = 0;
-        LocalDate d = from;
-        while (!d.isAfter(to)) {
-            dayCount++;
-            long dayTotal = 0, dayErrors = 0;
-            for (ApiRecord rec : records) {
-                boolean isBlocked = "차단완료".equals(rec.getStatus());
-                boolean noCall = noCallApis.contains(rec.getApiPath());
-                boolean isLowCall = lowCallApis.contains(rec.getApiPath());
-                long callCount;
-                if (isBlocked || noCall) {
-                    callCount = 0;
-                } else if (isLowCall) {
-                    callCount = lowCallDays.get(rec.getApiPath()).contains(d) ? 1L : 0L;
-                } else {
-                    // 요일별 가중치 + API별 기본부하 + 랜덤 변동
-                    double[] dayWeight = {0.3, 1.1, 1.0, 1.0, 0.95, 1.05, 0.3};
-                    double weight = dayWeight[d.getDayOfWeek().getValue() % 7];
-                    int baseLoad = Math.abs(rec.getApiPath().hashCode() % 120) + 10;
-                    double variation = 0.6 + ThreadLocalRandom.current().nextDouble() * 0.8;
-                    callCount = Math.max(0, Math.round(baseLoad * weight * variation));
-                }
-                long errorCount = callCount > 0 ? ThreadLocalRandom.current().nextLong(0, Math.max(1, callCount / 20)) : 0;
-                String errorMsg = errorCount > 0 ? errorMessages[ThreadLocalRandom.current().nextInt(errorMessages.length)] : null;
-
-                ApmCallData data = new ApmCallData();
-                data.setRepositoryName(repoName);
-                data.setApiPath(rec.getApiPath());
-                data.setCallDate(d);
-                data.setCallCount(callCount);
-                data.setErrorCount(errorCount);
-                data.setErrorMessage(errorMsg);
-                data.setClassName(rec.getControllerName());
-                data.setSource(src);
-                batch.add(data);
-                generated++;
-                dayTotal += callCount;
-                dayErrors += errorCount;
-
-                if (batch.size() >= 1000) {
-                    apmRepo.saveAll(batch);
-                    batch.clear();
-                }
+        int generated = 0;
+        long dayTotal = 0, dayErrors = 0;
+        for (ApiRecord rec : ctx.records) {
+            boolean isBlocked = "차단완료".equals(rec.getStatus());
+            boolean noCall = ctx.noCallApis.contains(rec.getApiPath());
+            boolean isLowCall = ctx.lowCallApis.contains(rec.getApiPath());
+            long callCount;
+            if (isBlocked || noCall) {
+                callCount = 0;
+            } else if (isLowCall) {
+                callCount = ctx.lowCallDays.get(rec.getApiPath()).contains(day) ? 1L : 0L;
+            } else {
+                double[] dayWeight = {0.3, 1.1, 1.0, 1.0, 0.95, 1.05, 0.3};
+                double weight = dayWeight[day.getDayOfWeek().getValue() % 7];
+                int baseLoad = Math.abs(rec.getApiPath().hashCode() % 120) + 10;
+                double variation = 0.6 + ThreadLocalRandom.current().nextDouble() * 0.8;
+                callCount = Math.max(0, Math.round(baseLoad * weight * variation));
             }
-            addApmLog("OK", String.format("MOCK %s [%d/%d] 호출=%,d건 에러=%,d건 (API %d개)",
-                    d, dayCount, totalDays, dayTotal, dayErrors, records.size()));
-            d = d.plusDays(1);
+            long errorCount = callCount > 0 ? ThreadLocalRandom.current().nextLong(0, Math.max(1, callCount / 20)) : 0;
+            String errorMsg = errorCount > 0 ? ctx.errorMessages[ThreadLocalRandom.current().nextInt(ctx.errorMessages.length)] : null;
+
+            ApmCallData data = new ApmCallData();
+            data.setRepositoryName(repoName);
+            data.setApiPath(rec.getApiPath());
+            data.setCallDate(day);
+            data.setCallCount(callCount);
+            data.setErrorCount(errorCount);
+            data.setErrorMessage(errorMsg);
+            data.setClassName(rec.getControllerName());
+            data.setSource(src);
+            batch.add(data);
+            generated++;
+            dayTotal += callCount;
+            dayErrors += errorCount;
+
+            if (batch.size() >= 1000) {
+                apmRepo.saveAll(batch);
+                batch.clear();
+            }
         }
         if (!batch.isEmpty()) apmRepo.saveAll(batch);
-        return Map.of("generated", generated, "apis", records.size(),
-                "from", from.toString(), "to", to.toString(), "source", src);
+        addApmLog("OK", String.format("MOCK %s [%d/%d] 호출=%,d건 에러=%,d건 (API %d개)",
+                day, dayNum, ctx.totalDays, dayTotal, dayErrors, ctx.records.size()));
+        return generated;
+    }
+
+    /**
+     * 하루치 WHATAP/JENNIFER 데이터 수집 + 저장. REQUIRES_NEW 트랜잭션으로 해당 날짜만 커밋.
+     * 각 외부 서비스의 collect(repo, day, day, logCb) 를 1일 범위로 호출.
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public Map<String, Object> generateOneDayExternal(String repoName, LocalDate day, String src,
+            java.util.function.BiConsumer<String, String> logCb) {
+        apmRepo.deleteByRepoSourceAndDateRange(repoName, src, day, day);
+        RepoConfig repo = repoConfigRepo.findByRepoName(repoName).orElseThrow(
+                () -> new IllegalArgumentException("레포 설정 없음: " + repoName));
+        if ("WHATAP".equals(src)) {
+            return whatapApmService.collect(repo, day, day, logCb);
+        } else {
+            return jenniferApmService.collect(repo, day, day, logCb);
+        }
     }
 
     /**
@@ -365,6 +432,45 @@ public class MockApmService {
         return Map.of("updated", updated, "zeroed", zeroed, "totalApis", totals.size());
     }
 
+    /**
+     * apm_call_data 전체 기준으로 URL별 호출건수를 apm_url_stat에 집계.
+     * api_record(URL 분석) 여부와 무관하게 APM에 수집된 모든 URL을 대상으로 함.
+     * call-stats.html fast-path 데이터 소스.
+     *
+     * 처리: 레포 기존 행 전체 삭제 → 재삽입 (upsert 대안).
+     */
+    @Transactional
+    public void aggregateToApmUrlStat(String repoName) {
+        log.info("[URL 통계 집계] 시작: repo={}", repoName);
+        LocalDate today = LocalDate.now();
+        LocalDate yearAgo  = today.minusDays(365);
+        LocalDate monthAgo = today.minusDays(30);
+        LocalDate weekAgo  = today.minusDays(7);
+
+        Map<String, long[]> totals = new HashMap<>(); // apiPath → [year, month, week]
+        accumulateMaxPerDate(apmRepo.sumByRepoAndDateRange(repoName, yearAgo, today),  totals, 0);
+        accumulateMaxPerDate(apmRepo.sumByRepoAndDateRange(repoName, monthAgo, today), totals, 1);
+        accumulateMaxPerDate(apmRepo.sumByRepoAndDateRange(repoName, weekAgo, today),  totals, 2);
+
+        // 기존 레포 행 삭제 후 재삽입
+        apmUrlStatRepo.deleteByRepo(repoName);
+
+        LocalDateTime now = LocalDateTime.now();
+        List<ApmUrlStat> stats = new ArrayList<>(totals.size());
+        for (Map.Entry<String, long[]> e : totals.entrySet()) {
+            ApmUrlStat stat = new ApmUrlStat();
+            stat.setRepositoryName(repoName);
+            stat.setApiPath(e.getKey());
+            stat.setCallCount(e.getValue()[0]);
+            stat.setCallCountMonth(e.getValue()[1]);
+            stat.setCallCountWeek(e.getValue()[2]);
+            stat.setUpdatedAt(now);
+            stats.add(stat);
+        }
+        apmUrlStatRepo.saveAll(stats);
+        log.info("[URL 통계 집계] 완료: repo={}, URL={}개", repoName, stats.size());
+    }
+
     /** 레포별 APM 일별 데이터 조회 (source 지정 시 해당 source만) */
     public List<ApmCallData> getCallData(String repoName, LocalDate from, LocalDate to, String source) {
         if (source == null || source.isBlank() || "ALL".equalsIgnoreCase(source)) {
@@ -498,6 +604,7 @@ public class MockApmService {
                 try {
                     addApmLog("INFO", r.getRepoName() + " 집계(aggregate) 실행 중...");
                     self.aggregateToRecords(r.getRepoName());
+                    self.aggregateToApmUrlStat(r.getRepoName());
                     addApmLog("OK", r.getRepoName() + " 집계 완료");
                 } catch (Exception e) { addApmLog("ERROR", r.getRepoName() + " 집계 실패: " + e.getMessage()); }
                 perRepo.add(r.getRepoName() + ":" + (totalGenerated - beforeTotal));
@@ -524,12 +631,16 @@ public class MockApmService {
         if (allRepos && allSources) {
             deleted = (int) apmRepo.count();
             apmRepo.bulkDeleteAll();
+            apmUrlStatRepo.deleteAllRows();  // 전체 삭제 시 통계도 함께 초기화
         } else if (allRepos) {
             deleted = apmRepo.bulkDeleteBySource(normalizeSource(source));
+            // source별 삭제는 다른 source 데이터가 남으므로 통계는 유지
         } else if (allSources) {
             deleted = apmRepo.bulkDeleteByRepo(repoName);
+            apmUrlStatRepo.deleteByRepo(repoName);  // 레포 전체 삭제 시 통계도 삭제
         } else {
             deleted = apmRepo.bulkDeleteByRepoAndSource(repoName, normalizeSource(source));
+            // source별 삭제는 다른 source 데이터가 남으므로 통계는 유지
         }
         log.info("[APM 데이터 삭제 완료] {}건 ({})", deleted, (allRepos && allSources) ? "TRUNCATE" : "bulk DELETE");
         return Map.of("deleted", deleted);

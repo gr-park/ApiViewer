@@ -145,6 +145,24 @@ public interface ApiRecordRepository extends JpaRepository<ApiRecord, Long>,
             + "AND (r.logWorkExcluded IS NULL OR r.logWorkExcluded = false)")
     long countByStatusAndLogNotExcludedForRepo(@Param("status") String status, @Param("repo") String repo);
 
+    // ── 호출현황(call-stats) fast-path ──────────────────────────────────
+    /**
+     * URL 호출현황 목록용 사전집계 쿼리.
+     * apm_call_data(천만+건) 를 GROUP BY/SUM 하지 않고 사전 집계된 call_count* 컬럼을 직접 조회.
+     * 정렬(ORDER BY)은 Pageable.Sort 로 위임 — 호출자가 week/month/year 에 맞게 callCountWeek / callCountMonth / callCount 지정.
+     * 반환: [repositoryName, apiPath, callCount, callCountMonth, callCountWeek]
+     */
+    @Query(value = "SELECT r.repositoryName, r.apiPath, r.callCount, r.callCountMonth, r.callCountWeek " +
+                   "FROM ApiRecord r " +
+                   "WHERE (:repo IS NULL OR r.repositoryName = :repo) " +
+                   "  AND (:q IS NULL OR LOWER(CAST(r.apiPath AS string)) LIKE LOWER(CONCAT('%', CAST(:q AS string), '%'))) " +
+                   "  AND (r.status IS NULL OR r.status <> '삭제')",
+           countQuery = "SELECT COUNT(r) FROM ApiRecord r " +
+                        "WHERE (:repo IS NULL OR r.repositoryName = :repo) " +
+                        "  AND (:q IS NULL OR LOWER(CAST(r.apiPath AS string)) LIKE LOWER(CONCAT('%', CAST(:q AS string), '%'))) " +
+                        "  AND (r.status IS NULL OR r.status <> '삭제')")
+    Page<Object[]> pageCallStats(@Param("repo") String repo, @Param("q") String q, Pageable pageable);
+
     // ── 벌크 UPDATE (대량 처리 시 N+1 제거) ────────────────────────────────
     @org.springframework.transaction.annotation.Transactional
     @Modifying(clearAutomatically = true, flushAutomatically = true)

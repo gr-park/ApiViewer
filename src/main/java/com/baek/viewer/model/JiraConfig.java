@@ -19,13 +19,9 @@ public class JiraConfig {
     @Column(name = "project_key", length = 20)
     private String projectKey;
 
-    /** Jira API 토큰 */
+    /** Jira API 토큰 (Bearer Token) */
     @Column(name = "api_token", length = 500)
     private String apiToken;
-
-    /** 서비스 계정 ID (Basic Auth 사용자) */
-    @Column(name = "service_account", length = 100)
-    private String serviceAccount;
 
     /** 동기화 활성화 여부 */
     @Column(name = "sync_enabled")
@@ -38,10 +34,6 @@ public class JiraConfig {
     /** 마지막 동기화 일시 */
     @Column(name = "last_synced_at")
     private LocalDateTime lastSyncedAt;
-
-    /** URLViewer ID 커스텀 필드 ID (예: customfield_10100) */
-    @Column(name = "custom_field_id", length = 50)
-    private String customFieldId;
 
     /** JSON: Jira 상태명 → reviewStage 매핑 */
     @Column(name = "status_mappings", columnDefinition = "TEXT")
@@ -65,9 +57,6 @@ public class JiraConfig {
     public String getApiToken() { return apiToken; }
     public void setApiToken(String apiToken) { this.apiToken = apiToken; }
 
-    public String getServiceAccount() { return serviceAccount; }
-    public void setServiceAccount(String serviceAccount) { this.serviceAccount = serviceAccount; }
-
     public boolean isSyncEnabled() { return syncEnabled; }
     public void setSyncEnabled(boolean syncEnabled) { this.syncEnabled = syncEnabled; }
 
@@ -76,9 +65,6 @@ public class JiraConfig {
 
     public LocalDateTime getLastSyncedAt() { return lastSyncedAt; }
     public void setLastSyncedAt(LocalDateTime lastSyncedAt) { this.lastSyncedAt = lastSyncedAt; }
-
-    public String getCustomFieldId() { return customFieldId; }
-    public void setCustomFieldId(String customFieldId) { this.customFieldId = customFieldId; }
 
     public String getStatusMappings() { return statusMappings; }
     public void setStatusMappings(String statusMappings) { this.statusMappings = statusMappings; }

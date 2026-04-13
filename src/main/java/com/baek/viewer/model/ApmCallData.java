@@ -10,8 +10,14 @@ import java.time.LocalDate;
 @Entity
 @Table(name = "apm_call_data",
     indexes = {
-        @Index(name = "idx_apm_repo_api_date", columnList = "repository_name, api_path, call_date"),
-        @Index(name = "idx_apm_call_date", columnList = "call_date")
+        // 레포+API+날짜 복합 — sumByRepoAndDateRange (집계), 단건 API 조회
+        @Index(name = "idx_apm_repo_api_date",  columnList = "repository_name, api_path, call_date"),
+        // 날짜+레포 — aggregateByPeriod slow-path (임의 기간 전체 집계)
+        @Index(name = "idx_apm_date_repo",      columnList = "call_date, repository_name"),
+        // 날짜 단독 — summaryBySource, 날짜 범위 스캔
+        @Index(name = "idx_apm_call_date",      columnList = "call_date"),
+        // source 필터링 — summaryBySource GROUP BY source
+        @Index(name = "idx_apm_source",         columnList = "source")
     })
 public class ApmCallData {
 

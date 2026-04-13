@@ -72,6 +72,8 @@ public class ApiStorageService {
         List<ApiRecord> toInsert = new ArrayList<>();
         List<ApiRecord> toUpdate = new ArrayList<>();
         int revertedToUsed = 0;
+        // 파서가 동일 (apiPath|httpMethod) 를 중복 반환할 경우 두 번째부터 insert 목록에서 제외 (PK 에러 방지)
+        Set<String> pendingInsertKeys = new HashSet<>();
 
         for (ApiInfo a : apis) {
             String key = a.getApiPath() + "|" + a.getHttpMethod();
@@ -109,7 +111,11 @@ public class ApiStorageService {
                 }
                 toUpdate.add(existing);
             } else {
-                // ① 신규
+                // ① 신규 — 동일 key 가 이미 toInsert 대기 중이면 중복 skip (파서 중복값 방어)
+                if (!pendingInsertKeys.add(key)) {
+                    log.warn("[중복 URL 스킵] repo={} key={} — 어노테이션 배열에 동일 경로가 중복 선언됨", repositoryName, key);
+                    continue;
+                }
                 ApiRecord r = new ApiRecord();
                 r.setRepositoryName(repositoryName);
                 r.setApiPath(a.getApiPath());

@@ -3,7 +3,7 @@ package com.baek.viewer.job;
 import com.baek.viewer.model.RepoConfig;
 import com.baek.viewer.repository.RepoConfigRepository;
 import com.baek.viewer.repository.ScheduleConfigRepository;
-import com.baek.viewer.service.MockApmService;
+import com.baek.viewer.service.ApmCollectionService;
 import org.quartz.Job;
 import org.quartz.JobExecutionContext;
 import org.slf4j.Logger;
@@ -24,7 +24,7 @@ public class ApmCollectJob implements Job {
     private static final Logger log = LoggerFactory.getLogger(ApmCollectJob.class);
     @Autowired private ScheduleConfigRepository scheduleRepo;
     @Autowired private RepoConfigRepository repoConfigRepo;
-    @Autowired private MockApmService mockApmService;
+    @Autowired private ApmCollectionService apmCollectionService;
 
     @Override
     public void execute(JobExecutionContext context) {
@@ -62,7 +62,7 @@ public class ApmCollectJob implements Job {
                     try {
                         int wd = Math.min(days, 365);
                         LocalDate wfrom = to.minusDays(wd - 1);
-                        Object o = mockApmService.generateMockDataByRange(r.getRepoName(), wfrom, to, "WHATAP").get("generated");
+                        Object o = apmCollectionService.generateMockDataByRange(r.getRepoName(), wfrom, to, "WHATAP").get("generated");
                         int n = (o instanceof Number num) ? num.intValue() : 0;
                         totalGenerated += n; repoGen += n;
                         log.info("[APM_COLLECT]   - {} : WHATAP {}건 수집 ({}일)", r.getRepoName(), n, wd);
@@ -74,7 +74,7 @@ public class ApmCollectJob implements Job {
                     try {
                         int jd = Math.min(days, 30);
                         LocalDate jfrom = to.minusDays(jd - 1);
-                        Object o = mockApmService.generateMockDataByRange(r.getRepoName(), jfrom, to, "JENNIFER").get("generated");
+                        Object o = apmCollectionService.generateMockDataByRange(r.getRepoName(), jfrom, to, "JENNIFER").get("generated");
                         int n = (o instanceof Number num) ? num.intValue() : 0;
                         totalGenerated += n; repoGen += n;
                         log.info("[APM_COLLECT]   - {} : JENNIFER {}건 수집 ({}일)", r.getRepoName(), n, jd);
@@ -83,7 +83,7 @@ public class ApmCollectJob implements Job {
                     }
                 }
                 try {
-                    Object o = mockApmService.aggregateToRecords(r.getRepoName()).get("updated");
+                    Object o = apmCollectionService.aggregateToRecords(r.getRepoName()).get("updated");
                     int updated = (o instanceof Number num) ? num.intValue() : 0;
                     log.info("[APM_COLLECT]   - {} : 집계반영 — {}건 API 호출건수 업데이트 (수집 {}건)", r.getRepoName(), updated, repoGen);
                 } catch (Exception e) {

@@ -278,14 +278,8 @@ public class YamlConfigService {
             if (isBlank(jiraCfg.getProjectKey()) && !isBlank(jiraYml.getProjectKey())) {
                 jiraCfg.setProjectKey(jiraYml.getProjectKey()); jiraCfgChanged = true;
             }
-            if (isBlank(jiraCfg.getServiceAccount()) && !isBlank(jiraYml.getServiceAccount())) {
-                jiraCfg.setServiceAccount(jiraYml.getServiceAccount()); jiraCfgChanged = true;
-            }
             if (isBlank(jiraCfg.getApiToken()) && !isBlank(jiraYml.getApiToken())) {
                 jiraCfg.setApiToken(jiraYml.getApiToken()); jiraCfgChanged = true;
-            }
-            if (isBlank(jiraCfg.getCustomFieldId()) && !isBlank(jiraYml.getCustomFieldId())) {
-                jiraCfg.setCustomFieldId(jiraYml.getCustomFieldId()); jiraCfgChanged = true;
             }
             if (jiraCfgChanged || jiraCfg.getId() == null) {
                 jiraConfigRepo.save(jiraCfg);

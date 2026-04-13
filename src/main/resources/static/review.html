@@ -218,8 +218,8 @@
     <a href="/viewer.html" class="nav-link">📋 URL분석현황</a>
     <a href="/call-stats.html" class="nav-link">📈 URL호출현황</a>
     <a href="/review.html" class="nav-link nav-active">📝 현업 검토</a>
-    <a href="/workflow.html" class="nav-link">🗺️ 업무 플로우</a>
-    <a href="/proposal-jira.html" class="nav-link" id="navProposal" style="display:none;">🧩 추가개선안</a>
+    <a href="/workflow.html" class="nav-link">🗺️ 업무 흐름</a>
+
     <a href="/settings.html" class="nav-link" id="navSettings" style="display:none;">⚙️ 설정</a>
     <button class="nav-link" id="adminBtn" onclick="toggleAdmin()" style="background:none;cursor:pointer;">🔑 관리자</button>
   </div>
@@ -730,7 +730,6 @@
     const admin=isAdmin();
     const _ne=document.getElementById('navExtract'); if(_ne) _ne.style.display=admin?'':'none';
     document.getElementById('navSettings').style.display=admin?'':'none';
-    const _np=document.getElementById('navProposal'); if(_np) _np.style.display=admin?'':'none';
     document.getElementById('adminBtn').textContent=admin?'🔓 관리자 해제':'🔑 관리자';
     if(typeof renderRows==='function'&&filteredApis.length) renderRows(filteredApis);
   }

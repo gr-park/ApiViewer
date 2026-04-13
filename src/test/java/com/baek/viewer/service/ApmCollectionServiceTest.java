@@ -4,6 +4,7 @@ import com.baek.viewer.model.ApiRecord;
 import com.baek.viewer.model.ApmCallData;
 import com.baek.viewer.repository.ApiRecordRepository;
 import com.baek.viewer.repository.ApmCallDataRepository;
+import com.baek.viewer.repository.ApmUrlStatRepository;
 import com.baek.viewer.repository.RepoConfigRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -22,14 +23,17 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 /**
- * MockApmService 단위테스트.
+ * ApmCollectionService 단위테스트.
  * self-proxy 필드 때문에 @InjectMocks 대신 수동 생성자 주입.
  */
 @ExtendWith(MockitoExtension.class)
-class MockApmServiceTest {
+class ApmCollectionServiceTest {
 
     @Mock
     private ApmCallDataRepository apmRepo;
+
+    @Mock
+    private ApmUrlStatRepository apmUrlStatRepo;
 
     @Mock
     private ApiRecordRepository apiRecordRepo;
@@ -42,13 +46,13 @@ class MockApmServiceTest {
     private WhatapApmService whatapApmService;
     private JenniferApmService jenniferApmService;
 
-    private MockApmService service;
+    private ApmCollectionService service;
 
     @BeforeEach
     void setUp() {
         whatapApmService = new WhatapApmService(apmRepo, null);
         jenniferApmService = new JenniferApmService(apmRepo, null);
-        service = new MockApmService(apmRepo, apiRecordRepo, repoConfigRepo,
+        service = new ApmCollectionService(apmRepo, apmUrlStatRepo, apiRecordRepo, repoConfigRepo,
                 whatapApmService, jenniferApmService);
     }
 

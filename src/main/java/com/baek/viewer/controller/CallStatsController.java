@@ -1,15 +1,18 @@
 package com.baek.viewer.controller;
 
+import com.baek.viewer.repository.ApmUrlStatRepository;
 import com.baek.viewer.repository.ApmCallDataRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
-// Sort는 DB ORDER BY로 대체 (JPQL 내 정렬)
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
 
 /**
@@ -22,14 +25,30 @@ public class CallStatsController {
 
     private static final Logger log = LoggerFactory.getLogger(CallStatsController.class);
     private final ApmCallDataRepository apmRepo;
+    private final ApmUrlStatRepository apmUrlStatRepo;
 
-    public CallStatsController(ApmCallDataRepository apmRepo) {
+    public CallStatsController(ApmCallDataRepository apmRepo, ApmUrlStatRepository apmUrlStatRepo) {
         this.apmRepo = apmRepo;
+        this.apmUrlStatRepo = apmUrlStatRepo;
     }
 
     private LocalDate parse(String s, LocalDate def) {
         if (s == null || s.isBlank()) return def;
         try { return LocalDate.parse(s); } catch (Exception e) { return def; }
+    }
+
+    /**
+     * 기간이 api_record 사전집계(week/month/year)와 매칭되면 그 키를 반환, 아니면 null.
+     * aggregateToRecords() 는 today 기준으로 계산하므로 to 가 today 또는 어제면 매칭 허용.
+     */
+    private String detectPresetPeriod(LocalDate from, LocalDate to) {
+        LocalDate today = LocalDate.now();
+        if (!to.equals(today) && !to.equals(today.minusDays(1))) return null;
+        long span = ChronoUnit.DAYS.between(from, to) + 1;
+        if (span >= 5  && span <= 9)   return "week";
+        if (span >= 27 && span <= 33)  return "month";
+        if (span >= 360 && span <= 370) return "year";
+        return null;
     }
 
     /** 전체 요약 — source별 총계, 레포별 총계, TOP N (기본 1년) */
@@ -99,6 +118,13 @@ public class CallStatsController {
     /**
      * URL별 집계 목록 (페이징/검색) — 지정 기간(from~to) 기준 총건수/에러건수.
      * ?from=&to=&repo=&q=&page=&size=
+     *
+     * 성능: 기간이 1주/1달/1년 preset + to=오늘/어제 이면 api_record 사전집계를 사용(fast path).
+     *      그 외(3달, 임의 기간 등)는 apm_call_data GROUP BY/SUM 으로 폴백(slow path).
+     *      apm_call_data 가 천만 건을 넘어가면 fast path 는 수만 건 스캔으로 1000배↑ 빨라짐.
+     *
+     * fast path 제약: api_record 에 error 집계가 없어 totalError=0 으로 반환.
+     *                 정확한 에러건수는 상세 모달(/daily, /monthly) 에서 확인.
      */
     @GetMapping("/apis")
     public ResponseEntity<?> apis(@RequestParam(required = false) String from,
@@ -109,14 +135,55 @@ public class CallStatsController {
                                    @RequestParam(defaultValue = "50") int size) {
         LocalDate toDate = parse(to, LocalDate.now().minusDays(1));
         LocalDate fromDate = parse(from, toDate.minusDays(364));
+        String repoArg = (repo != null && !repo.isBlank()) ? repo : null;
+        String qArg = (q != null && !q.isBlank()) ? q : null;
+        int pageNum = Math.max(0, page);
+        int pageSize = Math.min(200, Math.max(1, size));
 
-        org.springframework.data.domain.Pageable pageable = PageRequest.of(Math.max(0, page), Math.min(200, Math.max(1, size)));
+        String period = detectPresetPeriod(fromDate, toDate);
+        if (period != null) {
+            // ── fast path: apm_url_stat 사전집계 (api_record 분석 여부 무관, APM 전체 URL) ──
+            String sortField = switch (period) {
+                case "week"  -> "callCountWeek";
+                case "month" -> "callCountMonth";
+                default      -> "callCount"; // year
+            };
+            Pageable pageable = PageRequest.of(pageNum, pageSize,
+                    Sort.by(Sort.Direction.DESC, sortField).and(Sort.by("apiPath").ascending()));
+            Page<Object[]> pageResult = apmUrlStatRepo.pageStats(repoArg, qArg, pageable);
+            // 반환 컬럼: [0]=repositoryName, [1]=apiPath, [2]=callCount, [3]=callCountMonth, [4]=callCountWeek
+            int callIdx = switch (period) {
+                case "week"  -> 4;
+                case "month" -> 3;
+                default      -> 2;
+            };
+            List<Map<String, Object>> items = new ArrayList<>();
+            for (Object[] row : pageResult.getContent()) {
+                Map<String, Object> m = new LinkedHashMap<>();
+                m.put("repoName", row[0]);
+                m.put("apiPath", row[1]);
+                Number call = (Number) row[callIdx];
+                m.put("totalCall", call == null ? 0L : call.longValue());
+                m.put("totalError", 0L); // fast path: 에러 집계 없음 (상세 모달에서 확인)
+                items.add(m);
+            }
+            Map<String, Object> result = new LinkedHashMap<>();
+            result.put("from", fromDate.toString());
+            result.put("to", toDate.toString());
+            result.put("items", items);
+            result.put("page", pageResult.getNumber());
+            result.put("size", pageResult.getSize());
+            result.put("totalElements", pageResult.getTotalElements());
+            result.put("totalPages", pageResult.getTotalPages());
+            result.put("source", "apm_url_stat");
+            result.put("period", period);
+            result.put("fast", true);
+            return ResponseEntity.ok(result);
+        }
 
-        Page<Object[]> pageResult = apmRepo.aggregateByPeriod(
-                fromDate, toDate,
-                (repo != null && !repo.isBlank()) ? repo : null,
-                (q != null && !q.isBlank()) ? q : null,
-                pageable);
+        // ── slow path: apm_call_data GROUP BY/SUM (임의 기간) ─────────────
+        Pageable pageable = PageRequest.of(pageNum, pageSize);
+        Page<Object[]> pageResult = apmRepo.aggregateByPeriod(fromDate, toDate, repoArg, qArg, pageable);
 
         List<Map<String, Object>> items = new ArrayList<>();
         for (Object[] row : pageResult.getContent()) {
@@ -136,6 +203,8 @@ public class CallStatsController {
         result.put("size", pageResult.getSize());
         result.put("totalElements", pageResult.getTotalElements());
         result.put("totalPages", pageResult.getTotalPages());
+        result.put("source", "apm_call_data");
+        result.put("fast", false);
         return ResponseEntity.ok(result);
     }
 
