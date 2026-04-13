@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>URL Viewer — 업무 플로우</title>
+  <title>URL Viewer — 업무 흐름</title>
   <link rel="stylesheet" href="/css/common.css">
   <style>
     /* ═══════════════════════════════════════════════════════════════
@@ -357,14 +357,14 @@
     <polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>
   </svg>
   <h1>URL Viewer</h1>
-  <span class="header-sub">업무 플로우</span>
+  <span class="header-sub">업무 흐름</span>
   <div class="header-right">
     <a href="/"               class="nav-link">📊 대시보드</a>
     <a href="/viewer.html"    class="nav-link">📋 URL분석현황</a>
     <a href="/call-stats.html" class="nav-link">📈 URL호출현황</a>
     <a href="/review.html"    class="nav-link">📝 현업 검토</a>
-    <a href="/workflow.html"  class="nav-link nav-active">🗺️ 업무 플로우</a>
-    <a href="/proposal-jira.html" class="nav-link">🧩 추가개선안</a>
+    <a href="/workflow.html"  class="nav-link nav-active">🗺️ 업무 흐름</a>
+
     <a href="/settings.html"  class="nav-link" id="navSettings" style="display:none;">⚙️ 설정</a>
     <button class="nav-link" id="adminBtn" onclick="toggleAdmin()" style="background:none;cursor:pointer;">🔑 관리자</button>
   </div>
@@ -374,7 +374,7 @@
 
   <!-- 인트로 + 범례 -->
   <div class="card">
-    <div class="card-title"><span class="dot dot-blue"></span>URLViewer 업무 플로우 개요</div>
+    <div class="card-title"><span class="dot dot-blue"></span>URLViewer 업무 흐름 개요</div>
     <div class="intro">
       <div class="intro-text">
         <strong>URLViewer</strong>는 Spring Boot Controller 소스에서 URL을 자동 추출하고,
@@ -453,8 +453,8 @@
       <div class="arrow">›</div>
       <div class="step">
         <div class="step-head"><span class="step-num">4</span>JIRA_SYNC</div>
-        <div class="step-desc">Jira REST API로 차단 대상 URL을 Story 발행(PUSH)하고, Jira 결재 결과를 역동기화(PULL).</div>
-        <span class="step-tag locked">🔗 Jira 양방향 동기화</span>
+        <div class="step-desc">SmartWay REST API로 차단 대상 URL을 Story 발행(PUSH)하고, SmartWay 결재 결과를 역동기화(PULL).</div>
+        <span class="step-tag locked">🔗 SmartWay 양방향 동기화</span>
       </div>
       <div class="arrow">›</div>
       <div class="step">
@@ -561,8 +561,111 @@
     </div>
   </div>
 
+  <!-- 섹션 5: 현업 검토 + SmartWay 연동 흐름 -->
+  <div class="section-title">5. 현업 검토 + SmartWay 연동 흐름</div>
+  <div class="card" style="padding:16px 20px;">
+    <div style="font-size:12px;color:#64748b;margin-bottom:14px;line-height:1.6;">
+      현업이 review.html을 직접 사용하는 방식이 아닌, <b>메일로 검토결과를 취합</b>하여 IT 담당자가 엑셀로 일괄 업로드하고
+      <b>SmartWay 티켓 발행</b>으로 연동하는 실제 운영 흐름입니다.
+    </div>
+
+    <!-- 흐름 카드 -->
+    <div style="display:flex;flex-direction:column;gap:8px;">
+
+      <!-- 1단계 그룹: 차단 대상 확정 -->
+      <div style="display:flex;align-items:stretch;gap:8px;">
+        <div style="width:90px;min-width:90px;background:#dbeafe;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#1d4ed8;text-align:center;padding:6px;">👤<br>IT 담당자</div>
+        <div style="flex:1;background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:10px 14px;">
+          <div style="font-size:11px;font-weight:700;color:#0369a1;margin-bottom:4px;">STEP 1 · 차단 대상 확정</div>
+          <div style="font-size:12px;color:#334155;line-height:1.6;">
+            <b>viewer.html</b>에서 차단 대상 URL을 필터링하고 <b>상태 확정(statusOverridden=true)</b>을 설정합니다.<br>
+            차단 대상 레코드 목록을 <b>엑셀로 다운로드</b>하여 현업 검토 요청용 자료로 활용합니다.
+          </div>
+        </div>
+      </div>
+
+      <!-- 화살표 -->
+      <div style="text-align:center;font-size:18px;color:#94a3b8;line-height:1;">↓</div>
+
+      <!-- 2단계 그룹: 현업 검토 요청·회신 -->
+      <div style="display:flex;align-items:stretch;gap:8px;">
+        <div style="width:90px;min-width:90px;background:#fef9c3;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#854d0e;text-align:center;padding:6px;">✉️<br>메일</div>
+        <div style="flex:1;background:#fefce8;border:1px solid #fde68a;border-radius:8px;padding:10px 14px;">
+          <div style="font-size:11px;font-weight:700;color:#b45309;margin-bottom:4px;">STEP 2 · 현업 검토 요청 / 회신</div>
+          <div style="font-size:12px;color:#334155;line-height:1.6;">
+            IT 담당자가 현업 담당자에게 <b>메일로 검토 요청</b>을 발송합니다. (엑셀 첨부 또는 URL 목록)<br>
+            현업 담당자는 메일로 <b>검토결과를 회신</b>합니다. (차단대상 제외 / 차단확정 / 판단불가)
+          </div>
+        </div>
+      </div>
+
+      <!-- 화살표 -->
+      <div style="text-align:center;font-size:18px;color:#94a3b8;line-height:1;">↓</div>
+
+      <!-- 3단계 그룹: 엑셀 업로드 -->
+      <div style="display:flex;align-items:stretch;gap:8px;">
+        <div style="width:90px;min-width:90px;background:#dbeafe;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#1d4ed8;text-align:center;padding:6px;">👤<br>IT 담당자</div>
+        <div style="flex:1;background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:10px 14px;">
+          <div style="font-size:11px;font-weight:700;color:#0369a1;margin-bottom:4px;">STEP 3 · 검토결과 엑셀 업로드</div>
+          <div style="font-size:12px;color:#334155;line-height:1.6;">
+            회신받은 검토결과를 엑셀에 정리한 뒤 <b>review.html</b> 또는 <b>viewer.html</b>에서 <b>엑셀 업로드</b>합니다.<br>
+            <code style="font-size:11px;background:#e0f2fe;padding:1px 5px;border-radius:3px;">reviewResult</code> 컬럼이 일괄 갱신되며 URL 상태에 반영됩니다.
+          </div>
+        </div>
+      </div>
+
+      <!-- 화살표 -->
+      <div style="text-align:center;font-size:18px;color:#94a3b8;line-height:1;">↓</div>
+
+      <!-- 4단계 그룹: SmartWay 발행 -->
+      <div style="display:flex;align-items:stretch;gap:8px;">
+        <div style="width:90px;min-width:90px;background:#ede9fe;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#6d28d9;text-align:center;padding:6px;">🔗<br>SmartWay</div>
+        <div style="flex:1;background:#faf5ff;border:1px solid #d8b4fe;border-radius:8px;padding:10px 14px;">
+          <div style="font-size:11px;font-weight:700;color:#7c3aed;margin-bottom:4px;">STEP 4 · SmartWay 티켓 발행</div>
+          <div style="font-size:12px;color:#334155;line-height:1.6;">
+            <b>viewer.html</b>에서 대상 URL을 체크박스로 선택 후 <b>SmartWay 발행</b> 버튼을 클릭합니다.<br>
+            SmartWay에 Story 티켓이 생성되며 <code style="font-size:11px;background:#ede9fe;padding:1px 5px;border-radius:3px;">jira_issue_key</code>가 레코드에 저장됩니다.<br>
+            SmartWay에서 현업 결재·승인이 진행됩니다.
+          </div>
+        </div>
+      </div>
+
+      <!-- 화살표 -->
+      <div style="text-align:center;font-size:18px;color:#94a3b8;line-height:1;">↓</div>
+
+      <!-- 5단계 그룹: 역방향 동기화 -->
+      <div style="display:flex;align-items:stretch;gap:8px;">
+        <div style="width:90px;min-width:90px;background:#ede9fe;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#6d28d9;text-align:center;padding:6px;">🔄<br>SmartWay</div>
+        <div style="flex:1;background:#faf5ff;border:1px solid #d8b4fe;border-radius:8px;padding:10px 14px;">
+          <div style="font-size:11px;font-weight:700;color:#7c3aed;margin-bottom:4px;">STEP 5 · SmartWay 동기화 (역방향)</div>
+          <div style="font-size:12px;color:#334155;line-height:1.6;">
+            SmartWay 결재 완료 후 <b>SmartWay 동기화</b> 버튼을 클릭하여 결재 결과를 URLViewer로 가져옵니다.<br>
+            Resolution → <code style="font-size:11px;background:#ede9fe;padding:1px 5px;border-radius:3px;">reviewStage</code> 전이: Done → JIRA_APPROVED / Won't Do → JIRA_REJECTED
+          </div>
+        </div>
+      </div>
+
+      <!-- 화살표 -->
+      <div style="text-align:center;font-size:18px;color:#94a3b8;line-height:1;">↓</div>
+
+      <!-- 6단계 그룹: 관리자 확정 -->
+      <div style="display:flex;align-items:stretch;gap:8px;">
+        <div style="width:90px;min-width:90px;background:#dbeafe;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#1d4ed8;text-align:center;padding:6px;">👤<br>관리자</div>
+        <div style="flex:1;background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:10px 14px;">
+          <div style="font-size:11px;font-weight:700;color:#0369a1;margin-bottom:4px;">STEP 6 · 상태 확정 및 소스 차단</div>
+          <div style="font-size:12px;color:#334155;line-height:1.6;">
+            <b>viewer.html</b>에서 최종 상태를 확인하고 <b>일괄 확정</b>합니다.<br>
+            개발팀이 소스에 @Deprecated · [URL차단작업] 주석 · UnsupportedOperationException 3가지를 적용하면
+            다음 소스 추출 시 <b>차단완료</b>로 자동 전환됩니다.
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
   <!-- URL 1건 라이프사이클 -->
-  <div class="section-title">5. URL 1건의 라이프사이클</div>
+  <div class="section-title">6. URL 1건의 라이프사이클</div>
   <div class="card" style="padding: 0;">
     <div class="lifecycle">
       <div class="lc-step">
@@ -591,7 +694,7 @@
       <div class="lc-arrow">›</div>
       <div class="lc-step" style="border-color:#c4b5fd;background:#f5f3ff;">
         <div class="lc-num" style="background:var(--purple);">5</div>
-        <span class="lc-title" style="color:var(--purple-hover);">Jira 발행/결재</span>
+        <span class="lc-title" style="color:var(--purple-hover);">SmartWay 발행/결재</span>
         <span class="lc-desc">PUSH → 현업 결재 → PULL</span>
       </div>
       <div class="lc-arrow">›</div>
@@ -610,7 +713,7 @@
   </div>
 
   <!-- 페이지별 권한 -->
-  <div class="section-title">6. 페이지별 접근 권한</div>
+  <div class="section-title">7. 페이지별 접근 권한</div>
   <div class="card" style="padding: 0;">
     <div class="auth-grid">
       <div class="auth-card">
@@ -623,7 +726,7 @@
           <li><b>/viewer.html</b> URL분석현황 — 전체 조회·엑셀 다운로드</li>
           <li><b>/call-stats.html</b> URL호출현황 — 차트·추이 분석</li>
           <li><b>/review.html</b> 현업 검토 — 차단대상 검토 입력</li>
-          <li><b>/workflow.html</b> 업무 플로우 — (이 페이지)</li>
+          <li><b>/workflow.html</b> 업무 흐름 — (이 페이지)</li>
         </ul>
       </div>
       <div class="auth-card">
@@ -634,7 +737,6 @@
         <ul class="auth-list">
           <li><b>/extract.html</b> — Git Pull·추출 실행</li>
           <li><b>/settings.html</b> — 배치·레포·로그·URL분석/검토·데이터 관리</li>
-          <li><b>/proposal-jira.html</b> — Jira 연동 구현 문서</li>
           <li><b>/h2-console</b> — H2 DB 콘솔</li>
           <li>상태확정·차단 반영·엑셀 업로드</li>
         </ul>
@@ -654,8 +756,8 @@
     </div>
   </div>
 
-  <!-- 섹션 7: URL 상태 판정 플로우차트 -->
-  <div class="section-title">7. URL 상태 판정 플로우차트</div>
+  <!-- 섹션 8: URL 상태 판정 플로우차트 -->
+  <div class="section-title">8. URL 상태 판정 플로우차트</div>
   <div class="card diagram-card">
     <div class="diagram-note">
       소스 추출 시 <b>각 URL 1건</b>이 거치는 상태 판정 전체 흐름입니다.
@@ -713,36 +815,36 @@ flowchart TD
     </div>
   </div>
 
-  <!-- 섹션 8: 역할별 Use Case -->
-  <div class="section-title">8. 역할별 Use Case</div>
+  <!-- 섹션 9: 역할별 Use Case -->
+  <div class="section-title">9. 역할별 Use Case</div>
   <div class="card diagram-card">
     <div class="diagram-note">
-      URLViewer를 사용하는 <b>4가지 역할</b>(관리자·IT담당자·현업 검토자·배치 시스템)과
-      각 역할이 수행할 수 있는 <b>Use Case</b>의 범위를 나타냅니다.
-      <b>왼쪽</b>: IT담당자·현업 검토자(공개 기능 사용), <b>오른쪽</b>: 관리자·배치 시스템(전용 기능).
+      <b>배치·관리자</b>가 URLViewer를 운영하고, <b>IT 담당자</b>가 양 시스템을 중계하며,
+      <b>SmartWay</b>를 통해 <b>현업 담당자</b>가 결재에 참여하는 전체 흐름을 나타냅니다.
+      레이아웃: 배치/관리자 → URLViewer → IT 담당자 → SmartWay → 현업 담당자
     </div>
     <div class="mermaid">
 graph LR
-    IT(["👤\nIT담당자"])
-    REV(["👤\n현업 검토자"])
+    ADM(["👤\n관리자"])
+    BOT(["🤖\n배치 시스템"])
 
-    subgraph SYS["◈  URLViewer 시스템  ◈"]
+    subgraph UV["◈  URLViewer  ◈"]
         direction TB
-        subgraph ADMIN_UC["🔒 관리자 전용"]
+        subgraph ADM_F["🔒 관리자 전용"]
             UC1(["URL 소스 추출"])
             UC2(["레포지토리 설정"])
             UC3(["배치 스케줄 관리"])
             UC4(["상태 확정 · 강제 변경"])
             UC5(["데이터 백업 · 복구"])
         end
-        subgraph PUBLIC_UC["🌐 공개 기능"]
+        subgraph PUB_F["🌐 공개 기능"]
             UC6(["대시보드 조회"])
             UC7(["URL 분석현황 조회"])
             UC8(["호출현황 분석"])
             UC9(["엑셀 다운로드"])
-            UC10(["현업 검토 입력"])
+            UC10(["검토결과 엑셀 업로드"])
         end
-        subgraph BATCH_UC["⚙️ 시스템 자동"]
+        subgraph BATCH_F["⚙️ 자동 배치"]
             UC11(["Git Pull + 파싱"])
             UC12(["APM 호출건수 수집"])
             UC13(["상태 자동 재계산"])
@@ -750,20 +852,41 @@ graph LR
         end
     end
 
-    ADM(["👤\n관리자"])
-    BOT(["🤖\n배치 시스템"])
+    IT(["👤\nIT 담당자"])
 
-    IT --> UC6 & UC7 & UC8 & UC9
-    REV --> UC7 & UC10
+    subgraph SW["◈  SmartWay  ◈"]
+        direction TB
+        UC15(["티켓 발행\nPUSH"])
+        UC16(["결과 동기화\nPULL"])
+        UC17(["티켓 검토 · 결재"])
+    end
 
-    UC1 & UC2 & UC3 & UC4 & UC5 --> ADM
-    UC6 & UC7 & UC8 & UC9 --> ADM
-    UC11 & UC12 & UC13 & UC14 --> BOT
+    REV(["👤\n현업 담당자"])
+
+    %% 관리자 → URLViewer
+    ADM --> UC1 & UC2 & UC3 & UC4 & UC5
+    ADM --> UC6 & UC7 & UC8 & UC9
+
+    %% 배치 시스템 → URLViewer + SmartWay
+    BOT --> UC11 & UC12 & UC13 & UC14
+    BOT --> UC15 & UC16
+
+    %% URLViewer 공개 기능 → IT 담당자 (IT는 URLViewer 오른쪽에 배치)
+    UC6 & UC7 & UC8 & UC9 & UC10 --> IT
+
+    %% IT 담당자 → SmartWay (SmartWay는 IT 오른쪽에 배치)
+    IT --> UC15 & UC16
+
+    %% 관리자 → SmartWay
+    ADM --> UC15 & UC16
+
+    %% 현업 담당자 ← SmartWay 결재
+    UC17 --> REV
     </div>
   </div>
 
-  <!-- 섹션 9: 테이블/컬럼 명세서 -->
-  <div class="section-title">9. 테이블 / 컬럼 명세서</div>
+  <!-- 섹션 10: 테이블/컬럼 명세서 -->
+  <div class="section-title">10. 테이블 / 컬럼 명세서</div>
 
   <!-- api_record -->
   <div class="card" style="margin-bottom:14px;">
@@ -795,9 +918,9 @@ graph LR
         <tr><td style="padding:5px 10px;border:1px solid #e2e8f0;font-family:monospace;">blocked_reason</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">차단근거</td><td style="padding:5px 10px;border:1px solid #e2e8f0;white-space:nowrap;">TEXT</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">CSR 번호 등 fullComment 파싱</td></tr>
         <tr style="background:#f8fafc;"><td style="padding:5px 10px;border:1px solid #e2e8f0;font-family:monospace;">review_result</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">현업검토결과</td><td style="padding:5px 10px;border:1px solid #e2e8f0;white-space:nowrap;">VARCHAR(50)</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">차단대상 제외 / 차단확정 / 판단불가</td></tr>
         <tr><td style="padding:5px 10px;border:1px solid #e2e8f0;font-family:monospace;">review_opinion</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">현업검토의견</td><td style="padding:5px 10px;border:1px solid #e2e8f0;white-space:nowrap;">VARCHAR(500)</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">자유 텍스트</td></tr>
-        <tr style="background:#f5f3ff;"><td style="padding:5px 10px;border:1px solid #e2e8f0;font-family:monospace;">review_stage</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">Jira 검토 단계</td><td style="padding:5px 10px;border:1px solid #e2e8f0;white-space:nowrap;">VARCHAR(30)</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">INTERNAL_PENDING → JIRA_ISSUED → JIRA_APPROVED/REJECTED → BLOCKED</td></tr>
-        <tr style="background:#ede9fe;"><td style="padding:5px 10px;border:1px solid #e2e8f0;font-family:monospace;">jira_issue_key</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">Jira 티켓 키</td><td style="padding:5px 10px;border:1px solid #e2e8f0;white-space:nowrap;">VARCHAR(50)</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">예: CARD-1234. 발행 성공 시 저장.</td></tr>
-        <tr style="background:#f5f3ff;"><td style="padding:5px 10px;border:1px solid #e2e8f0;font-family:monospace;">jira_synced_at</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">Jira 마지막 동기화 일시</td><td style="padding:5px 10px;border:1px solid #e2e8f0;white-space:nowrap;">DATETIME</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">PUSH/PULL 시마다 갱신</td></tr>
+        <tr style="background:#f5f3ff;"><td style="padding:5px 10px;border:1px solid #e2e8f0;font-family:monospace;">review_stage</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">SmartWay 검토 단계</td><td style="padding:5px 10px;border:1px solid #e2e8f0;white-space:nowrap;">VARCHAR(30)</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">INTERNAL_PENDING → JIRA_ISSUED → JIRA_APPROVED/REJECTED → BLOCKED</td></tr>
+        <tr style="background:#ede9fe;"><td style="padding:5px 10px;border:1px solid #e2e8f0;font-family:monospace;">jira_issue_key</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">SmartWay 티켓 키</td><td style="padding:5px 10px;border:1px solid #e2e8f0;white-space:nowrap;">VARCHAR(50)</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">예: CARD-1234. 발행 성공 시 저장.</td></tr>
+        <tr style="background:#f5f3ff;"><td style="padding:5px 10px;border:1px solid #e2e8f0;font-family:monospace;">jira_synced_at</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">SmartWay 마지막 동기화 일시</td><td style="padding:5px 10px;border:1px solid #e2e8f0;white-space:nowrap;">DATETIME</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">PUSH/PULL 시마다 갱신</td></tr>
         <tr style="background:#f8fafc;"><td style="padding:5px 10px;border:1px solid #e2e8f0;font-family:monospace;">review_team</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">현업팀</td><td style="padding:5px 10px;border:1px solid #e2e8f0;white-space:nowrap;">VARCHAR(100)</td><td style="padding:5px 10px;border:1px solid #e2e8f0;"></td></tr>
         <tr><td style="padding:5px 10px;border:1px solid #e2e8f0;font-family:monospace;">review_manager</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">현업담당자</td><td style="padding:5px 10px;border:1px solid #e2e8f0;white-space:nowrap;">VARCHAR(100)</td><td style="padding:5px 10px;border:1px solid #e2e8f0;"></td></tr>
         <tr style="background:#f8fafc;"><td style="padding:5px 10px;border:1px solid #e2e8f0;font-family:monospace;">reviewed_at</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">현업검토일시</td><td style="padding:5px 10px;border:1px solid #e2e8f0;white-space:nowrap;">DATETIME</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">검토 저장 시 자동 갱신</td></tr>
@@ -962,8 +1085,8 @@ graph LR
     </div>
 
     <div class="card">
-      <div class="card-title" style="margin-bottom:10px;"><span class="dot" style="background:var(--purple);"></span>jira_config — Jira 연동 설정</div>
-      <div style="font-size:11px;color:#64748b;margin-bottom:8px;">단일 레코드 (0~1행). settings.html Jira 탭에서 관리. <code>repos-config.yml</code> 가져오기 시 빈 값만 자동 시딩.</div>
+      <div class="card-title" style="margin-bottom:10px;"><span class="dot" style="background:var(--purple);"></span>jira_config — SmartWay 연동 설정</div>
+      <div style="font-size:11px;color:#64748b;margin-bottom:8px;">단일 레코드 (0~1행). settings.html SmartWay 탭에서 관리. <code>repos-config.yml</code> 가져오기 시 빈 값만 자동 시딩.</div>
       <div style="overflow-x:auto;">
       <table style="width:100%;border-collapse:collapse;font-size:12px;">
         <thead><tr style="background:#f5f3ff;">
@@ -973,22 +1096,22 @@ graph LR
         </tr></thead>
         <tbody>
           <tr><td style="padding:5px 10px;border:1px solid #e2e8f0;font-family:monospace;">id</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">식별자</td><td style="padding:5px 10px;border:1px solid #e2e8f0;"><span style="background:#fef3c7;color:#92400e;padding:1px 5px;border-radius:3px;font-size:11px;">PK</span> AUTO</td></tr>
-          <tr style="background:#f8fafc;"><td style="padding:5px 10px;border:1px solid #e2e8f0;font-family:monospace;">jira_base_url</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">Jira 서버 URL</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">예: https://jira.company.com</td></tr>
-          <tr><td style="padding:5px 10px;border:1px solid #e2e8f0;font-family:monospace;">project_key</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">Jira 프로젝트 키</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">예: CARD</td></tr>
+          <tr style="background:#f8fafc;"><td style="padding:5px 10px;border:1px solid #e2e8f0;font-family:monospace;">jira_base_url</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">SmartWay 서버 URL</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">예: https://jira.company.com</td></tr>
+          <tr><td style="padding:5px 10px;border:1px solid #e2e8f0;font-family:monospace;">project_key</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">SmartWay 프로젝트 키</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">예: CARD</td></tr>
           <tr style="background:#f8fafc;"><td style="padding:5px 10px;border:1px solid #e2e8f0;font-family:monospace;">service_account</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">서비스 계정</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">Basic Auth 이메일/아이디</td></tr>
           <tr><td style="padding:5px 10px;border:1px solid #e2e8f0;font-family:monospace;">api_token</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">API 토큰</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">Cloud: API Token, Server: 비밀번호</td></tr>
           <tr style="background:#f8fafc;"><td style="padding:5px 10px;border:1px solid #e2e8f0;font-family:monospace;">custom_field_id</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">URLViewer ID 커스텀 필드</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">예: customfield_10100 (멱등성 보장용)</td></tr>
           <tr><td style="padding:5px 10px;border:1px solid #e2e8f0;font-family:monospace;">sync_enabled</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">자동 동기화 여부</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">BOOLEAN, 배치 JIRA_SYNC로 관리</td></tr>
           <tr style="background:#f8fafc;"><td style="padding:5px 10px;border:1px solid #e2e8f0;font-family:monospace;">last_synced_at</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">마지막 동기화 일시</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">DATETIME</td></tr>
-          <tr><td style="padding:5px 10px;border:1px solid #e2e8f0;font-family:monospace;">status_mappings</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">Jira 상태 매핑 JSON</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">Jira Resolution → reviewStage 매핑</td></tr>
+          <tr><td style="padding:5px 10px;border:1px solid #e2e8f0;font-family:monospace;">status_mappings</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">SmartWay 상태 매핑 JSON</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">SmartWay Resolution → reviewStage 매핑</td></tr>
         </tbody>
       </table>
       </div>
     </div>
 
     <div class="card">
-      <div class="card-title" style="margin-bottom:10px;"><span class="dot" style="background:var(--purple);"></span>jira_user_mapping — Jira 담당자 매핑</div>
-      <div style="font-size:11px;color:#64748b;margin-bottom:8px;">URLViewer 담당자명 ↔ Jira accountId 매핑. 복합 UNIQUE: <code>(team_name, urlviewer_name)</code>. <code>repos-config.yml</code> 가져오기 시 미존재 항목 자동 시딩.</div>
+      <div class="card-title" style="margin-bottom:10px;"><span class="dot" style="background:var(--purple);"></span>jira_user_mapping — SmartWay 담당자 매핑</div>
+      <div style="font-size:11px;color:#64748b;margin-bottom:8px;">URLViewer 담당자명 ↔ SmartWay accountId 매핑. 복합 UNIQUE: <code>(team_name, urlviewer_name)</code>. <code>repos-config.yml</code> 가져오기 시 미존재 항목 자동 시딩.</div>
       <div style="overflow-x:auto;">
       <table style="width:100%;border-collapse:collapse;font-size:12px;">
         <thead><tr style="background:#f5f3ff;">
@@ -1000,8 +1123,8 @@ graph LR
           <tr><td style="padding:5px 10px;border:1px solid #e2e8f0;font-family:monospace;">id</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">식별자</td><td style="padding:5px 10px;border:1px solid #e2e8f0;"><span style="background:#fef3c7;color:#92400e;padding:1px 5px;border-radius:3px;font-size:11px;">PK</span> AUTO</td></tr>
           <tr style="background:#f8fafc;"><td style="padding:5px 10px;border:1px solid #e2e8f0;font-family:monospace;">team_name</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">팀명</td><td style="padding:5px 10px;border:1px solid #e2e8f0;"><span style="background:#ede9fe;color:#5b21b6;padding:1px 5px;border-radius:3px;font-size:11px;">UNIQUE(복합)</span> VARCHAR(100)</td></tr>
           <tr><td style="padding:5px 10px;border:1px solid #e2e8f0;font-family:monospace;">urlviewer_name</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">URLViewer 담당자명</td><td style="padding:5px 10px;border:1px solid #e2e8f0;"><span style="background:#ede9fe;color:#5b21b6;padding:1px 5px;border-radius:3px;font-size:11px;">UNIQUE(복합)</span> VARCHAR(100)</td></tr>
-          <tr style="background:#f8fafc;"><td style="padding:5px 10px;border:1px solid #e2e8f0;font-family:monospace;">jira_account_id</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">Jira 계정 ID</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">Jira Cloud: uuid 형식 accountId</td></tr>
-          <tr><td style="padding:5px 10px;border:1px solid #e2e8f0;font-family:monospace;">jira_display_name</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">Jira 표시명</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">예: 홍길동 (Gildong Hong)</td></tr>
+          <tr style="background:#f8fafc;"><td style="padding:5px 10px;border:1px solid #e2e8f0;font-family:monospace;">jira_account_id</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">SmartWay 계정 ID</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">SmartWay Cloud: uuid 형식 accountId</td></tr>
+          <tr><td style="padding:5px 10px;border:1px solid #e2e8f0;font-family:monospace;">jira_display_name</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">SmartWay 표시명</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">예: 홍길동 (Gildong Hong)</td></tr>
         </tbody>
       </table>
       </div>
@@ -1042,7 +1165,6 @@ graph LR
   function applyAdminUI() {
     const admin = isAdmin();
     const ns = document.getElementById('navSettings'); if (ns) ns.style.display = admin ? '' : 'none';
-    const _np = document.getElementById('navProposal'); if (_np) _np.style.display = admin ? '' : 'none';
     const ab = document.getElementById('adminBtn'); if (ab) ab.textContent = admin ? '🔓 관리자 해제' : '🔑 관리자';
   }
   async function toggleAdmin() {

@@ -4,6 +4,17 @@
 
 ---
 
+# 명칭 규칙
+
+| 시스템 | 내부 명칭 (데이터·코드) | 화면 표시 명칭 |
+|--------|----------------------|--------------|
+| Jira | `jira` (DB 컬럼명, 함수명, API 경로 등) | **SmartWay** |
+
+- 화면에 노출되는 레이블·버튼·메시지에서 "Jira"는 **SmartWay**로 표기한다.
+- 함수명(`saveJiraConfig`, `bulkSyncToJira` 등), DB 컬럼(`jira_issue_key`), 상태값(`JIRA_ISSUED`, `JIRA_APPROVED`) 등 내부 식별자는 변경하지 않는다.
+
+---
+
 # 프로젝트 개요
 
 Spring Boot 기반 웹 애플리케이션. Controller 소스를 파싱하여 URL 목록을 추출하고, H2 DB에 저장·조회·관리하는 내부 도구.

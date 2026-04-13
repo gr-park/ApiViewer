@@ -80,14 +80,17 @@
 
     /* 일괄 변경 바 */
     .bulk-bar { display: none; position: sticky; bottom: 0; background: #1e293b; color: #fff;
-      padding: 10px 20px; border-radius: 10px; margin-bottom: 10px;
-      align-items: center; gap: 12px; box-shadow: 0 4px 16px rgba(0,0,0,.25); z-index: 10; }
+      padding: 8px 16px; border-radius: 10px; margin-bottom: 10px; flex-wrap: wrap;
+      align-items: center; gap: 8px; box-shadow: 0 4px 16px rgba(0,0,0,.25); z-index: 10; }
     .bulk-bar.visible { display: flex; }
-    .bulk-bar .bulk-count { font-size: 13px; font-weight: 600; flex: 1; }
-    .bulk-bar select { padding: 5px 10px; border-radius: 6px; font-size: 12px; border: none; outline: none; }
-    .btn-apply { background: var(--primary); color: #fff; border: none; border-radius: 6px; padding: 6px 16px; font-size: 12px; font-weight: 600; cursor: pointer; }
+    .bulk-bar .bulk-count { font-size: 12px; font-weight: 700; flex: none; }
+    .bulk-bar select, .bulk-bar input[type="text"] { height: 28px; padding: 4px 8px; border-radius: 6px; font-size: 11px; border: none; outline: none; box-sizing: border-box; }
+    .bulk-group { display: inline-flex; align-items: center; gap: 5px; }
+    .bulk-group:not(:last-child) { border-right: 1px solid rgba(255,255,255,.18); padding-right: 10px; margin-right: 2px; }
+    .bulk-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: rgba(255,255,255,.45); white-space: nowrap; }
+    .btn-apply { background: var(--primary); color: #fff; border: none; border-radius: 6px; padding: 5px 12px; font-size: 11px; font-weight: 600; cursor: pointer; height: 28px; line-height: 1; white-space: nowrap; box-sizing: border-box; }
     .btn-apply:hover { background: var(--primary-hover); }
-    .btn-cancel { background: #475569; color: #fff; border: none; border-radius: 6px; padding: 6px 12px; font-size: 12px; font-weight: 600; cursor: pointer; }
+    .btn-cancel { background: #475569; color: #fff; border: none; border-radius: 6px; padding: 5px 12px; font-size: 11px; font-weight: 600; cursor: pointer; height: 28px; line-height: 1; margin-left: auto; box-sizing: border-box; }
     .btn-cancel:hover { background: #334155; }
 
     /* 일괄처리 프로그레스 오버레이 */
@@ -272,8 +275,8 @@
     <a href="/viewer.html"  class="nav-link nav-active">📋 URL분석현황</a>
     <a href="/call-stats.html" class="nav-link">📈 URL호출현황</a>
     <a href="/review.html" class="nav-link">📝 현업 검토</a>
-    <a href="/workflow.html" class="nav-link">🗺️ 업무 플로우</a>
-    <a href="/proposal-jira.html" class="nav-link" id="navProposal" style="display:none;">🧩 추가개선안</a>
+    <a href="/workflow.html" class="nav-link">🗺️ 업무 흐름</a>
+
     <a href="/settings.html" class="nav-link" id="navSettings" style="display:none;">⚙️ 설정</a>
     <button class="nav-link" id="adminBtn" onclick="toggleAdmin()" style="background:none;cursor:pointer;">🔑 관리자</button>
   </div>
@@ -408,31 +411,55 @@
   <!-- 일괄 변경 바 -->
   <div class="bulk-bar" id="bulkBar">
     <span class="bulk-count" id="bulkCount">0개 선택됨</span>
-    <select id="bulkStatus" onchange="onBulkStatusChange()">
-      <option value="__SKIP__">-- 상태 --</option>
-      <option value="사용">사용</option>
-      <option value="차단완료">차단완료</option>
-      <option value="최우선 차단대상">① 최우선 차단대상</option>
-      <option value="후순위 차단대상">② 후순위 차단대상</option>
-      <option value="추가검토필요 차단대상">③ 추가검토필요 차단대상</option>
-      <option value="">자동계산 (초기화)</option>
-    </select>
-    <select id="bulkBlockCriteria">
-      <option value="__SKIP__">-- 차단기준 --</option>
-    </select>
-    <input id="bulkTeam" type="text" list="teamsDatalist" placeholder="팀 변경" style="padding:5px 10px;border-radius:6px;font-size:12px;border:none;outline:none;width:120px;">
-    <input id="bulkManager" type="text" placeholder="담당자 변경" style="padding:5px 10px;border-radius:6px;font-size:12px;border:none;outline:none;width:90px;">
-    <datalist id="teamsDatalist"></datalist>
-    <button class="btn-apply" onclick="applyBulk()">적용</button>
-    <button class="btn-apply" onclick="bulkLock(true)" style="background:#475569;">일괄 확정</button>
-    <button class="btn-apply" onclick="bulkLock(false)" style="background:#94a3b8;">일괄 해제</button>
-    <button class="btn-apply" onclick="bulkClearStatusChange()" style="background:#6b7280;">알림 확인 (신규/변경/삭제)</button>
-    <button class="btn-apply" id="bulkUnblockBtn" onclick="bulkUnblock()" style="background:#64748b;display:none;" title="선택한 차단완료 건을 '사용'으로 해제 (관리자)">🔓 차단완료 해제</button>
-    <button class="btn-apply" id="bulkDeleteBtn" onclick="bulkDeleteRecords()" style="background:#b91c1c;display:none;" title="선택한 레코드를 DB에서 완전 삭제 (관리자, 비밀번호 필요)">🗑 선택 삭제</button>
-    <button class="btn-apply" id="bulkPurgeBtn" onclick="bulkPurgeDeleted()" style="background:#7c2d12;display:none;">🗑 영구삭제</button>
-    <button class="btn-apply" id="bulkJiraSyncBtn" onclick="bulkSyncToJira()" style="background:var(--purple);">🔗 Jira 발행</button>
-    <button class="btn-apply" id="bulkJiraPullBtn" onclick="bulkPullFromJira()" style="background:#7c3aed;">🔄 Jira 동기화</button>
-    <button class="btn-cancel" onclick="clearSelection()">취소</button>
+
+    <!-- 그룹1: 상태 변경 -->
+    <span class="bulk-group">
+      <span class="bulk-label">상태변경</span>
+      <select id="bulkStatus" onchange="onBulkStatusChange()">
+        <option value="__SKIP__">-- 상태 --</option>
+        <option value="사용">사용</option>
+        <option value="차단완료">차단완료</option>
+        <option value="최우선 차단대상">① 최우선 차단대상</option>
+        <option value="후순위 차단대상">② 후순위 차단대상</option>
+        <option value="추가검토필요 차단대상">③ 추가검토필요 차단대상</option>
+        <option value="">자동계산 (초기화)</option>
+      </select>
+      <select id="bulkBlockCriteria">
+        <option value="__SKIP__">-- 차단기준 --</option>
+      </select>
+      <input id="bulkTeam" type="text" list="teamsDatalist" placeholder="팀 변경" style="width:110px;">
+      <input id="bulkManager" type="text" placeholder="담당자 변경" style="width:90px;">
+      <datalist id="teamsDatalist"></datalist>
+      <button class="btn-apply" onclick="applyBulk()">적용</button>
+    </span>
+
+    <!-- 그룹2: 상태확정 -->
+    <span class="bulk-group">
+      <span class="bulk-label">상태확정</span>
+      <button class="btn-apply" onclick="bulkLock(true)" style="background:#475569;">확정</button>
+      <button class="btn-apply" onclick="bulkLock(false)" style="background:#94a3b8;">해제</button>
+    </span>
+
+    <!-- 그룹3: 상태변경알림 -->
+    <span class="bulk-group">
+      <span class="bulk-label">상태변경알림</span>
+      <button class="btn-apply" onclick="bulkClearStatusChange()" style="background:#6b7280;">확인</button>
+    </span>
+
+    <!-- 그룹4: Jira -->
+    <span class="bulk-group">
+      <span class="bulk-label">SmartWay</span>
+      <button class="btn-apply" id="bulkJiraSyncBtn" onclick="bulkSyncToJira()" style="background:var(--purple);">발행</button>
+      <button class="btn-apply" id="bulkJiraPullBtn" onclick="bulkPullFromJira()" style="background:#7c3aed;">동기화</button>
+    </span>
+
+    <!-- 그룹5: 삭제 (관리자 전용) -->
+    <span class="bulk-group" id="bulkDeleteGroup" style="display:none;">
+      <span class="bulk-label" style="color:rgba(255,100,100,.6);">삭제</span>
+      <button class="btn-apply" id="bulkDeleteBtn" onclick="bulkDeleteRecords()" style="background:#b91c1c;" title="선택한 레코드를 DB에서 완전 삭제 (관리자, 비밀번호 필요)">삭제</button>
+    </span>
+
+    <button class="btn-cancel" onclick="clearSelection()">✕ 취소</button>
   </div>
 
   <!-- 테이블 -->
@@ -466,7 +493,7 @@
           <th class="hg-block no-sort">비고(입력가능)</th>
           <th class="hg-block" onclick="sortBy('reviewResult')">현업검토결과 <span class="sort-icon">↕</span></th>
           <th class="hg-block no-sort">현업검토의견</th>
-          <th class="hg-block no-sort">Jira</th>
+          <th class="hg-block no-sort">SmartWay 티켓번호</th>
           <th class="hg-deploy" onclick="sortBy('cboScheduledDate')">CBO예정일자 <span class="sort-icon">↕</span></th>
           <th class="hg-deploy" onclick="sortBy('deployScheduledDate')">배포예정일자 <span class="sort-icon">↕</span></th>
           <th class="hg-deploy no-sort">배포CSR</th>
@@ -1301,7 +1328,7 @@
       const cfg = repoConfigMap[a.repositoryName] || {};
       const git1 = parseGitHistory(a.gitHistory)[0];
       const lockIcon = isBlocked
-        ? `<span class="lock-btn lock-blocked">변경불가</span>${isAdmin() ? `<br><button onclick="unblockRecord(${a.id})" style="margin-top:2px;font-size:9px;padding:1px 5px;border:1px solid #94a3b8;border-radius:3px;background:none;cursor:pointer;color:#64748b;" title="차단완료 해제 (관리자)">🔓 해제</button>` : ''}`
+        ? `<span class="lock-btn lock-blocked">변경불가</span>`
         : locked
         ? `<span class="lock-btn lock-on" onclick="toggleLock(${a.id}, false)" title="클릭하여 확정 해제">🔒 확정</span>`
         : `<span class="lock-btn lock-off" onclick="toggleLock(${a.id}, true)" title="클릭하여 상태 확정">미확정</span>`;
@@ -1333,7 +1360,7 @@
         <td class="${(locked||isBlocked)?'':'memo-editable'}" onclick="${(locked||isBlocked)?'':('editField(this,'+a.id+',&apos;memo&apos;)')}" title="${(locked||isBlocked)?'수정불가':'클릭하여 입력'}" style="font-size:11px;">${esc(a.memo || '')}</td>
         <td>${reviewResultBadge(a.reviewResult)}</td>
         <td style="font-size:11px;color:var(--text-muted);max-width:140px;">${esc(a.reviewOpinion || '')}</td>
-        <td>${a.jiraIssueKey ? `<a href="${esc(a.jiraIssueUrl)}" target="_blank" class="jira-badge" title="Jira 티켓 바로가기">${esc(a.jiraIssueKey)}</a>` : '<span style="color:#cbd5e1;font-size:11px;">-</span>'}</td>
+        <td>${a.jiraIssueKey ? `<a href="${esc(a.jiraIssueUrl)}" target="_blank" class="jira-badge" title="SmartWay 티켓 바로가기">${esc(a.jiraIssueKey)}</a>` : '<span style="color:#cbd5e1;font-size:11px;">-</span>'}</td>
         <td class="${(locked||isBlocked)?'':'memo-editable'}" onclick="${(locked||isBlocked)?'':('editField(this,'+a.id+',&apos;cboScheduledDate&apos;)')}" title="${(locked||isBlocked)?'수정불가':'클릭하여 날짜 선택'}" style="font-size:11px;white-space:nowrap;">${esc(a.cboScheduledDate || '')}</td>
         <td class="${(locked||isBlocked)?'':'memo-editable'}" onclick="${(locked||isBlocked)?'':('editField(this,'+a.id+',&apos;deployScheduledDate&apos;)')}" title="${(locked||isBlocked)?'수정불가':'클릭하여 날짜 선택'}" style="font-size:11px;white-space:nowrap;">${esc(a.deployScheduledDate || '')}</td>
         <td class="${(locked||isBlocked)?'':'memo-editable'}" onclick="${(locked||isBlocked)?'':('editField(this,'+a.id+',&apos;deployCsr&apos;)')}" title="${(locked||isBlocked)?'수정불가':'클릭하여 입력'}" style="font-size:11px;">${esc(a.deployCsr || '')}</td>
@@ -1464,23 +1491,6 @@
       await refreshAll();
       showToast('차단완료 해제 완료', 'success');
     } catch(e) { showToast('해제 실패: ' + e.message, 'error'); }
-  }
-
-  async function bulkUnblock() {
-    if (!isAdmin()) { showToast('관리자 권한이 필요합니다.', 'error'); return; }
-    const ids = Array.from(selectedIds);
-    if (!ids.length) { showToast('선택된 항목이 없습니다.', 'error'); return; }
-    if (!await customConfirm(`${ids.length}개 항목의 차단완료를 해제하고 "사용"으로 변경하시겠습니까?`)) return;
-    showBulkProgress('차단완료 해제 중...', ids.length);
-    try {
-      const res = await fetch('/api/db/status', { method:'PATCH',
-        headers:{'Content-Type':'application/json', 'X-Admin-Token': localStorage.getItem('adminToken')||''},
-        body:JSON.stringify({ ids, status:'사용', statusOverridden: false }) });
-      if (!res.ok) { const d = await res.json(); throw new Error(d.error || '서버 오류'); }
-      clearSelection();
-      await refreshAll();
-      showToast(`${ids.length}개 차단완료 해제`, 'success');
-    } catch(e) { showToast('해제 실패: ' + e.message, 'error'); } finally { hideBulkProgress(); }
   }
 
   async function bulkDeleteRecords() {
@@ -1745,7 +1755,7 @@
       '관련 메뉴(또는 기능)','Deprecated','1년 호출건','1달 호출건','1주 호출건',
       '상태','상태확정','침해사고 로그 제외대상','차단기준','차단일자','차단근거',
       '비고','현업검토결과','현업검토의견',
-      'Jira 티켓','검토단계',
+      'SmartWay 티켓번호','검토단계',
       'CBO예정일자','배포예정일자','배포CSR',
       ...commitHeaders, '분석일시', '변경일시'
     ];
@@ -1839,7 +1849,7 @@
       '관련 메뉴(또는 기능)','Deprecated','1년 호출건','1달 호출건','1주 호출건',
       '상태','상태확정','침해사고 로그 제외대상','차단기준','차단일자','차단근거',
       '비고','현업검토결과','현업검토의견',
-      'Jira 티켓','검토단계',
+      'SmartWay 티켓번호','검토단계',
       'CBO예정일자','배포예정일자','배포CSR',
       ...commitHeaders, '분석일시', '변경일시'
     ];
@@ -2306,9 +2316,9 @@
         </div>
       </div>
       <div class="detail-section">
-        <div class="detail-section-title">🔗 Jira 연동</div>
+        <div class="detail-section-title">🔗 SmartWay 연동</div>
         <div class="detail-grid">
-          <div class="detail-label">Jira 티켓</div>
+          <div class="detail-label">SmartWay 티켓번호</div>
           <div class="detail-value">${r.jiraIssueKey
             ? `<a href="${esc(r.jiraIssueUrl)}" target="_blank" class="jira-badge">${esc(r.jiraIssueKey)}</a>`
             : '<span style="color:#94a3b8;">미발행</span>'}</div>
@@ -2318,7 +2328,7 @@
           <div class="detail-value">${r.jiraSyncedAt ? fmtDt(r.jiraSyncedAt) : '-'}</div>
         </div>
         <div style="margin-top:10px;display:flex;gap:8px;">
-          <button class="btn btn-sm" style="background:var(--purple);color:#fff;" onclick="syncSingleToJira(${r.id})">🔗 Jira 발행</button>
+          <button class="btn btn-sm" style="background:var(--purple);color:#fff;" onclick="syncSingleToJira(${r.id})">🔗 SmartWay 발행</button>
           ${r.jiraIssueKey ? `<button class="btn btn-sm btn-ghost" onclick="pullSingleFromJira(${r.id})">🔄 역방향 동기화</button>` : ''}
         </div>
       </div>
@@ -2355,7 +2365,7 @@
       'INTERNAL_PENDING':   { label: 'IT검토대기', cls: 'bt-rev' },
       'INTERNAL_CONFIRMED': { label: 'IT확정', cls: 'bt-top' },
       'INTERNAL_EXCLUDED':  { label: 'IT제외', cls: 'st-use' },
-      'JIRA_ISSUED':        { label: 'Jira발행', cls: '' },
+      'JIRA_ISSUED':        { label: 'SmartWay발행', cls: '' },
       'JIRA_APPROVED':      { label: '현업승인', cls: 'st-done' },
       'JIRA_REJECTED':      { label: '현업제외', cls: 'st-use' },
       'BLOCKED':            { label: '차단완료', cls: 'st-done' },
@@ -2370,7 +2380,7 @@
       const res = await fetch(`/api/jira/sync/record/${id}`, { method: 'POST' });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || '발행 실패');
-      showToast(`Jira 발행 완료: ${data.issueKey || ''}`, 'success');
+      showToast(`SmartWay 발행 완료: ${data.issueKey || ''}`, 'success');
       openDetail(id);
     } catch(e) { showToast('발행 실패: ' + e.message, 'error'); }
   }
@@ -2386,36 +2396,54 @@
 
   async function bulkSyncToJira() {
     if (!selectedIds.size) { showToast('선택된 항목이 없습니다.', 'error'); return; }
-    if (!await customConfirm(`${selectedIds.size}개 항목을 Jira로 발행하시겠습니까?`)) return;
-    showBulkProgress('Jira 발행 중...', selectedIds.size);
+    if (!await customConfirm('선택한 URL을 SmartWay 티켓으로 발행 또는 변경합니다. 진행하시겠습니까?')) return;
+    const total = selectedIds.size;
+    showBulkProgress('SmartWay 발행 중...', 0);
+    const sub = document.getElementById('bulkOverlaySub');
     let success = 0, fail = 0;
+    const updateJiraProgress = () => {
+      sub.textContent = `${success + fail} / ${total}건 처리됨${fail > 0 ? ` · 오류 ${fail}건` : ''}`;
+    };
+    updateJiraProgress();
     for (const id of selectedIds) {
       try {
-        await fetch(`/api/jira/sync/record/${id}`, { method: 'POST' });
-        success++;
-        updateBulkProgress(success + fail);
+        const res = await fetch(`/api/jira/sync/record/${id}`, { method: 'POST' });
+        if (!res.ok) { fail++; } else { success++; }
       } catch(e) { fail++; }
+      updateJiraProgress();
     }
     hideBulkProgress();
-    showToast(`Jira 발행 완료: 성공 ${success}건, 실패 ${fail}건`, success > 0 ? 'success' : 'error');
+    const msg = fail > 0
+      ? `SmartWay 발행 완료: 성공 ${success}건, 실패 ${fail}건`
+      : `SmartWay 발행 완료: ${success}건`;
+    showToast(msg, success > 0 ? 'success' : 'error');
     clearSelection();
     await refreshAll();
   }
 
   async function bulkPullFromJira() {
     if (!selectedIds.size) { showToast('선택된 항목이 없습니다.', 'error'); return; }
-    if (!await customConfirm(`${selectedIds.size}개 항목의 Jira 상태를 역방향 동기화하시겠습니까?`)) return;
-    showBulkProgress('Jira 동기화 중...', selectedIds.size);
+    if (!await customConfirm('선택한 URL을 SmartWay 티켓으로부터 상태를 가져와 동기화 시킵니다. 진행하시겠습니까?')) return;
+    const total = selectedIds.size;
+    showBulkProgress('SmartWay 동기화 중...', 0);
+    const sub = document.getElementById('bulkOverlaySub');
     let success = 0, fail = 0;
+    const updateJiraProgress = () => {
+      sub.textContent = `${success + fail} / ${total}건 처리됨${fail > 0 ? ` · 오류 ${fail}건` : ''}`;
+    };
+    updateJiraProgress();
     for (const id of selectedIds) {
       try {
-        await fetch(`/api/jira/pull/record/${id}`, { method: 'POST' });
-        success++;
-        updateBulkProgress(success + fail);
+        const res = await fetch(`/api/jira/pull/record/${id}`, { method: 'POST' });
+        if (!res.ok) { fail++; } else { success++; }
       } catch(e) { fail++; }
+      updateJiraProgress();
     }
     hideBulkProgress();
-    showToast(`Jira 동기화 완료: 성공 ${success}건, 실패 ${fail}건`, success > 0 ? 'success' : 'error');
+    const msg = fail > 0
+      ? `SmartWay 동기화 완료: 성공 ${success}건, 실패 ${fail}건`
+      : `SmartWay 동기화 완료: ${success}건`;
+    showToast(msg, success > 0 ? 'success' : 'error');
     clearSelection();
     await refreshAll();
   }
@@ -2423,8 +2451,8 @@
   async function repoSyncToJira() {
     const repo = document.getElementById('repoSelect').value;
     if (!repo) { showToast('레포를 선택해 주세요.', 'error'); return; }
-    if (!await customConfirm(`${repo} 레포의 차단대상을 Jira로 발행하시겠습니까?`)) return;
-    showToast('Jira 발행 중...', 'info');
+    if (!await customConfirm(`${repo} 레포의 차단대상을 SmartWay로 발행하시겠습니까?`)) return;
+    showToast('SmartWay 발행 중...', 'info');
     try {
       const res = await adminFetch(`/api/jira/sync/repo/${encodeURIComponent(repo)}`, { method: 'POST' });
       const data = await res.json();
@@ -2437,7 +2465,7 @@
   async function repoSyncFromJira() {
     const repo = document.getElementById('repoSelect').value;
     if (!repo) { showToast('레포를 선택해 주세요.', 'error'); return; }
-    if (!await customConfirm(`${repo} 레포의 Jira 상태를 동기화하시겠습니까?`)) return;
+    if (!await customConfirm(`${repo} 레포의 SmartWay 상태를 동기화하시겠습니까?`)) return;
     try {
       const res = await adminFetch(`/api/jira/pull/repo/${encodeURIComponent(repo)}`, { method: 'POST' });
       const data = await res.json();
@@ -2503,10 +2531,8 @@
     const admin = isAdmin();
     const _ne=document.getElementById('navExtract'); if(_ne) _ne.style.display = admin ? '' : 'none';
     document.getElementById('navSettings').style.display = admin ? '' : 'none';
-    const _np = document.getElementById('navProposal'); if (_np) _np.style.display = admin ? '' : 'none';
     document.getElementById('adminBtn').textContent = admin ? '🔓 관리자 해제' : '🔑 관리자';
-    const _ub = document.getElementById('bulkUnblockBtn'); if(_ub) _ub.style.display = admin ? 'inline-block' : 'none';
-    const _db = document.getElementById('bulkDeleteBtn'); if(_db) _db.style.display = admin ? 'inline-block' : 'none';
+    const _dg = document.getElementById('bulkDeleteGroup'); if(_dg) _dg.style.display = admin ? 'inline-flex' : 'none';
     const _ug = document.getElementById('uploadGroup'); if(_ug) _ug.style.display = admin ? 'inline-flex' : 'none';
     if (typeof renderRows === 'function' && filteredApis.length) renderRows(filteredApis);
   }
