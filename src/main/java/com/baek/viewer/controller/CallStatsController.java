@@ -1,6 +1,6 @@
 package com.baek.viewer.controller;
 
-import com.baek.viewer.repository.ApiRecordRepository;
+import com.baek.viewer.repository.ApmUrlStatRepository;
 import com.baek.viewer.repository.ApmCallDataRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,11 +25,11 @@ public class CallStatsController {
 
     private static final Logger log = LoggerFactory.getLogger(CallStatsController.class);
     private final ApmCallDataRepository apmRepo;
-    private final ApiRecordRepository apiRecordRepo;
+    private final ApmUrlStatRepository apmUrlStatRepo;
 
-    public CallStatsController(ApmCallDataRepository apmRepo, ApiRecordRepository apiRecordRepo) {
+    public CallStatsController(ApmCallDataRepository apmRepo, ApmUrlStatRepository apmUrlStatRepo) {
         this.apmRepo = apmRepo;
-        this.apiRecordRepo = apiRecordRepo;
+        this.apmUrlStatRepo = apmUrlStatRepo;
     }
 
     private LocalDate parse(String s, LocalDate def) {
@@ -142,7 +142,7 @@ public class CallStatsController {
 
         String period = detectPresetPeriod(fromDate, toDate);
         if (period != null) {
-            // ── fast path: api_record 사전집계 ────────────────────────────
+            // ── fast path: apm_url_stat 사전집계 (api_record 분석 여부 무관, APM 전체 URL) ──
             String sortField = switch (period) {
                 case "week"  -> "callCountWeek";
                 case "month" -> "callCountMonth";
@@ -150,7 +150,8 @@ public class CallStatsController {
             };
             Pageable pageable = PageRequest.of(pageNum, pageSize,
                     Sort.by(Sort.Direction.DESC, sortField).and(Sort.by("apiPath").ascending()));
-            Page<Object[]> pageResult = apiRecordRepo.pageCallStats(repoArg, qArg, pageable);
+            Page<Object[]> pageResult = apmUrlStatRepo.pageStats(repoArg, qArg, pageable);
+            // 반환 컬럼: [0]=repositoryName, [1]=apiPath, [2]=callCount, [3]=callCountMonth, [4]=callCountWeek
             int callIdx = switch (period) {
                 case "week"  -> 4;
                 case "month" -> 3;
@@ -174,7 +175,7 @@ public class CallStatsController {
             result.put("size", pageResult.getSize());
             result.put("totalElements", pageResult.getTotalElements());
             result.put("totalPages", pageResult.getTotalPages());
-            result.put("source", "api_record");
+            result.put("source", "apm_url_stat");
             result.put("period", period);
             result.put("fast", true);
             return ResponseEntity.ok(result);

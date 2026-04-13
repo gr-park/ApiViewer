@@ -1,9 +1,11 @@
 package com.baek.viewer.service;
 
 import com.baek.viewer.model.ApmCallData;
+import com.baek.viewer.model.ApmUrlStat;
 import com.baek.viewer.model.ApiRecord;
 import com.baek.viewer.model.RepoConfig;
 import com.baek.viewer.repository.ApmCallDataRepository;
+import com.baek.viewer.repository.ApmUrlStatRepository;
 import com.baek.viewer.repository.ApiRecordRepository;
 import com.baek.viewer.repository.RepoConfigRepository;
 import org.slf4j.Logger;
@@ -15,6 +17,7 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.stream.Collectors;
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
@@ -25,6 +28,7 @@ public class ApmCollectionService {
     private static final Logger log = LoggerFactory.getLogger(ApmCollectionService.class);
 
     private final ApmCallDataRepository apmRepo;
+    private final ApmUrlStatRepository apmUrlStatRepo;
     private final ApiRecordRepository apiRecordRepo;
     private final RepoConfigRepository repoConfigRepo;
     private final WhatapApmService whatapApmService;
@@ -51,10 +55,12 @@ public class ApmCollectionService {
     @Autowired @Lazy
     private ApmCollectionService self;
 
-    public ApmCollectionService(ApmCallDataRepository apmRepo, ApiRecordRepository apiRecordRepo,
+    public ApmCollectionService(ApmCallDataRepository apmRepo, ApmUrlStatRepository apmUrlStatRepo,
+                          ApiRecordRepository apiRecordRepo,
                           RepoConfigRepository repoConfigRepo,
                           WhatapApmService whatapApmService, JenniferApmService jenniferApmService) {
         this.apmRepo = apmRepo;
+        this.apmUrlStatRepo = apmUrlStatRepo;
         this.apiRecordRepo = apiRecordRepo;
         this.repoConfigRepo = repoConfigRepo;
         this.whatapApmService = whatapApmService;
@@ -426,6 +432,45 @@ public class ApmCollectionService {
         return Map.of("updated", updated, "zeroed", zeroed, "totalApis", totals.size());
     }
 
+    /**
+     * apm_call_data 전체 기준으로 URL별 호출건수를 apm_url_stat에 집계.
+     * api_record(URL 분석) 여부와 무관하게 APM에 수집된 모든 URL을 대상으로 함.
+     * call-stats.html fast-path 데이터 소스.
+     *
+     * 처리: 레포 기존 행 전체 삭제 → 재삽입 (upsert 대안).
+     */
+    @Transactional
+    public void aggregateToApmUrlStat(String repoName) {
+        log.info("[URL 통계 집계] 시작: repo={}", repoName);
+        LocalDate today = LocalDate.now();
+        LocalDate yearAgo  = today.minusDays(365);
+        LocalDate monthAgo = today.minusDays(30);
+        LocalDate weekAgo  = today.minusDays(7);
+
+        Map<String, long[]> totals = new HashMap<>(); // apiPath → [year, month, week]
+        accumulateMaxPerDate(apmRepo.sumByRepoAndDateRange(repoName, yearAgo, today),  totals, 0);
+        accumulateMaxPerDate(apmRepo.sumByRepoAndDateRange(repoName, monthAgo, today), totals, 1);
+        accumulateMaxPerDate(apmRepo.sumByRepoAndDateRange(repoName, weekAgo, today),  totals, 2);
+
+        // 기존 레포 행 삭제 후 재삽입
+        apmUrlStatRepo.deleteByRepo(repoName);
+
+        LocalDateTime now = LocalDateTime.now();
+        List<ApmUrlStat> stats = new ArrayList<>(totals.size());
+        for (Map.Entry<String, long[]> e : totals.entrySet()) {
+            ApmUrlStat stat = new ApmUrlStat();
+            stat.setRepositoryName(repoName);
+            stat.setApiPath(e.getKey());
+            stat.setCallCount(e.getValue()[0]);
+            stat.setCallCountMonth(e.getValue()[1]);
+            stat.setCallCountWeek(e.getValue()[2]);
+            stat.setUpdatedAt(now);
+            stats.add(stat);
+        }
+        apmUrlStatRepo.saveAll(stats);
+        log.info("[URL 통계 집계] 완료: repo={}, URL={}개", repoName, stats.size());
+    }
+
     /** 레포별 APM 일별 데이터 조회 (source 지정 시 해당 source만) */
     public List<ApmCallData> getCallData(String repoName, LocalDate from, LocalDate to, String source) {
         if (source == null || source.isBlank() || "ALL".equalsIgnoreCase(source)) {
@@ -559,6 +604,7 @@ public class ApmCollectionService {
                 try {
                     addApmLog("INFO", r.getRepoName() + " 집계(aggregate) 실행 중...");
                     self.aggregateToRecords(r.getRepoName());
+                    self.aggregateToApmUrlStat(r.getRepoName());
                     addApmLog("OK", r.getRepoName() + " 집계 완료");
                 } catch (Exception e) { addApmLog("ERROR", r.getRepoName() + " 집계 실패: " + e.getMessage()); }
                 perRepo.add(r.getRepoName() + ":" + (totalGenerated - beforeTotal));
@@ -585,12 +631,16 @@ public class ApmCollectionService {
         if (allRepos && allSources) {
             deleted = (int) apmRepo.count();
             apmRepo.bulkDeleteAll();
+            apmUrlStatRepo.deleteAllRows();  // 전체 삭제 시 통계도 함께 초기화
         } else if (allRepos) {
             deleted = apmRepo.bulkDeleteBySource(normalizeSource(source));
+            // source별 삭제는 다른 source 데이터가 남으므로 통계는 유지
         } else if (allSources) {
             deleted = apmRepo.bulkDeleteByRepo(repoName);
+            apmUrlStatRepo.deleteByRepo(repoName);  // 레포 전체 삭제 시 통계도 삭제
         } else {
             deleted = apmRepo.bulkDeleteByRepoAndSource(repoName, normalizeSource(source));
+            // source별 삭제는 다른 source 데이터가 남으므로 통계는 유지
         }
         log.info("[APM 데이터 삭제 완료] {}건 ({})", deleted, (allRepos && allSources) ? "TRUNCATE" : "bulk DELETE");
         return Map.of("deleted", deleted);
