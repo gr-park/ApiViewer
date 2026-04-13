@@ -174,8 +174,13 @@
     [data-theme="dark"] [style*="background:#fef2f2"] { background:#2d1515 !important; }
     [data-theme="dark"] [style*="background:#fff7ed"] { background:#2d1b0a !important; }
     [data-theme="dark"] [style*="background:#f8fafc"] { background:#1e293b !important; }
+    [data-theme="dark"] [style*="background:#fafbfc"] { background:#1e293b !important; }
     [data-theme="dark"] [style*="color:#991b1b"] { color:#f87171 !important; }
     [data-theme="dark"] [style*="color:#7c2d12"] { color:#fb923c !important; }
+    /* 배치 스케줄 카드 — data-enabled 기반 다크모드 */
+    [data-theme="dark"] [data-enabled="true"]  { background:#052e16 !important; border-color:#4ade80 !important; }
+    [data-theme="dark"] [data-enabled="false"] { background:#1e293b !important; border-color:#334155 !important; }
+    [data-theme="dark"] [data-enabled="false"] span[style*="border-radius:50%"] { background:#475569 !important; }
   </style>
   <script src="/js/dialog.js"></script>
   <script src="/js/darkmode.js"></script>
@@ -1590,16 +1595,15 @@ function updateAdminBadge(valid) {
         const dayOpts = ['MON','TUE','WED','THU','FRI','SAT','SUN'].map(d =>
           `<option value="${d}" ${s.runDay===d?'selected':''}>${{MON:'월',TUE:'화',WED:'수',THU:'목',FRI:'금',SAT:'토',SUN:'일'}[d]}</option>`
         ).join('');
-        const _dark = document.documentElement.getAttribute('data-theme') === 'dark';
-        const bgColor = s.enabled ? (_dark ? '#052e16' : '#f0fdf4') : (_dark ? '#1e293b' : '#fff');
+        const bgColor = s.enabled ? '#f0fdf4' : '#fff';
         const borderColor = s.enabled ? '#86efac' : 'var(--border)';
         const statusDot = s.enabled ? '<span style="width:8px;height:8px;border-radius:50%;background:#22c55e;display:inline-block;"></span>' : '<span style="width:8px;height:8px;border-radius:50%;background:#d1d5db;display:inline-block;"></span>';
-        return `<div style="border:2px solid ${borderColor};border-radius:8px;padding:12px 16px;background:${bgColor};" id="sch-${s.id}">
+        return `<div style="border:2px solid ${borderColor};border-radius:8px;padding:12px 16px;background:${bgColor};" id="sch-${s.id}" data-enabled="${s.enabled}">
           <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;">
             ${statusDot}
             <input type="checkbox" id="schChk-${s.id}" ${s.enabled?'checked':''} onclick="event.stopPropagation();toggleSchedule(${s.id},this.checked)" style="width:16px;height:16px;cursor:pointer;">
             <span style="font-size:13px;font-weight:700;">${esc(s.description||s.jobType)}</span>
-            ${s.enabled ? `<span style="font-size:10px;color:${document.documentElement.getAttribute('data-theme')==='dark'?'#4ade80':'#16a34a'};font-weight:600;">활성</span>` : '<span style="font-size:10px;color:#94a3b8;">비활성</span>'}
+            ${s.enabled ? '<span style="font-size:10px;color:#16a34a;font-weight:600;">활성</span>' : '<span style="font-size:10px;color:#94a3b8;">비활성</span>'}
           </div>
           <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;">
             <label class="field" style="min-width:100px;">실행 주기
@@ -1679,13 +1683,13 @@ function updateAdminBadge(valid) {
       // 전체 리렌더링 대신 해당 카드만 스타일 변경 (스크롤 유지)
       const card = document.getElementById('sch-'+id);
       if (card) {
-        const _dark = document.documentElement.getAttribute('data-theme') === 'dark';
+        card.dataset.enabled = String(enabled);
         card.style.borderColor = enabled ? '#86efac' : 'var(--border)';
-        card.style.background = enabled ? (_dark ? '#052e16' : '#f0fdf4') : (_dark ? '#1e293b' : '#fff');
+        card.style.background = enabled ? '#f0fdf4' : '#fff';
         const dot = card.querySelector('span[style*="border-radius:50%"]');
         if (dot) dot.style.background = enabled ? '#22c55e' : '#d1d5db';
         const label = card.querySelector('span[style*="font-size:10px"]');
-        if (label) { label.textContent = enabled ? '활성' : '비활성'; label.style.color = enabled ? (_dark ? '#4ade80' : '#16a34a') : '#94a3b8'; label.style.fontWeight = enabled ? '600' : '400'; }
+        if (label) { label.textContent = enabled ? '활성' : '비활성'; label.style.color = enabled ? '#16a34a' : '#94a3b8'; label.style.fontWeight = enabled ? '600' : '400'; }
       }
     } catch(e) { showToast('변경 실패','error'); }
   }
