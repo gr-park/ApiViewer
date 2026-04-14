@@ -107,13 +107,17 @@ public class GlobalConfig {
     @Column(name = "bitbucket_token", columnDefinition = "TEXT")
     private String bitbucketToken;
 
-    /** 레포 목록 조회 시 페이지당 건수 (기본 25) */
+    /** 레포 목록 조회 시 페이지당 건수 (기본 100) */
     @Column(name = "list_repo_limit")
-    private Integer listRepoLimit = 25;
+    private Integer listRepoLimit = 100;
 
     /** 클론받을 로컬 디렉토리 경로 */
     @Column(name = "clone_local_path", length = 1000)
     private String cloneLocalPath;
+
+    /** git-bash.exe 경로 (Windows 전용, 예: C:\Program Files\Git\git-bash.exe) */
+    @Column(name = "git_bash_path", length = 1000)
+    private String gitBashPath;
 
 
     public Long getId() { return id; }
@@ -173,8 +177,10 @@ public class GlobalConfig {
     public void setBitbucketUrl(String v) { this.bitbucketUrl = v; }
     public String getBitbucketToken() { return bitbucketToken; }
     public void setBitbucketToken(String v) { this.bitbucketToken = v; }
-    public Integer getListRepoLimit() { return listRepoLimit != null ? listRepoLimit : 25; }
+    public Integer getListRepoLimit() { return listRepoLimit != null ? listRepoLimit : 100; }
     public void setListRepoLimit(Integer v) { this.listRepoLimit = v; }
     public String getCloneLocalPath() { return cloneLocalPath; }
     public void setCloneLocalPath(String v) { this.cloneLocalPath = v; }
+    public String getGitBashPath() { return gitBashPath; }
+    public void setGitBashPath(String v) { this.gitBashPath = v; }
 }

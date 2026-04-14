@@ -41,6 +41,7 @@ public class ReposYamlConfig {
         private String bitbucketToken;
         private Integer listRepoLimit;
         private String cloneLocalPath;
+        private String gitBashPath;
 
         public PeriodGlobal getPeriod() { return period; }
         public void setPeriod(PeriodGlobal period) { this.period = period; }
@@ -88,6 +89,8 @@ public class ReposYamlConfig {
         public void setListRepoLimit(Integer v) { this.listRepoLimit = v; }
         public String getCloneLocalPath() { return cloneLocalPath; }
         public void setCloneLocalPath(String v) { this.cloneLocalPath = v; }
+        public String getGitBashPath() { return gitBashPath; }
+        public void setGitBashPath(String v) { this.gitBashPath = v; }
     }
 
     public static class PeriodGlobal {

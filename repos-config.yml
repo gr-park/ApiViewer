@@ -41,6 +41,7 @@ global:
   bitbucketToken: ""              # Bitbucket Bearer 토큰 (Personal Access Token)
   listRepoLimit: 25               # 레포 목록 조회 시 페이지당 건수
   cloneLocalPath: ""              # 클론받을 로컬 디렉토리 경로 (예: /Users/dev/repos)
+  gitBashPath: ""                 # git-bash.exe 경로 (Windows, 예: C:\Program Files\Git\git-bash.exe)
 
   # 와탭 조회 파라미터 (ptotal: 전체 건수 상한, psize: 한 페이지 건수)
   whatapPtotal: 100

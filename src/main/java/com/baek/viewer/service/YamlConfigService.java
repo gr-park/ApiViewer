@@ -118,6 +118,7 @@ public class YamlConfigService {
             if (g.getBitbucketToken() != null) gc.setBitbucketToken(g.getBitbucketToken());
             if (g.getListRepoLimit() != null) gc.setListRepoLimit(g.getListRepoLimit());
             if (g.getCloneLocalPath() != null) gc.setCloneLocalPath(g.getCloneLocalPath());
+            if (g.getGitBashPath() != null) gc.setGitBashPath(g.getGitBashPath());
 
             // teams, 와탭/제니퍼 공통 프로필 JSON 저장
             try {
