@@ -1229,8 +1229,55 @@ flowchart TD
     </div>
   </div>
 
-  <!-- 섹션 11: 테이블/컬럼 명세서 -->
-  <div class="section-title">11. 테이블 / 컬럼 명세서</div>
+  <!-- 섹션 11: 내용(관련 메뉴/기능) 판정 플로우차트 (개발자 참고용) -->
+  <div class="section-title" style="margin-top:0;">
+    11. 내용(관련 메뉴/기능) 판정 플로우차트
+  </div>
+  <div class="card diagram-card">
+    <div class="diagram-note">
+      분석현황 <b>"내용"</b> 컬럼 및 상세화면 <b>"관련 메뉴(또는 기능)"</b>에 표시되는 값을 결정하는 우선순위 판정 흐름입니다.
+      <b>사용자 수정값(descriptionOverride)</b>이 최우선이며, 값이 없으면 소스 파싱값을 단계별로 내려가며 확인합니다.
+      가장 먼저 값이 존재하는 항목이 선택되고, 모두 비어 있으면 공란으로 표시됩니다.
+    </div>
+    <div class="mermaid">
+flowchart TD
+    START(["📝 내용 값 결정 시작"]) --> P1{"PRIORITY 1\ndescriptionOverride\n(사용자 수정값)\n존재?"}
+
+    P1 -->|"Yes — 직접 입력됨"| V1["🟣 descriptionOverride 사용\n(현황/상세 화면에서 입력한 값)"]
+    P1 -->|"No — 비어있음"| P2{"PRIORITY 2\n@ApiOperation(value=…)\n존재?"}
+
+    P2 -->|"Yes"| V2["🔵 @ApiOperation.value 사용\n(Swagger 어노테이션)"]
+    P2 -->|"No"| P3{"PRIORITY 3\n@Description 또는\n/** @description */\n존재?"}
+
+    P3 -->|"Yes"| V3["🟢 Description 주석 사용\n(메소드 위 어노테이션/태그)"]
+    P3 -->|"No"| P4{"PRIORITY 4\n컨트롤러 클래스\nJavaDoc 주석 존재?"}
+
+    P4 -->|"Yes"| V4["🟡 컨트롤러 주석 첫 문장 사용\n(클래스 최상단 /** … */)"]
+    P4 -->|"No"| V5["⚪ 빈 값(공란)\n— FALLBACK —"]
+
+    RESULT(["✅ 내용 값 확정\napi_record 조회 시 표시"])
+    V1 --> RESULT
+    V2 --> RESULT
+    V3 --> RESULT
+    V4 --> RESULT
+    V5 --> RESULT
+
+    NOTE["💡 descriptionOverride를 비우면\n다시 자동 파싱 우선순위(P2~P4)로 내려감\n※ 차단완료 상태는 수정 불가"]
+    RESULT -.-> NOTE
+
+    style START  fill:#dbeafe,stroke:#93c5fd,color:#1e40af
+    style RESULT fill:#dcfce7,stroke:#86efac,color:#166534
+    style V1 fill:#f3e8ff,stroke:#c4b5fd,color:#6b21a8
+    style V2 fill:#dbeafe,stroke:#93c5fd,color:#1e40af
+    style V3 fill:#dcfce7,stroke:#86efac,color:#166534
+    style V4 fill:#fef9c3,stroke:#fde047,color:#713f12
+    style V5 fill:#f1f5f9,stroke:#cbd5e1,color:#475569
+    style NOTE fill:#fff7ed,stroke:#fdba74,color:#9a3412
+    </div>
+  </div>
+
+  <!-- 섹션 12: 테이블/컬럼 명세서 -->
+  <div class="section-title">12. 테이블 / 컬럼 명세서</div>
 
   <!-- api_record -->
   <div class="card" style="margin-bottom:14px;">
