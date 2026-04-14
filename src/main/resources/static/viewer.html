@@ -451,8 +451,8 @@
       <button class="btn-apply" onclick="bulkClearStatusChange()" style="background:#6b7280;">확인</button>
     </span>
 
-    <!-- 그룹4: Jira -->
-    <span class="bulk-group">
+    <!-- 그룹4: Jira (관리자 전용) -->
+    <span class="bulk-group" id="jiraBulkGroup">
       <span class="bulk-label">SmartWay</span>
       <button class="btn-apply" id="bulkJiraSyncBtn" onclick="bulkSyncToJira()" style="background:var(--purple);">발행</button>
       <button class="btn-apply" id="bulkJiraPullBtn" onclick="bulkPullFromJira()" style="background:#7c3aed;">동기화</button>
@@ -2396,10 +2396,10 @@
           <div class="detail-label">마지막 동기화</div>
           <div class="detail-value">${r.jiraSyncedAt ? fmtDt(r.jiraSyncedAt) : '-'}</div>
         </div>
-        <div style="margin-top:10px;display:flex;gap:8px;">
+        ${isAdmin() ? `<div style="margin-top:10px;display:flex;gap:8px;">
           <button class="btn btn-sm" style="background:var(--purple);color:#fff;" onclick="syncSingleToJira(${r.id})">🔗 SmartWay 발행</button>
           ${r.jiraIssueKey ? `<button class="btn btn-sm btn-ghost" onclick="pullSingleFromJira(${r.id})">🔄 역방향 동기화</button>` : ''}
-        </div>
+        </div>` : ''}
       </div>
       <div class="detail-section">
         <div class="detail-section-title">소스 변경 이력 (최근 5개)</div>
@@ -2545,7 +2545,7 @@
 
   async function syncSingleToJira(id) {
     try {
-      const res = await fetch(`/api/jira/sync/record/${id}`, { method: 'POST' });
+      const res = await adminFetch(`/api/jira/sync/record/${id}`, { method: 'POST' });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || '발행 실패');
       showToast(`SmartWay 발행 완료: ${data.issueKey || ''}`, 'success');
@@ -2555,7 +2555,7 @@
 
   async function pullSingleFromJira(id) {
     try {
-      const res = await fetch(`/api/jira/pull/record/${id}`, { method: 'POST' });
+      const res = await adminFetch(`/api/jira/pull/record/${id}`, { method: 'POST' });
       if (!res.ok) { const d = await res.json().catch(()=>({})); throw new Error(d.error || '동기화 실패'); }
       showToast('역방향 동기화 완료', 'success');
       openDetail(id);
@@ -2575,7 +2575,7 @@
     updateJiraProgress();
     for (const id of selectedIds) {
       try {
-        const res = await fetch(`/api/jira/sync/record/${id}`, { method: 'POST' });
+        const res = await adminFetch(`/api/jira/sync/record/${id}`, { method: 'POST' });
         if (!res.ok) { fail++; } else { success++; }
       } catch(e) { fail++; }
       updateJiraProgress();
@@ -2602,7 +2602,7 @@
     updateJiraProgress();
     for (const id of selectedIds) {
       try {
-        const res = await fetch(`/api/jira/pull/record/${id}`, { method: 'POST' });
+        const res = await adminFetch(`/api/jira/pull/record/${id}`, { method: 'POST' });
         if (!res.ok) { fail++; } else { success++; }
       } catch(e) { fail++; }
       updateJiraProgress();
@@ -2702,6 +2702,7 @@
     document.getElementById('adminBtn').textContent = admin ? '🔓 관리자 해제' : '🔑 관리자';
     const _dg = document.getElementById('bulkDeleteGroup'); if(_dg) _dg.style.display = admin ? 'inline-flex' : 'none';
     const _ug = document.getElementById('uploadGroup'); if(_ug) _ug.style.display = admin ? 'inline-flex' : 'none';
+    const _jg = document.getElementById('jiraBulkGroup'); if(_jg) _jg.style.display = admin ? '' : 'none';
     if (typeof renderRows === 'function' && filteredApis.length) renderRows(filteredApis);
   }
   async function toggleAdmin() {
