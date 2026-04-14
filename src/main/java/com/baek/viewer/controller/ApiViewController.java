@@ -439,6 +439,7 @@ public class ApiViewController {
         m.put("statusChangeLog",    r.getStatusChangeLog());
         m.put("teamOverride",       r.getTeamOverride());
         m.put("managerOverride",    r.getManagerOverride());
+        m.put("descriptionOverride", r.getDescriptionOverride());
         m.put("gitHistory",         r.getGitHistory());
         // Excel 내보내기 / 상세 표시에 필요한 TEXT 필드 (페이지 단위라 부담 작음)
         m.put("fullComment",        r.getFullComment());
@@ -657,6 +658,12 @@ public class ApiViewController {
             if (body.containsKey("memo"))            { r.setMemo(body.get("memo") != null ? body.get("memo").toString() : null); anyChanged = true; }
             if (body.containsKey("teamOverride"))    { r.setTeamOverride(body.get("teamOverride") != null ? body.get("teamOverride").toString() : null); anyChanged = true; }
             if (body.containsKey("managerOverride")) { r.setManagerOverride(body.get("managerOverride") != null ? body.get("managerOverride").toString() : null); anyChanged = true; }
+            if (body.containsKey("descriptionOverride")) {
+                Object v = body.get("descriptionOverride");
+                String s = v == null ? null : v.toString().trim();
+                r.setDescriptionOverride(s == null || s.isEmpty() ? null : s);
+                anyChanged = true;
+            }
             if (body.containsKey("reviewResult"))    { r.setReviewResult(body.get("reviewResult") != null ? body.get("reviewResult").toString() : null); anyChanged = true; reviewChanged = true; }
             if (body.containsKey("reviewOpinion"))   { r.setReviewOpinion(body.get("reviewOpinion") != null ? body.get("reviewOpinion").toString() : null); anyChanged = true; reviewChanged = true; }
             if (body.containsKey("cboScheduledDate")) {

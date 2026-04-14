@@ -206,6 +206,10 @@ public class ApiRecord {
     @Column(name = "manager_override", length = 100)
     private String managerOverride;
 
+    /** 내용(관련 메뉴/기능) 오버라이드 — 자동 파싱값(ApiOperation/DescriptionTag/컨트롤러주석)보다 우선 사용 */
+    @Column(name = "description_override", columnDefinition = "TEXT")
+    private String descriptionOverride;
+
     @Column(name = "git_history", columnDefinition = "TEXT")
     private String gitHistory; // JSON: [{"date":"...","author":"...","message":"..."},...]
 
@@ -335,6 +339,8 @@ public class ApiRecord {
     public void setTeamOverride(String teamOverride) { this.teamOverride = teamOverride; }
     public String getManagerOverride() { return managerOverride; }
     public void setManagerOverride(String managerOverride) { this.managerOverride = managerOverride; }
+    public String getDescriptionOverride() { return descriptionOverride; }
+    public void setDescriptionOverride(String descriptionOverride) { this.descriptionOverride = descriptionOverride; }
     public String getBlockTarget() { return blockTarget; }
     public void setBlockTarget(String blockTarget) { this.blockTarget = blockTarget; }
     public String getBlockCriteria() { return blockCriteria; }

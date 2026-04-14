@@ -1361,7 +1361,7 @@
         <td style="font-size:12px;min-width:160px;"><div style="display:flex;align-items:center;gap:4px;"><button class="copy-btn" onclick="copyText(event,'${esc(a.methodName)}')" title="메소드명 복사"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>${esc(a.methodName)}</div></td>
         <!-- 기타 메타 -->
         <td class="git-col">${git1 ? `<span class="git-col-d">${esc(git1.date)}</span> <span class="git-col-a">${esc(git1.author)}</span><br><span class="git-col-m" title="${esc(git1.message)}">${esc(git1.message)}</span>` : '<span style="color:#cbd5e1;">-</span>'}</td>
-        <td class="desc-col" title="${esc(allDesc(a))}">${esc(allDesc(a))}</td>
+        <td class="desc-col ${(locked||isBlocked)?'':'memo-editable'}" onclick="${(locked||isBlocked)?'':('editField(this,'+a.id+',&apos;descriptionOverride&apos;)')}" title="${(locked||isBlocked)?esc(allDesc(a)):'클릭하여 수정 — 자동 파싱값 대신 사용'}" style="font-size:11px;">${esc(allDesc(a))}${a.descriptionOverride ? '<span style=\"display:inline-block;margin-left:4px;padding:0 4px;background:#dbeafe;border:1px solid #93c5fd;border-radius:3px;color:#1e40af;font-size:9px;font-weight:600;vertical-align:middle;\" title=\"사용자 수정됨\">수정</span>' : ''}</td>
         <td style="text-align:right;font-size:12px;">${callCountCell(a, 'total')}</td>
         <td style="text-align:right;font-size:12px;">${callCountCell(a, 'month')}</td>
         <td style="text-align:right;font-size:12px;">${callCountCell(a, 'week')}</td>
@@ -1548,34 +1548,64 @@
   }
 
   function editField(td, id, field) {
-    if (td.querySelector('input')) return;
-    const old = td.textContent.trim();
+    if (td.querySelector('input, textarea')) return;
+    // descriptionOverride 는 실제 오버라이드 값(없으면 빈 문자열)을 초기값으로 사용
+    let old;
+    if (field === 'descriptionOverride') {
+      const entry = allApis.find(a => a.id === id);
+      old = entry && entry.descriptionOverride ? entry.descriptionOverride : '';
+    } else {
+      old = td.textContent.trim();
+    }
     td.dataset.oldVal = old;
+    td.dataset.origHtml = td.innerHTML; // 취소 시 복원용
     const isDateField = field === 'cboScheduledDate' || field === 'deployScheduledDate' || field === 'blockedDate';
+    const isLongText = field === 'descriptionOverride';
     const listAttr = field === 'teamOverride' ? 'list="teamsDatalist"' : '';
-    const inputType = isDateField ? 'date' : 'text';
-    td.innerHTML = `<input type="${inputType}" value="${esc(old)}" ${listAttr} style="width:100%;padding:3px 6px;border:1px solid var(--primary);border-radius:4px;font-size:11px;outline:none;"
-      onblur="saveFieldInline(this,${id},'${field}')"
-      onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}if(event.key==='Escape'){this.dataset.cancel='1';this.blur();}">`;
-    td.querySelector('input').focus();
+    if (isLongText) {
+      td.innerHTML = `<textarea rows="2" style="width:100%;padding:3px 6px;border:1px solid var(--primary);border-radius:4px;font-size:11px;outline:none;resize:vertical;font-family:inherit;" placeholder="비우면 자동 파싱값 사용"
+        onblur="saveFieldInline(this,${id},'${field}')"
+        onkeydown="if(event.key==='Escape'){this.dataset.cancel='1';this.blur();}if(event.key==='Enter'&&(event.ctrlKey||event.metaKey)){event.preventDefault();this.blur();}">${esc(old)}</textarea>`;
+    } else {
+      const inputType = isDateField ? 'date' : 'text';
+      td.innerHTML = `<input type="${inputType}" value="${esc(old)}" ${listAttr} style="width:100%;padding:3px 6px;border:1px solid var(--primary);border-radius:4px;font-size:11px;outline:none;"
+        onblur="saveFieldInline(this,${id},'${field}')"
+        onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}if(event.key==='Escape'){this.dataset.cancel='1';this.blur();}">`;
+    }
+    const el = td.querySelector('input, textarea');
+    el.focus();
+    if (el.select) el.select();
   }
   async function saveFieldInline(input, id, field) {
     const td = input.parentElement;
     const old = td.dataset.oldVal || '';
-    if (input.dataset.cancel) { td.textContent = old; return; }
+    const origHtml = td.dataset.origHtml;
+    if (input.dataset.cancel) {
+      if (origHtml !== undefined) td.innerHTML = origHtml; else td.textContent = old;
+      return;
+    }
     const val = input.value.trim();
     try {
       const body = {}; body[field] = val || null;
       const res = await fetch(`/api/db/record/${id}`, { method:'PATCH', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || '저장 실패');
-      td.textContent = val;
-      // 인메모리 데이터만 갱신 (전체 리렌더링 없이)
+      // 인메모리 데이터 갱신
       const entry = allApis.find(a => a.id === id);
       if (entry) entry[field] = val || null;
+      // 표시값 갱신: descriptionOverride 는 allDesc 재계산 + 수정 배지
+      if (field === 'descriptionOverride' && entry) {
+        const shown = allDesc(entry);
+        td.innerHTML = esc(shown) + (entry.descriptionOverride
+          ? '<span style="display:inline-block;margin-left:4px;padding:0 4px;background:#dbeafe;border:1px solid #93c5fd;border-radius:3px;color:#1e40af;font-size:9px;font-weight:600;vertical-align:middle;" title="사용자 수정됨">수정</span>'
+          : '');
+        td.title = '클릭하여 수정 — 자동 파싱값 대신 사용';
+      } else {
+        td.textContent = val;
+      }
       showToast('저장 완료', 'success');
     } catch(e) {
-      td.textContent = old;
+      if (origHtml !== undefined) td.innerHTML = origHtml; else td.textContent = old;
       showToast(e.message || '저장 실패', 'error');
     }
   }
@@ -2021,8 +2051,48 @@
     return '';
   }
 
-  /** 내용: 우선순위 기반 — 첫 번째 비어있지 않은 값 사용 */
+  /** 상세 모달 — 내용 오버라이드 저장 */
+  async function saveDetailDescOverride(id) {
+    const ta = document.getElementById('detailDescOverride');
+    if (!ta) return;
+    const val = ta.value.trim();
+    try {
+      const res = await fetch(`/api/db/record/${id}`, {
+        method:'PATCH',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({ descriptionOverride: val || null })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || '저장 실패');
+      const entry = allApis.find(a => a.id === id);
+      if (entry) entry.descriptionOverride = val || null;
+      // 상세 모달 내 표시값 갱신
+      const shown = document.getElementById('detailDescShown');
+      if (shown && entry) shown.textContent = allDesc(entry) || '-';
+      // 목록 내 해당 행의 내용 셀도 갱신 (재조회 없이)
+      const row = document.getElementById(`row-${id}`);
+      if (row) {
+        const descTd = row.querySelector('td.desc-col');
+        if (descTd && entry) {
+          descTd.innerHTML = esc(allDesc(entry)) + (entry.descriptionOverride
+            ? '<span style="display:inline-block;margin-left:4px;padding:0 4px;background:#dbeafe;border:1px solid #93c5fd;border-radius:3px;color:#1e40af;font-size:9px;font-weight:600;vertical-align:middle;" title="사용자 수정됨">수정</span>'
+            : '');
+        }
+      }
+      showToast('저장 완료', 'success');
+    } catch(e) {
+      showToast(e.message || '저장 실패', 'error');
+    }
+  }
+  function clearDetailDescOverride(id) {
+    const ta = document.getElementById('detailDescOverride');
+    if (ta) ta.value = '';
+    saveDetailDescOverride(id);
+  }
+
+  /** 내용: 우선순위 기반 — 사용자 오버라이드 → 첫 번째 비어있지 않은 자동 파싱값 */
   function allDesc(a) {
+    if (a.descriptionOverride && a.descriptionOverride !== '-') return a.descriptionOverride;
     if (a.apiOperationValue && a.apiOperationValue !== '-') return a.apiOperationValue;
     if (a.descriptionTag && a.descriptionTag !== '-') return a.descriptionTag;
     if (a.controllerComment && a.controllerComment !== '-') return a.controllerComment;
@@ -2321,7 +2391,20 @@
       <div class="detail-section">
         <div class="detail-section-title">관련 메뉴(또는 기능) / 참고용 주석</div>
         <div class="detail-grid">
-          <div class="detail-label">관련 메뉴(또는 기능)</div><div class="detail-value" style="font-weight:600;">${esc(allDesc(r)) || '-'}</div>
+          <div class="detail-label">관련 메뉴(또는 기능)</div>
+          <div class="detail-value" style="font-weight:600;">
+            <span id="detailDescShown">${esc(allDesc(r)) || '-'}</span>
+            ${r.descriptionOverride ? '<span style="display:inline-block;margin-left:6px;padding:1px 6px;background:#dbeafe;border:1px solid #93c5fd;border-radius:3px;color:#1e40af;font-size:10px;font-weight:600;" title="사용자 수정됨">수정</span>' : ''}
+          </div>
+          <div class="detail-label">내용(수정)</div>
+          <div class="detail-value">
+            <textarea id="detailDescOverride" rows="2" placeholder="비우면 자동 파싱값(ApiOperation/Description/컨트롤러주석) 사용" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:4px;font-size:12px;resize:vertical;font-family:inherit;" ${("차단완료"===r.status)?'disabled':''}>${esc(r.descriptionOverride || '')}</textarea>
+            <div style="display:flex;gap:6px;margin-top:6px;align-items:center;">
+              <button type="button" onclick="saveDetailDescOverride(${r.id})" ${("차단완료"===r.status)?'disabled':''} style="padding:4px 12px;background:var(--primary);color:#fff;border:0;border-radius:4px;font-size:11px;cursor:pointer;${("차단완료"===r.status)?'opacity:.4;cursor:not-allowed;':''}">저장</button>
+              <button type="button" onclick="clearDetailDescOverride(${r.id})" ${("차단완료"===r.status)?'disabled':''} style="padding:4px 12px;background:#fff;color:var(--text);border:1px solid var(--border);border-radius:4px;font-size:11px;cursor:pointer;${("차단완료"===r.status)?'opacity:.4;cursor:not-allowed;':''}">지우기(자동파싱값 사용)</button>
+              <span style="font-size:10px;color:var(--text-muted);">※ 저장 시 현황화면의 "내용" 컬럼에 반영됩니다.</span>
+            </div>
+          </div>
           <div class="detail-label">ApiOperation</div><div class="detail-value">${esc(v(r.apiOperationValue)) || '-'}</div>
           <div class="detail-label">Description주석</div><div class="detail-value">${esc(v(r.descriptionTag)) || '-'}</div>
           <div class="detail-label">메소드주석</div><div class="detail-value">${esc(v(r.fullComment)) || '-'}</div>
