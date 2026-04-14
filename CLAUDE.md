@@ -120,7 +120,7 @@ Spring Boot 기반 웹 애플리케이션. Controller 소스를 파싱하여 URL
 | 발급 | `POST /api/verify-password` → 토큰 반환 |
 | 전송 | `X-Admin-Token` 헤더에 토큰 포함 |
 | 검증 | AdminInterceptor가 보호 경로에서 토큰 검증 |
-| 보호 경로 | `/api/extract`, `/api/config/**`, `/api/logs/**`, `/api/schedule/**`, `/api/db/delete-all`, `/api/db/seed` |
+| 보호 경로 | `/api/extract`, `/api/config/**`, `/api/logs/**`, `/api/schedule/**`, `/api/db/delete-all`, `/api/db/seed`, `/api/mock/**` |
 | 공개 경로 | `GET /api/config/global`, `GET /api/config/repos` |
 
 ---
