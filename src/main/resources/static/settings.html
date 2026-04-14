@@ -538,6 +538,41 @@ function updateAdminBadge(valid) {
 
   <div style="border-top:2px solid var(--border);margin:20px 0;"></div>
 
+  <!-- Mock 분석데이터 생성 -->
+  <div class="card" style="border:1px solid #c7d2fe;">
+    <div class="card-title" style="margin-bottom:12px;">
+      <span class="dot" style="background:#6366f1;"></span>Mock 분석데이터 생성
+      <span style="font-size:11px;font-weight:400;color:var(--text-muted);margin-left:6px;">
+        소스 분석 없이 더미 ApiRecord 생성 — <b>mock-*</b> 네임스페이스 격리 (git_history 포함, 중복 자동 스킵)
+      </span>
+    </div>
+    <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;">
+      <label class="field" style="min-width:220px;">레포명 <span style="font-size:10px;color:var(--text-muted);">(자동으로 mock- prefix 부착)</span>
+        <input id="mockAnRepoName" type="text" placeholder="예: demo → mock-demo" value="demo"
+               style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;">
+      </label>
+      <label class="field" style="min-width:140px;">생성 건수
+        <input id="mockAnCount" type="number" value="100" min="1" max="5000"
+               style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;">
+      </label>
+      <label class="field" style="min-width:220px;">기존 mock 레포
+        <select id="mockAnExistSelect" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;">
+          <option value="">(목록 없음)</option>
+        </select>
+      </label>
+      <button class="btn" style="background:#6366f1;color:#fff;height:34px;" onclick="generateMockAnalysis()">🎲 Mock 분석데이터 생성</button>
+      <button class="btn" style="background:#f59e0b;color:#fff;height:34px;" onclick="deleteMockAnalysis('selected')">🗑 선택 삭제</button>
+      <button class="btn btn-ghost" style="height:34px;" onclick="deleteMockAnalysis('all')">🧹 전체 mock-* 삭제</button>
+    </div>
+    <div style="margin-top:8px;font-size:11px;color:var(--text-muted);">
+      상태 분포: 사용 60% / 검토필요 15% / 최우선 10% / 후순위 8% / 차단완료 7% &nbsp; · &nbsp;
+      호출건수는 0으로 생성 (호출이력은 extract.html Mock APM에서 별도 생성)
+    </div>
+    <div id="mockAnResult" style="margin-top:8px;font-size:12px;"></div>
+  </div>
+
+  <div style="border-top:1px solid var(--border);margin:16px 0;"></div>
+
   <!-- 성능 테스트용 대량 데이터 생성 -->
   <div class="card" style="border:1px solid #fde68a;">
     <div class="card-title" style="margin-bottom:12px;">
@@ -2187,6 +2222,87 @@ function updateAdminBadge(valid) {
     } finally { hideDelProgress(); }
   }
 
+  // ── Mock 분석데이터 생성/삭제 ─────────────────────────────
+  async function loadMockAnRepos() {
+    try {
+      const res = await adminFetch('/api/mock/analysis/repos', { method:'GET' });
+      if (!res.ok) return;
+      const list = await res.json();
+      const sel = document.getElementById('mockAnExistSelect');
+      if (!sel) return;
+      sel.innerHTML = '';
+      if (!list || list.length === 0) {
+        const opt = document.createElement('option');
+        opt.value = '';
+        opt.textContent = '(목록 없음)';
+        sel.appendChild(opt);
+        return;
+      }
+      for (const r of list) {
+        const opt = document.createElement('option');
+        opt.value = r;
+        opt.textContent = r;
+        sel.appendChild(opt);
+      }
+    } catch(e) { /* silent */ }
+  }
+
+  async function generateMockAnalysis() {
+    const repoName = (document.getElementById('mockAnRepoName').value || '').trim();
+    const count = parseInt(document.getElementById('mockAnCount').value, 10);
+    if (!repoName) { showToast('레포명을 입력하세요', 'error'); return; }
+    if (!Number.isFinite(count) || count < 1 || count > 5000) {
+      showToast('생성 건수: 1 ~ 5000', 'error'); return;
+    }
+    if (!await customConfirm(`Mock 분석데이터를 생성합니다.\n\n레포명: mock-${repoName.replace(/^mock-/, '')}\n생성 건수: ${count.toLocaleString()}건\n\n기존과 중복되는 (경로+메서드)는 자동 스킵됩니다.`)) return;
+    if (!await verifyPwPrompt()) return;
+    showDelProgress(`Mock 분석데이터 생성 중...`);
+    try {
+      const url = `/api/mock/analysis/generate?repoName=${encodeURIComponent(repoName)}&count=${count}`;
+      const res = await adminFetch(url, { method:'POST' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || '생성 실패');
+      document.getElementById('mockAnResult').innerHTML =
+        `<span style="color:var(--success);">✓ ${esc(data.repositoryName)} — 생성 ${data.inserted}건 / 중복스킵 ${data.skippedDuplicate}건 (요청 ${data.requested}건)</span>`;
+      showToast(`Mock 분석데이터 ${data.inserted}건 생성`, 'success');
+      await loadMockAnRepos();
+      try { loadDbMonitor(); } catch(e) {}
+    } catch(e) {
+      document.getElementById('mockAnResult').innerHTML = `<span style="color:var(--danger);">${esc(e.message)}</span>`;
+      showToast(e.message || '생성 실패', 'error');
+    } finally { hideDelProgress(); }
+  }
+
+  async function deleteMockAnalysis(scope) {
+    let target;
+    let msg;
+    if (scope === 'all') {
+      target = 'ALL';
+      msg = '모든 mock-* 레포의 분석데이터와 호출이력을 삭제합니다.\n(운영 데이터에는 영향 없음)\n\n계속하시겠습니까?';
+    } else {
+      target = document.getElementById('mockAnExistSelect').value;
+      if (!target) { showToast('삭제할 mock 레포를 선택하세요', 'error'); return; }
+      msg = `"${target}" 레포의 분석데이터와 호출이력을 삭제합니다.\n\n계속하시겠습니까?`;
+    }
+    if (!await customConfirm(msg)) return;
+    if (!await verifyPwPrompt()) return;
+    showDelProgress('Mock 분석데이터 삭제 중...');
+    try {
+      const url = `/api/mock/analysis?repoName=${encodeURIComponent(target)}`;
+      const res = await adminFetch(url, { method:'DELETE' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || '삭제 실패');
+      document.getElementById('mockAnResult').innerHTML =
+        `<span style="color:var(--success);">✓ ${esc(data.target)} — api_record ${data.apiRecordDeleted}건, apm_call_data ${data.apmCallDataDeleted}건 삭제</span>`;
+      showToast('Mock 분석데이터 삭제 완료', 'success');
+      await loadMockAnRepos();
+      try { loadDbMonitor(); } catch(e) {}
+    } catch(e) {
+      document.getElementById('mockAnResult').innerHTML = `<span style="color:var(--danger);">${esc(e.message)}</span>`;
+      showToast(e.message || '삭제 실패', 'error');
+    } finally { hideDelProgress(); }
+  }
+
   // ── 성능 테스트 시드 데이터 ──────────────────────────────
   async function seedTestData() {
     const apis = parseInt(document.getElementById('seedApis').value, 10);
@@ -2430,6 +2546,7 @@ function updateAdminBadge(valid) {
     loadSchedules();
     loadDelRepoOptions();
     loadDbMonitor();
+    loadMockAnRepos();
     loadMailConfig();
     loadTemplates();
   }

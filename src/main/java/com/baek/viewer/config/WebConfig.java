@@ -40,6 +40,7 @@ public class WebConfig implements WebMvcConfigurer {
                         "/api/db/records",         // 선택 레코드 강제 삭제
                         "/api/db/monitor/**",      // DB 모니터링
                         "/api/db/seed",            // 성능테스트용 시드 데이터
+                        "/api/mock/**",            // Mock 분석데이터 생성/삭제
                         "/api/config/**",          // 설정 변경
                         "/api/logs/**",            // 로그 조회
                         "/api/schedule/**",        // 스케줄 관리
