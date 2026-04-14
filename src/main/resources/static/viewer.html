@@ -1337,6 +1337,7 @@
     tbody.innerHTML = list.map((a, idx) => {
       const checked = selectedIds.has(a.id) ? 'checked' : '';
       const locked = a.statusOverridden;
+      const isBlocked = a.status === '차단완료';
       const rowCls  = (selectedIds.has(a.id) ? ' row-selected' : '') + (a.statusChanged ? ' row-changed' : '') + (locked ? ' row-locked' : '');
       const cfg = repoConfigMap[a.repositoryName] || {};
       const git1 = parseGitHistory(a.gitHistory)[0];
