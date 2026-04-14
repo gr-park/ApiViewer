@@ -11,6 +11,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 public interface ApmUrlStatRepository extends JpaRepository<ApmUrlStat, Long> {
 
+    /** 레포별 전체 조회 (대시보드 in-memory 집계용) */
+    java.util.List<ApmUrlStat> findByRepositoryName(String repositoryName);
+
     /** 레포 전체 삭제 (집계 갱신 시 delete + insert 패턴) */
     @Transactional
     @Modifying(clearAutomatically = true, flushAutomatically = true)

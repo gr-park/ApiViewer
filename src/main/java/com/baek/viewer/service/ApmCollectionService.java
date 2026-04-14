@@ -433,42 +433,102 @@ public class ApmCollectionService {
     }
 
     /**
-     * apm_call_data 전체 기준으로 URL별 호출건수를 apm_url_stat에 집계.
+     * apm_call_data 전체 기준으로 URL별 호출/에러 건수를 apm_url_stat에 집계.
      * api_record(URL 분석) 여부와 무관하게 APM에 수집된 모든 URL을 대상으로 함.
-     * call-stats.html fast-path 데이터 소스.
+     * call-stats.html 대시보드 데이터 소스.
      *
+     * 6개 기간: 전일(1일) / 1주 / 1달 / 3달 / 6달 / 1년
      * 처리: 레포 기존 행 전체 삭제 → 재삽입 (upsert 대안).
      */
     @Transactional
     public void aggregateToApmUrlStat(String repoName) {
         log.info("[URL 통계 집계] 시작: repo={}", repoName);
-        LocalDate today = LocalDate.now();
-        LocalDate yearAgo  = today.minusDays(365);
-        LocalDate monthAgo = today.minusDays(30);
-        LocalDate weekAgo  = today.minusDays(7);
+        LocalDate today     = LocalDate.now();
+        LocalDate yesterday = today.minusDays(1);
+        LocalDate weekAgo   = today.minusDays(7);
+        LocalDate monthAgo  = today.minusDays(30);
+        LocalDate month3Ago = today.minusDays(90);
+        LocalDate month6Ago = today.minusDays(180);
+        LocalDate yearAgo   = today.minusDays(365);
 
-        Map<String, long[]> totals = new HashMap<>(); // apiPath → [year, month, week]
-        accumulateMaxPerDate(apmRepo.sumByRepoAndDateRange(repoName, yearAgo, today),  totals, 0);
-        accumulateMaxPerDate(apmRepo.sumByRepoAndDateRange(repoName, monthAgo, today), totals, 1);
-        accumulateMaxPerDate(apmRepo.sumByRepoAndDateRange(repoName, weekAgo, today),  totals, 2);
+        // apiPath → [call_yesterday, call_week, call_month, call_3month, call_6month, call_year]
+        Map<String, long[]> calls = new HashMap<>();
+        // apiPath → [err_yesterday, err_week, err_month, err_3month, err_6month, err_year]
+        Map<String, long[]> errs  = new HashMap<>();
+
+        // 1년치 한 번만 조회 후 기간별로 나눠 집계 (DB 호출 최소화)
+        List<Object[]> yearRows = apmRepo.sumByRepoAndDateRange(repoName, yearAgo, today);
+        accumulatePeriodBoth(yearRows, calls, errs, yesterday, today,   0, 6); // 전일
+        accumulatePeriodBoth(yearRows, calls, errs, weekAgo,   today,   1, 6); // 1주
+        accumulatePeriodBoth(yearRows, calls, errs, monthAgo,  today,   2, 6); // 1달
+        accumulatePeriodBoth(yearRows, calls, errs, month3Ago, today,   3, 6); // 3달
+        accumulatePeriodBoth(yearRows, calls, errs, month6Ago, today,   4, 6); // 6달
+        accumulatePeriodBoth(yearRows, calls, errs, yearAgo,   today,   5, 6); // 1년
 
         // 기존 레포 행 삭제 후 재삽입
         apmUrlStatRepo.deleteByRepo(repoName);
 
+        // 모든 apiPath 수집 (call+err 두 맵의 합집합)
+        Set<String> allPaths = new HashSet<>(calls.keySet());
+        allPaths.addAll(errs.keySet());
+
         LocalDateTime now = LocalDateTime.now();
-        List<ApmUrlStat> stats = new ArrayList<>(totals.size());
-        for (Map.Entry<String, long[]> e : totals.entrySet()) {
+        List<ApmUrlStat> stats = new ArrayList<>(allPaths.size());
+        for (String path : allPaths) {
+            long[] c = calls.getOrDefault(path, new long[6]);
+            long[] e = errs.getOrDefault(path, new long[6]);
             ApmUrlStat stat = new ApmUrlStat();
             stat.setRepositoryName(repoName);
-            stat.setApiPath(e.getKey());
-            stat.setCallCount(e.getValue()[0]);
-            stat.setCallCountMonth(e.getValue()[1]);
-            stat.setCallCountWeek(e.getValue()[2]);
+            stat.setApiPath(path);
+            stat.setCallCountYesterday(c[0]);
+            stat.setCallCountWeek(c[1]);
+            stat.setCallCountMonth(c[2]);
+            stat.setCallCount3Month(c[3]);
+            stat.setCallCount6Month(c[4]);
+            stat.setCallCount(c[5]);
+            stat.setErrorCountYesterday(e[0]);
+            stat.setErrorCountWeek(e[1]);
+            stat.setErrorCountMonth(e[2]);
+            stat.setErrorCount3Month(e[3]);
+            stat.setErrorCount6Month(e[4]);
+            stat.setErrorCountYear(e[5]);
             stat.setUpdatedAt(now);
             stats.add(stat);
         }
         apmUrlStatRepo.saveAll(stats);
         log.info("[URL 통계 집계] 완료: repo={}, URL={}개", repoName, stats.size());
+    }
+
+    /**
+     * sumByRepoAndDateRange 결과에서 특정 날짜 범위(from~to)에 해당하는 행만 필터해
+     * apiPath별 call/error 합산을 calls[idx], errs[idx]에 누적.
+     * source별 중복은 날짜별 MAX(callCount) 방식으로 처리.
+     */
+    private void accumulatePeriodBoth(List<Object[]> rows,
+                                       Map<String, long[]> calls, Map<String, long[]> errs,
+                                       LocalDate from, LocalDate to,
+                                       int idx, int size) {
+        // apiPath → date → [maxCall, correspondingErr]
+        Map<String, Map<LocalDate, long[]>> maxByPathDate = new HashMap<>();
+        for (Object[] row : rows) {
+            LocalDate date = (LocalDate) row[1];
+            if (date.isBefore(from) || date.isAfter(to)) continue;
+            String apiPath = (String) row[0];
+            long call = ((Number) row[3]).longValue();
+            long err  = ((Number) row[4]).longValue();
+            long[] prev = maxByPathDate
+                    .computeIfAbsent(apiPath, k -> new HashMap<>())
+                    .get(date);
+            if (prev == null || call > prev[0]) {
+                maxByPathDate.get(apiPath).put(date, new long[]{call, err});
+            }
+        }
+        maxByPathDate.forEach((apiPath, dateMap) -> {
+            long callSum = 0, errSum = 0;
+            for (long[] v : dateMap.values()) { callSum += v[0]; errSum += v[1]; }
+            calls.computeIfAbsent(apiPath, k -> new long[size])[idx] = callSum;
+            errs.computeIfAbsent(apiPath,  k -> new long[size])[idx] = errSum;
+        });
     }
 
     /** 레포별 APM 일별 데이터 조회 (source 지정 시 해당 source만) */

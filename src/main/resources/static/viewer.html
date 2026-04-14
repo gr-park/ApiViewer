@@ -724,15 +724,17 @@
     '삭제': '삭제'
   };
   let teamsList = [];      // 팀 자동완성 목록
+  let jiraBaseUrl = '';    // Jira base URL (차단근거 티켓 링크용)
   let pageLoadCtrl = null; // 페이지 요청 취소 컨트롤러
 
   // ── 초기화 ────────────────────────────────────────────────
   async function initRepos() {
     try {
-      const [repoRes, cfgRes, globalRes] = await Promise.all([
+      const [repoRes, cfgRes, globalRes, jiraRes] = await Promise.all([
         fetch('/api/db/repositories'),
         fetch('/api/config/repos'),
-        fetch('/api/config/global')
+        fetch('/api/config/global'),
+        fetch('/api/jira/config')
       ]);
       const repos = await repoRes.json();
       const cfgs  = await cfgRes.json();
@@ -754,6 +756,10 @@
             if (dl) dl.innerHTML = teamsList.map(t => `<option value="${esc(t)}">`).join('');
           } catch(e) {}
         }
+      } catch(e) {}
+      try {
+        const jc = await jiraRes.json();
+        if (jc.jiraBaseUrl) jiraBaseUrl = jc.jiraBaseUrl.replace(/\/$/, '');
       } catch(e) {}
 
       // 팀/담당자 매핑 캐싱
@@ -1452,7 +1458,7 @@
         <td style="text-align:right;font-size:12px;">${callCountCell(a, 'week')}</td>
         <!-- 차단/검토 -->
         <td style="font-size:11px;color:var(--text-muted);white-space:nowrap;">${esc(a.blockedDate || '')}</td>
-        <td style="font-size:11px;color:var(--text-muted);max-width:200px;">${esc((a.blockedReason||'').slice(0,40))}${(a.blockedReason||'').length>40?'…':''}</td>
+        <td style="font-size:11px;color:var(--text-muted);max-width:200px;">${renderBlockedReason((a.blockedReason||'').slice(0,40))}${(a.blockedReason||'').length>40?'…':''}</td>
         <td class="${(locked||isBlocked)?'':'memo-editable'}" onclick="${(locked||isBlocked)?'':('editField(this,'+a.id+',&apos;memo&apos;)')}" title="${(locked||isBlocked)?'수정불가':'클릭하여 입력'}" style="font-size:11px;">${esc(a.memo || '')}</td>
         <td>${reviewResultBadge(a.reviewResult)}</td>
         <td style="font-size:11px;color:var(--text-muted);max-width:140px;">${esc(a.reviewOpinion || '')}</td>
@@ -2118,6 +2124,16 @@
     return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   }
 
+  // 차단근거 내 [TICKET-123] 패턴을 Jira 링크로 변환
+  function renderBlockedReason(text) {
+    if (!text) return '-';
+    const escaped = esc(text);
+    if (!jiraBaseUrl) return escaped;
+    return escaped.replace(/\[([A-Z][A-Z0-9]*-\d+)\]/g, (_, ticket) =>
+      `<a href="${esc(jiraBaseUrl)}/browse/${esc(ticket)}" target="_blank" class="jira-badge" title="SmartWay 티켓 바로가기">${esc(ticket)}</a>`
+    );
+  }
+
   // ── 상세 모달 ─────────────────────────────────────────────
   async function openDetail(id) {
     document.getElementById('detailModal').style.display = 'flex';
@@ -2395,7 +2411,7 @@
           <div class="detail-label">최근 1달 호출건</div><div class="detail-value">${detailCallCell(r, 'month', r.callCountMonth)}</div>
           <div class="detail-label">최근 1주 호출건</div><div class="detail-value">${detailCallCell(r, 'week', r.callCountWeek)}</div>
           <div class="detail-label">차단일자</div><div class="detail-value">${esc(r.blockedDate || '-')}</div>
-          <div class="detail-label">차단근거</div><div class="detail-value">${esc(r.blockedReason || '-')}</div>
+          <div class="detail-label">차단근거</div><div class="detail-value">${renderBlockedReason(r.blockedReason)}</div>
           <div class="detail-label">차단기준</div><div class="detail-value">${esc(r.blockCriteria || '-')}</div>
           <div class="detail-label">Deprecated</div><div class="detail-value">${r.isDeprecated === 'Y' ? '예' : '아니오'}</div>
           <div class="detail-label">비고</div><div class="detail-value">${esc(r.memo || '-')}</div>

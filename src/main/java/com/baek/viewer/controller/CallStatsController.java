@@ -1,5 +1,6 @@
 package com.baek.viewer.controller;
 
+import com.baek.viewer.model.ApmUrlStat;
 import com.baek.viewer.repository.ApmUrlStatRepository;
 import com.baek.viewer.repository.ApmCallDataRepository;
 import org.slf4j.Logger;
@@ -7,17 +8,23 @@ import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
-import java.time.temporal.ChronoUnit;
+import java.time.LocalDateTime;
 import java.util.*;
+import java.util.function.Function;
 
 /**
  * URL 호출현황 집계/조회 API (URL호출현황 화면 전용).
  * 공개 API — 관리자 인증 불필요.
+ *
+ * 구조:
+ *  - /dashboard : apm_url_stat 집계 테이블 기반 대시보드 (6개 기간 preset, 빠름)
+ *  - /apis      : apm_call_data 실시간 GROUP BY (임의 기간, 검색/페이징)
+ *  - /daily     : 단일 URL 일별 상세
+ *  - /monthly   : 단일 URL 월별 상세
  */
 @RestController
 @RequestMapping("/api/call-stats")
@@ -38,93 +45,95 @@ public class CallStatsController {
     }
 
     /**
-     * 기간이 api_record 사전집계(week/month/year)와 매칭되면 그 키를 반환, 아니면 null.
-     * aggregateToRecords() 는 today 기준으로 계산하므로 to 가 today 또는 어제면 매칭 허용.
+     * 대시보드 — apm_url_stat 집계 테이블 기반.
+     * 6개 기간: yesterday / week / month / 3month / 6month / year
+     * 레포 미지정 시 전체 집계.
      */
-    private String detectPresetPeriod(LocalDate from, LocalDate to) {
-        LocalDate today = LocalDate.now();
-        if (!to.equals(today) && !to.equals(today.minusDays(1))) return null;
-        long span = ChronoUnit.DAYS.between(from, to) + 1;
-        if (span >= 5  && span <= 9)   return "week";
-        if (span >= 27 && span <= 33)  return "month";
-        if (span >= 360 && span <= 370) return "year";
-        return null;
-    }
+    @GetMapping("/dashboard")
+    public ResponseEntity<?> dashboard(@RequestParam(defaultValue = "month") String period,
+                                        @RequestParam(required = false) String repo,
+                                        @RequestParam(defaultValue = "10") int topN) {
+        log.info("[대시보드] 기간={}, repo={}", period, repo);
 
-    /** 전체 요약 — source별 총계, 레포별 총계, TOP N (기본 1년) */
-    @GetMapping("/summary")
-    public ResponseEntity<?> summary(@RequestParam(required = false) String from,
-                                      @RequestParam(required = false) String to,
-                                      @RequestParam(required = false) String repo,
-                                      @RequestParam(defaultValue = "10") int topN) {
-        LocalDate toDate = parse(to, LocalDate.now().minusDays(1));
-        LocalDate fromDate = parse(from, toDate.minusDays(364));  // 기본 최근 1년
-        log.info("[호출현황 요약] from={}, to={}, repo={}", fromDate, toDate, repo);
+        List<ApmUrlStat> stats = (repo != null && !repo.isBlank())
+                ? apmUrlStatRepo.findByRepositoryName(repo)
+                : apmUrlStatRepo.findAll();
 
-        // source별 요약 (repo 지정은 summaryByRepo에서만 적용. source 요약은 전체 기준)
-        List<Map<String, Object>> bySource = new ArrayList<>();
-        long totalCall = 0, totalError = 0;
-        Set<String> allApis = new HashSet<>();
-        for (Object[] row : apmRepo.summaryBySource(fromDate, toDate)) {
-            Map<String, Object> m = new LinkedHashMap<>();
-            m.put("source", row[0]);
-            long call = ((Number) row[1]).longValue();
-            long err  = ((Number) row[2]).longValue();
-            m.put("callCount", call);
-            m.put("errorCount", err);
-            m.put("apiCount", ((Number) row[3]).longValue());
-            bySource.add(m);
-            totalCall += call;
-            totalError += err;
+        Function<ApmUrlStat, Long> callFn = switch (period) {
+            case "yesterday" -> ApmUrlStat::getCallCountYesterday;
+            case "week"      -> ApmUrlStat::getCallCountWeek;
+            case "3month"    -> ApmUrlStat::getCallCount3Month;
+            case "6month"    -> ApmUrlStat::getCallCount6Month;
+            case "year"      -> ApmUrlStat::getCallCount;
+            default          -> ApmUrlStat::getCallCountMonth; // month
+        };
+        Function<ApmUrlStat, Long> errFn = switch (period) {
+            case "yesterday" -> ApmUrlStat::getErrorCountYesterday;
+            case "week"      -> ApmUrlStat::getErrorCountWeek;
+            case "3month"    -> ApmUrlStat::getErrorCount3Month;
+            case "6month"    -> ApmUrlStat::getErrorCount6Month;
+            case "year"      -> ApmUrlStat::getErrorCountYear;
+            default          -> ApmUrlStat::getErrorCountMonth; // month
+        };
+
+        long totalCall  = stats.stream().mapToLong(callFn::apply).sum();
+        long totalError = stats.stream().mapToLong(errFn::apply).sum();
+
+        // 레포별 집계
+        Map<String, long[]> repoMap = new LinkedHashMap<>();
+        for (ApmUrlStat s : stats) {
+            long[] arr = repoMap.computeIfAbsent(s.getRepositoryName(), k -> new long[3]);
+            arr[0] += callFn.apply(s);
+            arr[1] += errFn.apply(s);
+            arr[2]++;
         }
-
-        // 레포별 요약
-        List<Map<String, Object>> byRepo = new ArrayList<>();
-        for (Object[] row : apmRepo.summaryByRepo(fromDate, toDate)) {
-            String repoName = (String) row[0];
-            if (repo != null && !repo.isBlank() && !repo.equals(repoName)) continue;
-            Map<String, Object> m = new LinkedHashMap<>();
-            m.put("repoName", repoName);
-            m.put("callCount", ((Number) row[1]).longValue());
-            m.put("errorCount", ((Number) row[2]).longValue());
-            m.put("apiCount", ((Number) row[3]).longValue());
-            byRepo.add(m);
-        }
+        List<Map<String, Object>> byRepo = repoMap.entrySet().stream()
+                .sorted((a, b) -> Long.compare(b.getValue()[0], a.getValue()[0]))
+                .map(e -> {
+                    Map<String, Object> m = new LinkedHashMap<>();
+                    m.put("repoName",   e.getKey());
+                    m.put("callCount",  e.getValue()[0]);
+                    m.put("errorCount", e.getValue()[1]);
+                    m.put("apiCount",   e.getValue()[2]);
+                    return m;
+                }).toList();
 
         // TOP N
-        List<Map<String, Object>> topApis = new ArrayList<>();
-        PageRequest topReq = PageRequest.of(0, Math.max(1, topN));
-        for (Object[] row : apmRepo.topApis(fromDate, toDate,
-                (repo != null && !repo.isBlank()) ? repo : null, topReq)) {
-            Map<String, Object> m = new LinkedHashMap<>();
-            m.put("repoName", row[0]);
-            m.put("apiPath", row[1]);
-            m.put("callCount", ((Number) row[2]).longValue());
-            m.put("errorCount", ((Number) row[3]).longValue());
-            topApis.add(m);
-        }
+        int limit = Math.max(1, Math.min(topN, 100));
+        List<Map<String, Object>> topApis = stats.stream()
+                .filter(s -> callFn.apply(s) > 0)
+                .sorted((a, b) -> Long.compare(callFn.apply(b), callFn.apply(a)))
+                .limit(limit)
+                .map(s -> {
+                    Map<String, Object> m = new LinkedHashMap<>();
+                    m.put("repoName",   s.getRepositoryName());
+                    m.put("apiPath",    s.getApiPath());
+                    m.put("callCount",  callFn.apply(s));
+                    m.put("errorCount", errFn.apply(s));
+                    return m;
+                }).toList();
+
+        // 집계 기준 시각 (최신 updatedAt)
+        LocalDateTime updatedAt = stats.stream()
+                .map(ApmUrlStat::getUpdatedAt)
+                .filter(t -> t != null)
+                .max(Comparator.naturalOrder())
+                .orElse(null);
 
         Map<String, Object> result = new LinkedHashMap<>();
-        result.put("from", fromDate.toString());
-        result.put("to", toDate.toString());
+        result.put("period",         period);
+        result.put("updatedAt",      updatedAt != null ? updatedAt.toString() : null);
         result.put("totalCallCount", totalCall);
-        result.put("totalErrorCount", totalError);
-        result.put("bySource", bySource);
-        result.put("byRepo", byRepo);
-        result.put("topApis", topApis);
+        result.put("totalErrorCount",totalError);
+        result.put("byRepo",         byRepo);
+        result.put("topApis",        topApis);
         return ResponseEntity.ok(result);
     }
 
     /**
-     * URL별 집계 목록 (페이징/검색) — 지정 기간(from~to) 기준 총건수/에러건수.
+     * URL별 집계 목록 (페이징/검색) — apm_call_data 실시간 GROUP BY.
      * ?from=&to=&repo=&q=&page=&size=
-     *
-     * 성능: 기간이 1주/1달/1년 preset + to=오늘/어제 이면 api_record 사전집계를 사용(fast path).
-     *      그 외(3달, 임의 기간 등)는 apm_call_data GROUP BY/SUM 으로 폴백(slow path).
-     *      apm_call_data 가 천만 건을 넘어가면 fast path 는 수만 건 스캔으로 1000배↑ 빨라짐.
-     *
-     * fast path 제약: api_record 에 error 집계가 없어 totalError=0 으로 반환.
-     *                 정확한 에러건수는 상세 모달(/daily, /monthly) 에서 확인.
+     * repo 미지정 시 전체 레포 조회 (q 없이 전체 조회는 느릴 수 있음 — 프론트에서 경고).
      */
     @GetMapping("/apis")
     public ResponseEntity<?> apis(@RequestParam(required = false) String from,
@@ -132,79 +141,36 @@ public class CallStatsController {
                                    @RequestParam(required = false) String repo,
                                    @RequestParam(required = false) String q,
                                    @RequestParam(defaultValue = "0") int page,
-                                   @RequestParam(defaultValue = "50") int size) {
-        LocalDate toDate = parse(to, LocalDate.now().minusDays(1));
-        LocalDate fromDate = parse(from, toDate.minusDays(364));
+                                   @RequestParam(defaultValue = "200") int size) {
+        LocalDate toDate   = parse(to,   LocalDate.now());
+        LocalDate fromDate = parse(from,  toDate.minusDays(30));
         String repoArg = (repo != null && !repo.isBlank()) ? repo : null;
-        String qArg = (q != null && !q.isBlank()) ? q : null;
-        int pageNum = Math.max(0, page);
-        int pageSize = Math.min(200, Math.max(1, size));
+        String qArg    = (q    != null && !q.isBlank())    ? q    : null;
+        int pageNum  = Math.max(0, page);
+        int pageSize = Math.min(500, Math.max(1, size));
+        log.info("[URL 조회] from={}, to={}, repo={}, q={}, page={}", fromDate, toDate, repoArg, qArg, pageNum);
 
-        String period = detectPresetPeriod(fromDate, toDate);
-        if (period != null) {
-            // ── fast path: apm_url_stat 사전집계 (api_record 분석 여부 무관, APM 전체 URL) ──
-            String sortField = switch (period) {
-                case "week"  -> "callCountWeek";
-                case "month" -> "callCountMonth";
-                default      -> "callCount"; // year
-            };
-            Pageable pageable = PageRequest.of(pageNum, pageSize,
-                    Sort.by(Sort.Direction.DESC, sortField).and(Sort.by("apiPath").ascending()));
-            Page<Object[]> pageResult = apmUrlStatRepo.pageStats(repoArg, qArg, pageable);
-            // 반환 컬럼: [0]=repositoryName, [1]=apiPath, [2]=callCount, [3]=callCountMonth, [4]=callCountWeek
-            int callIdx = switch (period) {
-                case "week"  -> 4;
-                case "month" -> 3;
-                default      -> 2;
-            };
-            List<Map<String, Object>> items = new ArrayList<>();
-            for (Object[] row : pageResult.getContent()) {
-                Map<String, Object> m = new LinkedHashMap<>();
-                m.put("repoName", row[0]);
-                m.put("apiPath", row[1]);
-                Number call = (Number) row[callIdx];
-                m.put("totalCall", call == null ? 0L : call.longValue());
-                m.put("totalError", 0L); // fast path: 에러 집계 없음 (상세 모달에서 확인)
-                items.add(m);
-            }
-            Map<String, Object> result = new LinkedHashMap<>();
-            result.put("from", fromDate.toString());
-            result.put("to", toDate.toString());
-            result.put("items", items);
-            result.put("page", pageResult.getNumber());
-            result.put("size", pageResult.getSize());
-            result.put("totalElements", pageResult.getTotalElements());
-            result.put("totalPages", pageResult.getTotalPages());
-            result.put("source", "apm_url_stat");
-            result.put("period", period);
-            result.put("fast", true);
-            return ResponseEntity.ok(result);
-        }
-
-        // ── slow path: apm_call_data GROUP BY/SUM (임의 기간) ─────────────
         Pageable pageable = PageRequest.of(pageNum, pageSize);
         Page<Object[]> pageResult = apmRepo.aggregateByPeriod(fromDate, toDate, repoArg, qArg, pageable);
 
         List<Map<String, Object>> items = new ArrayList<>();
         for (Object[] row : pageResult.getContent()) {
             Map<String, Object> m = new LinkedHashMap<>();
-            m.put("repoName", row[0]);
-            m.put("apiPath", row[1]);
+            m.put("repoName",   row[0]);
+            m.put("apiPath",    row[1]);
             m.put("totalCall",  ((Number) row[2]).longValue());
             m.put("totalError", ((Number) row[3]).longValue());
             items.add(m);
         }
 
         Map<String, Object> result = new LinkedHashMap<>();
-        result.put("from", fromDate.toString());
-        result.put("to", toDate.toString());
-        result.put("items", items);
-        result.put("page", pageResult.getNumber());
-        result.put("size", pageResult.getSize());
+        result.put("from",          fromDate.toString());
+        result.put("to",            toDate.toString());
+        result.put("items",         items);
+        result.put("page",          pageResult.getNumber());
+        result.put("size",          pageResult.getSize());
         result.put("totalElements", pageResult.getTotalElements());
-        result.put("totalPages", pageResult.getTotalPages());
-        result.put("source", "apm_call_data");
-        result.put("fast", false);
+        result.put("totalPages",    pageResult.getTotalPages());
         return ResponseEntity.ok(result);
     }
 
@@ -214,14 +180,14 @@ public class CallStatsController {
                                     @RequestParam String apiPath,
                                     @RequestParam(required = false) String from,
                                     @RequestParam(required = false) String to) {
-        LocalDate toDate = parse(to, LocalDate.now().minusDays(1));
-        LocalDate fromDate = parse(from, toDate.minusDays(29));
+        LocalDate toDate   = parse(to,   LocalDate.now());
+        LocalDate fromDate = parse(from,  toDate.minusDays(29));
         List<Map<String, Object>> rows = new ArrayList<>();
         for (Object[] row : apmRepo.dailyByApi(repo, apiPath, fromDate, toDate)) {
             Map<String, Object> m = new LinkedHashMap<>();
-            m.put("callDate", row[0].toString());
-            m.put("source", row[1]);
-            m.put("callCount", ((Number) row[2]).longValue());
+            m.put("callDate",   row[0].toString());
+            m.put("source",     row[1]);
+            m.put("callCount",  ((Number) row[2]).longValue());
             m.put("errorCount", ((Number) row[3]).longValue());
             rows.add(m);
         }
@@ -234,14 +200,14 @@ public class CallStatsController {
                                       @RequestParam String apiPath,
                                       @RequestParam(required = false) String from,
                                       @RequestParam(required = false) String to) {
-        LocalDate toDate = parse(to, LocalDate.now().minusDays(1));
-        LocalDate fromDate = parse(from, toDate.minusMonths(12));
+        LocalDate toDate   = parse(to,   LocalDate.now());
+        LocalDate fromDate = parse(from,  toDate.minusMonths(12));
         List<Map<String, Object>> rows = new ArrayList<>();
         for (Object[] row : apmRepo.monthlyByApi(repo, apiPath, fromDate, toDate)) {
             Map<String, Object> m = new LinkedHashMap<>();
-            m.put("month", row[0]);
-            m.put("source", row[1]);
-            m.put("callCount", ((Number) row[2]).longValue());
+            m.put("month",      row[0]);
+            m.put("source",     row[1]);
+            m.put("callCount",  ((Number) row[2]).longValue());
             m.put("errorCount", ((Number) row[3]).longValue());
             rows.add(m);
         }

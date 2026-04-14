@@ -30,6 +30,16 @@
     .dot{width:8px;height:8px;border-radius:50%;}
     .dot-blue{background:var(--primary);} .dot-green{background:var(--success);} .dot-purple{background:var(--purple);} .dot-orange{background:var(--warning);}
 
+    /* 섹션 구분선 */
+    .section-divider{display:flex;align-items:center;gap:10px;margin:20px 0 14px;font-size:12px;font-weight:700;color:var(--text-muted);}
+    .section-divider::before,.section-divider::after{content:'';flex:1;height:1px;background:var(--border);}
+
+    /* 대시보드 period 탭 */
+    .period-tabs{display:flex;gap:4px;margin-bottom:14px;}
+    .period-tab{padding:6px 16px;border:1px solid var(--border);border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;background:var(--card);color:var(--text-muted);transition:all .15s;}
+    .period-tab:hover{background:#f1f5f9;}
+    .period-tab.active{background:var(--primary);color:#fff;border-color:var(--primary);}
+
     /* 필터 바 */
     .filter-bar{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;}
     .field{display:flex;flex-direction:column;gap:3px;font-size:10px;color:var(--text-muted);font-weight:700;text-transform:uppercase;letter-spacing:.05em;}
@@ -52,27 +62,19 @@
     .sum-card.c-err .sum-value{color:#dc2626;}
     .sum-card.c-apis::before{background:#8b5cf6;}
     .sum-card.c-apis .sum-value{color:#7c3aed;}
-    .sum-card.c-days::before{background:#f59e0b;}
-    .sum-card.c-days .sum-value{color:#d97706;}
+    .sum-card.c-info::before{background:#f59e0b;}
 
     /* 2열 그리드 */
     .two-col{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
 
     /* 테이블 */
     table{width:100%;border-collapse:collapse;font-size:12px;}
-    thead th{background:#f1f5f9;padding:8px 10px;text-align:left;font-weight:700;color:var(--text-muted);font-size:11px;text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--border);position:sticky;top:0;z-index:1;}
-    thead th.sortable{cursor:pointer;user-select:none;}
-    thead th.sortable:hover{background:#e2e8f0;}
-    thead th.sorted{background:#dbeafe;color:#1e40af;}
+    thead th{background:#f1f5f9;padding:8px 10px;text-align:left;font-weight:700;color:var(--text-muted);font-size:11px;text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--border);}
     tbody td{padding:8px 10px;border-bottom:1px solid var(--border);vertical-align:middle;}
     tbody tr:hover{background:#f8fafc;}
     .num{text-align:right;font-variant-numeric:tabular-nums;font-weight:600;}
     .api-path{font-family:'Consolas',monospace;font-size:11px;color:#1e40af;word-break:break-all;}
     .repo-badge{display:inline-block;padding:2px 8px;background:#f1f5f9;color:var(--text-muted);border-radius:4px;font-size:10px;font-weight:600;}
-    .src-badge{display:inline-block;padding:1px 6px;border-radius:3px;font-size:10px;font-weight:600;}
-    .src-MOCK{background:#fef3c7;color:#92400e;}
-    .src-WHATAP{background:#dbeafe;color:#1e40af;}
-    .src-JENNIFER{background:#ede9fe;color:#6d28d9;}
     .rank{display:inline-block;width:22px;height:22px;line-height:22px;text-align:center;border-radius:50%;background:#f1f5f9;color:var(--text-muted);font-weight:700;font-size:10px;}
     .rank.r1{background:#fef3c7;color:#d97706;}
     .rank.r2{background:#e5e7eb;color:#4b5563;}
@@ -170,6 +172,7 @@
     [data-theme="dark"] [style*="background:#f8fafc"] { background:#1e293b !important; }
     [data-theme="dark"] [style*="color:#991b1b"] { color:#f87171 !important; }
     [data-theme="dark"] [style*="color:#7c2d12"] { color:#fb923c !important; }
+    .spinner{display:inline-block;width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--primary);border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;}
   </style>
   <script src="/exceljs.min.js"></script>
   <script src="/js/dialog.js"></script>
@@ -184,41 +187,40 @@
   <span class="header-sub">URL호출현황</span>
   <div class="header-right">
     <button class="dark-toggle" onclick="toggleDarkMode()">🌙 다크모드</button>
-    <a href="/"             class="nav-link">📊 대시보드</a>
-    <a href="/viewer.html"  class="nav-link">📋 URL분석현황</a>
-    <a href="/call-stats.html" class="nav-link nav-active">📈 URL호출현황</a>
-    <a href="/review.html"  class="nav-link">📝 현업 검토</a>
-    <a href="/workflow.html" class="nav-link">🗺️ 업무 흐름</a>
-
     <a href="/settings.html" class="nav-link">⚙️ 설정</a>
+    <a href="/"                  class="nav-link">📊 대시보드</a>
+    <a href="/viewer.html"       class="nav-link">📋 URL분석현황</a>
+    <a href="/call-stats.html"   class="nav-link nav-active">📈 URL호출현황</a>
+    <a href="/review.html"       class="nav-link">📝 현업 검토</a>
+    <a href="/workflow.html"     class="nav-link">🗺️ 업무 흐름</a>
+    <a href="/settings.html"     class="nav-link">⚙️ 설정</a>
   </div>
 </div>
 
 <div class="main">
-  <!-- 필터 -->
-  <div class="card">
-    <!-- 1줄: 조건 -->
-    <div class="filter-bar" style="margin-bottom:8px;">
-      <label class="field">시작일<input id="fromDate" type="date"></label>
-      <label class="field">종료일<input id="toDate" type="date"></label>
-      <label class="field">레포지토리
-        <select id="repoSelect" style="min-width:180px;">
+
+  <!-- ═══════════════════════════════════════════
+       상단: 대시보드 (집계 테이블 기반 — 빠름)
+  ═══════════════════════════════════════════ -->
+  <div class="section-divider">📊 대시보드 (집계 기준)</div>
+
+  <!-- 기간 선택 + 레포 필터 -->
+  <div class="card" style="padding-bottom:10px;">
+    <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+      <div class="period-tabs">
+        <button class="period-tab" onclick="selectPeriod('yesterday')">전일</button>
+        <button class="period-tab" onclick="selectPeriod('week')">1주</button>
+        <button class="period-tab active" id="tab-month" onclick="selectPeriod('month')">1달</button>
+        <button class="period-tab" onclick="selectPeriod('3month')">3달</button>
+        <button class="period-tab" onclick="selectPeriod('6month')">6달</button>
+        <button class="period-tab" onclick="selectPeriod('year')">1년</button>
+      </div>
+      <label class="field" style="margin-top:0;">레포
+        <select id="dashRepoSelect" style="min-width:160px;" onchange="loadDashboard()">
           <option value="">(전체)</option>
         </select>
       </label>
-      <label class="field">URL 검색
-        <input id="searchInput" type="text" placeholder="URL 경로 검색..." style="min-width:220px;">
-      </label>
-    </div>
-    <!-- 2줄: 기간 바로가기 + 조회 -->
-    <div style="display:flex;gap:6px;align-items:center;">
-      <button class="btn btn-ghost" onclick="setPeriodYesterday()">전일</button>
-      <button class="btn btn-ghost" onclick="setPeriod(7)">1주</button>
-      <button class="btn btn-ghost" onclick="setPeriod(30)">1달</button>
-      <button class="btn btn-ghost" onclick="setPeriod(90)">3달</button>
-      <button class="btn btn-ghost" onclick="setPeriod(365)">1년</button>
-      <div style="width:1px;height:20px;background:var(--border);margin:0 4px;"></div>
-      <button class="btn btn-blue" onclick="loadAll()">조회</button>
+      <span id="dashUpdatedAt" style="font-size:10px;color:var(--text-muted);margin-left:auto;"></span>
     </div>
   </div>
 
@@ -226,26 +228,26 @@
   <div class="summary-grid">
     <div class="sum-card c-call">
       <div class="sum-label">총 호출건수</div>
-      <div class="sum-value" id="sumCall">0</div>
-      <div class="sum-sub" id="sumPeriod">-</div>
+      <div class="sum-value" id="dashCall">-</div>
+      <div class="sum-sub" id="dashCallSub"></div>
     </div>
     <div class="sum-card c-err">
       <div class="sum-label">총 에러건수</div>
-      <div class="sum-value" id="sumErr">0</div>
-      <div class="sum-sub" id="sumErrPct">-</div>
+      <div class="sum-value" id="dashErr">-</div>
+      <div class="sum-sub" id="dashErrPct"></div>
     </div>
     <div class="sum-card c-apis">
-      <div class="sum-label">조회된 API 수</div>
-      <div class="sum-value" id="sumApis">0</div>
-      <div class="sum-sub">레포 <span id="sumRepos">0</span>개</div>
+      <div class="sum-label">레포 수</div>
+      <div class="sum-value" id="dashRepos">-</div>
+      <div class="sum-sub" id="dashApiCount"></div>
     </div>
-    <div class="sum-card c-days">
-      <div class="sum-label">APM 종류별 현황</div>
-      <div style="display:flex;flex-direction:column;gap:2px;margin-top:2px;" id="sumBySource"></div>
+    <div class="sum-card c-info">
+      <div class="sum-label" style="margin-bottom:6px;">집계 기준</div>
+      <div style="font-size:11px;color:var(--text-muted);line-height:1.6;" id="dashPeriodDesc">-</div>
     </div>
   </div>
 
-  <!-- 2열: 레포별 요약 + TOP 10 -->
+  <!-- 레포별 요약 + TOP 10 -->
   <div class="two-col">
     <div class="card">
       <div class="card-title"><span class="dot dot-purple"></span>레포별 호출 요약</div>
@@ -255,14 +257,14 @@
             <th>레포지토리</th>
             <th class="num">호출건수</th>
             <th class="num">에러</th>
-            <th class="num">API수</th>
+            <th class="num">API 수</th>
           </tr></thead>
-          <tbody id="byRepoTbody"><tr><td colspan="4" class="empty">로딩 중...</td></tr></tbody>
+          <tbody id="dashByRepoTbody"><tr><td colspan="4" class="empty">기간을 선택하세요</td></tr></tbody>
         </table>
       </div>
     </div>
     <div class="card">
-      <div class="card-title"><span class="dot dot-orange"></span>TOP 10 호출 URL (조회 기간)</div>
+      <div class="card-title"><span class="dot dot-orange"></span>TOP 10 호출 URL</div>
       <div style="max-height:320px;overflow:auto;">
         <table>
           <thead><tr>
@@ -271,19 +273,54 @@
             <th class="num">호출</th>
             <th class="num">에러</th>
           </tr></thead>
-          <tbody id="topTbody"><tr><td colspan="4" class="empty">로딩 중...</td></tr></tbody>
+          <tbody id="dashTopTbody"><tr><td colspan="4" class="empty">기간을 선택하세요</td></tr></tbody>
         </table>
       </div>
     </div>
   </div>
 
-  <!-- URL별 집계 테이블 (페이징) -->
+  <!-- ═══════════════════════════════════════════
+       하단: 실시간 조회 (apm_call_data 직접)
+  ═══════════════════════════════════════════ -->
+  <div class="section-divider">🔍 URL 실시간 조회 (임의 기간)</div>
+
+  <!-- 조회 필터 -->
   <div class="card">
+    <div class="filter-bar" style="margin-bottom:8px;">
+      <label class="field">레포지토리
+        <select id="queryRepoSelect" style="min-width:180px;">
+          <option value="">(전체 — URL 검색 권장)</option>
+        </select>
+      </label>
+      <label class="field">시작일<input id="fromDate" type="date"></label>
+      <label class="field">종료일<input id="toDate"   type="date"></label>
+      <label class="field">URL 검색
+        <input id="searchInput" type="text" placeholder="URL 경로 검색..." style="min-width:220px;">
+      </label>
+    </div>
+    <div style="display:flex;gap:6px;align-items:center;">
+      <span style="font-size:10px;color:var(--text-muted);font-weight:600;">기간:</span>
+      <button class="btn btn-ghost" onclick="setDateYesterday()">전일</button>
+      <button class="btn btn-ghost" onclick="setDate(7)">1주</button>
+      <button class="btn btn-ghost" onclick="setDate(30)">1달</button>
+      <button class="btn btn-ghost" onclick="setDate(90)">3달</button>
+      <button class="btn btn-ghost" onclick="setDate(180)">6달</button>
+      <button class="btn btn-ghost" onclick="setDate(365)">1년</button>
+      <div style="width:1px;height:20px;background:var(--border);margin:0 4px;"></div>
+      <button class="btn btn-blue" onclick="querySearch()">조회</button>
+    </div>
+    <div style="margin-top:8px;font-size:10px;color:var(--text-muted);">
+      ※ 레포 미선택 + URL 미입력 시 전체 조회로 수십 초 이상 소요될 수 있습니다.
+    </div>
+  </div>
+
+  <!-- URL별 집계 테이블 -->
+  <div class="card" id="queryResultCard" style="display:none;">
     <div class="card-title" style="display:flex;align-items:center;">
       <span class="dot dot-blue"></span>URL별 집계
       <span id="resultCount" style="margin-left:10px;font-size:11px;font-weight:400;color:var(--text-muted);text-transform:none;letter-spacing:0;"></span>
     </div>
-    <table id="apiTable">
+    <table>
       <thead><tr>
         <th style="width:40px;text-align:center;">No.</th>
         <th>URL</th>
@@ -292,10 +329,11 @@
         <th class="num">에러건수</th>
         <th class="num">상세</th>
       </tr></thead>
-      <tbody id="apiTbody"><tr><td colspan="6" class="empty">조회 결과가 여기 표시됩니다.</td></tr></tbody>
+      <tbody id="apiTbody"><tr><td colspan="6" class="empty">조회 버튼을 클릭하세요</td></tr></tbody>
     </table>
     <div class="pagination" id="pagination"></div>
   </div>
+
 </div>
 
 <!-- 상세 모달 -->
@@ -307,12 +345,10 @@
     </div>
     <div class="modal-body">
       <div class="tab-bar">
-        <button class="tab-btn active" id="tabList" onclick="switchDetailTab('list')">📋 목록</button>
-        <button class="tab-btn" id="tabChart" onclick="switchDetailTab('chart')">📊 그래프 (1년)</button>
+        <button class="tab-btn active" id="tabList"  onclick="switchDetailTab('list')">📋 목록</button>
+        <button class="tab-btn"        id="tabChart" onclick="switchDetailTab('chart')">📊 그래프 (1년)</button>
       </div>
-      <div id="detailBody">
-        <div class="loading">로딩 중...</div>
-      </div>
+      <div id="detailBody"><div class="loading">로딩 중...</div></div>
     </div>
   </div>
 </div>
@@ -320,10 +356,12 @@
 <div class="toast" id="toast"></div>
 
 <script>
-  let currentPage = 0, currentSize = 200;
-  let pageNavSize = 10;
-  let currentDetail = { repo:'', apiPath:'', tab:'daily' };
+  let currentPage = 0, currentSize = 200, pageNavSize = 10;
+  let currentPeriod = 'month';
+  let currentDetail = { repo:'', apiPath:'', tab:'list' };
+  let detailMonthRows = [], detailDailyRows = [];
 
+  // ── 유틸 ──────────────────────────────────────────────
   function showToast(msg, type='success') {
     const t = document.getElementById('toast');
     t.textContent = msg; t.className = `toast ${type} show`;
@@ -334,141 +372,107 @@
     return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
   function fmt(n) { return (n||0).toLocaleString(); }
+  function spinnerCell(colspan) {
+    return `<tr><td colspan="${colspan}" style="text-align:center;padding:30px;"><div class="spinner" style="width:20px;height:20px;border-width:2px;"></div><br><span style="color:var(--text-muted);font-size:11px;">조회 중...</span></td></tr>`;
+  }
 
+  // ── 초기화 ────────────────────────────────────────────
   async function init() {
-    // 글로벌 설정에서 pageSize, pageNavSize 로드
     try {
       const gRes = await fetch('/api/config/global');
       const g = await gRes.json();
-      if (g.pageSize) currentSize = g.pageSize;
-      if (g.pageNavSize) pageNavSize = g.pageNavSize;
+      if (g.pageSize)    currentSize    = g.pageSize;
+      if (g.pageNavSize) pageNavSize    = g.pageNavSize;
     } catch(e) {}
-    // 기본 기간: 최근 1년
+
     const today = new Date();
-    const from = new Date(today); from.setDate(today.getDate() - 365);
-    document.getElementById('toDate').value = today.toLocaleDateString('sv-SE');
+    const from  = new Date(today); from.setDate(today.getDate() - 30);
+    document.getElementById('toDate').value   = today.toLocaleDateString('sv-SE');
     document.getElementById('fromDate').value = from.toLocaleDateString('sv-SE');
-    // 레포 드롭다운
+
     try {
       const res = await fetch('/api/config/repos');
       const repos = await res.json();
-      const sel = document.getElementById('repoSelect');
-      repos.forEach(r => {
-        const opt = document.createElement('option');
-        opt.value = r.repoName;
-        opt.textContent = r.businessName ? `${r.repoName} | ${r.businessName}` : r.repoName;
-        sel.appendChild(opt);
-      });
+      [document.getElementById('dashRepoSelect'), document.getElementById('queryRepoSelect')]
+        .forEach(sel => {
+          repos.forEach(r => {
+            const opt = document.createElement('option');
+            opt.value = r.repoName;
+            opt.textContent = r.businessName ? `${r.repoName} | ${r.businessName}` : r.repoName;
+            sel.appendChild(opt);
+          });
+        });
     } catch(e) {}
-    // 자동 조회 제거 — 사용자가 조회 버튼을 누를 때만 데이터 로드
-    showEmptyState();
+
+    // 대시보드 초기 로드
+    await loadDashboard();
   }
 
-  function showEmptyState() {
-    const msg = '<span style="color:var(--text-muted);font-size:11px;">조회 버튼을 클릭하세요</span>';
-    document.getElementById('sumCall').innerHTML = '-';
-    document.getElementById('sumErr').innerHTML = '-';
-    document.getElementById('sumApis').innerHTML = '-';
-    document.getElementById('sumPeriod').textContent = '-';
-    document.getElementById('sumErrPct').textContent = '-';
-    document.getElementById('sumRepos').textContent = '-';
-    document.getElementById('sumBySource').innerHTML = msg;
-    document.getElementById('byRepoTbody').innerHTML = '<tr><td colspan="4" class="empty">조회 버튼을 클릭하세요</td></tr>';
-    document.getElementById('topTbody').innerHTML = '<tr><td colspan="4" class="empty">조회 버튼을 클릭하세요</td></tr>';
-    document.getElementById('apiTbody').innerHTML = '<tr><td colspan="6" class="empty">조회 버튼을 클릭하세요</td></tr>';
-    document.getElementById('resultCount').textContent = '';
+  // ══════════════════════════════════════════════════════
+  // 상단: 대시보드
+  // ══════════════════════════════════════════════════════
+  const PERIOD_LABEL = {
+    yesterday:'전일', week:'최근 1주', month:'최근 1달',
+    '3month':'최근 3달', '6month':'최근 6달', year:'최근 1년'
+  };
+
+  function selectPeriod(p) {
+    currentPeriod = p;
+    document.querySelectorAll('.period-tab').forEach(el => el.classList.remove('active'));
+    // 버튼 찾기: onclick 속성으로 매칭
+    document.querySelectorAll('.period-tab').forEach(el => {
+      if (el.getAttribute('onclick') === `selectPeriod('${p}')`) el.classList.add('active');
+    });
+    loadDashboard();
   }
 
-  function spinnerCell(colspan) {
-    return `<tr><td colspan="${colspan}" style="text-align:center;padding:30px;"><div class="spinner" style="display:inline-block;width:20px;height:20px;border:2px solid var(--border);border-top-color:var(--primary);border-radius:50%;animation:spin .7s linear infinite;"></div><br><span style="color:var(--text-muted);font-size:11px;">조회 중...</span></td></tr>`;
-  }
-  function spinnerInline() {
-    return '<div class="spinner" style="display:inline-block;width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--primary);border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;"></div>';
-  }
+  async function loadDashboard() {
+    const repo = document.getElementById('dashRepoSelect').value;
+    const params = new URLSearchParams({ period: currentPeriod, topN: 10 });
+    if (repo) params.set('repo', repo);
 
-  function setPeriod(days) {
-    const today = new Date();
-    const from = new Date(today); from.setDate(today.getDate() - days);
-    document.getElementById('toDate').value = today.toLocaleDateString('sv-SE');
-    document.getElementById('fromDate').value = from.toLocaleDateString('sv-SE');
-    loadAll();
-  }
+    document.getElementById('dashCall').innerHTML = '<div class="spinner"></div>';
+    document.getElementById('dashErr').innerHTML  = '<div class="spinner"></div>';
+    document.getElementById('dashRepos').innerHTML = '<div class="spinner"></div>';
+    document.getElementById('dashByRepoTbody').innerHTML = spinnerCell(4);
+    document.getElementById('dashTopTbody').innerHTML    = spinnerCell(4);
 
-  function getParams() {
-    const params = new URLSearchParams();
-    const from = document.getElementById('fromDate').value;
-    const to   = document.getElementById('toDate').value;
-    const repo = document.getElementById('repoSelect').value;
-    const q    = document.getElementById('searchInput').value.trim();
-    if (from) params.append('from', from);
-    if (to)   params.append('to', to);
-    if (repo) params.append('repo', repo);
-    if (q)    params.append('q', q);
-    return params;
-  }
-
-  async function loadAll() {
-    currentPage = 0;
-    // 4개 영역 모두 스피너 표시
-    document.getElementById('sumCall').innerHTML = spinnerInline();
-    document.getElementById('sumErr').innerHTML = spinnerInline();
-    document.getElementById('sumApis').innerHTML = spinnerInline();
-    document.getElementById('sumPeriod').textContent = '조회 중...';
-    document.getElementById('sumErrPct').textContent = '';
-    document.getElementById('sumRepos').textContent = '-';
-    document.getElementById('sumBySource').innerHTML = spinnerInline();
-    document.getElementById('byRepoTbody').innerHTML = spinnerCell(4);
-    document.getElementById('topTbody').innerHTML = spinnerCell(4);
-    document.getElementById('apiTbody').innerHTML = spinnerCell(6);
-    document.getElementById('resultCount').textContent = '조회 중...';
-    // 응답 도착 순서대로 화면 갱신 (Promise.all로 병렬 실행)
-    await Promise.all([loadSummary(), loadApis()]);
-  }
-
-  function setPeriodYesterday() {
-    const y = new Date(Date.now() - 86400000).toLocaleDateString('sv-SE');
-    document.getElementById('fromDate').value = y;
-    document.getElementById('toDate').value = y;
-    loadAll();
-  }
-
-  async function loadSummary() {
     try {
-      const params = getParams();
-      params.set('topN', '10');
-      const res = await fetch(`/api/call-stats/summary?${params}`);
-      const d = await res.json();
-      document.getElementById('sumCall').textContent = fmt(d.totalCallCount);
-      document.getElementById('sumErr').textContent  = fmt(d.totalErrorCount);
-      const errPct = d.totalCallCount > 0 ? ((d.totalErrorCount / d.totalCallCount) * 100).toFixed(2) : '0.00';
-      document.getElementById('sumErrPct').textContent = `에러율 ${errPct}%`;
-      document.getElementById('sumPeriod').textContent = `${d.from} ~ ${d.to}`;
-      // API 수 = 유니크 URL 수 (bySource에는 중복 가능해서 byRepo에서 집계)
-      const apiCount = (d.byRepo || []).reduce((s, r) => s + r.apiCount, 0);
-      document.getElementById('sumApis').textContent = fmt(apiCount);
-      document.getElementById('sumRepos').textContent = (d.byRepo || []).length;
-      // Source별
-      const srcWrap = document.getElementById('sumBySource');
-      srcWrap.innerHTML = (d.bySource || []).map(s =>
-        `<div style="font-size:10px;"><span class="src-badge src-${s.source}">${esc(s.source)}</span> <b>${fmt(s.callCount)}</b>건</div>`
-      ).join('') || '<span style="font-size:10px;color:var(--text-muted);">데이터 없음</span>';
+      const res = await fetch(`/api/call-stats/dashboard?${params}`);
+      const d   = await res.json();
+
+      document.getElementById('dashCall').textContent  = fmt(d.totalCallCount);
+      document.getElementById('dashErr').textContent   = fmt(d.totalErrorCount);
+      const errPct = d.totalCallCount > 0 ? ((d.totalErrorCount/d.totalCallCount)*100).toFixed(2) : '0.00';
+      document.getElementById('dashErrPct').textContent = `에러율 ${errPct}%`;
+      document.getElementById('dashRepos').textContent  = fmt((d.byRepo||[]).length);
+      const totalApis = (d.byRepo||[]).reduce((s,r) => s + r.apiCount, 0);
+      document.getElementById('dashApiCount').textContent = `API 총 ${fmt(totalApis)}개`;
+      document.getElementById('dashCallSub').textContent  = PERIOD_LABEL[currentPeriod] || currentPeriod;
+      document.getElementById('dashPeriodDesc').innerHTML =
+        `기간: <b>${PERIOD_LABEL[currentPeriod]||currentPeriod}</b><br>` +
+        (d.updatedAt ? `집계: ${d.updatedAt.replace('T',' ').slice(0,16)}` : '집계 데이터 없음');
+      document.getElementById('dashUpdatedAt').textContent =
+        d.updatedAt ? `집계일시: ${d.updatedAt.replace('T',' ').slice(0,16)}` : '';
+
       // 레포별
-      const repoTbody = document.getElementById('byRepoTbody');
-      if (!d.byRepo || d.byRepo.length === 0) {
+      const repoTbody = document.getElementById('dashByRepoTbody');
+      if (!d.byRepo || !d.byRepo.length) {
         repoTbody.innerHTML = '<tr><td colspan="4" class="empty">데이터 없음</td></tr>';
       } else {
         repoTbody.innerHTML = d.byRepo.map(r => `
-          <tr style="cursor:pointer;" onclick="filterByRepo('${esc(r.repoName)}')">
+          <tr style="cursor:pointer;" onclick="filterQueryByRepo('${esc(r.repoName)}')">
             <td><span class="repo-badge">${esc(r.repoName)}</span></td>
             <td class="num">${fmt(r.callCount)}</td>
             <td class="num" style="color:${r.errorCount>0?'#dc2626':'inherit'};">${fmt(r.errorCount)}</td>
             <td class="num">${fmt(r.apiCount)}</td>
           </tr>`).join('');
       }
+
       // TOP 10
-      const topTbody = document.getElementById('topTbody');
-      if (!d.topApis || d.topApis.length === 0) {
-        topTbody.innerHTML = '<tr><td colspan="4" class="empty">데이터 없음</td></tr>';
+      const topTbody = document.getElementById('dashTopTbody');
+      if (!d.topApis || !d.topApis.length) {
+        topTbody.innerHTML = '<tr><td colspan="4" class="empty">데이터 없음 (집계 실행 후 표시)</td></tr>';
       } else {
         topTbody.innerHTML = d.topApis.map((r, i) => {
           const rankCls = i < 3 ? `rank r${i+1}` : 'rank';
@@ -480,32 +484,72 @@
           </tr>`;
         }).join('');
       }
-    } catch(e) { showToast('요약 조회 실패: ' + e.message, 'error'); }
+    } catch(e) { showToast('대시보드 조회 실패: ' + e.message, 'error'); }
   }
 
-  function filterByRepo(repoName) {
-    document.getElementById('repoSelect').value = repoName;
-    loadAll();
+  // 레포별 행 클릭 → 하단 조회 레포 필터 세팅 + 스크롤
+  function filterQueryByRepo(repoName) {
+    document.getElementById('queryRepoSelect').value = repoName;
+    document.getElementById('queryResultCard').scrollIntoView({ behavior:'smooth' });
+  }
+
+  // ══════════════════════════════════════════════════════
+  // 하단: 실시간 조회
+  // ══════════════════════════════════════════════════════
+  function setDate(days) {
+    const today = new Date();
+    const from  = new Date(today); from.setDate(today.getDate() - days);
+    document.getElementById('toDate').value   = today.toLocaleDateString('sv-SE');
+    document.getElementById('fromDate').value = from.toLocaleDateString('sv-SE');
+  }
+  function setDateYesterday() {
+    const y = new Date(Date.now()-86400000).toLocaleDateString('sv-SE');
+    document.getElementById('fromDate').value = y;
+    document.getElementById('toDate').value   = y;
+  }
+
+  async function querySearch() {
+    const repo = document.getElementById('queryRepoSelect').value;
+    const q    = document.getElementById('searchInput').value.trim();
+    // 전체 레포 + URL 미입력 경고
+    if (!repo && !q) {
+      const ok = await customConfirm(
+        '레포지토리 미선택 + URL 미입력 상태에서 전체 조회를 실행합니다.\n' +
+        '데이터 규모에 따라 수십 초 이상 소요될 수 있습니다.\n계속하시겠습니까?'
+      );
+      if (!ok) return;
+    }
+    currentPage = 0;
+    document.getElementById('queryResultCard').style.display = 'block';
+    await loadApis();
   }
 
   async function loadApis() {
-    // 페이징 시에도 스피너 표시 (loadAll에서 이미 표시됐어도 안전)
     document.getElementById('apiTbody').innerHTML = spinnerCell(6);
+    document.getElementById('resultCount').textContent = '조회 중...';
     try {
-      const params = getParams();
+      const params = new URLSearchParams();
+      const from = document.getElementById('fromDate').value;
+      const to   = document.getElementById('toDate').value;
+      const repo = document.getElementById('queryRepoSelect').value;
+      const q    = document.getElementById('searchInput').value.trim();
+      if (from) params.set('from', from);
+      if (to)   params.set('to',   to);
+      if (repo) params.set('repo', repo);
+      if (q)    params.set('q',    q);
       params.set('page', currentPage);
       params.set('size', currentSize);
+
       const res = await fetch(`/api/call-stats/apis?${params}`);
-      const d = await res.json();
+      const d   = await res.json();
       const tbody = document.getElementById('apiTbody');
-      // fast path(api_record 사전집계) 여부: 에러 컬럼 표시 방식 결정
-      const isFast = d.fast === true;
-      if (!d.items || d.items.length === 0) {
+
+      if (!d.items || !d.items.length) {
         tbody.innerHTML = '<tr><td colspan="6" class="empty">검색 결과가 없습니다.</td></tr>';
       } else {
         const maxCall = Math.max(1, ...d.items.map(i => i.totalCall));
-        const cell = (val, max, color) => {
-          const pct = Math.max(2, Math.round((val / max) * 100));
+        const barCell = (val, max, color) => {
+          const pct = Math.max(2, Math.round((val/max)*100));
           return `<td class="num" style="position:relative;">
             <div style="position:absolute;left:0;top:0;bottom:0;width:${pct}%;background:${color};opacity:.15;pointer-events:none;"></div>
             <span style="position:relative;font-weight:700;">${fmt(val)}</span>
@@ -514,17 +558,16 @@
         const startNo = d.page * d.size;
         tbody.innerHTML = d.items.map((a, idx) => `
           <tr>
-            <td style="text-align:center;color:var(--text-muted);font-size:11px;">${startNo + idx + 1}</td>
+            <td style="text-align:center;color:var(--text-muted);font-size:11px;">${startNo+idx+1}</td>
             <td><div class="api-path">${esc(a.apiPath)}</div></td>
             <td><span class="repo-badge">${esc(a.repoName)}</span></td>
-            ${cell(a.totalCall, maxCall, '#3b82f6')}
-            <td class="num" style="color:${!isFast&&a.totalError>0?'#dc2626':'var(--text-muted)'};">${isFast ? '—' : fmt(a.totalError)}</td>
+            ${barCell(a.totalCall, maxCall, '#3b82f6')}
+            <td class="num" style="color:${a.totalError>0?'#dc2626':'inherit'};">${fmt(a.totalError)}</td>
             <td class="num"><button class="btn btn-ghost" style="font-size:10px;padding:3px 10px;height:auto;" onclick="openDetail('${esc(a.repoName)}','${esc(a.apiPath)}')">상세</button></td>
           </tr>`).join('');
       }
       document.getElementById('resultCount').textContent =
-        `총 ${fmt(d.totalElements)}개 (페이지 ${d.page+1}/${d.totalPages||1})` +
-        (isFast ? ' · 집계 기준: aggregate' : '');
+        `총 ${fmt(d.totalElements)}개 (페이지 ${d.page+1}/${d.totalPages||1}) · ${d.from} ~ ${d.to}`;
       renderPagination(d);
     } catch(e) { showToast('목록 조회 실패: ' + e.message, 'error'); }
   }
@@ -532,16 +575,15 @@
   function renderPagination(data) {
     const el = document.getElementById('pagination');
     const total = data.totalPages || 1;
-    const cur = data.page || 0;
+    const cur   = data.page || 0;
     if (total <= 1) { el.innerHTML = ''; return; }
     let html = `<span class="page-info">총 ${fmt(data.totalElements)}건 / ${total}페이지</span>`;
     html += `<button class="page-btn" onclick="gotoPage(0)" ${cur===0?'disabled':''}>≪</button>`;
     html += `<button class="page-btn" onclick="gotoPage(${cur-1})" ${cur===0?'disabled':''}>‹</button>`;
-    // 페이지 번호 (글로벌 설정 pageNavSize 기준)
-    const half = Math.floor(pageNavSize / 2);
-    let start = Math.max(0, cur - half);
-    let end   = Math.min(total - 1, start + pageNavSize - 1);
-    if (end - start + 1 < pageNavSize) start = Math.max(0, end - pageNavSize + 1);
+    const half = Math.floor(pageNavSize/2);
+    let start = Math.max(0, cur-half);
+    let end   = Math.min(total-1, start+pageNavSize-1);
+    if (end-start+1 < pageNavSize) start = Math.max(0, end-pageNavSize+1);
     for (let i = start; i <= end; i++) {
       html += `<button class="page-btn ${i===cur?'active':''}" onclick="gotoPage(${i})">${i+1}</button>`;
     }
@@ -550,26 +592,16 @@
     el.innerHTML = html;
   }
   function gotoPage(p) {
-    currentPage = p; loadApis();
-    const t = document.getElementById('apiTable');
-    if (t) t.scrollIntoView({behavior:'smooth', block:'start'});
-  }
-
-  function toggleSort(key) {
-    if (currentSort === key) currentDir = (currentDir === 'desc') ? 'asc' : 'desc';
-    else { currentSort = key; currentDir = 'desc'; }
-    // 정렬 아이콘 업데이트
-    document.querySelectorAll('[id^=sort-]').forEach(el => el.textContent = '');
-    document.querySelectorAll('thead th').forEach(th => th.classList.remove('sorted'));
-    document.getElementById('sort-'+key).textContent = currentDir === 'desc' ? '↓' : '↑';
-    currentPage = 0;
+    currentPage = p;
     loadApis();
+    document.getElementById('queryResultCard').scrollIntoView({behavior:'smooth',block:'start'});
   }
 
+  // ══════════════════════════════════════════════════════
+  // 상세 모달
+  // ══════════════════════════════════════════════════════
   async function openDetail(repo, apiPath) {
-    currentDetail.repo = repo;
-    currentDetail.apiPath = apiPath;
-    currentDetail.tab = 'list';
+    currentDetail = { repo, apiPath, tab:'list' };
     document.getElementById('detailTitle').textContent = `${apiPath}  (${repo})`;
     document.getElementById('detailModal').style.display = 'flex';
     document.getElementById('tabList').classList.add('active');
@@ -582,35 +614,24 @@
   }
   function switchDetailTab(tab) {
     currentDetail.tab = tab;
-    document.getElementById('tabList').classList.toggle('active', tab==='list');
+    document.getElementById('tabList').classList.toggle('active',  tab==='list');
     document.getElementById('tabChart').classList.toggle('active', tab==='chart');
     loadDetail();
   }
-
   async function loadDetail() {
     const body = document.getElementById('detailBody');
     body.innerHTML = '<div class="loading">로딩 중...</div>';
-
-    if (currentDetail.tab === 'chart') {
-      await loadDetailChart();
-      return;
-    }
+    if (currentDetail.tab === 'chart') { await loadDetailChart(); return; }
     await loadDetailList();
   }
 
-  // ── 목록 탭 (월별합계 체��� 시 월요약 + 일별 목록) ────────
-  // 상세 목록 데이터 (엑셀용 보존)
-  let detailMonthRows = [], detailDailyRows = [];
-
   async function loadDetailList() {
     const body = document.getElementById('detailBody');
-    const params = new URLSearchParams();
-    params.set('repo', currentDetail.repo);
-    params.set('apiPath', currentDetail.apiPath);
-    const to = new Date().toLocaleDateString('sv-SE');
-    const from = new Date(Date.now()-364*86400000).toLocaleDateString('sv-SE');
-    params.set('from', from);
-    params.set('to', to);
+    const params = new URLSearchParams({
+      repo: currentDetail.repo, apiPath: currentDetail.apiPath,
+      from: new Date(Date.now()-364*86400000).toLocaleDateString('sv-SE'),
+      to:   new Date().toLocaleDateString('sv-SE')
+    });
     try {
       const [monthRes, dailyRes] = await Promise.all([
         fetch(`/api/call-stats/monthly?${params}`),
@@ -618,63 +639,52 @@
       ]);
       const monthData = await monthRes.json();
       const dailyData = await dailyRes.json();
-      const monthRows = monthData.rows || [];
-      const dailyRows = dailyData.rows || [];
-      detailMonthRows = monthRows;
-      detailDailyRows = dailyRows;
+      detailMonthRows = monthData.rows || [];
+      detailDailyRows = dailyData.rows || [];
 
-      if (!dailyRows.length && !monthRows.length) {
-        body.innerHTML = '<div class="empty">데이터 없음</div>';
-        return;
+      if (!detailDailyRows.length && !detailMonthRows.length) {
+        body.innerHTML = '<div class="empty">데이터 없음</div>'; return;
       }
 
-      // URL 경로 헤더 + 엑셀 다운로드 버튼
       let html = `<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
         <div style="flex:1;font-size:13px;font-weight:700;padding:10px 14px;background:#f0fdf4;border-left:4px solid #22c55e;border-radius:4px;color:#166534;font-family:monospace;word-break:break-all;">
           📍 ${esc(currentDetail.apiPath)}</div>
         <button class="btn" style="background:#22c55e;color:#fff;height:34px;flex-shrink:0;" onclick="downloadDetailExcel()">⬇ 엑셀 다운로드</button>
       </div>`;
 
-      // 월별 합계
-      if (monthRows.length > 0) {
+      if (detailMonthRows.length) {
         const monthMap = {};
-        monthRows.forEach(r => {
-          const key = r.month;
-          if (!monthMap[key]) monthMap[key] = { month: key, callCount: 0, errorCount: 0 };
-          monthMap[key].callCount += r.callCount;
-          monthMap[key].errorCount += r.errorCount;
+        detailMonthRows.forEach(r => {
+          if (!monthMap[r.month]) monthMap[r.month] = {month:r.month,callCount:0,errorCount:0};
+          monthMap[r.month].callCount += r.callCount;
+          monthMap[r.month].errorCount += r.errorCount;
         });
         const months = Object.values(monthMap).sort((a,b) => b.month.localeCompare(a.month));
-        const totalCall = months.reduce((s,m) => s + m.callCount, 0);
-        const totalErr = months.reduce((s,m) => s + m.errorCount, 0);
+        const totalCall = months.reduce((s,m) => s+m.callCount, 0);
+        const totalErr  = months.reduce((s,m) => s+m.errorCount, 0);
         html += `<div style="margin-bottom:16px;">
           <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:6px;">📅 월별 합계</div>
-          <table><thead><tr>
-            <th>월</th><th class="num">호출건수</th><th class="num">에러건수</th>
-          </tr></thead><tbody>
+          <table><thead><tr><th>월</th><th class="num">호출건수</th><th class="num">에러건수</th></tr></thead><tbody>
           ${months.map(m => `<tr>
             <td style="font-weight:600;">${esc(m.month)}</td>
             <td class="num">${fmt(m.callCount)}</td>
             <td class="num" style="color:${m.errorCount>0?'#dc2626':'inherit'};">${fmt(m.errorCount)}</td>
           </tr>`).join('')}
           <tr style="border-top:2px solid var(--border);font-weight:700;background:#f1f5f9;">
-            <td>합계</td>
-            <td class="num">${fmt(totalCall)}</td>
+            <td>합계</td><td class="num">${fmt(totalCall)}</td>
             <td class="num" style="color:${totalErr>0?'#dc2626':'inherit'};">${fmt(totalErr)}</td>
-          </tr>
-          </tbody></table></div>`;
+          </tr></tbody></table></div>`;
       }
 
-      // 일별 목록 (헤더 고정)
       html += `<div>
-        <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:6px;">📋 일별 상세 (${fmt(dailyRows.length)}건)</div>
+        <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:6px;">📋 일별 상세 (${fmt(detailDailyRows.length)}건)</div>
         <div style="max-height:400px;overflow:auto;">
         <table><thead style="position:sticky;top:0;z-index:1;"><tr>
-          <th>일자</th><th>APM 종류</th><th class="num">호출건수</th><th class="num">에러건수</th>
+          <th>일자</th><th>APM</th><th class="num">호출건수</th><th class="num">에러건수</th>
         </tr></thead><tbody>
-        ${dailyRows.map(r => `<tr>
+        ${detailDailyRows.map(r => `<tr>
           <td>${esc(r.callDate)}</td>
-          <td><span class="src-badge src-${r.source}">${esc(r.source)}</span></td>
+          <td><span style="padding:1px 6px;border-radius:3px;font-size:10px;font-weight:600;background:#dbeafe;color:#1e40af;">${esc(r.source)}</span></td>
           <td class="num">${fmt(r.callCount)}</td>
           <td class="num" style="color:${r.errorCount>0?'#dc2626':'inherit'};">${fmt(r.errorCount)}</td>
         </tr>`).join('')}
@@ -686,15 +696,13 @@
     }
   }
 
-  // ── 그래프 탭 (1년 일단위 차트 — viewer와 동일) ────────
   async function loadDetailChart() {
     const body = document.getElementById('detailBody');
     try {
       const url = `/api/apm/chart?repoName=${encodeURIComponent(currentDetail.repo)}&apiPath=${encodeURIComponent(currentDetail.apiPath)}&bucket=daily&days=365`;
       const res = await fetch(url);
       if (!res.ok) throw new Error('조회 실패');
-      const data = await res.json();
-      renderDetailChartSvg(data);
+      renderDetailChartSvg(await res.json());
     } catch(e) {
       body.innerHTML = `<div class="empty">조회 실패: ${esc(e.message)}</div>`;
     }
@@ -702,10 +710,10 @@
 
   function renderDetailChartSvg(data) {
     const body = document.getElementById('detailBody');
-    const buckets = data.buckets || [];
-    const totalCall = buckets.reduce((s,b) => s + (b.callCount||0), 0);
-    const totalErr  = buckets.reduce((s,b) => s + (b.errorCount||0), 0);
-    const maxCall   = Math.max(0, ...buckets.map(b => b.callCount || 0));
+    const buckets  = data.buckets || [];
+    const totalCall = buckets.reduce((s,b) => s+(b.callCount||0), 0);
+    const totalErr  = buckets.reduce((s,b) => s+(b.errorCount||0), 0);
+    const maxCall   = Math.max(0, ...buckets.map(b => b.callCount||0));
 
     const header = `<div style="font-size:14px;font-weight:700;padding:10px 14px;margin-bottom:8px;background:#f0fdf4;border-left:4px solid #22c55e;border-radius:4px;color:#166534;font-family:monospace;word-break:break-all;">
       📍 ${esc(data.apiPath)}</div>
@@ -717,11 +725,9 @@
       </div>`;
 
     if (!buckets.length || totalCall === 0) {
-      body.innerHTML = header + '<div class="empty">해당 기간에 호출이력이 없습니다.</div>';
-      return;
+      body.innerHTML = header + '<div class="empty">해당 기간에 호출이력이 없습니다.</div>'; return;
     }
 
-    // Y축 자동 스��일
     const ys = calcYScale(maxCall);
     const yMax = ys.yMax, tickStep = ys.tickStep;
     const ticks = [];
@@ -729,29 +735,26 @@
 
     const chartHeight = 220;
     let barWidth, barGap;
-    if (buckets.length <= 7) { barWidth = 70; barGap = 20; }
-    else if (buckets.length <= 31) { barWidth = 28; barGap = 6; }
-    else { barWidth = 20; barGap = 3; }
+    if (buckets.length <= 7)       { barWidth=70; barGap=20; }
+    else if (buckets.length <= 31) { barWidth=28; barGap=6; }
+    else                           { barWidth=20; barGap=3; }
     const chartMinWidth = buckets.length * (barWidth + barGap) + 10;
-
     let labelSkip = 1;
-    if (buckets.length > 200) labelSkip = 14;
-    else if (buckets.length > 60) labelSkip = 7;
-    else if (buckets.length > 14) labelSkip = 2;
+    if (buckets.length > 200) labelSkip=14;
+    else if (buckets.length > 60) labelSkip=7;
+    else if (buckets.length > 14) labelSkip=2;
 
-    const yLabels = ticks.slice().reverse().map(v => `<div>${v.toLocaleString()}</div>`).join('');
+    const yLabels  = ticks.slice().reverse().map(v => `<div>${v.toLocaleString()}</div>`).join('');
     const gridLines = ticks.map(v => {
-      const pct = (v / yMax) * 100;
+      const pct = (v/yMax)*100;
       return `<div style="position:absolute;left:0;right:0;bottom:${pct}%;height:1px;background:${v===0?'#94a3b8':'#e2e8f0'};"></div>`;
     }).join('');
 
     const columns = buckets.map(b => {
-      const call = b.callCount || 0;
-      const err = Math.min(b.errorCount || 0, call);
-      const callH = (call / yMax) * chartHeight;
-      const errH  = (err / yMax) * chartHeight;
-      const greenH = Math.max(0, callH - errH);
-      const ym = fmtYearMD(b.label);
+      const call = b.callCount||0, err = Math.min(b.errorCount||0, call);
+      const callH = (call/yMax)*chartHeight, errH = (err/yMax)*chartHeight;
+      const greenH = Math.max(0, callH-errH);
+      const ym  = fmtYearMD(b.label);
       const tip = `${ym.year} ${ym.md} ${ym.dow}\n호출: ${call.toLocaleString()}건\n에러: ${(b.errorCount||0).toLocaleString()}건`;
       return `<div class="cs-chart-col" data-tip="${esc(tip)}" style="width:${barWidth}px;height:${chartHeight}px;margin-right:${barGap}px;display:flex;flex-direction:column;justify-content:flex-end;cursor:pointer;">
         ${errH>0?`<div style="background:#ec4899;height:${errH}px;width:100%;"></div>`:''}
@@ -759,11 +762,11 @@
       </div>`;
     }).join('');
 
-    const xLabels = buckets.map((b, i) => {
-      const show = (i % labelSkip === 0) || i === buckets.length - 1;
+    const xLabels = buckets.map((b,i) => {
+      const show = (i%labelSkip===0) || i===buckets.length-1;
       if (!show) return `<div style="width:${barWidth}px;margin-right:${barGap}px;"></div>`;
       const ym = fmtYearMD(b.label);
-      const dowColor = ym.dowIdx === 0 ? '#dc2626' : (ym.dowIdx === 6 ? '#2563eb' : '#64748b');
+      const dowColor = ym.dowIdx===0?'#dc2626':(ym.dowIdx===6?'#2563eb':'#64748b');
       return `<div style="width:${barWidth}px;margin-right:${barGap}px;font-size:8px;color:#64748b;text-align:center;line-height:1.25;">
         <span style="color:#94a3b8;">${esc(ym.year)}</span><br><span style="font-weight:600;color:#475569;">${esc(ym.md)}</span><br><span style="color:${dowColor};font-weight:600;">${esc(ym.dow)}</span>
       </div>`;
@@ -785,13 +788,8 @@
         <span><span style="display:inline-block;width:12px;height:12px;background:#ec4899;border-radius:2px;vertical-align:middle;margin-right:4px;"></span>에러건수</span>
       </div>`;
 
-    // 스크롤 우측 끝 (최신 날짜) — DOM 렌더링 완료 후 실행
-    setTimeout(() => {
-      const wrap = document.getElementById('csChartWrap');
-      if (wrap) wrap.scrollLeft = wrap.scrollWidth;
-    }, 50);
+    setTimeout(() => { const w = document.getElementById('csChartWrap'); if(w) w.scrollLeft = w.scrollWidth; }, 50);
 
-    // 플로팅 툴팁
     let tip = document.getElementById('csChartTooltip');
     if (!tip) {
       tip = document.createElement('div');
@@ -800,90 +798,80 @@
       document.body.appendChild(tip);
     }
     body.querySelectorAll('.cs-chart-col').forEach(col => {
-      col.addEventListener('mouseenter', () => { tip.textContent = col.dataset.tip||''; tip.style.display = 'block'; });
-      col.addEventListener('mousemove', e => {
-        let left = e.clientX+14, top = e.clientY-60;
-        if (left+140>window.innerWidth) left = e.clientX-154;
-        if (top<8) top = e.clientY+18;
+      col.addEventListener('mouseenter', () => { tip.textContent = col.dataset.tip||''; tip.style.display='block'; });
+      col.addEventListener('mousemove',  e => {
+        let left=e.clientX+14, top=e.clientY-60;
+        if (left+140>window.innerWidth) left=e.clientX-154;
+        if (top<8) top=e.clientY+18;
         tip.style.left=left+'px'; tip.style.top=top+'px';
       });
-      col.addEventListener('mouseleave', () => { tip.style.display = 'none'; });
+      col.addEventListener('mouseleave', () => { tip.style.display='none'; });
     });
   }
 
-  // ── 상세 목록 엑셀 다운로드 ────��─────────────────────
+  // ── 엑셀 다운로드 ──────────────────────────────────────
   async function downloadDetailExcel() {
     const wb = new ExcelJS.Workbook();
-
-    // Sheet 1: 월별 합계
     const ws1 = wb.addWorksheet('Monthly');
     ws1.addRow([`URL: ${currentDetail.apiPath}`]);
     ws1.addRow([`레포: ${currentDetail.repo}`]);
     ws1.addRow([]);
-    const mh = ws1.addRow(['월', '호출건수', '에러건수']);
-    mh.eachCell(c => { c.font = {bold:true}; c.fill = {type:'pattern',pattern:'solid',fgColor:{argb:'FFE0F2FE'}}; });
+    const mh = ws1.addRow(['월','호출건수','에러건수']);
+    mh.eachCell(c => { c.font={bold:true}; c.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFE0F2FE'}}; });
     const monthMap = {};
     detailMonthRows.forEach(r => {
-      if (!monthMap[r.month]) monthMap[r.month] = {callCount:0, errorCount:0};
+      if (!monthMap[r.month]) monthMap[r.month]={callCount:0,errorCount:0};
       monthMap[r.month].callCount += r.callCount;
       monthMap[r.month].errorCount += r.errorCount;
     });
-    Object.entries(monthMap).sort((a,b) => b[0].localeCompare(a[0])).forEach(([m,v]) => {
-      ws1.addRow([m, v.callCount, v.errorCount]);
-    });
+    Object.entries(monthMap).sort((a,b) => b[0].localeCompare(a[0])).forEach(([m,v]) => ws1.addRow([m,v.callCount,v.errorCount]));
     ws1.columns = [{width:14},{width:14},{width:14}];
-    if (ws1.rowCount > 4) ws1.autoFilter = {from:'A4',to:'C4'};
+    if (ws1.rowCount>4) ws1.autoFilter = {from:'A4',to:'C4'};
 
-    // Sheet 2: 일별 상세
     const ws2 = wb.addWorksheet('Daily');
     ws2.addRow([`URL: ${currentDetail.apiPath}`]);
     ws2.addRow([`레포: ${currentDetail.repo}`]);
     ws2.addRow([]);
-    const dh = ws2.addRow(['일자', 'APM종류', '호출건수', '에러건수']);
-    dh.eachCell(c => { c.font = {bold:true}; c.fill = {type:'pattern',pattern:'solid',fgColor:{argb:'FFE0F2FE'}}; });
-    detailDailyRows.forEach(r => {
-      ws2.addRow([r.callDate, r.source, r.callCount, r.errorCount]);
-    });
+    const dh = ws2.addRow(['일자','APM종류','호출건수','에러건수']);
+    dh.eachCell(c => { c.font={bold:true}; c.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFE0F2FE'}}; });
+    detailDailyRows.forEach(r => ws2.addRow([r.callDate,r.source,r.callCount,r.errorCount]));
     ws2.columns = [{width:14},{width:12},{width:14},{width:14}];
-    if (ws2.rowCount > 4) ws2.autoFilter = {from:'A4',to:'D4'};
+    if (ws2.rowCount>4) ws2.autoFilter = {from:'A4',to:'D4'};
 
     const buf = await wb.xlsx.writeBuffer();
-    const blob = new Blob([buf], {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+    const blob = new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
     a.download = `호출현황_${currentDetail.repo}_${currentDetail.apiPath.replace(/\//g,'_')}.xlsx`;
     a.click(); URL.revokeObjectURL(a.href);
   }
 
-  // Y축 자동 스케일 (viewer와 동일)
+  // ── 유틸 ──────────────────────────────────────────────
   function calcYScale(maxVal) {
-    if (maxVal <= 0) return { yMax: 10, tickStep: 1 };
-    const rough = maxVal / 8;
+    if (maxVal<=0) return {yMax:10,tickStep:1};
+    const rough = maxVal/8;
     const magnitude = Math.pow(10, Math.floor(Math.log10(rough)));
-    const normalized = rough / magnitude;
+    const normalized = rough/magnitude;
     let tickStep;
-    if (normalized < 1.5) tickStep = 1 * magnitude;
-    else if (normalized < 3) tickStep = 2 * magnitude;
-    else if (normalized < 7) tickStep = 5 * magnitude;
-    else tickStep = 10 * magnitude;
-    const yMax = Math.ceil(maxVal / tickStep) * tickStep;
-    return { yMax, tickStep };
+    if (normalized<1.5) tickStep=1*magnitude;
+    else if (normalized<3) tickStep=2*magnitude;
+    else if (normalized<7) tickStep=5*magnitude;
+    else tickStep=10*magnitude;
+    return {yMax:Math.ceil(maxVal/tickStep)*tickStep, tickStep};
   }
-
   function fmtYearMD(s) {
-    if (!s) return { year:'', md:'', dow:'', dowIdx:-1 };
+    if (!s) return {year:'',md:'',dow:'',dowIdx:-1};
     const m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
-    if (!m) return { year:'', md:s, dow:'', dowIdx:-1 };
-    const d = new Date(parseInt(m[1]), parseInt(m[2])-1, parseInt(m[3]));
+    if (!m) return {year:'',md:s,dow:'',dowIdx:-1};
+    const d = new Date(parseInt(m[1]),parseInt(m[2])-1,parseInt(m[3]));
     const dowIdx = d.getDay();
     const dowNames = ['일','월','화','수','목','금','토'];
-    return { year:`${m[1].slice(2)}년`, md:`${parseInt(m[2])}월${parseInt(m[3])}일`, dow:`(${dowNames[dowIdx]})`, dowIdx };
+    return {year:`${m[1].slice(2)}년`, md:`${parseInt(m[2])}월${parseInt(m[3])}일`, dow:`(${dowNames[dowIdx]})`, dowIdx};
   }
 
-  // Enter 키로 조회
-  document.getElementById('searchInput').addEventListener('keydown', e => { if (e.key === 'Enter') loadAll(); });
+  // Enter 키 조회
+  document.getElementById('searchInput').addEventListener('keydown', e => { if(e.key==='Enter') querySearch(); });
 
   init();
-
 </script>
 </body>
 </html>
