@@ -22,8 +22,16 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 
+import javax.net.ssl.HostnameVerifier;
+import javax.net.ssl.HttpsURLConnection;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSocketFactory;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
 import java.io.IOException;
+import java.net.HttpURLConnection;
 import java.nio.charset.StandardCharsets;
+import java.security.cert.X509Certificate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -33,6 +41,29 @@ public class JiraService {
 
     private static final Logger log = LoggerFactory.getLogger(JiraService.class);
     private static final ObjectMapper MAPPER = new ObjectMapper();
+
+    /** 내부 SmartWay 서버의 사설 인증서 수용용: 모든 인증서를 신뢰하는 SSLSocketFactory. */
+    private static final SSLSocketFactory TRUST_ALL_SSL_FACTORY = buildTrustAllSslFactory();
+    /** 내부망 호스트명 검증 우회 HostnameVerifier. */
+    private static final HostnameVerifier TRUST_ALL_HOSTNAME = (hostname, session) -> true;
+
+    private static SSLSocketFactory buildTrustAllSslFactory() {
+        try {
+            TrustManager[] trustAll = new TrustManager[] {
+                    new X509TrustManager() {
+                        @Override public void checkClientTrusted(X509Certificate[] chain, String authType) {}
+                        @Override public void checkServerTrusted(X509Certificate[] chain, String authType) {}
+                        @Override public X509Certificate[] getAcceptedIssuers() { return new X509Certificate[0]; }
+                    }
+            };
+            SSLContext ctx = SSLContext.getInstance("TLS");
+            ctx.init(null, trustAll, new java.security.SecureRandom());
+            return ctx.getSocketFactory();
+        } catch (Exception e) {
+            log.error("[Jira] Trust-All SSLContext 초기화 실패: {}", e.getMessage(), e);
+            return null;
+        }
+    }
 
     private final ApiRecordRepository recordRepo;
     private final RepoConfigRepository repoConfigRepo;
@@ -59,7 +90,21 @@ public class JiraService {
      */
     private RestTemplate buildRestTemplate(JiraConfig config) {
         // BufferingFactory: 응답 스트림을 버퍼링해 인터셉터에서 바디를 읽어도 이후 역직렬화 가능
-        SimpleClientHttpRequestFactory inner = new SimpleClientHttpRequestFactory();
+        // 망분리 내부 SmartWay 서버는 사설/내부 CA 인증서를 사용하므로 HTTPS 연결에 한해
+        // SSL 검증을 우회한다 (해당 RestTemplate 인스턴스 범위로만 적용, JVM 전역 영향 없음).
+        SimpleClientHttpRequestFactory inner = new SimpleClientHttpRequestFactory() {
+            @Override
+            protected void prepareConnection(HttpURLConnection connection, String httpMethod) throws IOException {
+                if (connection instanceof HttpsURLConnection https) {
+                    SSLSocketFactory sf = TRUST_ALL_SSL_FACTORY;
+                    if (sf != null) {
+                        https.setSSLSocketFactory(sf);
+                        https.setHostnameVerifier(TRUST_ALL_HOSTNAME);
+                    }
+                }
+                super.prepareConnection(connection, httpMethod);
+            }
+        };
         inner.setConnectTimeout(10_000);
         inner.setReadTimeout(30_000);
         RestTemplate rt = new RestTemplate(new BufferingClientHttpRequestFactory(inner));
@@ -540,7 +585,18 @@ public class JiraService {
         } catch (Exception e) {
             log.error("[Jira] 연결 테스트 실패: {} | url={}", e.getMessage(), url);
             log.debug("[Jira] 연결 테스트 실패 스택:", e);
-            return Map.of("success", false, "error", e.getMessage());
+            String msg = e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage();
+            // 대표적인 오류 한글 힌트 부여
+            if (msg.contains("PKIX") || msg.contains("SunCertPathBuilderException")) {
+                msg = "SSL 인증서 검증 실패 (내부 CA 미신뢰). 서버 재기동 후 재시도해 주세요. 원인: " + msg;
+            } else if (msg.contains("401") || msg.toLowerCase().contains("unauthorized")) {
+                msg = "인증 실패 (401) — Bearer 토큰을 확인해 주세요.";
+            } else if (msg.contains("404")) {
+                msg = "경로 미존재 (404) — SmartWay URL 을 확인해 주세요.";
+            } else if (msg.contains("ConnectException") || msg.contains("connect timed out")) {
+                msg = "서버 접속 실패 — 네트워크/URL 을 확인해 주세요. 원인: " + msg;
+            }
+            return Map.of("success", false, "error", msg);
         }
     }
 
