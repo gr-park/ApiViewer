@@ -37,15 +37,51 @@
         </encoder>
     </appender>
 
-    <!-- 비즈니스 로거: com.baek.viewer 패키지 → 비즈니스 파일 + 콘솔 -->
-    <logger name="com.baek.viewer" level="INFO" additivity="false">
-        <appender-ref ref="CONSOLE"/>
-        <appender-ref ref="BUSINESS_FILE"/>
-    </logger>
+    <!-- ── 일반 모드 (기본) ── -->
+    <springProfile name="!debug">
+        <!-- 비즈니스 로거 -->
+        <logger name="com.baek.viewer" level="INFO" additivity="false">
+            <appender-ref ref="CONSOLE"/>
+            <appender-ref ref="BUSINESS_FILE"/>
+        </logger>
+        <!-- 루트 -->
+        <root level="INFO">
+            <appender-ref ref="CONSOLE"/>
+            <appender-ref ref="SYSTEM_FILE"/>
+        </root>
+    </springProfile>
 
-    <!-- 루트 로거: 나머지 (Spring, Hibernate, Quartz 등) → 시스템 파일 + 콘솔 -->
-    <root level="INFO">
-        <appender-ref ref="CONSOLE"/>
-        <appender-ref ref="SYSTEM_FILE"/>
-    </root>
+    <!-- ── 디버그 모드: --spring.profiles.active=debug ── -->
+    <springProfile name="debug">
+        <!-- 비즈니스 로거: DEBUG -->
+        <logger name="com.baek.viewer" level="DEBUG" additivity="false">
+            <appender-ref ref="CONSOLE"/>
+            <appender-ref ref="BUSINESS_FILE"/>
+        </logger>
+        <!-- Spring Web / RestTemplate 요청·응답 헤더 로깅 -->
+        <logger name="org.springframework.web.client.RestTemplate" level="DEBUG" additivity="false">
+            <appender-ref ref="CONSOLE"/>
+            <appender-ref ref="SYSTEM_FILE"/>
+        </logger>
+        <!-- JPA SQL 로깅 -->
+        <logger name="org.hibernate.SQL" level="DEBUG" additivity="false">
+            <appender-ref ref="CONSOLE"/>
+            <appender-ref ref="SYSTEM_FILE"/>
+        </logger>
+        <logger name="org.hibernate.orm.jdbc.bind" level="TRACE" additivity="false">
+            <appender-ref ref="CONSOLE"/>
+            <appender-ref ref="SYSTEM_FILE"/>
+        </logger>
+        <!-- Spring MVC 요청 매핑 -->
+        <logger name="org.springframework.web.servlet.DispatcherServlet" level="DEBUG" additivity="false">
+            <appender-ref ref="CONSOLE"/>
+            <appender-ref ref="SYSTEM_FILE"/>
+        </logger>
+        <!-- 루트 -->
+        <root level="INFO">
+            <appender-ref ref="CONSOLE"/>
+            <appender-ref ref="SYSTEM_FILE"/>
+        </root>
+    </springProfile>
+
 </configuration>
