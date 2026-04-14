@@ -2397,15 +2397,8 @@
             <span id="detailDescShown">${esc(allDesc(r)) || '-'}</span>
             ${r.descriptionOverride ? '<span style="display:inline-block;margin-left:6px;padding:1px 6px;background:#dbeafe;border:1px solid #93c5fd;border-radius:3px;color:#1e40af;font-size:10px;font-weight:600;" title="사용자 수정됨">수정</span>' : ''}
           </div>
-          <div class="detail-label">내용(수정)</div>
-          <div class="detail-value">
-            <textarea id="detailDescOverride" rows="2" placeholder="비우면 자동 파싱값(ApiOperation/Description/컨트롤러주석) 사용" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:4px;font-size:12px;resize:vertical;font-family:inherit;" ${("차단완료"===r.status)?'disabled':''}>${esc(r.descriptionOverride || '')}</textarea>
-            <div style="display:flex;gap:6px;margin-top:6px;align-items:center;">
-              <button type="button" onclick="saveDetailDescOverride(${r.id})" ${("차단완료"===r.status)?'disabled':''} style="padding:4px 12px;background:var(--primary);color:#fff;border:0;border-radius:4px;font-size:11px;cursor:pointer;${("차단완료"===r.status)?'opacity:.4;cursor:not-allowed;':''}">저장</button>
-              <button type="button" onclick="clearDetailDescOverride(${r.id})" ${("차단완료"===r.status)?'disabled':''} style="padding:4px 12px;background:#fff;color:var(--text);border:1px solid var(--border);border-radius:4px;font-size:11px;cursor:pointer;${("차단완료"===r.status)?'opacity:.4;cursor:not-allowed;':''}">지우기(자동파싱값 사용)</button>
-              <span style="font-size:10px;color:var(--text-muted);">※ 저장 시 현황화면의 "내용" 컬럼에 반영됩니다.</span>
-            </div>
-          </div>
+          <div class="detail-label">내용(수정) <span style="color:var(--primary);font-size:10px;">✎</span></div>
+          <div class="detail-value" style="white-space:normal;"><textarea id="detailDescOverride" rows="2" placeholder="비우면 자동 파싱값(ApiOperation/Description/컨트롤러주석) 사용" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:4px;font-size:12px;resize:vertical;font-family:inherit;" ${("차단완료"===r.status)?'disabled':''}>${esc(r.descriptionOverride || '')}</textarea><div style="display:flex;gap:6px;margin-top:6px;align-items:center;"><button type="button" onclick="saveDetailDescOverride(${r.id})" ${("차단완료"===r.status)?'disabled':''} style="padding:4px 12px;background:var(--primary);color:#fff;border:0;border-radius:4px;font-size:11px;cursor:pointer;${("차단완료"===r.status)?'opacity:.4;cursor:not-allowed;':''}">저장</button><button type="button" onclick="clearDetailDescOverride(${r.id})" ${("차단완료"===r.status)?'disabled':''} style="padding:4px 12px;background:#fff;color:var(--text);border:1px solid var(--border);border-radius:4px;font-size:11px;cursor:pointer;${("차단완료"===r.status)?'opacity:.4;cursor:not-allowed;':''}">지우기(자동파싱값 사용)</button><span style="font-size:10px;color:var(--text-muted);">※ 저장 시 현황화면의 "내용" 컬럼에 반영됩니다.</span></div></div>
           <div class="detail-label">ApiOperation</div><div class="detail-value">${esc(v(r.apiOperationValue)) || '-'}</div>
           <div class="detail-label">Description주석</div><div class="detail-value">${esc(v(r.descriptionTag)) || '-'}</div>
           <div class="detail-label">메소드주석</div><div class="detail-value">${esc(v(r.fullComment)) || '-'}</div>
@@ -2418,22 +2411,9 @@
         <div class="detail-section-title">상태 / 차단</div>
         <div class="detail-grid">
           <div class="detail-label">상태 <span style="color:var(--primary);font-size:10px;">✎</span></div>
-          <div class="detail-value">
-            <select id="df-status" class="df-select" style="width:100%;" onchange="onDetailStatusChange()" ${dis}>
-              <option value="사용" ${r.status==='사용'?'selected':''}>사용</option>
-              <option value="차단완료" ${r.status==='차단완료'?'selected':''}>차단완료</option>
-              <option value="최우선 차단대상" ${r.status==='최우선 차단대상'?'selected':''}>① 최우선 차단대상</option>
-              <option value="후순위 차단대상" ${r.status==='후순위 차단대상'?'selected':''}>② 후순위 차단대상</option>
-              <option value="추가검토필요 차단대상" ${r.status==='추가검토필요 차단대상'?'selected':''}>③ 추가검토필요 차단대상</option>
-            </select>
-            ${(r.status==='최우선 차단대상' && r.logWorkExcluded) ? '<span style="font-size:11px;color:#9a3412;font-weight:600;margin-top:4px;display:block;">(침해사고 로그 제외)</span>' : ''}
-          </div>
+          <div class="detail-value" style="white-space:normal;"><select id="df-status" class="df-select" style="width:100%;" onchange="onDetailStatusChange()" ${dis}><option value="사용" ${r.status==='사용'?'selected':''}>사용</option><option value="차단완료" ${r.status==='차단완료'?'selected':''}>차단완료</option><option value="최우선 차단대상" ${r.status==='최우선 차단대상'?'selected':''}>① 최우선 차단대상</option><option value="후순위 차단대상" ${r.status==='후순위 차단대상'?'selected':''}>② 후순위 차단대상</option><option value="추가검토필요 차단대상" ${r.status==='추가검토필요 차단대상'?'selected':''}>③ 추가검토필요 차단대상</option></select>${(r.status==='최우선 차단대상' && r.logWorkExcluded) ? '<span style="font-size:11px;color:#9a3412;font-weight:600;margin-top:4px;display:block;">(침해사고 로그 제외)</span>' : ''}</div>
           <div class="detail-label">차단대상기준 <span style="color:var(--primary);font-size:10px;">✎</span></div>
-          <div class="detail-value">
-            <select id="df-blockCriteria" class="df-select" style="width:100%;" ${dis}>
-              ${buildCriteriaOptions(r.status, r.blockCriteria || '')}
-            </select>
-          </div>
+          <div class="detail-value" style="white-space:normal;"><select id="df-blockCriteria" class="df-select" style="width:100%;" ${dis}>${buildCriteriaOptions(r.status, r.blockCriteria || '')}</select></div>
           <div class="detail-label">상태확정</div>
           <div class="detail-value">
             ${lk
