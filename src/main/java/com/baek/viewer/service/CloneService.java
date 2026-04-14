@@ -67,7 +67,7 @@ public class CloneService {
     }
 
     // ── Bitbucket 레포 목록 조회 (페이지네이션) ──────────────────────────
-    public Map<String, Object> listRepos(int page) throws Exception {
+    public Map<String, Object> listRepos(int start) throws Exception {
         GlobalConfig gc = globalRepo.findById(1L)
                 .orElseThrow(() -> new IllegalStateException("설정 정보가 없습니다."));
 
@@ -80,11 +80,10 @@ public class CloneService {
         if (token == null || token.isBlank())
             throw new IllegalArgumentException("Bitbucket 토큰이 설정되지 않았습니다.");
 
-        int start = page * limit;
         String url = baseUrl.replaceAll("/+$", "")
                 + "/rest/api/1.0/repos?limit=" + limit + "&start=" + start;
 
-        log.info("[Bitbucket 레포 조회] page={} start={} url={}", page, start, url);
+        log.info("[Bitbucket 레포 조회] start={} url={}", start, url);
 
         HttpClient client = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(10))
@@ -104,7 +103,7 @@ public class CloneService {
         }
 
         Map<String, Object> result = om.readValue(response.body(), new TypeReference<>() {});
-        log.info("[Bitbucket 레포 조회 완료] page={} isLastPage={}", page, result.get("isLastPage"));
+        log.info("[Bitbucket 레포 조회 완료] start={} isLastPage={}", start, result.get("isLastPage"));
         return result;
     }
 

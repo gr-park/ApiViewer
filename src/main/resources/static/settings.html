@@ -345,9 +345,9 @@ function updateAdminBadge(valid) {
 
       <!-- 페이지 네비게이션 -->
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:12px;color:var(--text-muted);">
-        <button class="btn btn-ghost" style="height:24px;font-size:11px;padding:2px 10px;" id="bbPrevBtn" onclick="bbListRepos(bbState.page - 1)" disabled>◀ 이전</button>
+        <button class="btn btn-ghost" style="height:24px;font-size:11px;padding:2px 10px;" id="bbPrevBtn" onclick="bbListReposPrev()" disabled>◀ 이전</button>
         <span id="bbPageInfo">1 페이지</span>
-        <button class="btn btn-ghost" style="height:24px;font-size:11px;padding:2px 10px;" id="bbNextBtn" onclick="bbListRepos(bbState.page + 1)" disabled>다음 ▶</button>
+        <button class="btn btn-ghost" style="height:24px;font-size:11px;padding:2px 10px;" id="bbNextBtn" onclick="bbListReposNext()" disabled>다음 ▶</button>
       </div>
 
       <!-- 레포 체크박스 목록 -->
@@ -1417,7 +1417,7 @@ function updateAdminBadge(valid) {
   }
 
   // ── Bitbucket Clone ───────────────────────────────────────
-  const bbState = { page: 0, isLastPage: true, pollTimer: null, jobId: null, allRepos: [], selected: new Map() };
+  const bbState = { start: 0, nextStart: 0, startHistory: [], isLastPage: true, pollTimer: null, jobId: null, allRepos: [], selected: new Map() };
 
   /** repos 탭 활성화 시 Bitbucket 설정 로드 */
   async function loadBitbucketConfig() {
@@ -1527,29 +1527,41 @@ function updateAdminBadge(valid) {
   }
 
   /** Bitbucket 레포 목록 조회 */
-  async function bbListRepos(page) {
-    if (page < 0) return;
-    if (page > 0 && bbState.isLastPage) return;
+  async function bbListRepos(start) {
     try {
-      const res = await adminFetch(`/api/clone/repos?page=${page}`);
+      const res = await adminFetch(`/api/clone/repos?start=${start}`);
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
         showToast(err.error || '레포 조회 실패', 'error'); return;
       }
       const data = await res.json();
-      bbState.page = page;
+      bbState.start      = start;
+      bbState.nextStart  = data.nextPageStart ?? 0;
       bbState.isLastPage = data.isLastPage ?? true;
       bbState.allRepos   = data.values || [];
 
+      const pageNum = bbState.startHistory.length + 1;
       document.getElementById('bbRepoArea').style.display = 'block';
       document.getElementById('bbTotalCount').textContent  = bbState.allRepos.length;
-      document.getElementById('bbPageInfo').textContent    = `${page + 1} 페이지`;
-      document.getElementById('bbPrevBtn').disabled        = page === 0;
+      document.getElementById('bbPageInfo').textContent    = `${pageNum} 페이지`;
+      document.getElementById('bbPrevBtn').disabled        = bbState.startHistory.length === 0;
       document.getElementById('bbNextBtn').disabled        = bbState.isLastPage;
 
       bbRenderRepoList(bbState.allRepos);
       bbUpdateSelectedInfo();
     } catch(e) { showToast('레포 조회 중 오류: ' + e.message, 'error'); }
+  }
+
+  function bbListReposNext() {
+    if (bbState.isLastPage) return;
+    bbState.startHistory.push(bbState.start);
+    bbListRepos(bbState.nextStart);
+  }
+
+  function bbListReposPrev() {
+    if (bbState.startHistory.length === 0) return;
+    const prevStart = bbState.startHistory.pop();
+    bbListRepos(prevStart);
   }
 
   function bbRenderRepoList(repos) {

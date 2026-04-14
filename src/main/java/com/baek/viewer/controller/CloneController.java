@@ -23,10 +23,10 @@ public class CloneController {
 
     /** Bitbucket 레포 목록 조회 (페이지네이션) */
     @GetMapping("/repos")
-    public ResponseEntity<?> listRepos(@RequestParam(defaultValue = "0") int page) {
-        log.info("[Bitbucket 레포 조회] GET /api/clone/repos?page={}", page);
+    public ResponseEntity<?> listRepos(@RequestParam(defaultValue = "0") int start) {
+        log.info("[Bitbucket 레포 조회] GET /api/clone/repos?start={}", start);
         try {
-            return ResponseEntity.ok(cloneService.listRepos(page));
+            return ResponseEntity.ok(cloneService.listRepos(start));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         } catch (Exception e) {
