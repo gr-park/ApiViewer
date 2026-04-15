@@ -2180,7 +2180,7 @@
     const escaped = esc(text);
     if (!jiraBaseUrl) return escaped;
     const linkFn = t =>
-      `<a href="${esc(jiraBaseUrl)}/browse/${t}" target="_blank" class="jira-badge" title="SmartWay 티켓 바로가기">🔗 ${t}</a>`;
+      `<a href="${esc(jiraBaseUrl)}/browse/${t}" target="_blank" rel="noopener noreferrer" class="jira-badge" title="SmartWay 티켓 바로가기" onclick="event.stopPropagation()">🔗 ${t}</a>`;
     // [CSR-12345] / [OP-12345] 먼저 처리, 그 다음 대괄호 없는 CSR-12345 / OP-12345
     return escaped.replace(/\[((?:CSR|OP)-\d+)\]|\b((?:CSR|OP)-\d+)\b/g, (_, t1, t2) => linkFn(t1 || t2));
   }
