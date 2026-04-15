@@ -732,30 +732,7 @@ public class JiraService {
             summary = summary.substring(0, 252) + "...";
         }
 
-        StringBuilder desc = new StringBuilder();
-        desc.append("■ 기본 정보\n");
-        desc.append("- 업무명: ").append(businessName).append("\n");
-        desc.append("- 레포지토리: ").append(record.getRepositoryName()).append("\n");
-        if (record.getControllerName() != null) {
-            desc.append("- Controller: ").append(record.getControllerName()).append("\n");
-        }
-        if (record.getMethodName() != null) {
-            desc.append("- 메소드: ").append(record.getMethodName()).append("\n");
-        }
-        desc.append("- URL 경로: ").append(record.getApiPath()).append("\n");
-        if (record.getFullUrl() != null) {
-            desc.append("- Full URL: ").append(record.getFullUrl()).append("\n");
-        }
-        desc.append("\n■ 차단 판단 근거\n");
-        desc.append("- 상태: ").append(record.getStatus()).append("\n");
-        desc.append("- 호출건수: 총 ").append(nn(record.getCallCount())).append("건");
-        desc.append(" / 1달 ").append(nn(record.getCallCountMonth())).append("건");
-        desc.append(" / 1주 ").append(nn(record.getCallCountWeek())).append("건\n");
-        if (record.getBlockCriteria() != null) {
-            desc.append("- 차단기준: ").append(record.getBlockCriteria()).append("\n");
-        }
-        desc.append("\n■ URLViewer 참조\n");
-        desc.append("- URLViewer ID: ").append(record.getId()).append("\n");
+        String descText = buildDescriptionTables(cfg, record, businessName);
 
         String priority = switch (record.getStatus()) {
             case "최우선 차단대상" -> "Highest";
@@ -767,7 +744,7 @@ public class JiraService {
         fields.put("project", Map.of("key", cfg.getProjectKey()));
         fields.put("issuetype", Map.of("name", "Story"));
         fields.put("summary", summary);
-        fields.put("description", desc.toString());
+        fields.put("description", descText);
         fields.put("priority", Map.of("name", priority));
         fields.put("labels", List.of(record.getRepositoryName()));
 
@@ -782,6 +759,192 @@ public class JiraService {
                 summary, priority, epicKey, assigneeAccountId);
 
         return fields;
+    }
+
+    /**
+     * SmartWay(Jira) 이슈 description 을 5개 표로 구성한다.
+     * - Jira wiki markup 사용: h3. 제목, ||헤더||, |셀|, {color:#xxx}text{color}
+     * - 타이틀: 파란색 + bold (h3. {color:#1e40af}*...*{color})
+     * - 상태값 셀은 viewer.html 배지 색상과 동일
+     * - 차단근거 셀: SmartWay 이슈 URL 링크
+     *
+     * 표 구성:
+     *   1) 기본정보     — 업무명, 레포지토리, Controller, 메소드, URL경로, Full URL, HTTP Method
+     *   2) 상세정보     — ApiOperation, Description주석, 메소드주석, 컨트롤러주석, 관련메뉴(override)
+     *   3) 상태정보     — 상태(배지색), 상태확정, 1년/1달/1주 호출건, Deprecated
+     *   4) 차단정보     — 차단기준, 차단일자, 차단근거(SmartWay 링크), 비고
+     *   5) 소스변경이력 — gitHistory(JSON) → 최근 5건 (날짜/변경자/내용)
+     */
+    String buildDescriptionTables(JiraConfig cfg, ApiRecord record, String businessName) {
+        log.debug("[Jira] buildDescriptionTables 시작: recordId={}, repo={}, apiPath={}",
+                record.getId(), record.getRepositoryName(), record.getApiPath());
+
+        StringBuilder sb = new StringBuilder();
+
+        // 1) 기본정보
+        appendTitle(sb, "기본정보");
+        sb.append("||항목||값||\n");
+        row(sb, "업무명",       businessName);
+        row(sb, "레포지토리",   record.getRepositoryName());
+        row(sb, "Controller",   record.getControllerName());
+        row(sb, "메소드",       record.getMethodName());
+        row(sb, "URL 경로",     record.getApiPath());
+        row(sb, "Full URL",     record.getFullUrl());
+        row(sb, "HTTP Method",  record.getHttpMethod());
+        sb.append("\n");
+
+        // 2) 상세정보
+        appendTitle(sb, "상세정보");
+        sb.append("||항목||값||\n");
+        row(sb, "관련메뉴(사용자지정)", safe(record.getDescriptionOverride()));
+        row(sb, "ApiOperation",          safe(record.getApiOperationValue()));
+        row(sb, "Description 주석",      safe(record.getDescriptionTag()));
+        row(sb, "메소드 주석",           safe(record.getFullComment()));
+        row(sb, "컨트롤러 주석",         safe(record.getControllerComment()));
+        sb.append("\n");
+
+        // 3) 상태정보
+        appendTitle(sb, "상태정보");
+        sb.append("||항목||값||\n");
+        row(sb, "상태",          colorizeStatus(record.getStatus()));
+        row(sb, "상태확정",      record.isStatusOverridden() ? "확정" : "미확정");
+        row(sb, "1년 호출건",    nn(record.getCallCount()) + "건");
+        row(sb, "1달 호출건",    nn(record.getCallCountMonth()) + "건");
+        row(sb, "1주 호출건",    nn(record.getCallCountWeek()) + "건");
+        row(sb, "Deprecated",    "Y".equals(record.getIsDeprecated()) ? "Y" : "N");
+        sb.append("\n");
+
+        // 4) 차단정보
+        appendTitle(sb, "차단정보");
+        sb.append("||항목||값||\n");
+        row(sb, "차단기준",  safe(record.getBlockCriteria()));
+        row(sb, "차단일자",  record.getBlockedDate() != null ? record.getBlockedDate().toString() : "-");
+        rowRaw(sb, "차단근거", linkifyBlockedReason(cfg, record.getBlockedReason()));
+        row(sb, "비고",      safe(record.getMemo()));
+        sb.append("\n");
+
+        // 5) 소스변경이력
+        appendTitle(sb, "소스변경이력 (최근 5건)");
+        sb.append("||#||날짜||변경자||내용||\n");
+        List<String[]> commits = parseGitHistory(record.getGitHistory());
+        if (commits.isEmpty()) {
+            sb.append("|-|-|-|-|\n");
+        } else {
+            int idx = 1;
+            for (String[] c : commits) {
+                sb.append("|").append(idx++).append("|")
+                  .append(cell(c[0])).append("|")
+                  .append(cell(c[1])).append("|")
+                  .append(cell(c[2])).append("|\n");
+            }
+        }
+
+        log.debug("[Jira] buildDescriptionTables 완료: length={}, commits={}",
+                sb.length(), commits.size());
+        return sb.toString();
+    }
+
+    /** 표 타이틀: 파란색 + bold (Jira wiki markup) */
+    private void appendTitle(StringBuilder sb, String title) {
+        sb.append("h3. {color:#1e40af}*").append(title).append("*{color}\n");
+    }
+
+    /** 일반 2열 행 (값을 cell() 로 정제) */
+    private void row(StringBuilder sb, String k, String v) {
+        sb.append("|").append(k).append("|").append(cell(v)).append("|\n");
+    }
+
+    /** 값이 이미 안전하게 정제된 상태(예: linkifyBlockedReason) 일 때 사용 */
+    private void rowRaw(StringBuilder sb, String k, String v) {
+        sb.append("|").append(k).append("|").append(v == null || v.isBlank() ? "-" : v).append("|\n");
+    }
+
+    /** 셀 값 정제: null/빈값 → '-', Jira wiki 예약문자 중 표 구분자 '|' 를 전각으로 치환, 개행은 \\\\ 로 */
+    private String cell(String v) {
+        if (v == null || v.isBlank()) return "-";
+        String s = v.replace("|", "｜");
+        s = s.replace("\r\n", "\n").replace("\r", "\n").replace("\n", " \\\\ ");
+        if (s.length() > 500) s = s.substring(0, 497) + "...";
+        return s;
+    }
+
+    /** null/-/blank 를 '-' 로 치환 */
+    private String safe(String v) {
+        if (v == null || v.isBlank() || "-".equals(v.trim())) return "-";
+        return v.trim();
+    }
+
+    /**
+     * 상태값을 viewer.html 배지 색상으로 채색.
+     * 사용/차단완료: 초록(#166534), 최우선: 빨강(#991b1b), 후순위: 주황(#c2410c),
+     * 추가검토필요: 노랑(#92400e)
+     */
+    private String colorizeStatus(String status) {
+        if (status == null || status.isBlank()) return "-";
+        String color = switch (status) {
+            case "사용", "차단완료" -> "#166534";
+            case "최우선 차단대상"   -> "#991b1b";
+            case "후순위 차단대상"   -> "#c2410c";
+            case "추가검토필요 차단대상" -> "#92400e";
+            default                   -> "#475569";
+        };
+        return "{color:" + color + "}*" + status + "*{color}";
+    }
+
+    /**
+     * 차단근거 내 [CSR-xxx]/[OP-xxx] 티켓 패턴을 SmartWay(Jira) 이슈 링크로 변환.
+     * viewer.html 의 class="jira-badge" 가 가리키는 URL 과 동일한 {baseUrl}/browse/{KEY} 를 사용.
+     */
+    private String linkifyBlockedReason(JiraConfig cfg, String reason) {
+        if (reason == null || reason.isBlank()) return "-";
+        String baseUrl = cfg != null ? cfg.getJiraBaseUrl() : null;
+        // 1) 줄바꿈/길이/파이프 정제를 먼저 수행 (단, 파이프 치환은 안전하게 하되 아래 링크 조립 후 별도 처리)
+        String s = reason.replace("\r\n", "\n").replace("\r", "\n").replace("\n", " \\\\ ");
+        if (s.length() > 500) s = s.substring(0, 497) + "...";
+        // 기존 본문에 있던 '|' 는 표 구분자와 충돌하므로 전각으로 치환
+        s = s.replace("|", "｜");
+        if (baseUrl == null || baseUrl.isBlank()) return s;
+
+        String trimmed = baseUrl.endsWith("/") ? baseUrl.substring(0, baseUrl.length() - 1) : baseUrl;
+        // 2) 그 다음 CSR-xxx / OP-xxx 패턴을 [KEY|URL] 링크로 치환 (이 '|' 는 wiki 링크 문법용)
+        java.util.regex.Pattern p = java.util.regex.Pattern.compile(
+                "\\[((?:CSR|OP)-\\d+)\\]|\\b((?:CSR|OP)-\\d+)\\b");
+        java.util.regex.Matcher m = p.matcher(s);
+        StringBuffer out = new StringBuffer();
+        while (m.find()) {
+            String key = m.group(1) != null ? m.group(1) : m.group(2);
+            String replacement = "[" + key + "|" + trimmed + "/browse/" + key + "]";
+            m.appendReplacement(out, java.util.regex.Matcher.quoteReplacement(replacement));
+        }
+        m.appendTail(out);
+        return out.toString();
+    }
+
+    /** gitHistory(JSON 배열) → [date, author, message] 최근 5건. 파싱 실패 시 빈 리스트. */
+    @SuppressWarnings("unchecked")
+    private List<String[]> parseGitHistory(String json) {
+        if (json == null || json.isBlank()) return List.of();
+        try {
+            Object parsed = MAPPER.readValue(json, Object.class);
+            if (!(parsed instanceof List<?> list)) return List.of();
+            List<String[]> result = new ArrayList<>();
+            for (Object o : list) {
+                if (!(o instanceof Map<?, ?> map)) continue;
+                String date    = strOrBlank(map.get("date"));
+                String author  = strOrBlank(map.get("author"));
+                String message = strOrBlank(map.get("message"));
+                result.add(new String[]{ date, author, message });
+                if (result.size() >= 5) break;
+            }
+            return result;
+        } catch (Exception e) {
+            log.debug("[Jira] parseGitHistory 파싱 실패: {}", e.getMessage());
+            return List.of();
+        }
+    }
+
+    private String strOrBlank(Object o) {
+        return o == null ? "" : String.valueOf(o);
     }
 
     /**

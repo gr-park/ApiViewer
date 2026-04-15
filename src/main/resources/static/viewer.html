@@ -488,7 +488,7 @@
           <th class="hg-dev" style="min-width:160px;" onclick="sortBy('methodName')">메소드명 <span class="sort-icon">↕</span></th>
           <!-- 기타 메타 -->
           <th class="hg-dev no-sort">최근변경</th>
-          <th class="hg-desc" onclick="sortBy('apiOperationValue')">관련 메뉴(또는 기능) <span class="sort-icon">↕</span></th>
+          <th class="hg-desc" onclick="sortBy('apiOperationValue')">관련메뉴 <span class="sort-icon">↕</span></th>
           <th class="hg-desc" style="min-width:120px;" onclick="sortBy('callCount')">1년 호출건 <span class="sort-icon">↕</span></th>
           <th class="hg-desc" style="min-width:110px;" onclick="sortBy('callCountMonth')">1달 호출건 <span class="sort-icon">↕</span></th>
           <th class="hg-desc" style="min-width:110px;" onclick="sortBy('callCountWeek')">1주 호출건 <span class="sort-icon">↕</span></th>
@@ -1564,7 +1564,7 @@
     const isLongText = field === 'descriptionOverride';
     const listAttr = field === 'teamOverride' ? 'list="teamsDatalist"' : '';
     if (isLongText) {
-      td.innerHTML = `<textarea rows="2" style="width:100%;padding:3px 6px;border:1px solid var(--primary);border-radius:4px;font-size:11px;outline:none;resize:vertical;font-family:inherit;" placeholder="비우면 자동 파싱값 사용"
+      td.innerHTML = `<textarea rows="2" style="width:100%;padding:3px 6px;border:1px solid var(--primary);border-radius:4px;font-size:11px;outline:none;resize:vertical;font-family:inherit;" placeholder="관련 메뉴 또는 기능을 입력"
         onblur="saveFieldInline(this,${id},'${field}')"
         onkeydown="if(event.key==='Escape'){this.dataset.cancel='1';this.blur();}if(event.key==='Enter'&&(event.ctrlKey||event.metaKey)){event.preventDefault();this.blur();}">${esc(old)}</textarea>`;
     } else {
@@ -2052,51 +2052,15 @@
     return '';
   }
 
-  /** 상세 모달 — 내용 오버라이드 저장 */
-  async function saveDetailDescOverride(id) {
-    const ta = document.getElementById('detailDescOverride');
-    if (!ta) return;
-    const val = ta.value.trim();
-    try {
-      const res = await fetch(`/api/db/record/${id}`, {
-        method:'PATCH',
-        headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({ descriptionOverride: val || null })
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || '저장 실패');
-      const entry = allApis.find(a => a.id === id);
-      if (entry) entry.descriptionOverride = val || null;
-      // 상세 모달 내 표시값 갱신
-      const shown = document.getElementById('detailDescShown');
-      if (shown && entry) shown.textContent = allDesc(entry) || '-';
-      // 목록 내 해당 행의 내용 셀도 갱신 (재조회 없이)
-      const row = document.getElementById(`row-${id}`);
-      if (row) {
-        const descTd = row.querySelector('td.desc-col');
-        if (descTd && entry) {
-          descTd.innerHTML = esc(allDesc(entry)) + (entry.descriptionOverride
-            ? '<span style="display:inline-block;margin-left:4px;padding:0 4px;background:#dbeafe;border:1px solid #93c5fd;border-radius:3px;color:#1e40af;font-size:9px;font-weight:600;vertical-align:middle;" title="사용자 수정됨">수정</span>'
-            : '');
-        }
-      }
-      showToast('저장 완료', 'success');
-    } catch(e) {
-      showToast(e.message || '저장 실패', 'error');
-    }
-  }
-  function clearDetailDescOverride(id) {
-    const ta = document.getElementById('detailDescOverride');
-    if (ta) ta.value = '';
-    saveDetailDescOverride(id);
+  /** 상세 모달 — 편집 발생 시 상단 저장 버튼 노출 */
+  function showDetailSave() {
+    const btn = document.getElementById('detailSaveBtn');
+    if (btn) btn.style.display = '';
   }
 
-  /** 내용: 우선순위 기반 — 사용자 오버라이드 → 첫 번째 비어있지 않은 자동 파싱값 */
+  /** 관련메뉴(표시값): descriptionOverride 만 사용. 자동파싱 폴백 제거. */
   function allDesc(a) {
     if (a.descriptionOverride && a.descriptionOverride !== '-') return a.descriptionOverride;
-    if (a.apiOperationValue && a.apiOperationValue !== '-') return a.apiOperationValue;
-    if (a.descriptionTag && a.descriptionTag !== '-') return a.descriptionTag;
-    if (a.controllerComment && a.controllerComment !== '-') return a.controllerComment;
     return '';
   }
 
@@ -2390,15 +2354,13 @@
         </div>
       </div>
       <div class="detail-section">
-        <div class="detail-section-title">관련 메뉴(또는 기능) / 참고용 주석</div>
+        <div class="detail-section-title">관련메뉴 / 참고용 주석</div>
         <div class="detail-grid">
-          <div class="detail-label">관련 메뉴(또는 기능)</div>
-          <div class="detail-value" style="font-weight:600;">
-            <span id="detailDescShown">${esc(allDesc(r)) || '-'}</span>
-            ${r.descriptionOverride ? '<span style="display:inline-block;margin-left:6px;padding:1px 6px;background:#dbeafe;border:1px solid #93c5fd;border-radius:3px;color:#1e40af;font-size:10px;font-weight:600;" title="사용자 수정됨">수정</span>' : ''}
+          <div class="detail-label">관련메뉴 <span style="color:var(--primary);font-size:10px;">✎</span></div>
+          <div class="detail-value" style="white-space:normal;">
+            <input id="df-descriptionOverride" class="df-input" value="${esc(r.descriptionOverride || '')}" placeholder="관련 메뉴 또는 기능을 입력하세요" style="width:100%;" ${dis} oninput="showDetailSave()">
+            <div style="font-size:10px;color:var(--text-muted);margin-top:4px;">※ 상단 [저장] 버튼으로 확정됩니다. 참고용 주석은 하단 필드를 확인하세요.</div>
           </div>
-          <div class="detail-label">내용(수정) <span style="color:var(--primary);font-size:10px;">✎</span></div>
-          <div class="detail-value" style="white-space:normal;"><textarea id="detailDescOverride" rows="2" placeholder="비우면 자동 파싱값(ApiOperation/Description/컨트롤러주석) 사용" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:4px;font-size:12px;resize:vertical;font-family:inherit;" ${("차단완료"===r.status)?'disabled':''}>${esc(r.descriptionOverride || '')}</textarea><div style="display:flex;gap:6px;margin-top:6px;align-items:center;"><button type="button" onclick="saveDetailDescOverride(${r.id})" ${("차단완료"===r.status)?'disabled':''} style="padding:4px 12px;background:var(--primary);color:#fff;border:0;border-radius:4px;font-size:11px;cursor:pointer;${("차단완료"===r.status)?'opacity:.4;cursor:not-allowed;':''}">저장</button><button type="button" onclick="clearDetailDescOverride(${r.id})" ${("차단완료"===r.status)?'disabled':''} style="padding:4px 12px;background:#fff;color:var(--text);border:1px solid var(--border);border-radius:4px;font-size:11px;cursor:pointer;${("차단완료"===r.status)?'opacity:.4;cursor:not-allowed;':''}">지우기(자동파싱값 사용)</button><span style="font-size:10px;color:var(--text-muted);">※ 저장 시 현황화면의 "내용" 컬럼에 반영됩니다.</span></div></div>
           <div class="detail-label">ApiOperation</div><div class="detail-value">${esc(v(r.apiOperationValue)) || '-'}</div>
           <div class="detail-label">Description주석</div><div class="detail-value">${esc(v(r.descriptionTag)) || '-'}</div>
           <div class="detail-label">메소드주석</div><div class="detail-value">${esc(v(r.fullComment)) || '-'}</div>
@@ -2578,6 +2540,7 @@
     const memo = g('memo');           if (memo !== undefined) body.memo           = memo || null;
     const team = g('teamOverride');   if (team !== undefined) body.teamOverride   = team || null;
     const mgr = g('managerOverride'); if (mgr !== undefined) body.managerOverride = mgr || null;
+    const desc = g('descriptionOverride'); if (desc !== undefined) body.descriptionOverride = desc || null;
     if (!Object.keys(body).length) { showToast('변경 사항 없음', 'info'); return; }
     try {
       const res = await adminFetch(`/api/db/record/${id}`, { method:'PATCH', body: JSON.stringify(body) });
