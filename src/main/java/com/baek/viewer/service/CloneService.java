@@ -129,7 +129,7 @@ public class CloneService {
         List<RepoCloneStatus> statuses = new CopyOnWriteArrayList<>();
 
         for (Map<String, String> repo : repos) {
-            RepoCloneStatus s = new RepoCloneStatus(repo.get("slug"), repo.get("cloneUrl"));
+            RepoCloneStatus s = new RepoCloneStatus(repo.get("slug"), repo.get("cloneUrl"), repo.getOrDefault("project", ""));
             statuses.add(s);
         }
         jobMap.put(jobId, statuses);
@@ -178,8 +178,12 @@ public class CloneService {
             status.setStatus("CLONING");
             status.setPercent(0);
 
-            String cloneUrl = status.getCloneUrl();
-            File targetDir  = new File(localPath, status.getSlug());
+            String cloneUrl  = status.getCloneUrl();
+            String project   = status.getProject();
+            File   parentDir = (project != null && !project.isBlank())
+                    ? new File(localPath, project)
+                    : new File(localPath);
+            File targetDir   = new File(parentDir, status.getSlug());
 
             if (targetDir.exists()) {
                 status.addLog("[이미 존재] " + targetDir.getAbsolutePath() + " — 이미 클론된 레포지토리입니다. 건너뜁니다.");
@@ -188,7 +192,7 @@ public class CloneService {
                 return;
             }
 
-            new File(localPath).mkdirs();
+            parentDir.mkdirs();
 
             status.addLog("[시작] git clone -> " + targetDir.getAbsolutePath());
             status.addLog("[git] " + gitExe);
@@ -440,14 +444,21 @@ public class CloneService {
         for (int i = 0; i < repos.size(); i++) {
             Map<String, String> repo = repos.get(i);
             String slug     = repo.get("slug");
+            String project  = repo.getOrDefault("project", "");
             String cloneUrl = repo.get("cloneUrl") != null ? repo.get("cloneUrl") : "";
+            String targetPath = (project != null && !project.isBlank())
+                    ? "\"$BASE_DIR/" + project + "/" + slug + "\""
+                    : "\"$BASE_DIR/" + slug + "\"";
 
             sb.append("# ").append(i + 1).append(". ").append(slug).append("\n");
+            if (project != null && !project.isBlank()) {
+                sb.append("mkdir -p \"$BASE_DIR/").append(project).append("\"\n");
+            }
             sb.append("echo '=== [").append(i + 1).append("/").append(repos.size())
               .append("] ").append(slug).append(" 클론 시작 ==='\n");
             sb.append("git clone --progress \\\n");
             sb.append("  \"").append(cloneUrl).append("\" \\\n");
-            sb.append("  \"$BASE_DIR/").append(slug).append("\" 2>&1 \\\n");
+            sb.append("  ").append(targetPath).append(" 2>&1 \\\n");
             sb.append("  | grep -E '(Cloning|remote:|Receiving|Resolving|done\\.|error|fatal)'\n");
             sb.append("echo ''\n\n");
         }
@@ -477,19 +488,22 @@ public class CloneService {
     public static class RepoCloneStatus {
         private final String slug;
         private final String cloneUrl;
+        private final String project;
         private volatile String status = "PENDING";
         private volatile int percent = 0;
         private final List<String> logs = new CopyOnWriteArrayList<>();
 
-        public RepoCloneStatus(String slug, String cloneUrl) {
+        public RepoCloneStatus(String slug, String cloneUrl, String project) {
             this.slug     = slug;
             this.cloneUrl = cloneUrl;
+            this.project  = project != null ? project : "";
         }
 
         public void addLog(String line) { logs.add(line); }
 
         public String getSlug()     { return slug; }
         public String getCloneUrl() { return cloneUrl; }
+        public String getProject()  { return project; }
         public String getStatus()   { return status; }
         public void setStatus(String s) { this.status = s; }
         public int getPercent()     { return percent; }

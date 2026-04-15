@@ -6,8 +6,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-import java.util.Map;
+import java.io.File;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/clone")
@@ -63,6 +64,43 @@ public class CloneController {
             return ResponseEntity.notFound().build();
         }
         return ResponseEntity.ok(statuses.stream().map(CloneService.RepoCloneStatus::toMap).toList());
+    }
+
+    /** 서버 파일시스템 디렉토리 목록 조회 (폴더 탐색기용) */
+    @GetMapping("/dirs")
+    public ResponseEntity<?> listDirs(@RequestParam(defaultValue = "") String path) {
+        log.debug("[디렉토리 탐색] path={}", path);
+        try {
+            File dir = path.isBlank()
+                    ? new File(System.getProperty("user.home"))
+                    : new File(path);
+
+            if (!dir.exists() || !dir.isDirectory()) {
+                return ResponseEntity.badRequest().body(Map.of("error", "유효하지 않은 경로입니다: " + path));
+            }
+
+            String current = dir.getCanonicalPath();
+            File parent = dir.getParentFile();
+            String parentPath = parent != null ? parent.getCanonicalPath() : null;
+
+            File[] children = dir.listFiles(f -> f.isDirectory() && !f.getName().startsWith("."));
+            List<Map<String, String>> dirs = new ArrayList<>();
+            if (children != null) {
+                Arrays.sort(children, Comparator.comparing(f -> f.getName().toLowerCase()));
+                for (File f : children) {
+                    dirs.add(Map.of("name", f.getName(), "path", f.getCanonicalPath()));
+                }
+            }
+
+            Map<String, Object> result = new LinkedHashMap<>();
+            result.put("current", current);
+            result.put("parent", parentPath);
+            result.put("dirs", dirs);
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            log.error("[디렉토리 탐색 오류] path={}, error={}", path, e.getMessage());
+            return ResponseEntity.internalServerError().body(Map.of("error", e.getMessage()));
+        }
     }
 
     /**
