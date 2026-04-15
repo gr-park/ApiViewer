@@ -6,7 +6,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.InputStreamReader;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -99,6 +101,46 @@ public class CloneController {
             return ResponseEntity.ok(result);
         } catch (Exception e) {
             log.error("[디렉토리 탐색 오류] path={}, error={}", path, e.getMessage());
+            return ResponseEntity.internalServerError().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    /** OS 네이티브 폴더 선택 다이얼로그 실행 후 선택된 경로 반환 */
+    @GetMapping("/pick-dir")
+    public ResponseEntity<?> pickDir() {
+        log.debug("[폴더 선택 다이얼로그] 실행 요청");
+        try {
+            String os = System.getProperty("os.name").toLowerCase();
+            ProcessBuilder pb;
+            if (os.contains("mac")) {
+                pb = new ProcessBuilder("osascript", "-e", "POSIX path of (choose folder)");
+            } else if (os.contains("win")) {
+                pb = new ProcessBuilder("powershell", "-NoProfile", "-Command",
+                        "Add-Type -AssemblyName System.Windows.Forms;" +
+                        "$f = New-Object System.Windows.Forms.FolderBrowserDialog;" +
+                        "if ($f.ShowDialog() -eq 'OK') { $f.SelectedPath }");
+            } else {
+                return ResponseEntity.badRequest().body(Map.of("error", "지원하지 않는 운영체제입니다: " + os));
+            }
+
+            pb.redirectErrorStream(true);
+            Process process = pb.start();
+            String output;
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
+                output = reader.lines().collect(Collectors.joining("\n")).trim();
+            }
+            int exitCode = process.waitFor();
+
+            if (exitCode != 0 || output.isBlank()) {
+                log.debug("[폴더 선택 다이얼로그] 취소됨 또는 오류 (exitCode={})", exitCode);
+                return ResponseEntity.ok(Map.of("cancelled", true));
+            }
+
+            // macOS osascript 결과 끝에 개행 포함 가능 → trim 처리됨
+            log.debug("[폴더 선택 다이얼로그] 선택 경로: {}", output);
+            return ResponseEntity.ok(Map.of("path", output));
+        } catch (Exception e) {
+            log.error("[폴더 선택 다이얼로그 오류] {}", e.getMessage());
             return ResponseEntity.internalServerError().body(Map.of("error", e.getMessage()));
         }
     }
