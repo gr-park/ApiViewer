@@ -325,7 +325,7 @@ public class CloneService {
             if (inRepositories) {
                 // 새 레포 엔트리 시작 (  - repoName: 또는  - repoName:)
                 if (trimmed.startsWith("- repoName:")) {
-                    String entryName = trimmed.substring("- repoName:".length()).trim();
+                    String entryName = trimmed.substring("- repoName:".length()).trim().replace("\"", "");
                     inTargetBlock = repoName.equals(entryName);
                     result.add(line);
                     continue;
@@ -335,7 +335,7 @@ public class CloneService {
                 if (inTargetBlock && trimmed.startsWith("rootPath:")) {
                     // 원래 인덴트 유지
                     String indent = line.substring(0, line.length() - line.stripLeading().length());
-                    result.add(indent + "rootPath: " + newPath);
+                    result.add(indent + "rootPath: \"" + newPath + "\"");
                     replaced = true;
                     continue;
                 }
