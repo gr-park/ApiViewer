@@ -654,11 +654,11 @@
     </div>
   </div>
 
-  <!-- 스윔레인 4: 사용자 / 현업 검토자 -->
-  <div class="section-title">4. 일반 사용자 · 현업 검토자</div>
+  <!-- 스윔레인 4: 사용자 -->
+  <div class="section-title">4. 사용자</div>
   <div class="swimlane lane-user">
     <div class="lane-label">
-      사용자 / 검토자
+      IT담당자 / 현업
     </div>
     <div class="steps">
       <div class="step">
@@ -687,11 +687,193 @@
     </div>
   </div>
 
-  <!-- 섹션 5: 현업 검토 + SmartWay 연동 + 배포 + 모니터링 전체 흐름 -->
-  <div class="section-title">5. 차단 확정 · 배포 · 모니터링 전체 흐름</div>
+  <!-- 섹션 5: 역할별 Use Case -->
+  <div class="section-title">5. 역할별 Use Case</div>
+  <div class="card" style="padding:18px 20px;">
+
+    <!-- 시스템 관계 요약 바 -->
+    <div style="display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:4px;margin-bottom:20px;">
+      <span style="background:#1e293b;color:#94a3b8;font-size:11px;font-weight:600;padding:5px 11px;border-radius:20px;">👤 관리자(IT카드개발팀)</span>
+      <span style="background:#1e293b;color:#94a3b8;font-size:11px;font-weight:600;padding:5px 11px;border-radius:20px;">🤖 배치 시스템</span>
+      <span style="color:#94a3b8;font-size:18px;line-height:1;margin:0 2px;">→</span>
+      <span style="background:#dbeafe;color:#1d4ed8;font-size:11px;font-weight:700;padding:5px 13px;border-radius:20px;border:1.5px solid #93c5fd;">◈ URLViewer</span>
+      <span style="color:#94a3b8;font-size:18px;line-height:1;margin:0 2px;">↔</span>
+      <span style="background:#f1f5f9;color:#334155;font-size:11px;font-weight:700;padding:5px 13px;border-radius:20px;border:1.5px dashed #94a3b8;">👤 IT개발실</span>
+      <span style="color:#94a3b8;font-size:18px;line-height:1;margin:0 2px;">↔</span>
+      <span style="background:#ede9fe;color:#6d28d9;font-size:11px;font-weight:700;padding:5px 13px;border-radius:20px;border:1.5px solid #c4b5fd;">◈ 메일 및 SmartWay</span>
+      <span style="color:#94a3b8;font-size:18px;line-height:1;margin:0 2px;">←</span>
+      <span style="background:#1e293b;color:#94a3b8;font-size:11px;font-weight:600;padding:5px 11px;border-radius:20px;">👤 현업 담당자</span>
+    </div>
+
+    <!-- 역할 카드 그리드 -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;">
+
+      <!-- 배치 시스템 -->
+      <div style="border-radius:10px;overflow:hidden;border:1.5px solid #cbd5e1;">
+        <div style="background:#475569;color:#fff;padding:10px 12px;text-align:center;">
+          <div style="font-size:20px;line-height:1;">🤖</div>
+          <div style="font-size:12px;font-weight:700;margin-top:5px;">배치 시스템</div>
+          <div style="font-size:10px;opacity:.75;margin-top:2px;">자동 수행</div>
+        </div>
+        <div style="padding:11px 13px;background:#f8fafc;">
+          <div style="font-size:10px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px;padding-bottom:4px;border-bottom:1px solid #cbd5e1;">URLViewer</div>
+          <ul style="list-style:none;padding:0;margin:0 0 10px;font-size:11px;color:#1e293b;line-height:1.8;">
+            <li>소스 자동 수집 · 분석</li>
+            <li>사용 현황 자동 집계</li>
+            <li>상태 자동 재판정</li>
+            <li>데이터 자동 백업</li>
+          </ul>
+          <div style="font-size:10px;font-weight:700;color:#6d28d9;text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px;padding-bottom:4px;border-bottom:1px solid #ddd6fe;">SmartWay</div>
+          <ul style="list-style:none;padding:0;margin:0;font-size:11px;color:#1e293b;line-height:1.8;">
+            <li>티켓 발행</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- 관리자(IT카드개발팀) -->
+      <div style="border-radius:10px;overflow:hidden;border:1.5px solid #bfdbfe;">
+        <div style="background:#1e40af;color:#fff;padding:10px 12px;text-align:center;">
+          <div style="font-size:20px;line-height:1;">👤</div>
+          <div style="font-size:12px;font-weight:700;margin-top:5px;">관리자(IT카드개발팀)</div>
+          <div style="font-size:9px;opacity:.7;margin-top:3px;letter-spacing:.01em;">시스템운영관리 &amp; 차단작업 총괄</div>
+        </div>
+        <div style="padding:11px 13px;background:#f8faff;">
+          <div style="font-size:10px;font-weight:700;color:#1d4ed8;text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px;padding-bottom:4px;border-bottom:1px solid #bfdbfe;">URLViewer</div>
+          <ul style="list-style:none;padding:0;margin:0 0 10px;font-size:11px;color:#1e293b;line-height:1.8;">
+            <li>URL 수집 · 시스템 설정</li>
+            <li>자동 처리 관리 · 상태 확정</li>
+            <li>데이터 관리 · 복구</li>
+            <li>전체 조회 · 엑셀</li>
+          </ul>
+          <div style="font-size:10px;font-weight:700;color:#6d28d9;text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px;padding-bottom:4px;border-bottom:1px solid #ddd6fe;">SmartWay</div>
+          <ul style="list-style:none;padding:0;margin:0;font-size:11px;color:#1e293b;line-height:1.8;">
+            <li>티켓 발행</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- IT개발실 -->
+      <div style="border-radius:10px;overflow:hidden;border:1.5px solid #93c5fd;">
+        <div style="background:#2563eb;color:#fff;padding:10px 12px;text-align:center;">
+          <div style="font-size:20px;line-height:1;">👤</div>
+          <div style="font-size:12px;font-weight:700;margin-top:5px;">IT개발실</div>
+          <div style="font-size:10px;opacity:.75;margin-top:2px;">차단대상분석 및 선별</div>
+        </div>
+        <div style="padding:11px 13px;background:#f0f7ff;">
+          <div style="font-size:10px;font-weight:700;color:#1d4ed8;text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px;padding-bottom:4px;border-bottom:1px solid #bfdbfe;">URLViewer</div>
+          <ul style="list-style:none;padding:0;margin:0 0 10px;font-size:11px;color:#1e293b;line-height:1.8;">
+            <li>대시보드 · URL 현황</li>
+            <li>호출현황 분석</li>
+            <li>엑셀 다운로드 · 업로드</li>
+            <li>차단 확정 · 배포 요청</li>
+            <li>배포 후 모니터링</li>
+          </ul>
+          <div style="font-size:10px;font-weight:700;color:#6d28d9;text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px;padding-bottom:4px;border-bottom:1px solid #ddd6fe;">SmartWay</div>
+          <ul style="list-style:none;padding:0;margin:0;font-size:11px;color:#1e293b;line-height:1.8;">
+            <li>티켓 발행</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- 현업 담당자 -->
+      <div style="border-radius:10px;overflow:hidden;border:1.5px solid #a7f3d0;">
+        <div style="background:#065f46;color:#fff;padding:10px 12px;text-align:center;">
+          <div style="font-size:20px;line-height:1;">👤</div>
+          <div style="font-size:12px;font-weight:700;margin-top:5px;">현업 담당자</div>
+          <div style="font-size:10px;opacity:.75;margin-top:2px;">최종검토 및 승인</div>
+        </div>
+        <div style="padding:11px 13px;background:#f0fdf4;">
+          <div style="font-size:10px;font-weight:700;color:#6d28d9;text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px;padding-bottom:4px;border-bottom:1px solid #ddd6fe;">협조전 + 메일 + SmartWay</div>
+          <ul style="list-style:none;padding:0;margin:0;font-size:11px;color:#1e293b;line-height:1.8;">
+            <li>차단대상 최종 검토</li>
+          </ul>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- URL 관리 Life Cycle -->
+  <div class="section-title">6. URL 관리 Life Cycle</div>
+  <div class="card" style="padding: 16px 18px;">
+    <div class="lifecycle">
+      <div class="lc-step" style="border-color:#cbd5e1;background:#f1f5f9;">
+        <div class="lc-num" style="background:#64748b;">1</div>
+        <span class="lc-title">소스 수집</span>
+        <span class="lc-desc">소스 자동 수집 · 분석</span>
+      </div>
+      <div class="lc-arrow">›</div>
+      <div class="lc-step" style="border-color:#cbd5e1;background:#f1f5f9;">
+        <div class="lc-num" style="background:#64748b;">2</div>
+        <span class="lc-title">상태 자동 판정</span>
+        <span class="lc-desc">소스 상태·변경 이력 분석</span>
+      </div>
+      <div class="lc-arrow">›</div>
+      <div class="lc-step" style="border-color:#bfdbfe;background:#f0f9ff;">
+        <div class="lc-num" style="background:#2563eb;">3</div>
+        <span class="lc-title">사용 현황 반영</span>
+        <span class="lc-desc">전체·1개월·1주 기준</span>
+      </div>
+      <div class="lc-arrow">›</div>
+      <div class="lc-step" style="border-color:#a7f3d0;background:#f0fdf4;">
+        <div class="lc-num" style="background:#059669;">4</div>
+        <span class="lc-title">현업 검토</span>
+        <span class="lc-desc">제외 · 확정 · 판단불가</span>
+      </div>
+      <div class="lc-arrow">›</div>
+      <div class="lc-step" style="border-color:#cbd5e1;background:#f1f5f9;">
+        <div class="lc-num" style="background:#64748b;">5</div>
+        <span class="lc-title">SmartWay 티켓 발행</span>
+        <span class="lc-desc">현업공유 및 진행 근거 목적</span>
+      </div>
+      <div class="lc-arrow">›</div>
+      <div class="lc-step" style="border-color:#bfdbfe;background:#f0f9ff;">
+        <div class="lc-num" style="background:#2563eb;">6</div>
+        <span class="lc-title">최종 확정</span>
+        <span class="lc-desc">IT개발실 확정 처리</span>
+      </div>
+      <div class="lc-arrow">›</div>
+      <div class="lc-step" style="border-color:#bfdbfe;background:#f0f9ff;">
+        <div class="lc-num" style="background:#2563eb;">7</div>
+        <span class="lc-title">개발 · 테스트</span>
+        <span class="lc-desc">소스 차단 코드 작성 · 검증</span>
+      </div>
+      <div class="lc-arrow">›</div>
+      <div class="lc-step" style="border-color:#bfdbfe;background:#f0f9ff;">
+        <div class="lc-num" style="background:#2563eb;">8</div>
+        <span class="lc-title">CBO 배포</span>
+        <span class="lc-desc">약 1주 운영 확인</span>
+      </div>
+      <div class="lc-arrow">›</div>
+      <div class="lc-step" style="border-color:#bfdbfe;background:#f0f9ff;">
+        <div class="lc-num" style="background:#2563eb;">9</div>
+        <span class="lc-title">운영 배포 + 모니터링</span>
+        <span class="lc-desc">1주 · 인입 여부 확인</span>
+      </div>
+    </div>
+
+    <!-- 그룹별 담당 영역 범례 -->
+    <div style="display:flex;flex-wrap:wrap;justify-content:center;gap:10px;margin-top:14px;padding-top:12px;border-top:1px dashed #e2e8f0;">
+      <span style="display:inline-flex;align-items:center;gap:6px;background:#f1f5f9;border:1px solid #cbd5e1;color:#334155;font-size:11px;font-weight:700;padding:5px 12px;border-radius:999px;">
+        <span style="display:inline-block;width:14px;height:14px;border-radius:50%;background:#64748b;"></span>
+        1 · 2 · 5 : 자동화
+      </span>
+      <span style="display:inline-flex;align-items:center;gap:6px;background:#f0fdf4;border:1px solid #a7f3d0;color:#065f46;font-size:11px;font-weight:700;padding:5px 12px;border-radius:999px;">
+        <span style="display:inline-block;width:14px;height:14px;border-radius:50%;background:#059669;"></span>
+        4 : 현업담당자
+      </span>
+      <span style="display:inline-flex;align-items:center;gap:6px;background:#f0f9ff;border:1px solid #bfdbfe;color:#1d4ed8;font-size:11px;font-weight:700;padding:5px 12px;border-radius:999px;">
+        <span style="display:inline-block;width:14px;height:14px;border-radius:50%;background:#2563eb;"></span>
+        3 · 6~9 : IT개발실
+      </span>
+    </div>
+  </div>
+
+  <!-- 섹션 7: URL 관리 상세 흐름 (구 섹션 5) -->
+  <div class="section-title">7. URL 관리 상세 흐름</div>
   <div class="card" style="padding:16px 20px;">
     <div style="font-size:12px;color:#64748b;margin-bottom:14px;line-height:1.6;">
-      현업 검토결과를 <b>메일로 취합</b>하여 IT개발실이 일괄 업로드하고, SmartWay 결재 → 개발 · 배포 → 운영 모니터링까지
+      분석 후 현업 검토결과를 취합받아 개발 · 배포 → 운영 모니터링까지
       <b>IT카드개발팀이 주도</b>하는 전체 운영 흐름입니다.
     </div>
 
@@ -721,7 +903,7 @@
 
       <!-- 2단계: 현업 검토 요청·회신 -->
       <div style="display:flex;align-items:stretch;gap:8px;">
-        <div style="width:90px;min-width:90px;background:#fef9c3;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#854d0e;text-align:center;padding:6px;">📋<br>협조전<br>+ 메일<br>+ SmartWay</div>
+        <div style="width:90px;min-width:90px;background:#fef9c3;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#854d0e;text-align:center;padding:6px;">📋<br>현업검토</div>
         <div style="flex:1;background:#fefce8;border:1px solid #fde68a;border-radius:8px;padding:10px 14px;">
           <div style="font-size:11px;font-weight:700;color:#b45309;margin-bottom:6px;">STEP 2 · 현업 검토 요청 / 회신</div>
           <div style="font-size:12px;color:#334155;line-height:1.7;">
@@ -758,36 +940,21 @@
           <div style="font-size:11px;font-weight:700;color:#7c3aed;margin-bottom:4px;">STEP 4 · SmartWay 티켓 발행</div>
           <div style="font-size:12px;color:#334155;line-height:1.6;">
             URL 분석현황 화면에서 대상 URL을 선택 후 <b>SmartWay 발행</b> 버튼을 클릭합니다.<br>
-            SmartWay에 업무 티켓이 생성되며 티켓 번호가 자동으로 저장됩니다.<br>
-            SmartWay에서 현업 담당자의 결재·승인이 진행됩니다.
+            SmartWay에 업무 티켓이 생성되며 티켓 번호가 자동으로 저장됩니다.
           </div>
         </div>
       </div>
 
       <div style="text-align:center;font-size:18px;color:#94a3b8;line-height:1;">↓</div>
 
-      <!-- 5단계: 역방향 동기화 -->
-      <div style="display:flex;align-items:stretch;gap:8px;">
-        <div style="width:90px;min-width:90px;background:#ede9fe;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#6d28d9;text-align:center;padding:6px;">🔄<br>SmartWay</div>
-        <div style="flex:1;background:#faf5ff;border:1px solid #d8b4fe;border-radius:8px;padding:10px 14px;">
-          <div style="font-size:11px;font-weight:700;color:#7c3aed;margin-bottom:4px;">STEP 5 · SmartWay 결재 결과 동기화</div>
-          <div style="font-size:12px;color:#334155;line-height:1.6;">
-            SmartWay 결재 완료 후 <b>SmartWay 동기화</b> 버튼을 클릭하여 결재 결과를 URLViewer로 가져옵니다.<br>
-            승인(Done) 또는 반려(Won't Do) 결과가 각 URL의 검토 단계에 자동으로 반영됩니다.
-          </div>
-        </div>
-      </div>
-
-      <div style="text-align:center;font-size:18px;color:#94a3b8;line-height:1;">↓</div>
-
-      <!-- 6단계: 최종 확정 -->
+      <!-- 5단계: 최종 확정 -->
       <div style="display:flex;align-items:stretch;gap:8px;">
         <div style="width:90px;min-width:90px;background:#dbeafe;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#1d4ed8;text-align:center;padding:6px;">👤<br>IT개발실</div>
         <div style="flex:1;background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:10px 14px;">
-          <div style="font-size:11px;font-weight:700;color:#0369a1;margin-bottom:4px;">STEP 6 · 최종 상태 확정</div>
+          <div style="font-size:11px;font-weight:700;color:#0369a1;margin-bottom:4px;">STEP 5 · 최종 상태 확정</div>
           <div style="font-size:12px;color:#334155;line-height:1.6;">
             URL 분석현황 화면에서 결재 결과를 최종 확인하고 <b>일괄 확정</b>합니다.<br>
-            차단 대상 목록을 개발팀에 전달하여 소스 수정을 요청합니다.
+            차단 대상 목록을 IT개발실 + IT운영팀에 전달하여 소스 수정을 요청합니다.
           </div>
         </div>
       </div>
@@ -801,11 +968,11 @@
 
       <div style="text-align:center;font-size:18px;color:#94a3b8;line-height:1;">↓</div>
 
-      <!-- 7단계: 개발 및 테스트 -->
+      <!-- 6단계: 개발 및 테스트 -->
       <div style="display:flex;align-items:stretch;gap:8px;">
-        <div style="width:90px;min-width:90px;background:#e0f2fe;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#0369a1;text-align:center;padding:6px;">💻🧪<br>개발팀</div>
+        <div style="width:90px;min-width:90px;background:#e0f2fe;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#0369a1;text-align:center;padding:6px;">💻🧪<br>IT개발실<br>+ IT운영팀</div>
         <div style="flex:1;background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:10px 14px;">
-          <div style="font-size:11px;font-weight:700;color:#0369a1;margin-bottom:6px;">STEP 7 · 개발 및 테스트</div>
+          <div style="font-size:11px;font-weight:700;color:#0369a1;margin-bottom:6px;">STEP 6 · 개발 및 테스트</div>
           <div style="font-size:12px;color:#334155;line-height:1.7;">
             차단 확정된 URL에 대해 아래 <b>3가지 조건을 모두 소스에 반영</b>합니다.<br>
             <div style="margin:6px 0 8px 0;display:flex;flex-direction:column;gap:3px;">
@@ -821,11 +988,11 @@
 
       <div style="text-align:center;font-size:18px;color:#94a3b8;line-height:1;">↓</div>
 
-      <!-- 9단계: CBO 배포 -->
+      <!-- 7단계: CBO 배포 -->
       <div style="display:flex;align-items:stretch;gap:8px;">
         <div style="width:90px;min-width:90px;background:#fef3c7;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#92400e;text-align:center;padding:6px;">🚀<br>CBO 배포</div>
         <div style="flex:1;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:10px 14px;">
-          <div style="font-size:11px;font-weight:700;color:#b45309;margin-bottom:4px;">STEP 8 · CBO 배포 <span style="font-size:10px;background:#fde68a;color:#92400e;padding:1px 7px;border-radius:999px;margin-left:4px;">약 1주</span></div>
+          <div style="font-size:11px;font-weight:700;color:#b45309;margin-bottom:4px;">STEP 7 · CBO 배포 <span style="font-size:10px;background:#fde68a;color:#92400e;padding:1px 7px;border-radius:999px;margin-left:4px;">약 1주</span></div>
           <div style="font-size:12px;color:#334155;line-height:1.6;">
             CBO 환경에 배포 후 <b>약 1주간 운영</b>하며 이상 여부를 확인합니다.<br>
             문제 발생 시 즉시 롤백하고 원인을 분석합니다. 이상 없으면 운영 배포를 진행합니다.
@@ -835,11 +1002,11 @@
 
       <div style="text-align:center;font-size:18px;color:#94a3b8;line-height:1;">↓</div>
 
-      <!-- 10단계: 운영 배포 -->
+      <!-- 8단계: 운영 배포 -->
       <div style="display:flex;align-items:stretch;gap:8px;">
         <div style="width:90px;min-width:90px;background:#dcfce7;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#166534;text-align:center;padding:6px;">✅<br>운영 배포</div>
         <div style="flex:1;background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:10px 14px;">
-          <div style="font-size:11px;font-weight:700;color:#166534;margin-bottom:4px;">STEP 9 · 운영 배포</div>
+          <div style="font-size:11px;font-weight:700;color:#166534;margin-bottom:4px;">STEP 8 · 운영 배포</div>
           <div style="font-size:12px;color:#334155;line-height:1.6;">
             CBO 검증이 완료된 소스를 <b>운영 환경에 배포</b>합니다.<br>
             배포 완료 후 URLViewer 다음 소스 수집 시 해당 URL이 <b>차단완료</b> 상태로 자동 전환됩니다.
@@ -849,11 +1016,11 @@
 
       <div style="text-align:center;font-size:18px;color:#94a3b8;line-height:1;">↓</div>
 
-      <!-- 11단계: 모니터링 -->
+      <!-- 9단계: 모니터링 -->
       <div style="display:flex;align-items:stretch;gap:8px;">
         <div style="width:90px;min-width:90px;background:#f1f5f9;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#334155;text-align:center;padding:6px;">📡<br>모니터링</div>
         <div style="flex:1;background:#f8fafc;border:1px solid #cbd5e1;border-radius:8px;padding:10px 14px;">
-          <div style="font-size:11px;font-weight:700;color:#334155;margin-bottom:4px;">STEP 10 · 배포 후 모니터링 <span style="font-size:10px;background:#e2e8f0;color:#475569;padding:1px 7px;border-radius:999px;margin-left:4px;">약 1주</span></div>
+          <div style="font-size:11px;font-weight:700;color:#334155;margin-bottom:4px;">STEP 9 · 배포 후 모니터링 <span style="font-size:10px;background:#e2e8f0;color:#475569;padding:1px 7px;border-radius:999px;margin-left:4px;">약 1주</span></div>
           <div style="font-size:12px;color:#334155;line-height:1.6;">
             운영 배포 후 <b>약 1주간 모니터링 시스템</b>을 통해 차단된 URL로 <b>실제 인입이 있는지</b> 확인합니다.<br>
             인입이 감지되면 원인을 분석하여 즉시 대응합니다. 이상 없으면 차단 작업을 <b>최종 완료</b>로 처리합니다.
@@ -867,87 +1034,21 @@
     <div style="margin-top:16px;background:linear-gradient(90deg,#0f172a 0%,#1e293b 100%);border-radius:8px;padding:10px 16px;display:flex;align-items:center;gap:10px;">
       <span style="font-size:18px;">🔁</span>
       <div style="font-size:12px;color:#e2e8f0;line-height:1.6;">
-        <strong style="color:#7dd3fc;">전체 흐름(STEP 1~10)은 1~3개월마다 반복 수행</strong>합니다.
+        <strong style="color:#7dd3fc;">전체 흐름(STEP 1~9)은 1~3개월마다 반복 수행</strong>합니다.
         IT카드개발팀이 주기를 설정하고, 분석 → 검토 → 배포 → 모니터링 사이클을 지속적으로 운영합니다.
       </div>
     </div>
 
   </div>
 
-  <!-- URL 1건 라이프사이클 -->
-  <div class="section-title">6. URL 1건의 라이프사이클</div>
-  <div class="card" style="padding: 0;">
-    <div class="lifecycle">
-      <div class="lc-step">
-        <div class="lc-num">1</div>
-        <span class="lc-title">소스 수집</span>
-        <span class="lc-desc">소스 자동 수집 · 분석</span>
-      </div>
-      <div class="lc-arrow">›</div>
-      <div class="lc-step">
-        <div class="lc-num">2</div>
-        <span class="lc-title">상태 자동 판정</span>
-        <span class="lc-desc">소스 상태·변경 이력 분석</span>
-      </div>
-      <div class="lc-arrow">›</div>
-      <div class="lc-step">
-        <div class="lc-num">3</div>
-        <span class="lc-title">사용 현황 반영</span>
-        <span class="lc-desc">전체·1개월·1주 기준</span>
-      </div>
-      <div class="lc-arrow">›</div>
-      <div class="lc-step">
-        <div class="lc-num">4</div>
-        <span class="lc-title">현업 검토</span>
-        <span class="lc-desc">제외 · 확정 · 판단불가</span>
-      </div>
-      <div class="lc-arrow">›</div>
-      <div class="lc-step" style="border-color:#c4b5fd;background:#f5f3ff;">
-        <div class="lc-num" style="background:var(--purple);">5</div>
-        <span class="lc-title" style="color:var(--purple-hover);">SmartWay 발행/결재</span>
-        <span class="lc-desc">PUSH → 현업 결재 → PULL</span>
-      </div>
-      <div class="lc-arrow">›</div>
-      <div class="lc-step">
-        <div class="lc-num">6</div>
-        <span class="lc-title">최종 확정</span>
-        <span class="lc-desc">IT개발실 확정 처리</span>
-      </div>
-      <div class="lc-arrow">›</div>
-      <div class="lc-step">
-        <div class="lc-num">7</div>
-        <span class="lc-title">개발 · 테스트</span>
-        <span class="lc-desc">소스 차단 코드 작성 · 검증</span>
-      </div>
-      <div class="lc-arrow">›</div>
-      <div class="lc-step" style="border-color:#fde68a;background:#fffbeb;">
-        <div class="lc-num" style="background:#d97706;">8</div>
-        <span class="lc-title">CBO 배포</span>
-        <span class="lc-desc">약 1주 운영 확인</span>
-      </div>
-      <div class="lc-arrow">›</div>
-      <div class="lc-step" style="border-color:#86efac;background:#f0fdf4;">
-        <div class="lc-num" style="background:var(--success);">9</div>
-        <span class="lc-title">운영 배포</span>
-        <span class="lc-desc">차단완료 자동 전환</span>
-      </div>
-      <div class="lc-arrow">›</div>
-      <div class="lc-step" style="border-color:#cbd5e1;background:#f8fafc;">
-        <div class="lc-num" style="background:#475569;">10</div>
-        <span class="lc-title">모니터링</span>
-        <span class="lc-desc">1주 · 인입 여부 확인</span>
-      </div>
-    </div>
-  </div>
-
   <!-- 페이지별 권한 -->
-  <div class="section-title">7. 페이지별 접근 권한</div>
+  <div class="section-title">8. 페이지별 접근 권한</div>
   <div class="card" style="padding: 0;">
     <div class="auth-grid">
       <div class="auth-card">
         <div class="auth-head">
           <span class="auth-title">공개 페이지</span>
-          <span class="auth-label auth-pub">Public</span>
+          <span class="auth-label auth-pub">전체 사용</span>
         </div>
         <ul class="auth-list">
           <li><b>/</b> 대시보드 — 상태별 통계</li>
@@ -974,17 +1075,17 @@
           <span class="auth-label auth-adm">Token</span>
         </div>
         <ul class="auth-list">
-          <li>비밀번호 입력으로 IT카드개발팀 인증 발급</li>
+          <li>비밀번호 입력으로 관리자 인증 발급</li>
           <li>유효시간 8시간, 만료 시 재인증 필요</li>
-          <li>인증 후 IT카드개발팀 전용 기능 자동 활성화</li>
+          <li>인증 후 관리자 전용 기능 자동 활성화</li>
           <li>보호 기능은 토큰 검증 후 접근 허용</li>
         </ul>
       </div>
     </div>
   </div>
 
-  <!-- 섹션 8: URL 차단 여부 판정 기준 -->
-  <div class="section-title">8. URL 차단 여부 판정 기준</div>
+  <!-- 섹션 9: URL 차단 여부 판정 기준 -->
+  <div class="section-title">9. URL 차단 여부 판정 기준</div>
   <div class="card" style="padding:16px 20px;">
     <div style="font-size:12px;color:#64748b;margin-bottom:16px;line-height:1.6;">
       소스 수집 시 <b>각 URL</b>에 대해 아래 순서대로 판정이 수행됩니다. 앞 단계에서 확정되면 이후 단계는 건너뜁니다.
@@ -1037,116 +1138,6 @@
         <div style="background:#dcfce7;border:1px solid #86efac;border-radius:8px;padding:10px 12px;">
           <div style="font-size:11px;font-weight:700;color:#166534;margin-bottom:4px;">🟢 사용</div>
           <div style="font-size:11px;color:#334155;line-height:1.6;">위 조건에 해당하지 않는 기본 상태. 정상 운영 중.</div>
-        </div>
-      </div>
-
-    </div>
-  </div>
-
-  <!-- 섹션 9: 역할별 Use Case -->
-  <div class="section-title">9. 역할별 Use Case</div>
-  <div class="card" style="padding:18px 20px;">
-
-    <!-- 시스템 관계 요약 바 -->
-    <div style="display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:4px;margin-bottom:20px;">
-      <span style="background:#1e293b;color:#94a3b8;font-size:11px;font-weight:600;padding:5px 11px;border-radius:20px;">👤 관리자(IT카드개발팀)</span>
-      <span style="background:#1e293b;color:#94a3b8;font-size:11px;font-weight:600;padding:5px 11px;border-radius:20px;">🤖 배치 시스템</span>
-      <span style="color:#94a3b8;font-size:18px;line-height:1;margin:0 2px;">→</span>
-      <span style="background:#dbeafe;color:#1d4ed8;font-size:11px;font-weight:700;padding:5px 13px;border-radius:20px;border:1.5px solid #93c5fd;">◈ URLViewer</span>
-      <span style="color:#94a3b8;font-size:18px;line-height:1;margin:0 2px;">↔</span>
-      <span style="background:#f1f5f9;color:#334155;font-size:11px;font-weight:700;padding:5px 13px;border-radius:20px;border:1.5px dashed #94a3b8;">👤 IT개발실</span>
-      <span style="color:#94a3b8;font-size:18px;line-height:1;margin:0 2px;">↔</span>
-      <span style="background:#ede9fe;color:#6d28d9;font-size:11px;font-weight:700;padding:5px 13px;border-radius:20px;border:1.5px solid #c4b5fd;">◈ SmartWay</span>
-      <span style="color:#94a3b8;font-size:18px;line-height:1;margin:0 2px;">←</span>
-      <span style="background:#1e293b;color:#94a3b8;font-size:11px;font-weight:600;padding:5px 11px;border-radius:20px;">👤 현업 담당자</span>
-    </div>
-
-    <!-- 역할 카드 그리드 -->
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;">
-
-      <!-- 관리자(IT카드개발팀) -->
-      <div style="border-radius:10px;overflow:hidden;border:1.5px solid #bfdbfe;">
-        <div style="background:#1e40af;color:#fff;padding:10px 12px;text-align:center;">
-          <div style="font-size:20px;line-height:1;">👤</div>
-          <div style="font-size:12px;font-weight:700;margin-top:5px;">관리자(IT카드개발팀)</div>
-          <div style="font-size:9px;opacity:.7;margin-top:3px;letter-spacing:.01em;">시스템운영관리 &amp; 차단작업 총괄</div>
-        </div>
-        <div style="padding:11px 13px;background:#f8faff;">
-          <div style="font-size:10px;font-weight:700;color:#1d4ed8;text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px;padding-bottom:4px;border-bottom:1px solid #bfdbfe;">URLViewer</div>
-          <ul style="list-style:none;padding:0;margin:0 0 10px;font-size:11px;color:#1e293b;line-height:1.8;">
-            <li>URL 수집 · 시스템 설정</li>
-            <li>자동 처리 관리 · 상태 확정</li>
-            <li>데이터 관리 · 복구</li>
-            <li>전체 조회 · 엑셀</li>
-          </ul>
-          <div style="font-size:10px;font-weight:700;color:#6d28d9;text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px;padding-bottom:4px;border-bottom:1px solid #ddd6fe;">SmartWay</div>
-          <ul style="list-style:none;padding:0;margin:0;font-size:11px;color:#1e293b;line-height:1.8;">
-            <li>티켓 발행</li>
-            <li>티켓 동기화</li>
-          </ul>
-        </div>
-      </div>
-
-      <!-- IT개발실 -->
-      <div style="border-radius:10px;overflow:hidden;border:1.5px solid #93c5fd;">
-        <div style="background:#2563eb;color:#fff;padding:10px 12px;text-align:center;">
-          <div style="font-size:20px;line-height:1;">👤</div>
-          <div style="font-size:12px;font-weight:700;margin-top:5px;">IT개발실</div>
-          <div style="font-size:10px;opacity:.75;margin-top:2px;">차단대상분석 및 선별</div>
-        </div>
-        <div style="padding:11px 13px;background:#f0f7ff;">
-          <div style="font-size:10px;font-weight:700;color:#1d4ed8;text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px;padding-bottom:4px;border-bottom:1px solid #bfdbfe;">URLViewer</div>
-          <ul style="list-style:none;padding:0;margin:0 0 10px;font-size:11px;color:#1e293b;line-height:1.8;">
-            <li>대시보드 · URL 현황</li>
-            <li>호출현황 분석</li>
-            <li>엑셀 다운로드 · 업로드</li>
-            <li>차단 확정 · 배포 요청</li>
-            <li>배포 후 모니터링</li>
-          </ul>
-          <div style="font-size:10px;font-weight:700;color:#6d28d9;text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px;padding-bottom:4px;border-bottom:1px solid #ddd6fe;">SmartWay</div>
-          <ul style="list-style:none;padding:0;margin:0;font-size:11px;color:#1e293b;line-height:1.8;">
-            <li>티켓 발행</li>
-            <li>티켓 동기화</li>
-          </ul>
-        </div>
-      </div>
-
-      <!-- 배치 시스템 -->
-      <div style="border-radius:10px;overflow:hidden;border:1.5px solid #cbd5e1;">
-        <div style="background:#475569;color:#fff;padding:10px 12px;text-align:center;">
-          <div style="font-size:20px;line-height:1;">🤖</div>
-          <div style="font-size:12px;font-weight:700;margin-top:5px;">배치 시스템</div>
-          <div style="font-size:10px;opacity:.75;margin-top:2px;">자동 수행</div>
-        </div>
-        <div style="padding:11px 13px;background:#f8fafc;">
-          <div style="font-size:10px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px;padding-bottom:4px;border-bottom:1px solid #cbd5e1;">URLViewer</div>
-          <ul style="list-style:none;padding:0;margin:0 0 10px;font-size:11px;color:#1e293b;line-height:1.8;">
-            <li>소스 자동 수집 · 분석</li>
-            <li>사용 현황 자동 집계</li>
-            <li>상태 자동 재판정</li>
-            <li>데이터 자동 백업</li>
-          </ul>
-          <div style="font-size:10px;font-weight:700;color:#6d28d9;text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px;padding-bottom:4px;border-bottom:1px solid #ddd6fe;">SmartWay</div>
-          <ul style="list-style:none;padding:0;margin:0;font-size:11px;color:#1e293b;line-height:1.8;">
-            <li>티켓 발행</li>
-            <li>티켓 동기화</li>
-          </ul>
-        </div>
-      </div>
-
-      <!-- 현업 담당자 -->
-      <div style="border-radius:10px;overflow:hidden;border:1.5px solid #a7f3d0;">
-        <div style="background:#065f46;color:#fff;padding:10px 12px;text-align:center;">
-          <div style="font-size:20px;line-height:1;">👤</div>
-          <div style="font-size:12px;font-weight:700;margin-top:5px;">현업 담당자</div>
-          <div style="font-size:10px;opacity:.75;margin-top:2px;">최종검토 및 승인</div>
-        </div>
-        <div style="padding:11px 13px;background:#f0fdf4;">
-          <div style="font-size:10px;font-weight:700;color:#6d28d9;text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px;padding-bottom:4px;border-bottom:1px solid #ddd6fe;">SmartWay</div>
-          <ul style="list-style:none;padding:0;margin:0;font-size:11px;color:#1e293b;line-height:1.8;">
-            <li>티켓 검토 · 결재</li>
-            <li>승인 / 반려</li>
-          </ul>
         </div>
       </div>
 
