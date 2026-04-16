@@ -57,7 +57,7 @@
       letter-spacing: .06em;
       text-transform: uppercase;
     }
-    .lane-admin  .lane-label { background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); }
+    .lane-admin  .lane-label { background: linear-gradient(135deg, #334155 0%, #1e293b 100%); }
     .lane-batch  .lane-label { background: linear-gradient(135deg, var(--purple) 0%, var(--purple-hover) 100%); }
     .lane-status .lane-label { background: linear-gradient(135deg, var(--warning) 0%, var(--warning-hover) 100%); }
     .lane-dev    .lane-label { background: linear-gradient(135deg, #60a5fa 0%, #2563eb 100%); }
@@ -110,6 +110,7 @@
       font-weight: 700;
       flex-shrink: 0;
     }
+    .lane-admin  .step-num { background: #334155; }
     .lane-batch  .step-num { background: var(--purple); }
     .lane-status .step-num { background: var(--warning); }
     .lane-dev    .step-num { background: #2563eb; }
@@ -687,7 +688,7 @@
 
     <!-- 시스템 관계 요약 바 -->
     <div style="display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:4px;margin-bottom:20px;">
-      <span style="background:#1e40af;color:#fff;font-size:11px;font-weight:700;padding:5px 11px;border-radius:20px;">👤 관리자(IT카드개발팀)</span>
+      <span style="background:#1e293b;color:#fff;font-size:11px;font-weight:700;padding:5px 11px;border-radius:20px;">👤 관리자(IT카드개발팀)</span>
       <span style="background:#7c3aed;color:#fff;font-size:11px;font-weight:700;padding:5px 11px;border-radius:20px;">🤖 배치 시스템</span>
       <span style="color:#94a3b8;font-size:18px;line-height:1;margin:0 2px;">→</span>
       <span style="background:#dbeafe;color:#1d4ed8;font-size:11px;font-weight:700;padding:5px 13px;border-radius:20px;border:1.5px solid #93c5fd;">◈ URLViewer</span>
@@ -725,14 +726,14 @@
       </div>
 
       <!-- 관리자(IT카드개발팀) -->
-      <div style="border-radius:10px;overflow:hidden;border:1.5px solid #bfdbfe;display:flex;flex-direction:column;">
-        <div style="background:#1e40af;color:#fff;padding:10px 12px;text-align:center;">
+      <div style="border-radius:10px;overflow:hidden;border:1.5px solid #cbd5e1;display:flex;flex-direction:column;">
+        <div style="background:#1e293b;color:#fff;padding:10px 12px;text-align:center;">
           <div style="font-size:20px;line-height:1;">👤</div>
           <div style="font-size:12px;font-weight:700;margin-top:5px;">관리자(IT카드개발팀)</div>
           <div style="font-size:9px;opacity:.7;margin-top:3px;letter-spacing:.01em;">시스템운영관리 &amp; 차단작업 총괄</div>
         </div>
-        <div style="padding:11px 13px;background:#f8faff;flex:1;">
-          <div style="font-size:10px;font-weight:700;color:#1d4ed8;text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px;padding-bottom:4px;border-bottom:1px solid #bfdbfe;">URLViewer</div>
+        <div style="padding:11px 13px;background:#f8fafc;flex:1;">
+          <div style="font-size:10px;font-weight:700;color:#334155;text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px;padding-bottom:4px;border-bottom:1px solid #cbd5e1;">URLViewer</div>
           <ul style="list-style:none;padding:0;margin:0 0 10px;font-size:11px;color:#1e293b;line-height:1.8;">
             <li>URL 수집 · 시스템 설정</li>
             <li>자동 처리 관리 · 상태 확정</li>
