@@ -2,6 +2,7 @@ package com.baek.viewer.service;
 
 import com.baek.viewer.model.ApiRecord;
 import com.baek.viewer.model.JiraConfig;
+import com.baek.viewer.model.RepoConfig;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -20,6 +21,7 @@ class JiraServiceDescriptionTest {
 
     private JiraService svc;
     private JiraConfig cfg;
+    private RepoConfig repoCfg;
 
     @BeforeEach
     void setUp() {
@@ -28,6 +30,10 @@ class JiraServiceDescriptionTest {
         cfg = new JiraConfig();
         cfg.setJiraBaseUrl("https://smartway.example.com");
         cfg.setProjectKey("APIV");
+
+        repoCfg = new RepoConfig();
+        repoCfg.setTeamName("카드개발팀");
+        repoCfg.setManagerName("김철수");
     }
 
     private ApiRecord baseRecord() {
@@ -61,7 +67,7 @@ class JiraServiceDescriptionTest {
     @Test
     @DisplayName("4개 표 타이틀이 모두 ■ 접두사 + 파란색+bold 포함된다")
     void title_bluebold_forAllFourTables() {
-        String desc = svc.buildDescriptionTables(cfg, baseRecord(), "카드업무");
+        String desc = svc.buildDescriptionTables(cfg, repoCfg, baseRecord(), "카드업무");
         assertThat(desc).contains("h3. {color:#1e40af}*■ URL기본정보*{color}");
         assertThat(desc).contains("h3. {color:#1e40af}*■ URL상태정보*{color}");
         assertThat(desc).contains("h3. {color:#1e40af}*■ URL기타정보*{color}");
@@ -72,9 +78,44 @@ class JiraServiceDescriptionTest {
     }
 
     @Test
+    @DisplayName("URL기본정보 표에 팀/담당자가 레포지토리 바로 아래에 포함된다")
+    void basicInfo_containsTeamAndManager() {
+        String desc = svc.buildDescriptionTables(cfg, repoCfg, baseRecord(), "카드업무");
+        assertThat(desc).contains("|팀|카드개발팀|");
+        assertThat(desc).contains("|담당자|김철수|");
+        // 레포지토리 → 팀 → 담당자 순서 확인
+        int idxRepo = desc.indexOf("|레포지토리|");
+        int idxTeam = desc.indexOf("|팀|");
+        int idxManager = desc.indexOf("|담당자|");
+        assertThat(idxRepo).isLessThan(idxTeam);
+        assertThat(idxTeam).isLessThan(idxManager);
+    }
+
+    @Test
+    @DisplayName("managerOverride 가 있으면 담당자로 우선 표시된다")
+    void basicInfo_managerOverride_takePriority() {
+        ApiRecord r = baseRecord();
+        r.setManagerOverride("박영희");
+        String desc = svc.buildDescriptionTables(cfg, repoCfg, r, "카드업무");
+        assertThat(desc).contains("|담당자|박영희|");
+        assertThat(desc).doesNotContain("|담당자|김철수|");
+    }
+
+    @Test
+    @DisplayName("managerMappings 프로그램ID 가 apiPath 에 포함되면 해당 담당자로 표시된다")
+    void basicInfo_programIdMapping_matchesApiPath() {
+        ApiRecord r = baseRecord();
+        r.setApiPath("/api/card/v1/LIMIT/check");
+        repoCfg.setManagerMappings("[{\"programId\":\"LIMIT\",\"managerName\":\"이매퍼\"}]");
+        String desc = svc.buildDescriptionTables(cfg, repoCfg, r, "카드업무");
+        assertThat(desc).contains("|담당자|이매퍼|");
+        assertThat(desc).doesNotContain("|담당자|김철수|");
+    }
+
+    @Test
     @DisplayName("URL기본정보 표에 핵심 필드와 관련메뉴가 포함되고 Controller/메소드는 없다")
     void basicInfo_containsCoreFields() {
-        String desc = svc.buildDescriptionTables(cfg, baseRecord(), "카드업무");
+        String desc = svc.buildDescriptionTables(cfg, repoCfg, baseRecord(), "카드업무");
         assertThat(desc).contains("|업무명|카드업무|");
         assertThat(desc).contains("|레포지토리|card-core|");
         assertThat(desc).contains("|URL 경로|/api/card/v1/limit|");
@@ -87,7 +128,7 @@ class JiraServiceDescriptionTest {
     @Test
     @DisplayName("URL기타정보 표에 Controller/메소드(최상단), HTTP Method, Deprecated 포함된다")
     void otherInfo_containsMovedFields() {
-        String desc = svc.buildDescriptionTables(cfg, baseRecord(), "카드업무");
+        String desc = svc.buildDescriptionTables(cfg, repoCfg, baseRecord(), "카드업무");
         assertThat(desc).contains("|ApiOperation|한도 조회|");
         assertThat(desc).contains("|Description 주석|카드 한도 조회 API|");
         assertThat(desc).contains("|HTTP Method|GET|");
@@ -99,7 +140,7 @@ class JiraServiceDescriptionTest {
     @Test
     @DisplayName("URL상태정보: 최우선 차단대상은 빨강(#991b1b) + bold, 상태확정 행 없음, 4-열 헤더 포함")
     void status_topPriority_coloredRed_and_4colHeader() {
-        String desc = svc.buildDescriptionTables(cfg, baseRecord(), "카드업무");
+        String desc = svc.buildDescriptionTables(cfg, repoCfg, baseRecord(), "카드업무");
         assertThat(desc).contains("{color:#991b1b}*최우선 차단대상*{color}");
         assertThat(desc).contains("||항목||값||항목||값||");
         assertThat(desc).contains("1년 호출건");
@@ -113,26 +154,26 @@ class JiraServiceDescriptionTest {
         ApiRecord r = baseRecord();
 
         r.setStatus("사용");
-        assertThat(svc.buildDescriptionTables(cfg, r, "x"))
+        assertThat(svc.buildDescriptionTables(cfg, repoCfg, r, "x"))
                 .contains("{color:#166534}*사용*{color}");
 
         r.setStatus("후순위 차단대상");
-        assertThat(svc.buildDescriptionTables(cfg, r, "x"))
+        assertThat(svc.buildDescriptionTables(cfg, repoCfg, r, "x"))
                 .contains("{color:#c2410c}*후순위 차단대상*{color}");
 
         r.setStatus("추가검토필요 차단대상");
-        assertThat(svc.buildDescriptionTables(cfg, r, "x"))
+        assertThat(svc.buildDescriptionTables(cfg, repoCfg, r, "x"))
                 .contains("{color:#92400e}*추가검토필요 차단대상*{color}");
 
         r.setStatus("차단완료");
-        assertThat(svc.buildDescriptionTables(cfg, r, "x"))
+        assertThat(svc.buildDescriptionTables(cfg, repoCfg, r, "x"))
                 .contains("{color:#166534}*차단완료*{color}");
     }
 
     @Test
     @DisplayName("차단근거 셀: [CSR-xxx]/OP-xxx 패턴이 SmartWay URL 링크로 변환된다")
     void blockedReason_csrAndOpKeys_linkified() {
-        String desc = svc.buildDescriptionTables(cfg, baseRecord(), "카드업무");
+        String desc = svc.buildDescriptionTables(cfg, repoCfg, baseRecord(), "카드업무");
         // [CSR-12345] → [CSR-12345|https://smartway.example.com/browse/CSR-12345]
         assertThat(desc).contains("[CSR-12345|https://smartway.example.com/browse/CSR-12345]");
         // bare OP-9999 도 링크로
@@ -142,7 +183,7 @@ class JiraServiceDescriptionTest {
     @Test
     @DisplayName("URL상태정보 4-열에 차단기준/일자/비고(차단비고)가 포함된다")
     void block_containsCriteriaDateMemo() {
-        String desc = svc.buildDescriptionTables(cfg, baseRecord(), "카드업무");
+        String desc = svc.buildDescriptionTables(cfg, repoCfg, baseRecord(), "카드업무");
         assertThat(desc).contains("|차단기준|호출 0건 + 1년 경과|");
         assertThat(desc).contains("|차단일자|2026-04-10|");
         assertThat(desc).contains("|차단비고|업무팀 합의 완료|");
@@ -153,7 +194,7 @@ class JiraServiceDescriptionTest {
     @Test
     @DisplayName("소스변경이력 표: gitHistory JSON 5건 이내 렌더링")
     void gitHistory_renderedAsTable() {
-        String desc = svc.buildDescriptionTables(cfg, baseRecord(), "카드업무");
+        String desc = svc.buildDescriptionTables(cfg, repoCfg, baseRecord(), "카드업무");
         assertThat(desc).contains("||#||날짜||변경자||내용||");
         assertThat(desc).contains("|1|2026-03-01|hong|한도 로직 수정|");
         assertThat(desc).contains("|2|2026-02-10|kim|주석 보완|");
@@ -164,7 +205,7 @@ class JiraServiceDescriptionTest {
     void gitHistory_empty_placeholder() {
         ApiRecord r = baseRecord();
         r.setGitHistory(null);
-        String desc = svc.buildDescriptionTables(cfg, r, "카드업무");
+        String desc = svc.buildDescriptionTables(cfg, repoCfg, r, "카드업무");
         assertThat(desc).contains("||#||날짜||변경자||내용||");
         assertThat(desc).contains("|-|-|-|-|");
     }
@@ -176,7 +217,7 @@ class JiraServiceDescriptionTest {
         r.setApiOperationValue(null);
         r.setDescriptionTag("");
         r.setFullComment("pipe|in|value");
-        String desc = svc.buildDescriptionTables(cfg, r, "카드업무");
+        String desc = svc.buildDescriptionTables(cfg, repoCfg, r, "카드업무");
         assertThat(desc).contains("|ApiOperation|-|");
         assertThat(desc).contains("|Description 주석|-|");
         assertThat(desc).contains("|메소드 주석|pipe｜in｜value|");
@@ -186,7 +227,7 @@ class JiraServiceDescriptionTest {
     @DisplayName("JiraConfig.baseUrl 이 null 이면 CSR 키가 링크로 치환되지 않고 원문 유지")
     void blockedReason_noBaseUrl_plainText() {
         cfg.setJiraBaseUrl(null);
-        String desc = svc.buildDescriptionTables(cfg, baseRecord(), "카드업무");
+        String desc = svc.buildDescriptionTables(cfg, repoCfg, baseRecord(), "카드업무");
         // 링크 마크업이 생기지 않아야 한다
         assertThat(desc).doesNotContain("/browse/");
         // 원문은 여전히 포함

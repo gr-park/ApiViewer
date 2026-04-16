@@ -639,10 +639,8 @@ public class JiraService {
         // 3. 담당자 매핑
         String assignee = resolveAssignee(record, repoCfg);
         log.info("[SmartWay] Step3. 담당자 매핑: manager={}, team={} → jiraAccountId={}",
-                record.getManagerOverride() != null ? record.getManagerOverride()
-                        : (repoCfg != null ? repoCfg.getManagerName() : null),
-                record.getTeamOverride() != null ? record.getTeamOverride()
-                        : (repoCfg != null ? repoCfg.getTeamName() : null),
+                resolveManagerName(record, repoCfg),
+                resolveTeamName(record, repoCfg),
                 assignee);
 
         // 4. Story 필드 구성
@@ -929,22 +927,66 @@ public class JiraService {
     }
 
     /**
-     * 담당자 매핑: managerOverride → managerMappings → managerName → JiraUserMapping 변환
+     * 담당자 이름 해석: managerOverride → repoCfg.managerMappings(programId 매칭) → repoCfg.managerName
+     * viewer.html의 resolveManager 로직과 동일하게 유지한다.
+     */
+    private String resolveManagerName(ApiRecord record, RepoConfig repoCfg) {
+        if (record.getManagerOverride() != null && !record.getManagerOverride().isBlank()) {
+            log.debug("[Jira] resolveManagerName: 선택경로=override, manager={}", record.getManagerOverride());
+            return record.getManagerOverride();
+        }
+        if (repoCfg != null) {
+            String mappingsJson = repoCfg.getManagerMappings();
+            if (mappingsJson != null && !mappingsJson.isBlank() && record.getApiPath() != null) {
+                try {
+                    List<Map<String, Object>> mappings = MAPPER.readValue(mappingsJson,
+                            MAPPER.getTypeFactory().constructCollectionType(List.class, Map.class));
+                    String apiPathUpper = record.getApiPath().toUpperCase();
+                    for (Map<String, Object> m : mappings) {
+                        String programId = (String) m.get("programId");
+                        String managerName = (String) m.get("managerName");
+                        if (programId != null && !programId.isBlank()
+                                && managerName != null && !managerName.isBlank()
+                                && apiPathUpper.contains(programId.toUpperCase())) {
+                            log.debug("[Jira] resolveManagerName: 선택경로=programId-mapping, programId={}, manager={}",
+                                    programId, managerName);
+                            return managerName;
+                        }
+                    }
+                } catch (Exception e) {
+                    log.debug("[Jira] resolveManagerName: managerMappings 파싱 실패, 폴백 진행: {}", e.getMessage());
+                }
+            }
+            if (repoCfg.getManagerName() != null && !repoCfg.getManagerName().isBlank()) {
+                log.debug("[Jira] resolveManagerName: 선택경로=default, manager={}", repoCfg.getManagerName());
+                return repoCfg.getManagerName();
+            }
+        }
+        log.debug("[Jira] resolveManagerName: 담당자 없음");
+        return null;
+    }
+
+    /**
+     * 팀 이름 해석: teamOverride → repoCfg.teamName
+     */
+    private String resolveTeamName(ApiRecord record, RepoConfig repoCfg) {
+        if (record.getTeamOverride() != null && !record.getTeamOverride().isBlank()) {
+            return record.getTeamOverride();
+        }
+        return (repoCfg != null) ? repoCfg.getTeamName() : null;
+    }
+
+    /**
+     * 담당자 매핑: resolveManagerName → resolveTeamName → JiraUserMapping 변환
      */
     private String resolveAssignee(ApiRecord record, RepoConfig repoCfg) {
-        String manager = record.getManagerOverride();
-        if (manager == null && repoCfg != null) {
-            manager = repoCfg.getManagerName();
-        }
-        if (manager == null) {
+        String manager = resolveManagerName(record, repoCfg);
+        if (manager == null || manager.isBlank()) {
             log.debug("[Jira] resolveAssignee: 담당자 없음 → assignee=null");
             return null;
         }
 
-        String team = record.getTeamOverride();
-        if (team == null && repoCfg != null) {
-            team = repoCfg.getTeamName();
-        }
+        String team = resolveTeamName(record, repoCfg);
 
         if (team != null) {
             Optional<JiraUserMapping> byTeam =
@@ -978,7 +1020,7 @@ public class JiraService {
             summary = summary.substring(0, 252) + "...";
         }
 
-        String descText = buildDescriptionTables(cfg, record, businessName);
+        String descText = buildDescriptionTables(cfg, repoCfg, record, businessName);
 
         String priority = switch (record.getStatus()) {
             case "최우선 차단대상" -> "Highest";
@@ -1036,7 +1078,7 @@ public class JiraService {
      *   3) ■ URL기타정보   — Controller, 메소드, ApiOperation, Description주석, 메소드주석, 컨트롤러주석, HTTP Method, Deprecated
      *   4) ■ URL관련 소스변경이력(최근 5건) — gitHistory(JSON)
      */
-    String buildDescriptionTables(JiraConfig cfg, ApiRecord record, String businessName) {
+    String buildDescriptionTables(JiraConfig cfg, RepoConfig repoCfg, ApiRecord record, String businessName) {
         log.debug("[Jira] buildDescriptionTables 시작: recordId={}, repo={}, apiPath={}",
                 record.getId(), record.getRepositoryName(), record.getApiPath());
 
@@ -1047,6 +1089,8 @@ public class JiraService {
         sb.append("||항목||값||\n");
         row(sb, "업무명",     businessName);
         row(sb, "레포지토리", record.getRepositoryName());
+        row(sb, "팀",         safe(resolveTeamName(record, repoCfg)));
+        row(sb, "담당자",     safe(resolveManagerName(record, repoCfg)));
         row(sb, "URL 경로",   record.getApiPath());
         row(sb, "Full URL",   record.getFullUrl());
         row(sb, "관련메뉴",   safe(record.getDescriptionOverride()));
