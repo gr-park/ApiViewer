@@ -62,7 +62,14 @@ public class ApmController {
         var logs = apmCollectionService.getApmLogs();
         int total = logs.size();
         var slice = from < total ? logs.subList(from, total) : List.of();
-        return ResponseEntity.ok(Map.of("logs", slice, "total", total, "collecting", apmCollectionService.isApmCollecting()));
+        var result = new java.util.LinkedHashMap<String, Object>();
+        result.put("logs", slice);
+        result.put("total", total);
+        result.put("collecting", apmCollectionService.isApmCollecting());
+        result.put("progressCurrent", apmCollectionService.getProgressCurrent());
+        result.put("progressTotal", apmCollectionService.getProgressTotal());
+        result.put("progressRepo", apmCollectionService.getProgressRepo());
+        return ResponseEntity.ok(result);
     }
 
     /** APM 수집 로그 초기화 */

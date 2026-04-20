@@ -2159,9 +2159,12 @@
     if (btn) btn.style.display = '';
   }
 
-  /** 관련메뉴(표시값): descriptionOverride 만 사용. 자동파싱 폴백 제거. */
+  /** 관련메뉴(표시값): descriptionOverride → apiOperationValue → descriptionTag → fullComment 폴백 */
   function allDesc(a) {
     if (a.descriptionOverride && a.descriptionOverride !== '-') return a.descriptionOverride;
+    if (a.apiOperationValue && a.apiOperationValue !== '-') return a.apiOperationValue;
+    if (a.descriptionTag && a.descriptionTag !== '-') return a.descriptionTag;
+    if (a.fullComment && a.fullComment !== '-') return a.fullComment.slice(0, 60) + (a.fullComment.length > 60 ? '…' : '');
     return '';
   }
 

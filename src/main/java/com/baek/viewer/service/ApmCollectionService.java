@@ -38,6 +38,11 @@ public class ApmCollectionService {
     private final List<String> apmLogs = java.util.Collections.synchronizedList(new ArrayList<>());
     private volatile boolean apmCollecting = false;
 
+    /** 실시간 진행률 (날짜 단위) */
+    private volatile int progressCurrent = 0;
+    private volatile int progressTotal = 0;
+    private volatile String progressRepo = "";
+
     public void addApmLog(String level, String msg) {
         String ts = java.time.LocalTime.now().toString().substring(0, 8);
         apmLogs.add(ts + " [" + level + "] " + msg);
@@ -50,6 +55,9 @@ public class ApmCollectionService {
 
     public List<String> getApmLogs() { return apmLogs; }
     public boolean isApmCollecting() { return apmCollecting; }
+    public int getProgressCurrent() { return progressCurrent; }
+    public int getProgressTotal() { return progressTotal; }
+    public String getProgressRepo() { return progressRepo; }
 
     /** 자기 자신 프록시 — 내부 @Transactional 메서드 호출 시 새 트랜잭션 생성용 */
     @Autowired @Lazy
@@ -93,6 +101,9 @@ public class ApmCollectionService {
         }
         boolean isOuterCall = !apmCollecting;
         if (isOuterCall) apmCollecting = true;
+        progressTotal = (int) spanDays;
+        progressCurrent = 0;
+        progressRepo = repoName;
         addApmLog("INFO", String.format("수집 시작 — repo=%s, source=%s, 기간=%s~%s (%d일)", repoName, src, from, to, spanDays));
 
         try {
@@ -117,6 +128,7 @@ public class ApmCollectionService {
                         addApmLog("WARN", String.format("MOCK %s 일자 실패 (스킵): %s", d, e.getMessage()));
                         failDays++;
                     }
+                    progressCurrent = dayNum;
                     d = d.plusDays(1);
                 }
             } else {
@@ -135,6 +147,7 @@ public class ApmCollectionService {
                         addApmLog("WARN", String.format("%s %s 일자 실패 (스킵): %s", src, day, e.getMessage()));
                         failDays++;
                     }
+                    progressCurrent = dayNum;
                     d = d.plusDays(1);
                 }
             }

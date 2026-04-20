@@ -675,6 +675,7 @@
     addLocalLog('INFO', `── APM ${label} 시작: ${targets.length}개 레포 / ${totalSteps}단계 ──`);
     // 서버 로그 초기화 후 폴링 시작
     await fetch('/api/apm/logs', { method: 'DELETE' }).catch(() => {});
+    apmProgressMode = 'batch';
     startApmLogPolling();
 
     document.getElementById('apmCollectResult').innerHTML =
@@ -785,6 +786,7 @@
     addLocalLog('INFO', `── APM 수집 시작: ${repoName} / ${source} / ${from}~${to} (${diff}일) ──`);
     document.getElementById('progCount').textContent = `${source} 데이터 수집 중...`;
     document.getElementById('apmCollectResult').innerHTML = `<span style="color:var(--text-muted);">${source} 수집 중... (${diff}일)</span>`;
+    apmProgressMode = 'single';
     startApmLogPolling();
     try {
       const res = await fetch('/api/apm/collect', {
@@ -1135,6 +1137,8 @@
   // ── APM 서버 로그 폴링 ──────────────────────────────────────
   let apmLogTimer = null;
   let apmLogOffset = 0;
+  // 'single': 레포별 수집 (폴링이 % 제어), 'batch': 전체수집 (프론트가 레포단위 % 제어)
+  let apmProgressMode = 'single';
 
   function startApmLogPolling() {
     apmLogOffset = 0;
@@ -1147,6 +1151,20 @@
         if (data.logs && data.logs.length > 0) {
           data.logs.forEach(line => appendLogLine(line));
           apmLogOffset = data.total;
+        }
+        // ── 날짜별 실시간 진행률 업데이트 ──
+        if (data.collecting && data.progressTotal > 0) {
+          const cur = data.progressCurrent || 0;
+          const tot = data.progressTotal;
+          // 레포별 수집 모드일 때만 % 제어 (전체수집은 프론트가 레포단위로 % 제어)
+          if (apmProgressMode === 'single') {
+            const pct = Math.round((cur / tot) * 100);
+            document.getElementById('progFill').style.width = pct + '%';
+            document.getElementById('progPct').textContent = pct + '%';
+          }
+          // 날짜 진행 텍스트는 두 모드 모두 표시
+          document.getElementById('progCount').textContent =
+            `${data.progressRepo} · ${cur}/${tot}일 수집 중`;
         }
       } catch(e) { /* ignore */ }
     }, 500);

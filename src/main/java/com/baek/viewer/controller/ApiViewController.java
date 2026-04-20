@@ -351,11 +351,13 @@ public class ApiViewController {
             if (q != null && !q.isBlank()) {
                 String pat = "%" + q.toLowerCase() + "%";
                 ps.add(cb.or(
-                        cb.like(cb.lower(root.get("apiPath")),            pat),
-                        cb.like(cb.lower(root.get("methodName")),         pat),
-                        cb.like(cb.lower(root.get("apiOperationValue")),  pat),
-                        cb.like(cb.lower(root.get("descriptionTag")),     pat),
-                        cb.like(cb.lower(root.get("memo")),               pat)
+                        cb.like(cb.lower(root.get("apiPath")),             pat),
+                        cb.like(cb.lower(root.get("methodName")),          pat),
+                        cb.like(cb.lower(root.get("apiOperationValue")),   pat),
+                        cb.like(cb.lower(root.get("descriptionTag")),      pat),
+                        cb.like(cb.lower(root.get("descriptionOverride")), pat),
+                        cb.like(cb.lower(root.get("fullComment")),         pat),
+                        cb.like(cb.lower(root.get("memo")),                pat)
                 ));
             }
             if (alert != null && !alert.isBlank()) {
