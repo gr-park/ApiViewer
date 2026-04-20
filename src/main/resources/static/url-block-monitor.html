@@ -163,7 +163,7 @@
       </div>
 
       <div class="field">
-        OkindName (서비스 그룹) — 다중 선택 (전체 미선택 시 전체)
+        조회 대상 okindName — 레포 기준 자동 세팅
         <div id="okindBox" class="okind-box">
           <span class="okind-empty">레포 선택 시 표시</span>
         </div>
@@ -342,38 +342,29 @@
     selectedRepo = document.getElementById('fRepo').value;
     const box = document.getElementById('okindBox');
     box.innerHTML = '';
-    let okinds = [];
-    if (selectedRepo) {
-      const r = reposCache.find(x => x.repoName === selectedRepo);
-      okinds = r ? r.okinds : [];
-    } else {
-      // 전체 레포의 okindName distinct
-      const seen = new Set();
-      reposCache.forEach(r => (r.okinds||[]).forEach(o => {
-        if (!seen.has(o.name)) { seen.add(o.name); okinds.push(o); }
-      }));
+    if (!selectedRepo) {
+      box.innerHTML = '<span class="okind-empty">전체 활성 레포 — okind 필터 없음 (각 레포 설정값 자동 사용)</span>';
+      return;
     }
+    const r = reposCache.find(x => x.repoName === selectedRepo);
+    const okinds = r ? (r.okinds || []) : [];
     if (!okinds.length) {
-      box.innerHTML = '<span class="okind-empty">설정된 okind 없음</span>';
+      box.innerHTML = '<span class="okind-empty">해당 레포에 설정된 okind 없음</span>';
       return;
     }
     okinds.forEach(o => {
-      const lbl = document.createElement('label');
-      lbl.className = 'okind-chip';
-      lbl.innerHTML = `<input type="checkbox" value="${esc(o.name)}" onchange="this.parentElement.classList.toggle('on', this.checked)"><span>${esc(o.name)}</span>`;
-      box.appendChild(lbl);
+      const chip = document.createElement('span');
+      chip.className = 'okind-chip on';
+      chip.textContent = o.name;
+      box.appendChild(chip);
     });
-  }
-
-  function collectOkindNames(){
-    return Array.from(document.querySelectorAll('#okindBox input:checked')).map(i => i.value);
   }
 
   async function doSearch(){
     const from = document.getElementById('fFrom').value;
     const to = document.getElementById('fTo').value;
     if (!from || !to) { showToast('기간을 입력하세요', 'error'); return; }
-    const okindNames = collectOkindNames();
+    // okindNames는 서버가 레포 설정에서 자동으로 가져가므로 null 고정
     const serviceLike = document.getElementById('fService').value.trim();
     const extraBot = collectMonBotKeywords();
 
@@ -388,7 +379,7 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           repoName: selectedRepo || null,
-          okindNames: okindNames.length ? okindNames : null,
+          okindNames: null,
           serviceLike: serviceLike || null,
           from, to,
           excludeBot,
