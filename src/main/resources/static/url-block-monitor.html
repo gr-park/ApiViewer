@@ -46,13 +46,7 @@
     .toggle-group{display:inline-flex;border:1px solid var(--border);border-radius:6px;overflow:hidden;}
     .toggle-group button{padding:6px 12px;background:var(--card);color:var(--text-muted);border:none;font-size:12px;font-weight:600;cursor:pointer;}
     .toggle-group button.on{background:var(--primary);color:#fff;}
-
-    /* okind 체크박스 그룹 */
-    .okind-box{display:flex;flex-wrap:wrap;gap:6px;max-height:120px;overflow:auto;padding:6px;border:1px solid var(--border);border-radius:6px;background:var(--card);}
-    .okind-chip{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;background:#f1f5f9;border-radius:4px;font-size:11px;font-weight:600;cursor:pointer;color:var(--text-muted);}
-    .okind-chip input{margin:0;cursor:pointer;}
-    .okind-chip.on{background:#dbeafe;color:#1e40af;}
-    .okind-empty{font-size:11px;color:var(--text-muted);padding:4px;}
+    .toggle-group.toggle-sm button{padding:4px 10px;font-size:11px;line-height:1;}
 
     /* 요약 카드 */
     .summary-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px;}
@@ -116,9 +110,6 @@
     [data-theme="dark"] .btn-ghost{background:#293548;color:var(--text-muted);border-color:var(--border);}
     [data-theme="dark"] .btn-ghost:hover{background:#334155;}
     [data-theme="dark"] .toggle-group button{background:var(--card);color:var(--text-muted);}
-    [data-theme="dark"] .okind-box{background:#0f172a;}
-    [data-theme="dark"] .okind-chip{background:#293548;color:var(--text-muted);}
-    [data-theme="dark"] .okind-chip.on{background:#1e3a5f;color:#93c5fd;}
     [data-theme="dark"] .col-svc{color:#93c5fd;}
     [data-theme="dark"] .col-err{color:#fca5a5;}
     [data-theme="dark"] .badge-method{background:#1e3a5f;color:#93c5fd;}
@@ -154,32 +145,13 @@
   <div class="card">
     <div class="card-title"><span class="dot dot-blue"></span>조회 조건</div>
 
-    <!-- Row 1: 레포지토리 | OkindName | 봇 표시 -->
-    <div class="filter-grid">
-      <div class="field">레포지토리
+    <!-- Row 1: 레포지토리 | 기간 | 빠른선택 -->
+    <div style="display:flex;gap:14px;align-items:flex-end;flex-wrap:wrap;">
+      <div class="field" style="min-width:200px;">레포지토리
         <select id="fRepo" onchange="onRepoChange()">
           <option value="">(전체 활성 레포)</option>
         </select>
       </div>
-
-      <div class="field">
-        조회 대상 okindName — 레포 기준 자동 세팅
-        <div id="okindBox" class="okind-box">
-          <span class="okind-empty">레포 선택 시 표시</span>
-        </div>
-      </div>
-
-      <div class="field">
-        봇 표시
-        <div class="toggle-group">
-          <button id="btnExcludeBot" class="on" onclick="setExcludeBot(true)">봇 제외</button>
-          <button id="btnIncludeBot" onclick="setExcludeBot(false)">전체 보기</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Row 2: 기간 | 빠른선택 -->
-    <div style="display:flex;gap:12px;margin-top:12px;">
       <div class="field">
         기간
         <div style="display:flex;gap:6px;align-items:center;">
@@ -198,14 +170,18 @@
       </div>
     </div>
 
-    <!-- Row 3: 봇 키워드 (전체 너비) -->
+    <!-- Row 2: 봇 키워드 + 봇 표시 토글 -->
     <div class="field" style="margin-top:12px;">봇 또는 제외대상 키워드 (대소문자 구분)
       <div id="monBotKeywordsList" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px;min-height:28px;"></div>
-      <div style="display:flex;gap:6px;align-items:center;">
+      <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
         <input type="text" id="newMonBotKeywordInput" placeholder="키워드 입력 후 Enter"
                style="flex:1;max-width:300px;padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;"
                onkeydown="if(event.key==='Enter'){event.preventDefault();addMonBotKeyword();}">
         <button type="button" class="btn btn-ghost" style="font-size:11px;padding:4px 12px;height:auto;" onclick="addMonBotKeyword()">+ 추가</button>
+        <div class="toggle-group toggle-sm">
+          <button id="btnExcludeBot" class="on" onclick="setExcludeBot(true)">봇 제외</button>
+          <button id="btnIncludeBot" onclick="setExcludeBot(false)">전체 보기</button>
+        </div>
       </div>
     </div>
 
@@ -329,7 +305,7 @@
       reposCache.forEach(r => {
         const opt = document.createElement('option');
         opt.value = r.repoName;
-        opt.textContent = r.repoName + ' (pcode=' + r.pcode + ')';
+        opt.textContent = r.repoName;
         sel.appendChild(opt);
       });
       onRepoChange();
@@ -340,24 +316,6 @@
 
   function onRepoChange(){
     selectedRepo = document.getElementById('fRepo').value;
-    const box = document.getElementById('okindBox');
-    box.innerHTML = '';
-    if (!selectedRepo) {
-      box.innerHTML = '<span class="okind-empty">전체 활성 레포 — okind 필터 없음 (각 레포 설정값 자동 사용)</span>';
-      return;
-    }
-    const r = reposCache.find(x => x.repoName === selectedRepo);
-    const okinds = r ? (r.okinds || []) : [];
-    if (!okinds.length) {
-      box.innerHTML = '<span class="okind-empty">해당 레포에 설정된 okind 없음</span>';
-      return;
-    }
-    okinds.forEach(o => {
-      const chip = document.createElement('span');
-      chip.className = 'okind-chip on';
-      chip.textContent = o.name;
-      box.appendChild(chip);
-    });
   }
 
   async function doSearch(){
