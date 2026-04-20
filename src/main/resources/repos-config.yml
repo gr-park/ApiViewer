@@ -43,6 +43,21 @@ global:
   cloneLocalPath: ""              # 클론받을 로컬 디렉토리 경로 (예: /Users/dev/repos)
   gitBashPath: ""                 # git-bash.exe 경로 (Windows, 예: C:\Program Files\Git\git-bash.exe)
 
+  # URL 차단 모니터링 (와탭/제니퍼 공통)
+  blockMonitorBaseUrl: ""            # 트랜잭션 검색 Base URL (예: https://whatap.company.com 또는 jennifer 주소)
+  excludeKeywords:                   # 봇/제외대상 키워드 (clientType·clientName·userAgent 부분일치, 대소문자 구분)
+    - Googlebot
+    - AdsBot
+    - bingbot
+    - YandexBot
+    - DuckDuckBot
+    - facebookexternalhit
+    - Slackbot
+    - Twitterbot
+    - LinkedInBot
+    - crawler
+    - spider
+
   # 와탭 조회 파라미터 (ptotal: 전체 건수 상한, psize: 한 페이지 건수)
   whatapPtotal: 100
   whatapPsize: 10000

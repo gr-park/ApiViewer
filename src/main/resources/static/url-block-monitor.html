@@ -69,7 +69,7 @@
     /* 테이블 */
     .table-wrap{overflow:auto;max-height:65vh;border:1px solid var(--border);border-radius:8px;background:var(--card);}
     table{width:100%;border-collapse:collapse;font-size:11.5px;}
-    thead th{position:sticky;top:0;z-index:1;background:#f1f5f9;padding:7px 8px;text-align:left;font-weight:700;color:var(--text-muted);font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--border);white-space:nowrap;}
+    thead th{position:sticky;top:0;z-index:1;background:#f1f5f9;padding:7px 8px;text-align:left;font-weight:700;color:var(--text-muted);font-size:10.5px;letter-spacing:.04em;border-bottom:1px solid var(--border);white-space:nowrap;}
     tbody td{padding:6px 8px;border-bottom:1px solid var(--border);vertical-align:middle;white-space:nowrap;}
     tbody tr:hover{background:#f8fafc;}
     tbody tr.bot-row{background:#fff7ed;}
@@ -161,7 +161,7 @@
         </select>
       </label>
 
-      <label class="field">서비스 (URL) — 부분일치
+      <label class="field">URL 경로 (부분일치)
         <input id="fService" type="text" placeholder="/api/...">
       </label>
 
@@ -175,7 +175,7 @@
 
     <div class="filter-grid" style="margin-top:12px;">
       <div class="field" style="grid-column:span 1;">
-        기간 (최대 7일)
+        기간
         <div style="display:flex;gap:6px;align-items:center;">
           <input id="fFrom" type="date" style="width:140px;">
           <span style="color:var(--text-muted);">~</span>
@@ -200,9 +200,15 @@
     </div>
 
     <div class="filter-grid" style="margin-top:12px;grid-template-columns:3fr 1fr 1fr;">
-      <label class="field">봇 또는 제외대상 키워드 (콤마 구분, 대소문자 구분)
-        <input id="fExtraBot" type="text" placeholder="예: Googlebot,AdsBot,bingbot">
-      </label>
+      <div class="field">봇 또는 제외대상 키워드 (대소문자 구분)
+        <div id="monBotKeywordsList" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px;min-height:28px;"></div>
+        <div style="display:flex;gap:6px;align-items:center;">
+          <input type="text" id="newMonBotKeywordInput" placeholder="키워드 입력 후 Enter"
+                 style="flex:1;max-width:300px;padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;"
+                 onkeydown="if(event.key==='Enter'){event.preventDefault();addMonBotKeyword();}">
+          <button type="button" class="btn btn-ghost" style="font-size:11px;padding:4px 12px;height:auto;" onclick="addMonBotKeyword()">+ 추가</button>
+        </div>
+      </div>
       <div class="field">&nbsp;
         <button class="btn btn-blue" onclick="doSearch()" id="searchBtn">🔍 조회</button>
       </div>
@@ -368,7 +374,7 @@
     if (!from || !to) { showToast('기간을 입력하세요', 'error'); return; }
     const okindNames = collectOkindNames();
     const serviceLike = document.getElementById('fService').value.trim();
-    const extraBot = document.getElementById('fExtraBot').value.split(',').map(s => s.trim()).filter(Boolean);
+    const extraBot = collectMonBotKeywords();
 
     document.getElementById('searchBtn').disabled = true;
     document.getElementById('excelBtn').disabled = true;
@@ -507,17 +513,37 @@
     URL.revokeObjectURL(a.href);
   }
 
+  // ── 봇 키워드 태그 관리 ──────────────────────────────────
+  function renderMonBotKeywordTag(name) {
+    const list = document.getElementById('monBotKeywordsList');
+    const tag = document.createElement('span');
+    tag.className = 'mon-bot-tag';
+    tag.style.cssText = 'display:inline-flex;align-items:center;gap:4px;padding:4px 8px 4px 10px;background:#fef3c7;border:1px solid #fcd34d;border-radius:12px;font-size:11px;color:#92400e;font-weight:600;';
+    tag.innerHTML = `<span>${esc(name)}</span><button type="button" style="background:none;border:none;color:#b45309;cursor:pointer;font-size:14px;padding:0 2px;line-height:1;" onclick="this.parentElement.remove()">×</button>`;
+    tag.dataset.name = name;
+    list.appendChild(tag);
+  }
+  function addMonBotKeyword() {
+    const input = document.getElementById('newMonBotKeywordInput');
+    const name = input.value.trim();
+    if (!name) return;
+    const existing = Array.from(document.querySelectorAll('#monBotKeywordsList .mon-bot-tag')).map(t => t.dataset.name);
+    if (existing.includes(name)) { showToast('이미 등록된 키워드입니다.', 'error'); return; }
+    renderMonBotKeywordTag(name);
+    input.value = '';
+    input.focus();
+  }
+  function collectMonBotKeywords() {
+    return Array.from(document.querySelectorAll('#monBotKeywordsList .mon-bot-tag')).map(t => t.dataset.name);
+  }
+
   // 초기화
   setRange(1, document.querySelector('.filter-grid .btn-ghost.active'));
   loadRepos();
-  // 글로벌 봇 키워드를 입력란 기본값으로 세팅 (사용자가 직접 조정 가능)
+  // 글로벌 봇 키워드를 태그로 기본 세팅 (사용자가 직접 조정 가능)
   fetch('/api/url-block-monitor/bot-keywords')
     .then(r => r.json())
-    .then(d => {
-      if (d.keywords && d.keywords.length) {
-        document.getElementById('fExtraBot').value = d.keywords.join(', ');
-      }
-    })
+    .then(d => { if (d.keywords && d.keywords.length) d.keywords.forEach(renderMonBotKeywordTag); })
     .catch(() => {});
 </script>
 </body>

@@ -43,7 +43,6 @@ public class WhatapTxSearchService {
     private static final ZoneId KST = ZoneId.of("Asia/Seoul");
     private static final DateTimeFormatter TS_FMT =
             DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").withZone(KST);
-    private static final int MAX_RANGE_DAYS = 7;
     private static final String BLOCK_PREFIX = "차단";
 
     private final HttpClient httpClient = HttpClient.newBuilder()
@@ -104,7 +103,6 @@ public class WhatapTxSearchService {
         if (from == null || to == null) throw new IllegalArgumentException("from/to 필수");
         if (to.isBefore(from)) throw new IllegalArgumentException("종료일이 시작일보다 이전입니다");
         long days = java.time.temporal.ChronoUnit.DAYS.between(from, to) + 1;
-        if (days > MAX_RANGE_DAYS) throw new IllegalArgumentException("최대 " + MAX_RANGE_DAYS + "일까지 조회 가능");
 
         GlobalConfig gc = globalRepo.findById(1L).orElse(new GlobalConfig());
         String baseUrl = gc.getWhatapTxsearchBaseUrl();

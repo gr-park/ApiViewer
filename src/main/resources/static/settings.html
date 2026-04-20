@@ -302,7 +302,7 @@ function updateAdminBadge(valid) {
     </div>
 
     <!-- APM 설정 -->
-    <div style="font-size:11px;font-weight:700;color:var(--text-muted);margin-bottom:6px;letter-spacing:.05em;">APM 설정</div>
+    <div style="font-size:11px;font-weight:700;color:var(--text-muted);margin-bottom:6px;letter-spacing:.05em;margin-top:16px;padding-top:12px;border-top:1px dashed var(--border);">APM 설정</div>
     <div class="field-row col3" style="margin-bottom:14px;">
       <label class="field">와탭 ptotal
         <input id="gWhatapPtotal" type="number" min="1" style="width:80px;">
@@ -315,20 +315,26 @@ function updateAdminBadge(valid) {
     </div>
 
     <!-- URL 차단 모니터링 -->
-    <div style="font-size:11px;font-weight:700;color:var(--text-muted);margin-bottom:6px;letter-spacing:.05em;">URL 차단 모니터링 (와탭 트랜잭션 검색)</div>
-    <div class="field-row col2" style="margin-bottom:14px;">
-      <label class="field">와탭 트랜잭션 검색 Base URL
+    <div style="font-size:11px;font-weight:700;color:var(--text-muted);margin-bottom:6px;letter-spacing:.05em;margin-top:16px;padding-top:12px;border-top:1px dashed var(--border);">URL 차단 모니터링 (와탭 트랜잭션 검색)</div>
+    <div style="margin-bottom:14px;">
+      <label class="field" style="display:block;margin-bottom:10px;">와탭 트랜잭션 검색 Base URL
         <input id="gWhatapTxsearchBaseUrl" type="text" placeholder="https://service.whatap-browser-agent.io" style="width:100%;max-width:420px;">
         <span class="field-hint">/v2/txsearch 호출용. 각 레포의 pcode로 구분</span>
       </label>
-      <label class="field">봇 키워드 (콤마 구분)
-        <input id="gBotKeywords" type="text" placeholder="Googlebot,AdsBot,bingbot,..." style="width:100%;max-width:520px;">
-        <span class="field-hint">userAgent / clientType 부분일치로 봇 제외</span>
+      <label class="field" style="display:block;">봇 또는 제외대상 키워드
+        <div id="botKeywordsList" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px;min-height:28px;"></div>
+        <div style="display:flex;gap:6px;align-items:center;">
+          <input type="text" id="newBotKeywordInput" placeholder="키워드 입력 후 Enter (대소문자 구분)"
+                 style="flex:1;max-width:320px;padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;"
+                 onkeydown="if(event.key==='Enter'){event.preventDefault();addBotKeyword();}">
+          <button type="button" class="btn btn-ghost" style="font-size:11px;padding:4px 12px;height:auto;" onclick="addBotKeyword()">+ 추가</button>
+        </div>
+        <span class="field-hint">clientType / clientName / userAgent 부분일치 제외 (대소문자 구분)</span>
       </label>
     </div>
 
     <!-- 시스템 설정 -->
-    <div style="font-size:11px;font-weight:700;color:var(--text-muted);margin-bottom:6px;letter-spacing:.05em;">시스템 설정</div>
+    <div style="font-size:11px;font-weight:700;color:var(--text-muted);margin-bottom:6px;letter-spacing:.05em;margin-top:16px;padding-top:12px;border-top:1px dashed var(--border);">시스템 설정</div>
     <div class="field-row col3" style="margin-bottom:14px;">
       <label class="field">로그 레벨
         <select id="gApmLogLevel" style="width:120px;">
@@ -1024,7 +1030,9 @@ function updateAdminBadge(valid) {
       document.getElementById('gWhatapPtotal').value   = g.whatapPtotal ?? 100;
       document.getElementById('gWhatapPsize').value    = g.whatapPsize ?? 10000;
       document.getElementById('gWhatapTxsearchBaseUrl').value = g.whatapTxsearchBaseUrl || '';
-      document.getElementById('gBotKeywords').value    = g.botKeywords || 'Googlebot,AdsBot,bingbot,YandexBot,DuckDuckBot,facebookexternalhit,Slackbot,Twitterbot,LinkedInBot,crawler,spider';
+      document.getElementById('botKeywordsList').innerHTML = '';
+      const _bkDefault = 'Googlebot,AdsBot,bingbot,YandexBot,DuckDuckBot,facebookexternalhit,Slackbot,Twitterbot,LinkedInBot,crawler,spider';
+      (g.botKeywords || _bkDefault).split(',').map(s => s.trim()).filter(Boolean).forEach(renderBotKeywordTag);
       // 로그 tail 줄수 — 공통설정 + 로그조회 화면 모두 세팅
       const tailVal = g.logTailLines ?? 1000;
       document.getElementById('gLogTailLines').value   = tailVal;
@@ -1084,6 +1092,31 @@ function updateAdminBadge(valid) {
     return Array.from(document.querySelectorAll('#teamsList .team-tag')).map(t => t.dataset.name);
   }
 
+  // ── 봇 키워드 관리 ────────────────────────────────────────
+  function renderBotKeywordTag(name) {
+    const _dark = document.documentElement.getAttribute('data-theme') === 'dark';
+    const list = document.getElementById('botKeywordsList');
+    const tag = document.createElement('span');
+    tag.className = 'bot-keyword-tag';
+    tag.style.cssText = `display:inline-flex;align-items:center;gap:4px;padding:4px 8px 4px 10px;background:${_dark?'#1c1917':'#fef3c7'};border:1px solid ${_dark?'#78350f':'#fcd34d'};border-radius:12px;font-size:11px;color:${_dark?'#fbbf24':'#92400e'};font-weight:600;`;
+    tag.innerHTML = `<span>${esc(name)}</span><button type="button" style="background:none;border:none;color:${_dark?'#fbbf24':'#b45309'};cursor:pointer;font-size:14px;padding:0 2px;line-height:1;" onclick="this.parentElement.remove()">×</button>`;
+    tag.dataset.name = name;
+    list.appendChild(tag);
+  }
+  function addBotKeyword() {
+    const input = document.getElementById('newBotKeywordInput');
+    const name = input.value.trim();
+    if (!name) return;
+    const existing = Array.from(document.querySelectorAll('#botKeywordsList .bot-keyword-tag')).map(t => t.dataset.name);
+    if (existing.includes(name)) { showToast('이미 등록된 키워드입니다.', 'error'); return; }
+    renderBotKeywordTag(name);
+    input.value = '';
+    input.focus();
+  }
+  function collectBotKeywords() {
+    return Array.from(document.querySelectorAll('#botKeywordsList .bot-keyword-tag')).map(t => t.dataset.name);
+  }
+
   async function saveGlobal() {
     try {
       // 기존 설정을 먼저 읽어 password 등 누락 방지
@@ -1101,7 +1134,8 @@ function updateAdminBadge(valid) {
       cur.whatapPtotal = parseInt(document.getElementById('gWhatapPtotal').value) || 100;
       cur.whatapPsize = parseInt(document.getElementById('gWhatapPsize').value) || 10000;
       cur.whatapTxsearchBaseUrl = document.getElementById('gWhatapTxsearchBaseUrl').value.trim() || null;
-      cur.botKeywords = document.getElementById('gBotKeywords').value.trim() || null;
+      const _bkList = collectBotKeywords();
+      cur.botKeywords = _bkList.length ? _bkList.join(',') : null;
       cur.teams = (() => { const t = collectTeams(); return t.length ? JSON.stringify(t) : null; })();
       cur.whatapProfiles = wpList.length ? JSON.stringify(wpList) : null;
       cur.jenniferProfiles = jpList.length ? JSON.stringify(jpList) : null;
