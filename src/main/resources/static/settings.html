@@ -1069,29 +1069,32 @@ function updateAdminBadge(valid) {
   }
 
   async function saveGlobal() {
-    const wpList = collectWhatapProfiles();
-    const jpList = collectJenniferProfiles();
-    const body = {
-      id: 1,
-      reviewThreshold: parseInt(document.getElementById('gReviewThreshold').value) || 3,
-      pageSize: parseInt(document.getElementById('gPageSize').value) || 200,
-      pageNavSize: parseInt(document.getElementById('gPageNavSize').value) || 10,
-      apmLogLevel: document.getElementById('gApmLogLevel').value,
-      logTailLines: parseInt(document.getElementById('gLogTailLines').value) || 1000,
-      whatapPtotal: parseInt(document.getElementById('gWhatapPtotal').value) || 100,
-      whatapPsize: parseInt(document.getElementById('gWhatapPsize').value) || 10000,
-      teams: (() => { const t = collectTeams(); return t.length ? JSON.stringify(t) : null; })(),
-      whatapProfiles: wpList.length ? JSON.stringify(wpList) : null,
-      jenniferProfiles: jpList.length ? JSON.stringify(jpList) : null,
-      reviewTargetStatuses: [
+    try {
+      // 기존 설정을 먼저 읽어 password 등 누락 방지
+      const curRes = await adminFetch('/api/config/global');
+      const cur = curRes.ok ? await curRes.json() : { id: 1 };
+
+      const wpList = collectWhatapProfiles();
+      const jpList = collectJenniferProfiles();
+
+      cur.reviewThreshold = parseInt(document.getElementById('gReviewThreshold').value) || 3;
+      cur.pageSize = parseInt(document.getElementById('gPageSize').value) || 200;
+      cur.pageNavSize = parseInt(document.getElementById('gPageNavSize').value) || 10;
+      cur.apmLogLevel = document.getElementById('gApmLogLevel').value;
+      cur.logTailLines = parseInt(document.getElementById('gLogTailLines').value) || 1000;
+      cur.whatapPtotal = parseInt(document.getElementById('gWhatapPtotal').value) || 100;
+      cur.whatapPsize = parseInt(document.getElementById('gWhatapPsize').value) || 10000;
+      cur.teams = (() => { const t = collectTeams(); return t.length ? JSON.stringify(t) : null; })();
+      cur.whatapProfiles = wpList.length ? JSON.stringify(wpList) : null;
+      cur.jenniferProfiles = jpList.length ? JSON.stringify(jpList) : null;
+      cur.reviewTargetStatuses = [
         {id:'gReviewStatus1', val:'최우선 차단대상'},
         {id:'gReviewStatus2', val:'후순위 차단대상'},
         {id:'gReviewStatus3', val:'추가검토필요 차단대상'}
-      ].filter(x => document.getElementById(x.id).checked).map(x => x.val).join(',') || '최우선 차단대상,후순위 차단대상,추가검토필요 차단대상'
-    };
-    try {
+      ].filter(x => document.getElementById(x.id).checked).map(x => x.val).join(',') || '최우선 차단대상,후순위 차단대상,추가검토필요 차단대상';
+
       const res = await adminFetch('/api/config/global', {
-        method: 'PUT', body: JSON.stringify(body)
+        method: 'PUT', body: JSON.stringify(cur)
       });
       if (!res.ok) throw new Error();
       showToast('공통 설정 저장 완료', 'success');
@@ -1107,8 +1110,13 @@ function updateAdminBadge(valid) {
     ].filter(x => document.getElementById(x.id)?.checked).map(x => x.val).join(',')
       || '최우선 차단대상,후순위 차단대상,추가검토필요 차단대상';
     try {
+      // 기존 설정을 먼저 읽어 password 등 누락 방지
+      const curRes = await adminFetch('/api/config/global');
+      const cur = curRes.ok ? await curRes.json() : { id: 1 };
+      cur.reviewTargetStatuses = statuses;
+
       const res = await adminFetch('/api/config/global', {
-        method: 'PUT', body: JSON.stringify({ id: 1, reviewTargetStatuses: statuses })
+        method: 'PUT', body: JSON.stringify(cur)
       });
       if (!res.ok) throw new Error();
       showToast('현업검토 화면 설정 저장 완료', 'success');

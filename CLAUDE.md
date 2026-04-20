@@ -326,7 +326,7 @@ workflow.html
 
 | 항목 | 내용 |
 |------|------|
-| 제외 대상 | `target/`, `.git/`, `.idea/`, `.claude/`, `data/`, `logs/`, `.sh`, `.bat`, `mvnw`, `*.jar` (lib/*.jar 포함), `application.properties`, `src/main/resources/repos-config.yml` |
+| 제외 대상 | `target/`, `.git/`, `.idea/`, `.claude/`, `data/`, `logs/`, `.sh`, `.bat`, `mvnw`, `*.jar` (lib/*.jar 포함), `application.properties`, `repos-config.yml` (루트), `src/main/resources/repos-config.yml` (리소스) |
 | 출력 경로 | `/Users/baegmyeongseon/Downloads/ApiViewer.zip` (절대 경로 사용) |
 | 실행 위치 | `cd /Users/baegmyeongseon/LP_DEV` 후 `zip -r 출력경로 ApiViewer --exclude "ApiViewer/..."` |
 | 기존 파일 | 기존 zip 존재 시 반드시 먼저 삭제 후 재생성 (업데이트 모드 방지) |

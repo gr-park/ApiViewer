@@ -1531,6 +1531,7 @@
       const res = await fetch('/api/db/clear-alerts', { method:'PATCH', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ids:targetIds}) });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || '서버 오류');
+      clearSelection();
       await refreshAll();
       showToast(`${data.cleared}건 알림 해제 완료`,'success');
     } catch(e) { showToast('실패: ' + e.message,'error'); } finally { hideBulkProgress(); }

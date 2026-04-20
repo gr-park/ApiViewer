@@ -5,11 +5,14 @@ import com.baek.viewer.model.RepoConfig;
 import com.baek.viewer.repository.GlobalConfigRepository;
 import com.baek.viewer.repository.RepoConfigRepository;
 import com.baek.viewer.service.YamlConfigService;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -83,6 +86,7 @@ public class ConfigController {
             log.warn("[레포설정 추가 실패] 중복 레포명: {}", config.getRepoName());
             return ResponseEntity.badRequest().body(Map.of("error", "이미 존재하는 레포지토리명입니다: " + config.getRepoName()));
         }
+        resolveApmProfileFallback(config);
         log.info("[레포설정 추가] repoName={}", config.getRepoName());
         return ResponseEntity.ok(repoRepo.save(config));
     }
@@ -92,8 +96,67 @@ public class ConfigController {
     public ResponseEntity<?> updateRepo(@PathVariable Long id, @RequestBody RepoConfig config) {
         if (!repoRepo.existsById(id)) return ResponseEntity.notFound().build();
         config.setId(id);
+        resolveApmProfileFallback(config);
         log.info("[레포설정 수정] id={}, repoName={}", id, config.getRepoName());
         return ResponseEntity.ok(repoRepo.save(config));
+    }
+
+    /**
+     * 레포 저장 시 whatapUrl/Cookie, jenniferUrl/BearerToken 이 비어있으면
+     * 공통 프로필(GlobalConfig.whatapProfiles/jenniferProfiles)에서 폴백한다.
+     * YAML 가져오기와 동일한 로직 — 설정 화면에서 "비워두면 공통 프로필 사용"과 일치시킨다.
+     */
+    private void resolveApmProfileFallback(RepoConfig config) {
+        GlobalConfig gc = globalRepo.findById(1L).orElse(null);
+        if (gc == null) return;
+
+        // 와탭 프로필 폴백
+        if (config.getWhatapProfileName() != null && !config.getWhatapProfileName().isBlank()) {
+            try {
+                List<Map<String, String>> profiles = gc.getWhatapProfiles() != null
+                        ? new ObjectMapper().readValue(gc.getWhatapProfiles(), new TypeReference<>() {})
+                        : List.of();
+                profiles.stream()
+                        .filter(p -> config.getWhatapProfileName().equals(p.get("name")))
+                        .findFirst()
+                        .ifPresent(prof -> {
+                            if (config.getWhatapUrl() == null || config.getWhatapUrl().isBlank()) {
+                                config.setWhatapUrl(prof.get("url"));
+                                log.debug("[레포설정] 와탭 URL 프로필 폴백: profile={}, url={}", config.getWhatapProfileName(), prof.get("url"));
+                            }
+                            if (config.getWhatapCookie() == null || config.getWhatapCookie().isBlank()) {
+                                config.setWhatapCookie(prof.get("cookie"));
+                                log.debug("[레포설정] 와탭 Cookie 프로필 폴백: profile={}", config.getWhatapProfileName());
+                            }
+                        });
+            } catch (Exception e) {
+                log.warn("[레포설정] 와탭 프로필 파싱 실패: {}", e.getMessage());
+            }
+        }
+
+        // 제니퍼 프로필 폴백
+        if (config.getJenniferProfileName() != null && !config.getJenniferProfileName().isBlank()) {
+            try {
+                List<Map<String, String>> profiles = gc.getJenniferProfiles() != null
+                        ? new ObjectMapper().readValue(gc.getJenniferProfiles(), new TypeReference<>() {})
+                        : List.of();
+                profiles.stream()
+                        .filter(p -> config.getJenniferProfileName().equals(p.get("name")))
+                        .findFirst()
+                        .ifPresent(prof -> {
+                            if (config.getJenniferUrl() == null || config.getJenniferUrl().isBlank()) {
+                                config.setJenniferUrl(prof.get("url"));
+                                log.debug("[레포설정] 제니퍼 URL 프로필 폴백: profile={}, url={}", config.getJenniferProfileName(), prof.get("url"));
+                            }
+                            if (config.getJenniferBearerToken() == null || config.getJenniferBearerToken().isBlank()) {
+                                config.setJenniferBearerToken(prof.get("bearerToken"));
+                                log.debug("[레포설정] 제니퍼 토큰 프로필 폴백: profile={}", config.getJenniferProfileName());
+                            }
+                        });
+            } catch (Exception e) {
+                log.warn("[레포설정] 제니퍼 프로필 파싱 실패: {}", e.getMessage());
+            }
+        }
     }
 
     // ── 레포 삭제 ─────────────────────────────────────────
