@@ -119,7 +119,7 @@ public class YamlConfigService {
             if (g.getListRepoLimit() != null) gc.setListRepoLimit(g.getListRepoLimit());
             if (g.getCloneLocalPath() != null) gc.setCloneLocalPath(g.getCloneLocalPath());
             if (g.getGitBashPath() != null) gc.setGitBashPath(g.getGitBashPath());
-            if (g.getBlockMonitorBaseUrl() != null) gc.setWhatapTxsearchBaseUrl(g.getBlockMonitorBaseUrl());
+            if (g.getBlockMonitorWhatapReferer() != null) gc.setBlockMonitorWhatapReferer(g.getBlockMonitorWhatapReferer());
             if (g.getExcludeKeywords() != null && !g.getExcludeKeywords().isEmpty()) {
                 String joined = String.join(",", g.getExcludeKeywords().stream()
                         .map(String::trim).filter(s -> !s.isEmpty()).toList());

@@ -42,7 +42,7 @@ public class ReposYamlConfig {
         private Integer listRepoLimit;
         private String cloneLocalPath;
         private String gitBashPath;
-        private String blockMonitorBaseUrl;
+        private String blockMonitorWhatapReferer;
         private List<String> excludeKeywords;
 
         public PeriodGlobal getPeriod() { return period; }
@@ -93,8 +93,8 @@ public class ReposYamlConfig {
         public void setCloneLocalPath(String v) { this.cloneLocalPath = v; }
         public String getGitBashPath() { return gitBashPath; }
         public void setGitBashPath(String v) { this.gitBashPath = v; }
-        public String getBlockMonitorBaseUrl() { return blockMonitorBaseUrl; }
-        public void setBlockMonitorBaseUrl(String v) { this.blockMonitorBaseUrl = v; }
+        public String getBlockMonitorWhatapReferer() { return blockMonitorWhatapReferer; }
+        public void setBlockMonitorWhatapReferer(String v) { this.blockMonitorWhatapReferer = v; }
         public List<String> getExcludeKeywords() { return excludeKeywords; }
         public void setExcludeKeywords(List<String> v) { this.excludeKeywords = v; }
     }

@@ -119,9 +119,14 @@ public class GlobalConfig {
     @Column(name = "git_bash_path", length = 1000)
     private String gitBashPath;
 
-    /** 와탭 트랜잭션 검색 Base URL (예: https://service.whatap-browser-agent.io). 각 레포는 RepoConfig.whatapPcode 로 구분 */
-    @Column(name = "whatap_txsearch_base_url", columnDefinition = "TEXT")
-    private String whatapTxsearchBaseUrl;
+    /**
+     * URL 차단 모니터링 — 와탭 Referer 경로 템플릿.
+     * 호스트(scheme+host+port)는 RepoConfig.whatapUrl 에서 자동 추출,
+     * 이 값은 {base}에 덧붙일 Referer 경로만 담는다. {pcode} 플레이스홀더는 RepoConfig.whatapPcode 로 치환.
+     * 예: "/v2/project/apm/{pcode}/new/tx_profile" (host는 RepoConfig.whatapUrl 에서 자동 추출)
+     */
+    @Column(name = "block_monitor_whatap_referer", columnDefinition = "TEXT")
+    private String blockMonitorWhatapReferer;
 
     /** URL 차단 모니터링에서 제외할 봇 키워드 (콤마 구분). userAgent / clientType 부분일치 */
     @Column(name = "bot_keywords", columnDefinition = "TEXT")
@@ -191,8 +196,12 @@ public class GlobalConfig {
     public void setCloneLocalPath(String v) { this.cloneLocalPath = v; }
     public String getGitBashPath() { return gitBashPath; }
     public void setGitBashPath(String v) { this.gitBashPath = v; }
-    public String getWhatapTxsearchBaseUrl() { return whatapTxsearchBaseUrl; }
-    public void setWhatapTxsearchBaseUrl(String v) { this.whatapTxsearchBaseUrl = v; }
+    public String getBlockMonitorWhatapReferer() {
+        return blockMonitorWhatapReferer != null && !blockMonitorWhatapReferer.isBlank()
+                ? blockMonitorWhatapReferer
+                : "/v2/project/apm/{pcode}/new/tx_profile";
+    }
+    public void setBlockMonitorWhatapReferer(String v) { this.blockMonitorWhatapReferer = v; }
     public String getBotKeywords() {
         return botKeywords != null && !botKeywords.isBlank() ? botKeywords
                : "Googlebot,AdsBot,bingbot,YandexBot,DuckDuckBot,facebookexternalhit,Slackbot,Twitterbot,LinkedInBot,crawler,spider";

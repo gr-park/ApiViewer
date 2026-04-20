@@ -43,8 +43,10 @@ global:
   cloneLocalPath: ""              # 클론받을 로컬 디렉토리 경로 (예: /Users/dev/repos)
   gitBashPath: ""                 # git-bash.exe 경로 (Windows, 예: C:\Program Files\Git\git-bash.exe)
 
-  # URL 차단 모니터링 (와탭/제니퍼 공통)
-  blockMonitorBaseUrl: ""            # 트랜잭션 검색 Base URL (예: https://whatap.company.com 또는 jennifer 주소)
+  # URL 차단 모니터링 (와탭 /yard/api/flush 호출 시 Referer 헤더 경로 템플릿)
+  # 호스트(scheme+host+port)는 각 레포의 whatapUrl(프로필 폴백값)에서 자동 추출됨
+  # {pcode}는 RepoConfig.whatapPcode 로 치환
+  blockMonitorWhatapReferer: "/v2/project/apm/{pcode}/new/tx_profile"
   excludeKeywords:                   # 봇/제외대상 키워드 (clientType·clientName·userAgent 부분일치, 대소문자 구분)
     - Googlebot
     - AdsBot

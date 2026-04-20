@@ -149,8 +149,8 @@ Spring Boot 기반 웹 애플리케이션. Controller 소스를 파싱하여 URL
 
 | 컬럼 | 설명 |
 |------|------|
-| `whatap_txsearch_base_url` | 와탭 트랜잭션 검색 Base URL (예: `https://service.whatap-browser-agent.io`). 각 레포는 `repo_config.whatap_pcode`로 구분 |
-| `bot_keywords` | 봇 제외 키워드 콤마 리스트. userAgent / clientType / clientName 부분일치 (대소문자 무시) |
+| `block_monitor_whatap_referer` | 와탭 `/yard/api/flush` 호출 시 Referer 헤더에 쓸 경로 템플릿 (기본 `/v2/project/apm/{pcode}/new/tx_profile`). 호스트(scheme+host+port)는 각 레포의 `repo_config.whatap_url`(프로필 폴백값)에서 자동 추출, `{pcode}`는 `repo_config.whatap_pcode`로 치환. 별도 Base URL 컬럼 없이 기존 와탭 프로필 인프라 재사용 |
+| `bot_keywords` | 봇 제외 키워드 콤마 리스트. userAgent / clientType / clientName 부분일치 (대소문자 구분) |
 
 ## 주요 DB 컬럼 (repo_config) — okind 매핑
 

@@ -12,11 +12,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.net.URI;
-import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -27,14 +25,17 @@ import java.util.*;
 /**
  * URL 차단 모니터링 — 와탭 트랜잭션 검색 호출 전용 서비스.
  *
- * 요청 패턴 (POST JSON, 사용자 캡쳐 페이로드 기반):
- * URL : {baseUrl}/v2/project/apm/{pcode}/new/tx_profile?stime=...&max=200&okinds=...&...
- * Body:
- *   { type:"profiles", path:"/v2/project/apm/{pcode}/new/tx_profile", pcode:"<pcode>",
- *     params:{ okinds:0, stime:<ms>, etime:<ms>, option:"forward",
- *              ptotal:100, filter:{ error:"차단" } } }
+ * 와탭 콘솔 API는 모두 공통 엔드포인트 {base}/yard/api/flush 로 POST하며,
+ * 서버는 Referer 헤더로 요청 맥락(어떤 화면의 어느 pcode)을 판별한다.
  *
- * pcode는 레포별 설정(RepoConfig.whatapPcode)에서 가져와 URL 경로에 포함.
+ * 요청 패턴 (POST JSON):
+ *   URL     : {base}/yard/api/flush                                       — {base}는 RepoConfig.whatapUrl 에서 scheme+host+port 추출
+ *   Referer : {base}{GlobalConfig.blockMonitorWhatapReferer, {pcode}치환}  — 기본 "/v2/project/apm/{pcode}/new/tx_profile"
+ *   Body    : { type:"profiles", path:"<referer 경로와 동일>", pcode:"<pcode>",
+ *               params:{ okinds:0, stime:<ms>, etime:<ms>, option:"forward",
+ *                        ptotal:100, filter:{ error:"차단" } } }
+ *
+ * Cookie는 RepoConfig.whatapCookie (프로필 폴백값) 사용.
  * DB 저장 X — 매 조회마다 실시간 fetch.
  */
 @Service
@@ -106,10 +107,7 @@ public class WhatapTxSearchService {
         long days = java.time.temporal.ChronoUnit.DAYS.between(from, to) + 1;
 
         GlobalConfig gc = globalRepo.findById(1L).orElse(new GlobalConfig());
-        String baseUrl = gc.getWhatapTxsearchBaseUrl();
-        if (baseUrl == null || baseUrl.isBlank()) {
-            throw new IllegalStateException("GlobalConfig.whatapTxsearchBaseUrl 미설정 — 설정 화면에서 입력하세요");
-        }
+        String refererTpl = gc.getBlockMonitorWhatapReferer();
         int ptotal = gc.getWhatapPtotal();
 
         List<RepoConfig> repos = pickRepos(repoName);
@@ -127,14 +125,18 @@ public class WhatapTxSearchService {
 
         List<BlockedTxRow> result = new ArrayList<>();
         for (RepoConfig r : repos) {
-            List<Integer> okinds = resolveOkinds(r, okindNames);
-            log.debug("[URL차단모니터] repo={} okinds={}", r.getRepoName(), okinds);
+            String base = extractBase(r.getWhatapUrl());
+            if (base == null) {
+                log.warn("[URL차단모니터] {} whatapUrl 미설정/파싱 실패 — 스킵", r.getRepoName());
+                continue;
+            }
+            String refererPath = refererTpl.replace("{pcode}", String.valueOf(r.getWhatapPcode()));
             LocalDate cursor = from;
             while (!cursor.isAfter(to)) {
                 long stime = cursor.atStartOfDay(KST).toInstant().toEpochMilli();
                 long etime = cursor.plusDays(1).atStartOfDay(KST).toInstant().toEpochMilli() - 1;
                 try {
-                    List<BlockedTxRow> day = fetchOneDay(baseUrl, r, okinds, stime, etime, ptotal);
+                    List<BlockedTxRow> day = fetchOneDay(base, refererPath, r, stime, etime, ptotal);
                     log.debug("[URL차단모니터] {} {} 응답={}건", r.getRepoName(), cursor, day.size());
                     for (BlockedTxRow row : day) {
                         if (row.getErrMessage() == null || !row.getErrMessage().startsWith(BLOCK_PREFIX)) continue;
@@ -173,25 +175,24 @@ public class WhatapTxSearchService {
                 .map(List::of).orElse(List.of());
     }
 
-    private List<Integer> resolveOkinds(RepoConfig repo, List<String> okindNames) {
-        List<Integer> ids = parseOkinds(repo.getWhatapOkinds());
-        if (okindNames == null || okindNames.isEmpty()) return ids;
-        List<String> names = splitCsv(repo.getWhatapOkindsName());
-        Set<String> wanted = new HashSet<>(okindNames);
-        List<Integer> out = new ArrayList<>();
-        for (int i = 0; i < ids.size() && i < names.size(); i++) {
-            if (wanted.contains(names.get(i))) out.add(ids.get(i));
+    /** RepoConfig.whatapUrl 에서 scheme+host+port 만 추출. 실패 시 null */
+    private String extractBase(String whatapUrl) {
+        if (whatapUrl == null || whatapUrl.isBlank()) return null;
+        try {
+            URI u = URI.create(whatapUrl.trim());
+            if (u.getScheme() == null || u.getAuthority() == null) return null;
+            return u.getScheme() + "://" + u.getAuthority();
+        } catch (IllegalArgumentException e) {
+            return null;
         }
-        return out;
     }
 
-    private List<BlockedTxRow> fetchOneDay(String baseUrl, RepoConfig repo, List<Integer> okinds,
+    private List<BlockedTxRow> fetchOneDay(String base, String refererPath, RepoConfig repo,
                                             long stime, long etime, int ptotal) throws Exception {
         boolean debug = globalRepo.findById(1L).map(GlobalConfig::isApmDebug).orElse(false);
 
         // 페이로드: 사용자 캡쳐 형식 그대로
         Map<String, Object> params = new LinkedHashMap<>();
-        // okinds는 단일/0 — 다중 okinds는 query string으로
         params.put("okinds", 0);
         params.put("stime", stime);
         params.put("etime", etime);
@@ -201,27 +202,27 @@ public class WhatapTxSearchService {
         filter.put("error", BLOCK_PREFIX);
         params.put("filter", filter);
 
-        int pcode = repo.getWhatapPcode();
-        String txPath = "/v2/project/apm/" + pcode + "/new/tx_profile";
-
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("type", "profiles");
-        body.put("path", txPath);
-        body.put("pcode", String.valueOf(pcode));
+        body.put("path", refererPath);
+        body.put("pcode", String.valueOf(repo.getWhatapPcode()));
         body.put("params", params);
 
         String reqBody = om.writeValueAsString(body);
 
-        String url = buildUrl(baseUrl, pcode, stime, etime, okinds, ptotal);
+        String url = base + "/yard/api/flush";
+        String referer = base + refererPath;
 
         if (debug) {
-            log.debug("[WHATAP-TX-REQ] POST {} | body={}", url, reqBody);
+            log.debug("[WHATAP-TX-REQ] POST {} | Referer={} | body={}", url, referer, reqBody);
         }
 
         HttpRequest.Builder builder = HttpRequest.newBuilder()
                 .uri(URI.create(url))
                 .timeout(Duration.ofSeconds(60))
                 .header("Content-Type", "application/json")
+                .header("Accept", "application/json, text/plain, */*")
+                .header("Referer", referer)
                 .POST(HttpRequest.BodyPublishers.ofString(reqBody));
         if (repo.getWhatapCookie() != null && !repo.getWhatapCookie().isBlank()) {
             builder.header("Cookie", repo.getWhatapCookie());
@@ -237,25 +238,6 @@ public class WhatapTxSearchService {
             throw new RuntimeException("HTTP " + resp.statusCode() + " — " + resp.body());
         }
         return parseRows(resp.body(), repo.getRepoName());
-    }
-
-    private String buildUrl(String baseUrl, int pcode, long stime, long etime, List<Integer> okinds, int ptotal) {
-        StringBuilder sb = new StringBuilder();
-        sb.append(baseUrl.endsWith("/") ? baseUrl.substring(0, baseUrl.length()-1) : baseUrl);
-        sb.append("/v2/project/apm/").append(pcode).append("/new/tx_profile?");
-        sb.append("interval=3600");
-        sb.append("&max=200");
-        sb.append("&skip=0");
-        sb.append("&stime=").append(stime);
-        sb.append("&etime=").append(etime);
-        sb.append("&ptotal=").append(ptotal);
-        sb.append("&option=forward");
-        sb.append("&filterKey=error");
-        sb.append("&filterValue=").append(URLEncoder.encode(BLOCK_PREFIX, StandardCharsets.UTF_8));
-        for (Integer id : okinds) {
-            sb.append("&okinds=").append(id);
-        }
-        return sb.toString();
     }
 
     private List<BlockedTxRow> parseRows(String body, String repoName) throws Exception {

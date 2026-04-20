@@ -315,11 +315,11 @@ function updateAdminBadge(valid) {
     </div>
 
     <!-- URL 차단 모니터링 -->
-    <div style="font-size:11px;font-weight:700;color:var(--text-muted);margin-bottom:6px;letter-spacing:.05em;margin-top:16px;padding-top:12px;border-top:1px dashed var(--border);">URL 차단 모니터링 (와탭 트랜잭션 검색)</div>
+    <div style="font-size:11px;font-weight:700;color:var(--text-muted);margin-bottom:6px;letter-spacing:.05em;margin-top:16px;padding-top:12px;border-top:1px dashed var(--border);">URL 차단 모니터링 (와탭 /yard/api/flush + Referer)</div>
     <div style="margin-bottom:14px;">
-      <label class="field" style="display:block;margin-bottom:10px;">와탭 트랜잭션 검색 Base URL
-        <input id="gWhatapTxsearchBaseUrl" type="text" placeholder="https://service.whatap-browser-agent.io" style="width:100%;max-width:420px;">
-        <span class="field-hint">/v2/txsearch 호출용. 각 레포의 pcode로 구분</span>
+      <label class="field" style="display:block;margin-bottom:10px;">와탭 Referer 경로 템플릿
+        <input id="gBlockMonitorWhatapReferer" type="text" placeholder="/v2/project/apm/{pcode}/new/tx_profile" style="width:100%;max-width:520px;">
+        <span class="field-hint">{base}/yard/api/flush 호출 시 Referer 헤더에 사용. 호스트는 레포 whatapUrl에서 자동 추출, {pcode}는 RepoConfig.whatapPcode로 치환</span>
       </label>
       <label class="field" style="display:block;">봇 또는 제외대상 키워드
         <div id="botKeywordsList" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px;min-height:28px;"></div>
@@ -1029,7 +1029,7 @@ function updateAdminBadge(valid) {
       document.getElementById('gApmLogLevel').value     = g.apmLogLevel || 'INFO';
       document.getElementById('gWhatapPtotal').value   = g.whatapPtotal ?? 100;
       document.getElementById('gWhatapPsize').value    = g.whatapPsize ?? 10000;
-      document.getElementById('gWhatapTxsearchBaseUrl').value = g.whatapTxsearchBaseUrl || '';
+      document.getElementById('gBlockMonitorWhatapReferer').value = g.blockMonitorWhatapReferer || '/v2/project/apm/{pcode}/new/tx_profile';
       document.getElementById('botKeywordsList').innerHTML = '';
       const _bkDefault = 'Googlebot,AdsBot,bingbot,YandexBot,DuckDuckBot,facebookexternalhit,Slackbot,Twitterbot,LinkedInBot,crawler,spider';
       (g.botKeywords || _bkDefault).split(',').map(s => s.trim()).filter(Boolean).forEach(renderBotKeywordTag);
@@ -1133,7 +1133,7 @@ function updateAdminBadge(valid) {
       cur.logTailLines = parseInt(document.getElementById('gLogTailLines').value) || 1000;
       cur.whatapPtotal = parseInt(document.getElementById('gWhatapPtotal').value) || 100;
       cur.whatapPsize = parseInt(document.getElementById('gWhatapPsize').value) || 10000;
-      cur.whatapTxsearchBaseUrl = document.getElementById('gWhatapTxsearchBaseUrl').value.trim() || null;
+      cur.blockMonitorWhatapReferer = document.getElementById('gBlockMonitorWhatapReferer').value.trim() || null;
       const _bkList = collectBotKeywords();
       cur.botKeywords = _bkList.length ? _bkList.join(',') : null;
       cur.teams = (() => { const t = collectTeams(); return t.length ? JSON.stringify(t) : null; })();
