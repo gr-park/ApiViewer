@@ -119,7 +119,8 @@ public class WhatapTxSearchService {
             return List.of();
         }
 
-        Set<String> botSet = mergeBotKeywords(gc.getBotKeywords(), extraBotKeywords);
+        // 봇 키워드: GlobalConfig 자동 합산 제거 — 프론트에서 초기값으로 세팅하여 사용자가 직접 제어
+        Set<String> botSet = buildBotSet(extraBotKeywords);
         String svc = (serviceLike == null) ? "" : serviceLike.trim().toLowerCase(Locale.ROOT);
 
         log.info("[URL차단모니터] 검색 시작 repos={} days={} excludeBot={} botSize={} serviceLike='{}'",
@@ -299,23 +300,24 @@ public class WhatapTxSearchService {
         return null;
     }
 
+    /** 대소문자 구분하여 clientType / clientName / userAgent 중 키워드 포함 여부 판정 */
     private boolean matchBot(BlockedTxRow row, Set<String> botSet) {
         if (botSet.isEmpty()) return false;
-        String hay = ((row.getClientType() == null ? "" : row.getClientType()) + " "
+        String hay = (row.getClientType() == null ? "" : row.getClientType()) + " "
                 + (row.getClientName() == null ? "" : row.getClientName()) + " "
-                + (row.getUserAgent() == null ? "" : row.getUserAgent())).toLowerCase(Locale.ROOT);
+                + (row.getUserAgent() == null ? "" : row.getUserAgent());
         for (String kw : botSet) {
             if (hay.contains(kw)) return true;
         }
         return false;
     }
 
-    private Set<String> mergeBotKeywords(String configured, List<String> extra) {
+    /** extraBotKeywords만으로 봇 키워드 Set 구성 (GlobalConfig 자동 합산 없음) */
+    private Set<String> buildBotSet(List<String> extra) {
         Set<String> out = new HashSet<>();
-        for (String s : splitCsv(configured)) out.add(s.toLowerCase(Locale.ROOT));
         if (extra != null) {
             for (String s : extra) {
-                if (s != null && !s.isBlank()) out.add(s.trim().toLowerCase(Locale.ROOT));
+                if (s != null && !s.isBlank()) out.add(s.trim());
             }
         }
         return out;

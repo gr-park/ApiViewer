@@ -200,8 +200,8 @@
     </div>
 
     <div class="filter-grid" style="margin-top:12px;grid-template-columns:3fr 1fr 1fr;">
-      <label class="field">추가 봇 키워드 (콤마 구분, GlobalConfig 기본값에 합산)
-        <input id="fExtraBot" type="text" placeholder="예: customBot, mybot">
+      <label class="field">봇 또는 제외대상 키워드 (콤마 구분, 대소문자 구분)
+        <input id="fExtraBot" type="text" placeholder="예: Googlebot,AdsBot,bingbot">
       </label>
       <div class="field">&nbsp;
         <button class="btn btn-blue" onclick="doSearch()" id="searchBtn">🔍 조회</button>
@@ -510,6 +510,15 @@
   // 초기화
   setRange(1, document.querySelector('.filter-grid .btn-ghost.active'));
   loadRepos();
+  // 글로벌 봇 키워드를 입력란 기본값으로 세팅 (사용자가 직접 조정 가능)
+  fetch('/api/url-block-monitor/bot-keywords')
+    .then(r => r.json())
+    .then(d => {
+      if (d.keywords && d.keywords.length) {
+        document.getElementById('fExtraBot').value = d.keywords.join(', ');
+      }
+    })
+    .catch(() => {});
 </script>
 </body>
 </html>
