@@ -65,7 +65,7 @@ public class JenniferApmService {
                     "레포 설정에서 Jennifer URL을 입력하거나, Mock 데이터가 필요하면 source=MOCK을 사용하세요.");
         }
 
-        String instanceId = buildInstanceId(repo.getJenniferOids());
+        String instanceId = resolveInstanceId(repo, logCallback);
 
         emit(logCallback, "INFO", String.format("JENNIFER(실제API) 일별 수집 시작 — 응답 전체 적재, sid=%s",
                 repo.getJenniferSid()));
@@ -188,6 +188,79 @@ public class JenniferApmService {
             }
         }
         return result;
+    }
+
+    /**
+     * OID 해석 우선순위:
+     * 1) jennifer_oids 설정값이 있으면 그대로 사용
+     * 2) 없으면 {jenniferUrl}/api/instance?domain_id={sid} 조회 후
+     *    name 에 repoName 이 포함된 instanceId 들을 사용
+     */
+    private String resolveInstanceId(RepoConfig repo,
+                                     java.util.function.BiConsumer<String, String> logCallback) {
+        if (repo.getJenniferOids() != null && !repo.getJenniferOids().isBlank()) {
+            log.debug("[JENNIFER] OID 설정값 사용: repoName={}", repo.getRepoName());
+            return buildInstanceId(repo.getJenniferOids());
+        }
+        log.debug("[JENNIFER] OID 미설정 → instance API 조회: repoName={}", repo.getRepoName());
+        return fetchInstanceIdsFromApi(repo, logCallback);
+    }
+
+    /**
+     * {jenniferUrl}/api/instance?domain_id={sid} 호출 →
+     * 응답 { "result": [ { "instanceId": "", "name": "" } ] } 에서
+     * name 에 repoName 이 포함된 instanceId 들을 콤마 문자열로 반환.
+     */
+    private String fetchInstanceIdsFromApi(RepoConfig repo,
+                                           java.util.function.BiConsumer<String, String> logCallback) {
+        try {
+            String apiUrl = repo.getJenniferUrl() + "/api/instance?domain_id=" + repo.getJenniferSid();
+            log.debug("[JENNIFER] instance API 호출: GET {}", apiUrl);
+
+            HttpRequest.Builder builder = HttpRequest.newBuilder()
+                    .uri(URI.create(apiUrl))
+                    .timeout(Duration.ofSeconds(10))
+                    .GET();
+            if (repo.getJenniferBearerToken() != null && !repo.getJenniferBearerToken().isBlank()) {
+                builder.header("Authorization", "Bearer " + repo.getJenniferBearerToken());
+            }
+
+            HttpResponse<String> resp = httpClient.send(builder.build(), HttpResponse.BodyHandlers.ofString());
+            log.debug("[JENNIFER] instance API 응답: HTTP {} | length={}", resp.statusCode(), resp.body().length());
+
+            if (resp.statusCode() != 200) {
+                log.warn("[JENNIFER] instance API 실패: HTTP {} — {}", resp.statusCode(), resp.body());
+                return "";
+            }
+
+            JsonNode root = objectMapper.readTree(resp.body());
+            JsonNode resultNode = root.path("result");
+            StringJoiner sj = new StringJoiner(",");
+            String repoName = repo.getRepoName();
+
+            if (resultNode.isArray()) {
+                for (JsonNode instance : resultNode) {
+                    String name       = instance.path("name").asText(null);
+                    String instanceId = instance.path("instanceId").asText(null);
+                    if (name != null && instanceId != null && name.contains(repoName)) {
+                        log.debug("[JENNIFER] instance 매칭: name={}, instanceId={}", name, instanceId);
+                        sj.add(instanceId);
+                    }
+                }
+            }
+
+            String matched = sj.toString();
+            if (matched.isBlank()) {
+                log.warn("[JENNIFER] instance API 조회 결과 매칭 없음: repoName={}", repoName);
+            } else {
+                emit(logCallback, "INFO",
+                        String.format("JENNIFER instance API 조회 완료 — %s → instanceId=%s", repoName, matched));
+            }
+            return matched;
+        } catch (Exception e) {
+            log.warn("[JENNIFER] instance API 조회 실패: {}", e.getMessage());
+            return "";
+        }
     }
 
     /** jennifer_oids JSON ([{"oid":10021,"shortName":"..."},...]) → "10021,10022" */
