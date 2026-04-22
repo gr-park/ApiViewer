@@ -82,6 +82,7 @@ public class WhatapTxSearchService {
             }
             Map<String, Object> repo = new LinkedHashMap<>();
             repo.put("repoName", r.getRepoName());
+            repo.put("source", "WHATAP");
             repo.put("pcode", r.getWhatapPcode());
             repo.put("okinds", okindList);
             out.add(repo);
@@ -340,6 +341,7 @@ public class WhatapTxSearchService {
         if (arr == null || !arr.isArray()) return out;
         for (JsonNode n : arr) {
             BlockedTxRow row = new BlockedTxRow();
+            row.setSource("WHATAP");
             row.setRepoName(repoName);
             row.setOkindName(text(n, "okindName"));
             row.setService(text(n, "service"));

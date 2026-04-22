@@ -207,14 +207,14 @@
       <div class="sum-sub" id="sumBotSub">'전체 보기' 모드일 때 의미</div>
     </div>
     <div class="sum-card c-svc">
-      <div class="sum-label">영향 service 수</div>
+      <div class="sum-label" id="sumSvcLabel">영향 service 수</div>
       <div class="sum-value" id="sumSvc">-</div>
-      <div class="sum-sub">distinct service</div>
+      <div class="sum-sub" id="sumSvcSub">distinct service</div>
     </div>
     <div class="sum-card c-okd">
-      <div class="sum-label">영향 okindName 수</div>
+      <div class="sum-label" id="sumOkdLabel">영향 okindName 수</div>
       <div class="sum-value" id="sumOkd">-</div>
-      <div class="sum-sub">distinct okindName</div>
+      <div class="sum-sub" id="sumOkdSub">distinct okindName</div>
     </div>
   </div>
 
@@ -226,7 +226,7 @@
     <div class="table-wrap">
       <table>
         <thead>
-          <tr>
+          <tr id="theadRow">
             <th>#</th>
             <th>endtime</th>
             <th>레포</th>
@@ -262,6 +262,20 @@
   let excludeBot = true;
   let reposCache = [];
   let selectedRepo = '';
+  /** 현재 데이터 소스: 'WHATAP' | 'JENNIFER' | 'MIXED' | null */
+  let detectedSource = null;
+
+  // ── 와탭 컬럼 정의 ──
+  const COLS_WHATAP = [
+    '#', 'endtime', '레포', 'okindName', 'service', 'method',
+    'domain', 'podName', 'country', 'clientType', 'clientName',
+    'clientOs', 'oName', 'ipAddr', 'userAgent'
+  ];
+  // ── Jennifer 컬럼 정의 ──
+  const COLS_JENNIFER = [
+    '#', 'time', '레포', 'applicationName', 'domainId', 'domainName',
+    'instanceId', 'instanceName', 'errorType', 'message'
+  ];
 
   function esc(s){ if(s==null) return ''; return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
   function showToast(msg, type){
@@ -274,7 +288,6 @@
   function fmt(n){ return Number(n||0).toLocaleString(); }
 
   function setRange(days, btn){
-    // 빠른선택 버튼 그룹 내에서만 active 토글 (부모 형제 기준 — 레이아웃 클래스에 비의존)
     if (btn && btn.parentElement) {
       btn.parentElement.querySelectorAll('button').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
@@ -298,6 +311,40 @@
 
   function visibleRows(){
     return excludeBot ? allRows.filter(r => !r.bot) : allRows;
+  }
+
+  /** 데이터 소스 감지: 모든 행이 동일한 source면 해당 값, 혼합이면 'MIXED', 없으면 null */
+  function detectSource(rows){
+    if (!rows || rows.length === 0) return null;
+    const sources = new Set(rows.map(r => r.source).filter(Boolean));
+    if (sources.size === 1) return [...sources][0];
+    return 'MIXED';
+  }
+
+  function colCount(){
+    return detectedSource === 'JENNIFER' ? COLS_JENNIFER.length : COLS_WHATAP.length;
+  }
+
+  /** 소스에 맞춰 테이블 헤더 재렌더링 */
+  function renderTableHeader(){
+    const tr = document.getElementById('theadRow');
+    const cols = detectedSource === 'JENNIFER' ? COLS_JENNIFER : COLS_WHATAP;
+    tr.innerHTML = cols.map(c => `<th>${c}</th>`).join('');
+  }
+
+  /** 소스에 맞춰 요약 카드 레이블 갱신 */
+  function updateSummaryLabels(){
+    if (detectedSource === 'JENNIFER') {
+      document.getElementById('sumSvcLabel').textContent = '영향 applicationName 수';
+      document.getElementById('sumSvcSub').textContent = 'distinct applicationName';
+      document.getElementById('sumOkdLabel').textContent = '영향 instanceName 수';
+      document.getElementById('sumOkdSub').textContent = 'distinct instanceName';
+    } else {
+      document.getElementById('sumSvcLabel').textContent = '영향 service 수';
+      document.getElementById('sumSvcSub').textContent = 'distinct service';
+      document.getElementById('sumOkdLabel').textContent = '영향 okindName 수';
+      document.getElementById('sumOkdSub').textContent = 'distinct okindName';
+    }
   }
 
   function showLoadingModal(text){
@@ -330,7 +377,8 @@
       reposCache.forEach(r => {
         const opt = document.createElement('option');
         opt.value = r.repoName;
-        opt.textContent = r.repoName;
+        const srcBadge = r.source === 'JENNIFER' ? ' [Jennifer]' : ' [Whatap]';
+        opt.textContent = r.repoName + srcBadge;
         sel.appendChild(opt);
       });
       onRepoChange();
@@ -343,17 +391,26 @@
     selectedRepo = document.getElementById('fRepo').value;
   }
 
+  /** 선택된 레포의 소스 타입 반환. 미선택(전체)이면 null */
+  function selectedRepoSource(){
+    if (!selectedRepo) return null;
+    const repo = reposCache.find(r => r.repoName === selectedRepo);
+    return repo ? repo.source : null;
+  }
+
   async function doSearch(){
     const from = document.getElementById('fFrom').value;
     const to = document.getElementById('fTo').value;
     if (!from || !to) { showToast('기간을 입력하세요', 'error'); return; }
-    // okindNames는 서버가 레포 설정에서 자동으로 가져가므로 null 고정
     const serviceLike = document.getElementById('fService').value.trim();
     const extraBot = collectMonBotKeywords();
 
+    const src = selectedRepoSource();
+    const loadingLabel = src === 'JENNIFER' ? 'Jennifer' : src === 'WHATAP' ? '와탭' : 'APM';
+
     document.getElementById('searchBtn').disabled = true;
     document.getElementById('excelBtn').disabled = true;
-    showLoadingModal(`와탭 호출 중...\n(${from} ~ ${to})`);
+    showLoadingModal(`${loadingLabel} 호출 중...\n(${from} ~ ${to})`);
 
     try {
       const res = await fetch('/api/url-block-monitor/search', {
@@ -384,6 +441,10 @@
       document.getElementById('excelBtn').disabled = visibleRows().length === 0;
       hideLoadingModal();
     }
+
+    detectedSource = detectSource(allRows);
+    renderTableHeader();
+    updateSummaryLabels();
     currentPage = 0;
     renderSummary();
     renderTable();
@@ -393,8 +454,14 @@
     const shown = visibleRows();
     const total = shown.length;
     const bots = allRows.filter(r => r.bot).length;
-    const svcSet = new Set(shown.map(r => r.service).filter(Boolean));
-    const okdSet = new Set(shown.map(r => r.okindName).filter(Boolean));
+    let svcSet, okdSet;
+    if (detectedSource === 'JENNIFER') {
+      svcSet = new Set(shown.map(r => r.applicationName).filter(Boolean));
+      okdSet = new Set(shown.map(r => r.instanceName).filter(Boolean));
+    } else {
+      svcSet = new Set(shown.map(r => r.service).filter(Boolean));
+      okdSet = new Set(shown.map(r => r.okindName).filter(Boolean));
+    }
     document.getElementById('sumTotal').textContent = fmt(total);
     document.getElementById('sumBot').textContent = fmt(bots);
     document.getElementById('sumSvc').textContent = fmt(svcSet.size);
@@ -405,11 +472,12 @@
   function renderTable(){
     const tbody = document.getElementById('tbody');
     const rows = visibleRows();
+    const colspan = colCount();
     if (!rows.length) {
       const msg = allRows.length
         ? '조건에 맞는 트랜잭션이 없습니다 (봇 제외 토글 확인).'
         : '조회된 차단 인입 트랜잭션이 없습니다.';
-      tbody.innerHTML = `<tr><td colspan="15" class="empty">${msg}</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="${colspan}" class="empty">${msg}</td></tr>`;
       document.getElementById('pagination').innerHTML = '';
       document.getElementById('resultMeta').textContent = '';
       return;
@@ -419,25 +487,44 @@
     if (currentPage < 0) currentPage = 0;
     const start = currentPage * PAGE_SIZE;
     const slice = rows.slice(start, start + PAGE_SIZE);
-    tbody.innerHTML = slice.map((r, i) => `
-      <tr class="${r.bot ? 'bot-row' : ''}">
-        <td>${start + i + 1}</td>
-        <td class="col-time">${esc(r.endtime)}</td>
-        <td><span class="badge badge-repo">${esc(r.repoName)}</span></td>
-        <td>${r.okindName ? `<span class="badge badge-okd">${esc(r.okindName)}</span>` : ''}</td>
-        <td class="col-svc" title="${esc(r.service)}">${esc(r.service)}</td>
-        <td>${r.method ? `<span class="badge badge-method">${esc(r.method)}</span>` : ''}</td>
-        <td>${esc(r.domain)}</td>
-        <td>${esc(r.podName)}</td>
-        <td>${esc(r.country)}</td>
-        <td>${esc(r.clientType)}${r.bot ? '<span class="badge badge-bot">BOT</span>' : ''}</td>
-        <td>${esc(r.clientName)}</td>
-        <td>${esc(r.clientOs)}</td>
-        <td>${esc(r.oName)}</td>
-        <td>${esc(r.ipAddr)}</td>
-        <td class="col-ua" title="${esc(r.userAgent)}">${esc(r.userAgent)}</td>
-      </tr>
-    `).join('');
+
+    if (detectedSource === 'JENNIFER') {
+      tbody.innerHTML = slice.map((r, i) => `
+        <tr>
+          <td>${start + i + 1}</td>
+          <td class="col-time">${esc(r.endtime)}</td>
+          <td><span class="badge badge-repo">${esc(r.repoName)}</span></td>
+          <td class="col-svc" title="${esc(r.applicationName)}">${esc(r.applicationName)}</td>
+          <td>${esc(r.domainId)}</td>
+          <td>${esc(r.domainName)}</td>
+          <td>${esc(r.instanceId)}</td>
+          <td>${esc(r.instanceName)}</td>
+          <td class="col-err">${esc(r.errorType)}</td>
+          <td class="col-err" style="max-width:360px;overflow:hidden;text-overflow:ellipsis;" title="${esc(r.message)}">${esc(r.message)}</td>
+        </tr>
+      `).join('');
+    } else {
+      tbody.innerHTML = slice.map((r, i) => `
+        <tr class="${r.bot ? 'bot-row' : ''}">
+          <td>${start + i + 1}</td>
+          <td class="col-time">${esc(r.endtime)}</td>
+          <td><span class="badge badge-repo">${esc(r.repoName)}</span></td>
+          <td>${r.okindName ? `<span class="badge badge-okd">${esc(r.okindName)}</span>` : ''}</td>
+          <td class="col-svc" title="${esc(r.service)}">${esc(r.service)}</td>
+          <td>${r.method ? `<span class="badge badge-method">${esc(r.method)}</span>` : ''}</td>
+          <td>${esc(r.domain)}</td>
+          <td>${esc(r.podName)}</td>
+          <td>${esc(r.country)}</td>
+          <td>${esc(r.clientType)}${r.bot ? '<span class="badge badge-bot">BOT</span>' : ''}</td>
+          <td>${esc(r.clientName)}</td>
+          <td>${esc(r.clientOs)}</td>
+          <td>${esc(r.oName)}</td>
+          <td>${esc(r.ipAddr)}</td>
+          <td class="col-ua" title="${esc(r.userAgent)}">${esc(r.userAgent)}</td>
+        </tr>
+      `).join('');
+    }
+
     document.getElementById('resultMeta').textContent =
       `총 ${fmt(rows.length)}건 · ${start + 1}~${Math.min(start + PAGE_SIZE, rows.length)} 표시`;
     renderPagination(totalPages);
@@ -465,8 +552,24 @@
     if (!visibleRows().length) { showToast('내보낼 데이터가 없습니다', 'error'); return; }
     const wb = new ExcelJS.Workbook();
     const ws = wb.addWorksheet('URL차단인입');
-    const headers = ['No.','endtime','레포','okindName','service','method','domain','podName',
-      'country','clientType','clientName','clientOs','oName','ipAddr','userAgent','BOT여부'];
+    const rows = visibleRows();
+
+    let headers, widths, rowMapper;
+    if (detectedSource === 'JENNIFER') {
+      headers = ['No.','time','레포','applicationName','domainId','domainName',
+                 'instanceId','instanceName','errorType','message'];
+      widths = [6, 20, 14, 22, 10, 20, 10, 22, 18, 50];
+      rowMapper = (r, i) => [i+1, r.endtime, r.repoName, r.applicationName,
+        r.domainId, r.domainName, r.instanceId, r.instanceName, r.errorType, r.message];
+    } else {
+      headers = ['No.','endtime','레포','okindName','service','method','domain','podName',
+                 'country','clientType','clientName','clientOs','oName','ipAddr','userAgent','BOT여부'];
+      widths = [6, 20, 12, 14, 32, 8, 18, 22, 8, 14, 14, 14, 14, 14, 36, 8];
+      rowMapper = (r, i) => [i+1, r.endtime, r.repoName, r.okindName, r.service, r.method,
+        r.domain, r.podName, r.country, r.clientType, r.clientName, r.clientOs,
+        r.oName, r.ipAddr, r.userAgent, r.bot ? 'Y' : 'N'];
+    }
+
     ws.addRow(headers);
     ws.getRow(1).eachCell(c => {
       c.font = { bold: true, color: { argb: 'FF1E293B' } };
@@ -474,13 +577,8 @@
       c.border = { bottom: { style: 'thin', color: { argb: 'FFCBD5E1' } } };
       c.alignment = { vertical: 'middle' };
     });
-    const rows = visibleRows();
-    rows.forEach((r, i) => {
-      ws.addRow([i+1, r.endtime, r.repoName, r.okindName, r.service, r.method, r.domain, r.podName,
-        r.country, r.clientType, r.clientName, r.clientOs, r.oName, r.ipAddr, r.userAgent,
-        r.bot ? 'Y' : 'N']);
-    });
-    [6, 8, 12, 12, 32, 8, 18, 22, 8, 14, 14, 14, 14, 14, 36, 8].forEach((w, i) => ws.getColumn(i+1).width = w);
+    rows.forEach((r, i) => ws.addRow(rowMapper(r, i)));
+    widths.forEach((w, i) => ws.getColumn(i+1).width = w);
     ws.views = [{ state: 'frozen', ySplit: 1 }];
     const buf = await wb.xlsx.writeBuffer();
     const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
