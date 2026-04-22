@@ -196,4 +196,45 @@ class ApiExtractorServiceTest {
         service.extract(req);
         assertThat(service.isExtracting()).isFalse();
     }
+
+    @Test
+    @DisplayName("extract — 원본 javadoc 과 별도로 /** @deprecated [URL차단작업] */ 블록이 @Deprecated 앞에 있어도 태그 인식")
+    void extract_urlBlockTagInSeparateJavadocBlock(@TempDir Path tmp) throws Exception {
+        when(globalConfigRepository.findById(1L)).thenReturn(Optional.empty());
+        // 개발자 관행: 기존 메서드 javadoc 은 그대로 두고, @Deprecated 바로 위에 별도 /** @deprecated [URL차단작업]... */ 블록을 덧붙임.
+        Path javaFile = tmp.resolve("ZZSCMAController.java");
+        Files.writeString(javaFile, """
+                package test;
+                import org.springframework.web.bind.annotation.*;
+                @RestController
+                public class ZZSCMAController {
+                    /**
+                     * 로그인한 사용자의 비밀번호를 변경한다.
+                     * @date 2020.03.01
+                     * @author InswaveSystems
+                     * @example
+                     */
+                    /** @deprecated [URL차단작업][2026-04-09][OP-13863]*/
+                    @Deprecated
+                    @RequestMapping("/commons/changePassword")
+                    public String changePassword() {
+                        if (true) throw new UnsupportedOperationException("차단된 URL 입니다.");
+                        return "";
+                    }
+                }
+                """);
+
+        ExtractRequest req = new ExtractRequest();
+        req.setRootPath(tmp.toString());
+        req.setDomain("http://example.com");
+
+        List<ApiInfo> result = service.extract(req);
+
+        assertThat(result).hasSize(1);
+        ApiInfo info = result.get(0);
+        assertThat(info.getApiPath()).isEqualTo("/commons/changePassword");
+        assertThat(info.getIsDeprecated()).isEqualTo("Y");
+        assertThat(info.getHasUrlBlock()).isEqualTo("Y");
+        assertThat(info.getFullComment()).contains("[URL차단작업]");
+    }
 }

@@ -651,17 +651,44 @@ public class ApiExtractorService {
                 .matcher(methodBodySnippet).find();
     }
 
-    /** @Deprecated 라인에서 [URL차단작업] 이후 전체 텍스트 추출 */
+    /**
+     * @Deprecated 인근 텍스트에서 [URL차단작업] 라인 추출.
+     *
+     * 탐색 순서 (하나라도 찾으면 즉시 반환):
+     *  ① @Deprecated 같은 줄 뒤쪽 (`@Deprecated [URL차단작업]...`)
+     *  ② @Deprecated 다음 줄/아래 라인 (`@Deprecated\n[URL차단작업]...`)
+     *  ③ @Deprecated **바로 위** 주석 블록들 — 원본 javadoc 과 별도로
+     *      `/** @deprecated [URL차단작업]... *\/` 블록을 @Deprecated 바로 위에 덧붙이는 개발자 관행 커버.
+     *      주석 블록이 여러 개 이어져 있어도(예: 원본 javadoc + 차단 태그 javadoc) 어느 블록이든 포함되면 감지.
+     */
     private String extractDeprecatedLine(String source) {
         if (source == null) return null;
+        // ① 같은 줄
         Matcher m = Pattern.compile("@Deprecated\\s+(.+)", Pattern.MULTILINE).matcher(source);
         if (m.find()) {
             String line = m.group(1).trim();
             if (line.contains("[URL차단작업]")) return line;
         }
-        // 여러 줄에 걸친 경우: @Deprecated 다음 줄에 [URL차단작업]
+        // ② 뒤쪽 줄
         Matcher m2 = Pattern.compile("@Deprecated[\\s\\S]*?(\\[URL차단작업\\].+)", Pattern.MULTILINE).matcher(source);
         if (m2.find()) return m2.group(1).trim();
+
+        // ③ @Deprecated 바로 위 주석 블록
+        int depIdx = source.indexOf("@Deprecated");
+        if (depIdx >= 0) {
+            int scanStart = Math.max(0, depIdx - 4000);   // 과도 범위 방지
+            String pre = source.substring(scanStart, depIdx);
+            // 직전 메서드/블록 경계 (}) 이후로 한정 — 다른 메서드의 [URL차단작업] 주석 오판 방지
+            int lastBrace = pre.lastIndexOf("}");
+            if (lastBrace >= 0) pre = pre.substring(lastBrace);
+            if (pre.contains("[URL차단작업]")) {
+                Matcher m3 = Pattern.compile("(\\[URL차단작업\\][^\\n\\r]*)").matcher(pre);
+                if (m3.find()) {
+                    // 주석 블록 종료 표식(*/ 또는 ** 등) 제거 + 선행 * 공백 제거
+                    return m3.group(1).replaceAll("\\s*\\*+/\\s*$", "").trim();
+                }
+            }
+        }
         return null;
     }
 
