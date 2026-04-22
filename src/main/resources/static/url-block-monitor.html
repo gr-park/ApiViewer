@@ -193,10 +193,6 @@
       <button class="btn btn-blue" onclick="doSearch()" id="searchBtn" style="height:36px;">🔍 조회</button>
       <button class="btn btn-green" onclick="downloadExcel()" id="excelBtn" disabled style="height:36px;">⬇ 엑셀 다운로드</button>
     </div>
-
-    <div id="progressArea" style="margin-top:10px;font-size:11px;color:var(--text-muted);display:none;">
-      <span class="spinner"></span><span id="progressText">조회 중...</span>
-    </div>
   </div>
 
   <div class="summary-grid">
@@ -244,14 +240,12 @@
             <th>clientName</th>
             <th>clientOs</th>
             <th>oName</th>
-            <th>errClass</th>
-            <th>errMessage</th>
             <th>ipAddr</th>
             <th>userAgent</th>
           </tr>
         </thead>
         <tbody id="tbody">
-          <tr><td colspan="17" class="empty">조건 입력 후 조회 버튼을 눌러주세요.</td></tr>
+          <tr><td colspan="15" class="empty">조건 입력 후 조회 버튼을 눌러주세요.</td></tr>
         </tbody>
       </table>
     </div>
@@ -296,6 +290,35 @@
     excludeBot = v;
     document.getElementById('btnExcludeBot').classList.toggle('on', v);
     document.getElementById('btnIncludeBot').classList.toggle('on', !v);
+    currentPage = 0;
+    renderSummary();
+    renderTable();
+    document.getElementById('excelBtn').disabled = visibleRows().length === 0;
+  }
+
+  function visibleRows(){
+    return excludeBot ? allRows.filter(r => !r.bot) : allRows;
+  }
+
+  function showLoadingModal(text){
+    let ov = document.getElementById('loadingOverlay');
+    if (!ov) {
+      ov = document.createElement('div');
+      ov.id = 'loadingOverlay';
+      ov.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,.5);z-index:10000;display:flex;align-items:center;justify-content:center;';
+      ov.innerHTML = `
+        <div style="background:#fff;border-radius:12px;padding:28px 36px;min-width:280px;display:flex;flex-direction:column;align-items:center;gap:14px;box-shadow:0 8px 32px rgba(0,0,0,.25);">
+          <div style="width:42px;height:42px;border:4px solid #e2e8f0;border-top-color:#3b82f6;border-radius:50%;animation:spin .7s linear infinite;"></div>
+          <div id="loadingText" style="font-size:13px;color:#1e293b;font-weight:600;text-align:center;white-space:pre-line;line-height:1.5;"></div>
+        </div>`;
+      document.body.appendChild(ov);
+    }
+    ov.querySelector('#loadingText').textContent = text || '조회 중...';
+    ov.style.display = 'flex';
+  }
+  function hideLoadingModal(){
+    const ov = document.getElementById('loadingOverlay');
+    if (ov) ov.style.display = 'none';
   }
 
   async function loadRepos(){
@@ -330,8 +353,7 @@
 
     document.getElementById('searchBtn').disabled = true;
     document.getElementById('excelBtn').disabled = true;
-    document.getElementById('progressArea').style.display = 'block';
-    document.getElementById('progressText').textContent = `와탭 호출 중... (${from} ~ ${to})`;
+    showLoadingModal(`와탭 호출 중...\n(${from} ~ ${to})`);
 
     try {
       const res = await fetch('/api/url-block-monitor/search', {
@@ -342,7 +364,7 @@
           okindNames: null,
           serviceLike: serviceLike || null,
           from, to,
-          excludeBot,
+          excludeBot: false,
           extraBotKeywords: extraBot.length ? extraBot : null
         })
       });
@@ -359,8 +381,8 @@
       allRows = [];
     } finally {
       document.getElementById('searchBtn').disabled = false;
-      document.getElementById('excelBtn').disabled = allRows.length === 0;
-      document.getElementById('progressArea').style.display = 'none';
+      document.getElementById('excelBtn').disabled = visibleRows().length === 0;
+      hideLoadingModal();
     }
     currentPage = 0;
     renderSummary();
@@ -368,29 +390,35 @@
   }
 
   function renderSummary(){
-    const total = allRows.length;
+    const shown = visibleRows();
+    const total = shown.length;
     const bots = allRows.filter(r => r.bot).length;
-    const svcSet = new Set(allRows.map(r => r.service).filter(Boolean));
-    const okdSet = new Set(allRows.map(r => r.okindName).filter(Boolean));
+    const svcSet = new Set(shown.map(r => r.service).filter(Boolean));
+    const okdSet = new Set(shown.map(r => r.okindName).filter(Boolean));
     document.getElementById('sumTotal').textContent = fmt(total);
     document.getElementById('sumBot').textContent = fmt(bots);
     document.getElementById('sumSvc').textContent = fmt(svcSet.size);
     document.getElementById('sumOkd').textContent = fmt(okdSet.size);
-    document.getElementById('sumTotalSub').textContent = excludeBot ? '(봇 제외 결과)' : '(봇 포함 전체)';
+    document.getElementById('sumTotalSub').textContent = excludeBot ? '(봇 제외 표시)' : '(봇 포함 전체)';
   }
 
   function renderTable(){
     const tbody = document.getElementById('tbody');
-    if (!allRows.length) {
-      tbody.innerHTML = '<tr><td colspan="17" class="empty">조회된 차단 인입 트랜잭션이 없습니다.</td></tr>';
+    const rows = visibleRows();
+    if (!rows.length) {
+      const msg = allRows.length
+        ? '조건에 맞는 트랜잭션이 없습니다 (봇 제외 토글 확인).'
+        : '조회된 차단 인입 트랜잭션이 없습니다.';
+      tbody.innerHTML = `<tr><td colspan="15" class="empty">${msg}</td></tr>`;
       document.getElementById('pagination').innerHTML = '';
       document.getElementById('resultMeta').textContent = '';
       return;
     }
-    const totalPages = Math.ceil(allRows.length / PAGE_SIZE);
+    const totalPages = Math.ceil(rows.length / PAGE_SIZE);
     if (currentPage >= totalPages) currentPage = totalPages - 1;
+    if (currentPage < 0) currentPage = 0;
     const start = currentPage * PAGE_SIZE;
-    const slice = allRows.slice(start, start + PAGE_SIZE);
+    const slice = rows.slice(start, start + PAGE_SIZE);
     tbody.innerHTML = slice.map((r, i) => `
       <tr class="${r.bot ? 'bot-row' : ''}">
         <td>${start + i + 1}</td>
@@ -406,14 +434,12 @@
         <td>${esc(r.clientName)}</td>
         <td>${esc(r.clientOs)}</td>
         <td>${esc(r.oName)}</td>
-        <td>${esc(r.errClass)}</td>
-        <td class="col-err" title="${esc(r.errMessage)}">${esc(r.errMessage)}</td>
         <td>${esc(r.ipAddr)}</td>
         <td class="col-ua" title="${esc(r.userAgent)}">${esc(r.userAgent)}</td>
       </tr>
     `).join('');
     document.getElementById('resultMeta').textContent =
-      `총 ${fmt(allRows.length)}건 · ${start + 1}~${Math.min(start + PAGE_SIZE, allRows.length)} 표시`;
+      `총 ${fmt(rows.length)}건 · ${start + 1}~${Math.min(start + PAGE_SIZE, rows.length)} 표시`;
     renderPagination(totalPages);
   }
 
@@ -436,11 +462,11 @@
   function gotoPage(p){ currentPage = p; renderTable(); window.scrollTo({top: document.querySelector('.table-wrap').offsetTop - 60, behavior: 'smooth'}); }
 
   async function downloadExcel(){
-    if (!allRows.length) { showToast('내보낼 데이터가 없습니다', 'error'); return; }
+    if (!visibleRows().length) { showToast('내보낼 데이터가 없습니다', 'error'); return; }
     const wb = new ExcelJS.Workbook();
     const ws = wb.addWorksheet('URL차단인입');
     const headers = ['No.','endtime','레포','okindName','service','method','domain','podName',
-      'country','clientType','clientName','clientOs','oName','errClass','errMessage','ipAddr','userAgent','BOT여부'];
+      'country','clientType','clientName','clientOs','oName','ipAddr','userAgent','BOT여부'];
     ws.addRow(headers);
     ws.getRow(1).eachCell(c => {
       c.font = { bold: true, color: { argb: 'FF1E293B' } };
@@ -448,12 +474,13 @@
       c.border = { bottom: { style: 'thin', color: { argb: 'FFCBD5E1' } } };
       c.alignment = { vertical: 'middle' };
     });
-    allRows.forEach((r, i) => {
+    const rows = visibleRows();
+    rows.forEach((r, i) => {
       ws.addRow([i+1, r.endtime, r.repoName, r.okindName, r.service, r.method, r.domain, r.podName,
-        r.country, r.clientType, r.clientName, r.clientOs, r.oName, r.errClass, r.errMessage, r.ipAddr, r.userAgent,
+        r.country, r.clientType, r.clientName, r.clientOs, r.oName, r.ipAddr, r.userAgent,
         r.bot ? 'Y' : 'N']);
     });
-    [6, 8, 12, 12, 32, 8, 18, 22, 8, 14, 14, 14, 14, 22, 32, 14, 36, 8].forEach((w, i) => ws.getColumn(i+1).width = w);
+    [6, 8, 12, 12, 32, 8, 18, 22, 8, 14, 14, 14, 14, 14, 36, 8].forEach((w, i) => ws.getColumn(i+1).width = w);
     ws.views = [{ state: 'frozen', ySplit: 1 }];
     const buf = await wb.xlsx.writeBuffer();
     const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
