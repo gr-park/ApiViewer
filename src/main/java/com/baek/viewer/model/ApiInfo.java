@@ -22,6 +22,7 @@ public class ApiInfo {
     private String[] git5 = {"-", "-", "No History"};
     private Long callCount; // Whatap 호출건수 (null = 미조회)
     private String hasUrlBlock = "N"; // 메소드 첫 줄에 UnsupportedOperationException throw 여부
+    private boolean blockMarkingIncomplete; // 실질 차단이지만 @Deprecated 또는 [URL차단작업] 주석 중 일부 누락
 
     public String getApiPath() { return apiPath; }
     public void setApiPath(String apiPath) {
@@ -86,4 +87,6 @@ public class ApiInfo {
     public void setCallCount(Long callCount) { this.callCount = callCount; }
     public String getHasUrlBlock() { return hasUrlBlock; }
     public void setHasUrlBlock(String hasUrlBlock) { this.hasUrlBlock = hasUrlBlock; }
+    public boolean isBlockMarkingIncomplete() { return blockMarkingIncomplete; }
+    public void setBlockMarkingIncomplete(boolean blockMarkingIncomplete) { this.blockMarkingIncomplete = blockMarkingIncomplete; }
 }

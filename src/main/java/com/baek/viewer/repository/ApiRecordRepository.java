@@ -109,6 +109,12 @@ public interface ApiRecordRepository extends JpaRepository<ApiRecord, Long>,
     @Query("SELECT COUNT(r) FROM ApiRecord r WHERE r.isDeprecated = 'Y' AND r.repositoryName = :repo")
     long countDeprecatedForRepo(@Param("repo") String repo);
 
+    @Query("SELECT COUNT(r) FROM ApiRecord r WHERE r.blockMarkingIncomplete = true")
+    long countBlockMarkingIncomplete();
+
+    @Query("SELECT COUNT(r) FROM ApiRecord r WHERE r.blockMarkingIncomplete = true AND r.repositoryName = :repo")
+    long countBlockMarkingIncompleteForRepo(@Param("repo") String repo);
+
     // ── 전체 선택/벌크 작업용 ID 목록 조회 (경량) ─────────────────────────
     @Query("SELECT r.id FROM ApiRecord r")
     List<Long> findAllIds();

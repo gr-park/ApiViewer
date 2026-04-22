@@ -377,6 +377,7 @@ public class ApiViewController {
                 switch (alert) {
                     case "new"      -> ps.add(cb.isTrue(root.get("isNew")));
                     case "changed"  -> ps.add(cb.isTrue(root.get("statusChanged")));
+                    case "marking-incomplete" -> ps.add(cb.isTrue(root.get("blockMarkingIncomplete")));
                     case "reviewed" -> ps.add(cb.and(
                             cb.isNotNull(root.get("reviewResult")),
                             cb.notEqual(root.get("reviewResult"), "")));
@@ -434,6 +435,8 @@ public class ApiViewController {
         m.put("controllerName",     r.getControllerName());
         m.put("repoPath",           r.getRepoPath());
         m.put("isDeprecated",       r.getIsDeprecated());
+        m.put("hasUrlBlock",        r.getHasUrlBlock());
+        m.put("blockMarkingIncomplete", r.isBlockMarkingIncomplete());
         m.put("programId",          r.getProgramId());
         m.put("apiOperationValue",  r.getApiOperationValue());
         m.put("descriptionTag",     r.getDescriptionTag());
@@ -510,6 +513,9 @@ public class ApiViewController {
         long changedCount    = hasRepo ? recordRepository.countStatusChangedForRepo(repository)   : recordRepository.countStatusChanged();
         long reviewedCount   = hasRepo ? recordRepository.countReviewedForRepo(repository)        : recordRepository.countReviewed();
         long deprecatedCount = hasRepo ? recordRepository.countDeprecatedForRepo(repository)      : recordRepository.countDeprecated();
+        long markingIncompleteCount = hasRepo
+                ? recordRepository.countBlockMarkingIncompleteForRepo(repository)
+                : recordRepository.countBlockMarkingIncomplete();
         // 최우선 차단대상 중 "로그작업이력 제외" 집계 (logWorkExcluded=false 만)
         long priorityPureCount = hasRepo
                 ? recordRepository.countByStatusAndLogNotExcludedForRepo("최우선 차단대상", repository)
@@ -522,6 +528,7 @@ public class ApiViewController {
         response.put("changedCount", changedCount);
         response.put("reviewedCount", reviewedCount);
         response.put("deprecated",   deprecatedCount);
+        response.put("markingIncompleteCount", markingIncompleteCount);
         response.put("byStatus",     byStatus);
         response.put("byMethod",     byMethod);
         response.put("priorityPureCount", priorityPureCount);

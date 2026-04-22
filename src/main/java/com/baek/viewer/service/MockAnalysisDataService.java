@@ -224,8 +224,29 @@ public class MockAnalysisDataService {
         LocalDate blockedDate = null;
         String blockedReason = null;
         boolean overridden = false;
+        boolean markingIncomplete = false;
         if (pick < 60) {
             status = "사용";
+            // "사용" 분포 중 일부(약 8%)는 "표기 미흡" 샘플 — 실질 차단(UnsupportedOperationException 첫문장)이지만
+            // @Deprecated 또는 [URL차단작업] 주석 중 일부가 누락됨.
+            int incomp = rnd.nextInt(100);
+            if (incomp < 8) {
+                hasBlock = "Y";
+                markingIncomplete = true;
+                int which = incomp % 3;   // 0=Deprecated누락 / 1=주석누락 / 2=둘 다 누락
+                LocalDate d = LocalDate.now().minusDays(rnd.nextInt(100) + 5);
+                String op = "OP-" + (10000 + rnd.nextInt(9000));
+                if (which == 0) {
+                    isDeprecated = "N";
+                    fullComment = "[URL차단작업][" + d + "][" + op + "] Mock 차단 (표기미흡-Deprecated누락)";
+                } else if (which == 1) {
+                    isDeprecated = "Y";
+                    fullComment = null;
+                } else {
+                    isDeprecated = "N";
+                    fullComment = null;
+                }
+            }
         } else if (pick < 75) {
             status = "검토필요 차단대상";
         } else if (pick < 85) {
@@ -247,6 +268,7 @@ public class MockAnalysisDataService {
         r.setStatusOverridden(overridden);
         r.setHasUrlBlock(hasBlock);
         r.setIsDeprecated(isDeprecated);
+        r.setBlockMarkingIncomplete(markingIncomplete);
         r.setBlockTarget(blockTarget);
         r.setBlockCriteria(blockCriteria);
         r.setBlockedDate(blockedDate);

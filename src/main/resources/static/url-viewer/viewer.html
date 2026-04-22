@@ -420,6 +420,7 @@
     <div class="stat-pill sg-hist" id="pill-new"     onclick="setFilter('new')"    ><span>신규</span><strong id="stat-new"     style="color:#6d28d9;">0</strong></div>
     <div class="stat-pill sg-hist" id="pill-changed" onclick="setFilter('changed')"><span>상태변경</span><strong id="stat-changed" style="color:#6d28d9;">0</strong></div>
     <div class="stat-pill sg-hist" id="pill-deleted" onclick="setFilter('deleted')"><span>삭제</span><strong id="stat-deleted" style="color:#6d28d9;">0</strong></div>
+    <div class="stat-pill" id="pill-marking-incomplete" style="background:#fff7ed;border-color:#fed7aa;" onclick="setFilter('marking-incomplete')" title="실질 차단(첫 문장 throw)이지만 @Deprecated 또는 [URL차단작업] 주석 누락"><span>📝 표기미흡</span><strong id="stat-marking-incomplete" style="color:#b45309;">0</strong></div>
     <!-- 메소드/Deprecated — 소형 chip, 별도 줄 -->
     <div style="width:100%;height:0;"></div>
     <div class="stat-chip" id="pill-GET"        onclick="setFilter('method:GET')"   ><span>GET</span><strong id="statGet">0</strong></div>
@@ -1062,6 +1063,7 @@
     else if (activeFilter === 'changed')  params.set('alert', 'changed');
     else if (activeFilter === 'reviewed') params.set('alert', 'reviewed');
     else if (activeFilter === 'deleted')  params.set('alert', 'deleted');
+    else if (activeFilter === 'marking-incomplete') params.set('alert', 'marking-incomplete');
     else if (activeFilter === 'deprecated') params.set('isDeprecated', 'Y');
     else if (activeFilter.startsWith('method:')) params.set('httpMethod', activeFilter.slice(7));
     else if (['사용','차단완료','최우선 차단대상','후순위 차단대상','추가검토필요 차단대상'].includes(activeFilter)) {
@@ -1271,6 +1273,7 @@
     document.getElementById('stat-new').textContent       = c.newCount || 0;
     document.getElementById('stat-changed').textContent   = c.changedCount || 0;
     document.getElementById('stat-deleted').textContent   = c.deletedCount || 0;
+    { const el = document.getElementById('stat-marking-incomplete'); if (el) el.textContent = c.markingIncompleteCount || 0; }
     document.getElementById('statGet').textContent        = byMethod['GET']    || 0;
     document.getElementById('statPost').textContent       = byMethod['POST']   || 0;
     document.getElementById('statPut').textContent        = byMethod['PUT']    || 0;
@@ -1338,6 +1341,7 @@
     else if (val === 'new') { document.getElementById('pill-new').classList.add('active-filter'); }
     else if (val === 'changed') { document.getElementById('pill-changed').classList.add('active-filter'); }
     else if (val === 'deleted') { document.getElementById('pill-deleted').classList.add('active-filter'); }
+    else if (val === 'marking-incomplete') { document.getElementById('pill-marking-incomplete').classList.add('active-filter'); }
     else if (val === 'method:GET')    { document.getElementById('pill-GET').classList.add('active-filter'); }
     else if (val === 'method:POST')   { document.getElementById('pill-POST').classList.add('active-filter'); }
     else if (val === 'method:PUT')    { document.getElementById('pill-PUT').classList.add('active-filter'); }
@@ -1441,7 +1445,7 @@
         <!-- 개발 메타 -->
         <td>${a.fullUrl ? `<a href="${esc(a.fullUrl)}" target="_blank" style="font-size:11px;color:var(--primary);text-decoration:none;padding:2px 8px;border:1px solid var(--primary);border-radius:4px;white-space:nowrap;">열기 ↗</a>` : '<span style="color:#cbd5e1;font-size:11px;">-</span>'}</td>
         <!-- 상태 / 상태확정 -->
-        <td>${statusBadge(a.status, a.logWorkExcluded)}${a.isNew ? `<br><span style="display:inline-block;margin-top:2px;padding:1px 5px;background:#dbeafe;border:1px solid #93c5fd;border-radius:3px;color:#1e40af;font-size:9px;font-weight:600;cursor:pointer;white-space:nowrap;" onclick="clearNewFlag(event,${a.id})" title="클릭하여 확인 완료">🆕 신규추가</span>` : ''}${(() => { if (!a.statusChanged) return ''; const logs = parseChangeLog(a.statusChangeLog); const last = logs.length ? logs[logs.length-1] : '변경감지'; const extra = logs.length > 1 ? ` <span style="color:#f87171;">(외 ${logs.length-1}건)</span>` : ''; return `<br><span style="display:inline-block;margin-top:2px;padding:1px 5px;background:#fef2f2;border:1px solid #fca5a5;border-radius:3px;color:#dc2626;font-size:9px;font-weight:600;cursor:pointer;white-space:nowrap;" onclick="clearStatusFlag(event,${a.id})" title="클릭: 확인 완료 | 상세보기에서 전체 이력 확인">⚠️ ${esc(last)}${extra}</span>`; })()}</td>
+        <td>${statusBadge(a.status, a.logWorkExcluded)}${a.isNew ? `<br><span style="display:inline-block;margin-top:2px;padding:1px 5px;background:#dbeafe;border:1px solid #93c5fd;border-radius:3px;color:#1e40af;font-size:9px;font-weight:600;cursor:pointer;white-space:nowrap;" onclick="clearNewFlag(event,${a.id})" title="클릭하여 확인 완료">🆕 신규추가</span>` : ''}${(() => { if (!a.statusChanged) return ''; const logs = parseChangeLog(a.statusChangeLog); const last = logs.length ? logs[logs.length-1] : '변경감지'; const extra = logs.length > 1 ? ` <span style="color:#f87171;">(외 ${logs.length-1}건)</span>` : ''; return `<br><span style="display:inline-block;margin-top:2px;padding:1px 5px;background:#fef2f2;border:1px solid #fca5a5;border-radius:3px;color:#dc2626;font-size:9px;font-weight:600;cursor:pointer;white-space:nowrap;" onclick="clearStatusFlag(event,${a.id})" title="클릭: 확인 완료 | 상세보기에서 전체 이력 확인">⚠️ ${esc(last)}${extra}</span>`; })()}${a.blockMarkingIncomplete ? `<br><span style="display:inline-block;margin-top:2px;padding:1px 5px;background:#fff7ed;border:1px solid #fed7aa;border-radius:3px;color:#b45309;font-size:9px;font-weight:600;white-space:nowrap;cursor:help;" title="실질 차단(UnsupportedOperationException 첫 문장)이지만 @Deprecated 또는 [URL차단작업] 주석이 누락됨. 주석 보완 후 다음 추출 시 자동 해제.">📝 표기미흡</span>` : ''}</td>
         <td style="text-align:center;">${lockIcon}</td>
         <!-- 개발 메타 -->
         <td class="ctrl-name"><div style="display:flex;align-items:center;gap:4px;"><button class="copy-btn" onclick="copyText(event,'${esc(a.controllerName)}')" title="컨트롤러명 복사"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>${esc(a.controllerName)}</div></td>
@@ -2477,6 +2481,22 @@
           <div class="detail-value">${dis ? `<div style="font-size:11px;line-height:1.8;">${renderBlockedReason(r.blockedReason || '')}</div>` : `<textarea id="df-blockedReason" class="df-textarea" rows="3">${esc(r.blockedReason || '')}</textarea>${r.blockedReason ? `<div style="margin-top:4px;font-size:11px;display:flex;flex-wrap:wrap;gap:4px;">${renderBlockedReason(r.blockedReason)}</div>` : ''}`}</div>
           <div class="detail-label">Deprecated <span style="color:var(--primary);font-size:10px;">✎</span></div>
           <div class="detail-value"><select id="df-isDeprecated" class="df-select" style="width:auto;" ${dis}><option value="" ${!r.isDeprecated||r.isDeprecated==='N'?'selected':''}>아니오 (N)</option><option value="Y" ${r.isDeprecated==='Y'?'selected':''}>예 (Y)</option></select></div>
+          <div class="detail-label">표기 완성도</div>
+          <div class="detail-value" style="display:flex;flex-direction:column;gap:4px;font-size:11px;">
+            <span style="display:flex;align-items:center;gap:6px;">
+              <span style="display:inline-block;width:14px;text-align:center;font-weight:700;color:${r.isDeprecated==='Y'?'#16a34a':'#dc2626'};">${r.isDeprecated==='Y'?'✓':'✗'}</span>
+              <span><b>@Deprecated</b> 어노테이션</span>
+            </span>
+            <span style="display:flex;align-items:center;gap:6px;">
+              <span style="display:inline-block;width:14px;text-align:center;font-weight:700;color:${(r.fullComment||'').includes('[URL차단작업]')?'#16a34a':'#dc2626'};">${(r.fullComment||'').includes('[URL차단작업]')?'✓':'✗'}</span>
+              <span><b>[URL차단작업]</b> javadoc 주석</span>
+            </span>
+            <span style="display:flex;align-items:center;gap:6px;">
+              <span style="display:inline-block;width:14px;text-align:center;font-weight:700;color:${r.hasUrlBlock==='Y'?'#16a34a':'#dc2626'};">${r.hasUrlBlock==='Y'?'✓':'✗'}</span>
+              <span><b>UnsupportedOperationException</b> throw (첫 문장)</span>
+            </span>
+            ${r.blockMarkingIncomplete ? `<span style="margin-top:4px;padding:6px 10px;background:#fff7ed;border:1px solid #fed7aa;border-radius:4px;color:#b45309;font-weight:600;line-height:1.5;">⚠ 표기 미흡 — 위 ✗ 항목을 보완하고 추출을 재실행하면 자동 해제됩니다.</span>` : ''}
+          </div>
           <div class="detail-label">비고 <span style="color:var(--primary);font-size:10px;">✎</span></div>
           <div class="detail-value"><textarea id="df-memo" class="df-textarea" rows="2" ${dis}>${esc(r.memo || '')}</textarea></div>
         </div>

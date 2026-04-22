@@ -409,10 +409,15 @@ public class ApiExtractorService {
                     }
                     info.setRequestPropertyValue("-");
                     info.setControllerRequestPropertyValue("-");
+                    info.setBlockMarkingIncomplete(computeBlockMarkingIncomplete(
+                            isFirstStmtUrlBlockRegex(mBody),
+                            info.getIsDeprecated(),
+                            info.getFullComment()));
                     apis.add(info);
                     if (debug) {
-                        log.debug("[파싱-RX]   {} {} | method={} | deprecated={} | urlBlock={}",
-                                httpMethod, finalPath, methodName, info.getIsDeprecated(), info.getHasUrlBlock());
+                        log.debug("[파싱-RX]   {} {} | method={} | deprecated={} | urlBlock={} | markingIncomplete={}",
+                                httpMethod, finalPath, methodName, info.getIsDeprecated(), info.getHasUrlBlock(),
+                                info.isBlockMarkingIncomplete());
                     }
                 }
 
@@ -436,10 +441,15 @@ public class ApiExtractorService {
                     info.setApiOperationValue("-");
                     info.setRequestPropertyValue("-");
                     info.setControllerRequestPropertyValue("-");
+                    info.setBlockMarkingIncomplete(computeBlockMarkingIncomplete(
+                            isFirstStmtUrlBlockRegex(mBody2),
+                            info.getIsDeprecated(),
+                            info.getFullComment()));
                     apis.add(info);
                     if (debug) {
-                        log.debug("[파싱-RX]   {} {} (빈매핑) | method={} | deprecated={}",
-                                httpMethod, info.getApiPath(), methodName, info.getIsDeprecated());
+                        log.debug("[파싱-RX]   {} {} (빈매핑) | method={} | deprecated={} | markingIncomplete={}",
+                                httpMethod, info.getApiPath(), methodName, info.getIsDeprecated(),
+                                info.isBlockMarkingIncomplete());
                     }
                 }
             }
@@ -497,6 +507,13 @@ public class ApiExtractorService {
         String op = extractAnnotationValue(method, "ApiOperation", "value");
         if ("-".equals(op)) op = extractAnnotationValue(method, "Operation", "summary");
         info.setApiOperationValue(op);
+
+        // 표기 미흡 판정 — 메서드 첫 실행 문장이 UnsupportedOperationException throw 인데
+        // @Deprecated 또는 [URL차단작업] 주석 중 하나라도 누락된 경우 true
+        info.setBlockMarkingIncomplete(computeBlockMarkingIncomplete(
+                isFirstStmtUrlBlock(method),
+                info.getIsDeprecated(),
+                info.getFullComment()));
 
         return info;
     }
@@ -629,6 +646,44 @@ public class ApiExtractorService {
         if (methodBodySnippet == null) return false;
         return Pattern.compile("throw\\s+new\\s+UnsupportedOperationException", Pattern.CASE_INSENSITIVE)
                 .matcher(methodBodySnippet).find();
+    }
+
+    /** JavaParser 경로 — 이름 일관성을 위한 alias. detectUrlBlock 이 이미 첫 statement 체크이므로 그대로 위임 */
+    private boolean isFirstStmtUrlBlock(MethodDeclaration method) { return detectUrlBlock(method); }
+
+    /**
+     * Regex 폴백 — 메서드 본문 **첫 실행 문장** 이 UnsupportedOperationException throw 인지 판정.
+     * 입력 snippet 은 메서드 시그니처 직후 500자 범위. {} 여는 괄호 뒤 공백/주석 스킵 후
+     *   `throw new Unsupported...` 또는 `if (...) throw new Unsupported...` 로 시작하면 true.
+     */
+    private boolean isFirstStmtUrlBlockRegex(String methodBodySnippet) {
+        if (methodBodySnippet == null) return false;
+        int openBrace = methodBodySnippet.indexOf('{');
+        if (openBrace < 0) return false;
+        String s = methodBodySnippet.substring(openBrace + 1);
+        // 공백 + // 라인주석 + /* ... */ 블록주석 반복 스킵
+        while (true) {
+            String stripped = s
+                    .replaceFirst("^\\s+", "")
+                    .replaceFirst("^//[^\\n]*\\n", "")
+                    .replaceFirst("(?s)^/\\*.*?\\*/", "");
+            if (stripped.equals(s)) break;
+            s = stripped;
+        }
+        return Pattern.compile("^(if\\s*\\([^)]*\\)\\s*\\{?\\s*)?throw\\s+new\\s+UnsupportedOperationException",
+                Pattern.DOTALL).matcher(s).find();
+    }
+
+    /**
+     * 표기 미흡 플래그 계산.
+     * 실질 차단(첫 실행 문장이 throw new UnsupportedOperationException)이면서
+     * @Deprecated 또는 [URL차단작업] 주석 중 하나라도 누락되면 true.
+     */
+    private boolean computeBlockMarkingIncomplete(boolean firstStmtBlocks, String isDeprecated, String fullComment) {
+        if (!firstStmtBlocks) return false;
+        boolean deprecatedOk = "Y".equals(isDeprecated);
+        boolean commentOk = fullComment != null && fullComment.contains("[URL차단작업]");
+        return !(deprecatedOk && commentOk);
     }
 
     /**

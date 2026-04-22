@@ -170,6 +170,7 @@ public class ApiStorageService {
         r.setRepoPath(a.getRepoPath());
         r.setIsDeprecated(a.getIsDeprecated());
         r.setHasUrlBlock(a.getHasUrlBlock());
+        r.setBlockMarkingIncomplete(a.isBlockMarkingIncomplete());
         r.setProgramId(a.getProgramId());
         r.setApiOperationValue(a.getApiOperationValue());
         r.setDescriptionTag(a.getDescriptionTag());

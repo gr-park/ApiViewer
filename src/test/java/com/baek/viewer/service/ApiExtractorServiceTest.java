@@ -236,5 +236,95 @@ class ApiExtractorServiceTest {
         assertThat(info.getIsDeprecated()).isEqualTo("Y");
         assertThat(info.getHasUrlBlock()).isEqualTo("Y");
         assertThat(info.getFullComment()).contains("[URL차단작업]");
+        // 완전 표기 — 미흡 플래그 false
+        assertThat(info.isBlockMarkingIncomplete()).isFalse();
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // blockMarkingIncomplete 플래그 — "실질 차단이지만 주석/어노테이션 누락" 회귀 테스트
+    // ═══════════════════════════════════════════════════════════════════════
+
+    @Test
+    @DisplayName("표기미흡 — @Deprecated 누락: 첫문장 throw + [URL차단작업] 주석 있으나 @Deprecated 없음 → true")
+    void markingIncomplete_whenDeprecatedMissing(@TempDir Path tmp) throws Exception {
+        when(globalConfigRepository.findById(1L)).thenReturn(Optional.empty());
+        Path f = tmp.resolve("FooController.java");
+        Files.writeString(f, """
+                package test;
+                import org.springframework.web.bind.annotation.*;
+                @RestController
+                public class FooController {
+                    /** @deprecated [URL차단작업][2026-04-09][OP-1] */
+                    @RequestMapping("/foo/a")
+                    public String a() {
+                        if (true) throw new UnsupportedOperationException("차단");
+                        return "";
+                    }
+                }
+                """);
+        ExtractRequest req = new ExtractRequest();
+        req.setRootPath(tmp.toString()); req.setDomain("");
+        List<ApiInfo> result = service.extract(req);
+        assertThat(result).hasSize(1);
+        ApiInfo info = result.get(0);
+        assertThat(info.getHasUrlBlock()).isEqualTo("Y");
+        assertThat(info.getIsDeprecated()).isEqualTo("N");
+        assertThat(info.isBlockMarkingIncomplete()).isTrue();
+    }
+
+    @Test
+    @DisplayName("표기미흡 — [URL차단작업] 주석 누락: 첫문장 throw + @Deprecated 있으나 주석 태그 없음 → true")
+    void markingIncomplete_whenCommentTagMissing(@TempDir Path tmp) throws Exception {
+        when(globalConfigRepository.findById(1L)).thenReturn(Optional.empty());
+        Path f = tmp.resolve("FooController.java");
+        Files.writeString(f, """
+                package test;
+                import org.springframework.web.bind.annotation.*;
+                @RestController
+                public class FooController {
+                    /** 미사용 API */
+                    @Deprecated
+                    @RequestMapping("/foo/b")
+                    public String b() {
+                        throw new UnsupportedOperationException("차단");
+                    }
+                }
+                """);
+        ExtractRequest req = new ExtractRequest();
+        req.setRootPath(tmp.toString()); req.setDomain("");
+        List<ApiInfo> result = service.extract(req);
+        assertThat(result).hasSize(1);
+        ApiInfo info = result.get(0);
+        assertThat(info.getHasUrlBlock()).isEqualTo("Y");
+        assertThat(info.getIsDeprecated()).isEqualTo("Y");
+        assertThat(info.getFullComment()).doesNotContain("[URL차단작업]");
+        assertThat(info.isBlockMarkingIncomplete()).isTrue();
+    }
+
+    @Test
+    @DisplayName("표기미흡 — 첫 문장이 throw 가 아니면 false: 선행 로직 뒤 throw 는 실질 차단으로 보지 않음")
+    void markingIncomplete_whenThrowNotFirstStatement(@TempDir Path tmp) throws Exception {
+        when(globalConfigRepository.findById(1L)).thenReturn(Optional.empty());
+        Path f = tmp.resolve("FooController.java");
+        Files.writeString(f, """
+                package test;
+                import org.springframework.web.bind.annotation.*;
+                @RestController
+                public class FooController {
+                    @RequestMapping("/foo/c")
+                    public String c() {
+                        int x = 1;
+                        if (x > 0) throw new UnsupportedOperationException("조건부");
+                        return "";
+                    }
+                }
+                """);
+        ExtractRequest req = new ExtractRequest();
+        req.setRootPath(tmp.toString()); req.setDomain("");
+        List<ApiInfo> result = service.extract(req);
+        assertThat(result).hasSize(1);
+        ApiInfo info = result.get(0);
+        // 첫 문장은 int x=1; 이므로 UnsupportedOperationException 이 첫 실행 문장이 아님 → markingIncomplete=false
+        assertThat(info.isBlockMarkingIncomplete()).isFalse();
     }
 }
