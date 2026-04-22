@@ -14,7 +14,7 @@
   const SEGMENTS = [
     {
       id: 'dashboard',
-      label: '📊 대시보드',
+      label: '대시보드',
       icon: '📊',
       home: '/dashboard/',
       pages: []   // 서브메뉴 없음 — 단일 페이지. nav.js 가 빈 배열일 때 2단-B 를 렌더하지 않음
