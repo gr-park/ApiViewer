@@ -108,7 +108,7 @@ Spring Boot 기반 웹 애플리케이션. Controller 소스를 파싱하여 URL
 
 | 상태 | 자동 계산 조건 | 비고 |
 |------|---------------|------|
-| 차단완료 | ①@Deprecated ②[URL차단작업] 주석 ③UnsupportedOperationException — 3가지 AND | 모든 수정 불가 |
+| 차단완료 | 메서드 첫 실행 문장이 `throw new UnsupportedOperationException(...)` (hasUrlBlock=Y) 이면 실질 차단으로 간주. `@Deprecated` 어노테이션 또는 `[URL차단작업]` javadoc 주석 중 하나라도 누락되면 `blockMarkingIncomplete=true` (차단처리미흡) 플래그 동반 — 상태는 동일하게 "차단완료". | 모든 수정 불가. 차단처리미흡 플래그는 주석/어노테이션 보완 후 재추출 시 자동 해제. |
 | 최우선 차단대상 | 호출 0건 + 커밋 1년 경과 | 자동 |
 | 후순위 차단대상 | 수동 설정 (침해사고 로그, IT담당자 검토건) | 수동 |
 | 검토필요 차단대상 | 호출 0건+커밋 1년 미만 / 호출 1~N건+커밋 1년 경과 | 자동 |

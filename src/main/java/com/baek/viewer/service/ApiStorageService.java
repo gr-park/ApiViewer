@@ -390,10 +390,10 @@ public class ApiStorageService {
         if ("차단대상 제외".equals(r.getReviewResult())) {
             return "사용";
         }
-        // 1. 차단완료: 3가지 모두 충족 (①@Deprecated ②[URL차단작업] ③UnsupportedOperationException)
-        if ("Y".equals(r.getIsDeprecated())
-                && containsBlockText(r.getFullComment())
-                && "Y".equals(r.getHasUrlBlock())) {
+        // 1. 차단완료: 메서드 첫 실행 문장이 throw new UnsupportedOperationException(...) 이면 실질 차단.
+        //    @Deprecated 어노테이션 또는 [URL차단작업] 주석 중 일부가 누락되면 blockMarkingIncomplete=true
+        //    (차단처리미흡) 로 별도 플래그만 세우고 상태는 동일하게 "차단완료".
+        if ("Y".equals(r.getHasUrlBlock())) {
             r.setLogWorkExcluded(false);
             return "차단완료";
         }
