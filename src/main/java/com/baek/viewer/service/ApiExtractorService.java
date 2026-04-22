@@ -398,10 +398,10 @@ public class ApiExtractorService {
                     } else {
                         info.setFullComment("-"); info.setDescriptionTag("-");
                     }
-                    // @Deprecated 라인에서 [URL차단작업] 정보 보충
-                    if (isDeprecated && (info.getFullComment().equals("-") || !info.getFullComment().contains("[URL차단작업]"))) {
+                    // @Deprecated 라인에서 [URL…차단…] 태그 정보 보충
+                    if (isDeprecated && (info.getFullComment().equals("-") || !ApiStorageService.containsUrlBlockTag(info.getFullComment()))) {
                         String depLine = extractDeprecatedLine(headArea);
-                        if (depLine != null && depLine.contains("[URL차단작업]")) {
+                        if (depLine != null && ApiStorageService.containsUrlBlockTag(depLine)) {
                             info.setFullComment(depLine);
                         }
                     }
@@ -499,12 +499,12 @@ public class ApiExtractorService {
         } else {
             info.setFullComment("-"); info.setDescriptionTag("-");
         }
-        // @Deprecated 라인에서 [URL차단작업] 정보 보충
-        if ("Y".equals(info.getIsDeprecated()) && (info.getFullComment().equals("-") || !info.getFullComment().contains("[URL차단작업]"))) {
+        // @Deprecated 라인에서 [URL…차단…] 태그 정보 보충
+        if ("Y".equals(info.getIsDeprecated()) && (info.getFullComment().equals("-") || !ApiStorageService.containsUrlBlockTag(info.getFullComment()))) {
             try {
                 String src = Files.readString(filePath, StandardCharsets.UTF_8);
                 String depLine = extractDeprecatedLine(src);
-                if (depLine != null && depLine.contains("[URL차단작업]")) {
+                if (depLine != null && ApiStorageService.containsUrlBlockTag(depLine)) {
                     info.setFullComment(depLine);
                 }
             } catch (Exception ignore) {}
@@ -691,7 +691,7 @@ public class ApiExtractorService {
     private boolean computeBlockMarkingIncomplete(boolean urlBlockDetected, String isDeprecated, String fullComment) {
         if (!urlBlockDetected) return false;
         boolean deprecatedOk = "Y".equals(isDeprecated);
-        boolean commentOk = fullComment != null && fullComment.contains("[URL차단작업]");
+        boolean commentOk = ApiStorageService.containsUrlBlockTag(fullComment);
         return !(deprecatedOk && commentOk);
     }
 
@@ -705,16 +705,22 @@ public class ApiExtractorService {
      *      `/** @deprecated [URL차단작업]... *\/` 블록을 @Deprecated 바로 위에 덧붙이는 개발자 관행 커버.
      *      주석 블록이 여러 개 이어져 있어도(예: 원본 javadoc + 차단 태그 javadoc) 어느 블록이든 포함되면 감지.
      */
+    /** 대괄호 안에 URL·차단 모두 포함된 토큰 — 변형 표기 허용 (예: [URL차단작업], [URL 차단작업], [차단URL완료]) */
+    private static final Pattern URL_BLOCK_TAG_IN_TEXT =
+            Pattern.compile("\\[(?=[^\\[\\]]*URL)(?=[^\\[\\]]*차단)[^\\[\\]]+\\]");
+
     private String extractDeprecatedLine(String source) {
         if (source == null) return null;
         // ① 같은 줄
         Matcher m = Pattern.compile("@Deprecated\\s+(.+)", Pattern.MULTILINE).matcher(source);
         if (m.find()) {
             String line = m.group(1).trim();
-            if (line.contains("[URL차단작업]")) return line;
+            if (ApiStorageService.containsUrlBlockTag(line)) return line;
         }
-        // ② 뒤쪽 줄
-        Matcher m2 = Pattern.compile("@Deprecated[\\s\\S]*?(\\[URL차단작업\\].+)", Pattern.MULTILINE).matcher(source);
+        // ② 뒤쪽 줄 — URL·차단 포함 대괄호 토큰 이후 라인 추출
+        Matcher m2 = Pattern.compile(
+                "@Deprecated[\\s\\S]*?(" + URL_BLOCK_TAG_IN_TEXT.pattern() + ".+)",
+                Pattern.MULTILINE).matcher(source);
         if (m2.find()) return m2.group(1).trim();
 
         // ③ @Deprecated 바로 위 주석 블록
@@ -722,11 +728,11 @@ public class ApiExtractorService {
         if (depIdx >= 0) {
             int scanStart = Math.max(0, depIdx - 4000);   // 과도 범위 방지
             String pre = source.substring(scanStart, depIdx);
-            // 직전 메서드/블록 경계 (}) 이후로 한정 — 다른 메서드의 [URL차단작업] 주석 오판 방지
+            // 직전 메서드/블록 경계 (}) 이후로 한정 — 다른 메서드의 URL차단 주석 오판 방지
             int lastBrace = pre.lastIndexOf("}");
             if (lastBrace >= 0) pre = pre.substring(lastBrace);
-            if (pre.contains("[URL차단작업]")) {
-                Matcher m3 = Pattern.compile("(\\[URL차단작업\\][^\\n\\r]*)").matcher(pre);
+            if (ApiStorageService.containsUrlBlockTag(pre)) {
+                Matcher m3 = Pattern.compile("(" + URL_BLOCK_TAG_IN_TEXT.pattern() + "[^\\n\\r]*)").matcher(pre);
                 if (m3.find()) {
                     // 주석 블록 종료 표식(*/ 또는 ** 등) 제거 + 선행 * 공백 제거
                     return m3.group(1).replaceAll("\\s*\\*+/\\s*$", "").trim();

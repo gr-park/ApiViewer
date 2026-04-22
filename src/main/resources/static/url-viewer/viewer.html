@@ -1480,6 +1480,14 @@
     '추가검토필요 차단대상': '③ 호출 0건 + 소스변경 1년 미만, 호출 1~N건 + 소스변경 1년 경과',
     '삭제': '분석에서 제외된 API (소스 삭제 등)'
   };
+  // 대괄호 안에 'URL' 과 '차단' 둘 다 포함된 토큰 탐지 — 공백·오타·순서 허용.
+  // 예: [URL차단작업], [URL 차단작업], [URL차단완료], [차단URL작업] 등 모두 true.
+  const URL_BLOCK_TAG_RE = /\[(?=[^\[\]]*URL)(?=[^\[\]]*차단)[^\[\]]+\]/;
+  function hasUrlBlockTag(text) {
+    if (!text) return false;
+    return URL_BLOCK_TAG_RE.test(text);
+  }
+
   function statusBadge(status, logWorkExcluded) {
     const cls = { '사용':'st-use', '차단완료':'st-done', '삭제':'st-del', '최우선 차단대상':'bt-top', '후순위 차단대상':'bt-low', '추가검토필요 차단대상':'bt-rev' };
     const c = cls[status] || 'st-use';
@@ -2492,8 +2500,8 @@
               <span><b>@Deprecated</b> 어노테이션</span>
             </span>
             <span style="display:flex;align-items:center;gap:6px;">
-              <span style="display:inline-block;width:14px;text-align:center;font-weight:700;color:${(r.fullComment||'').includes('[URL차단작업]')?'#16a34a':'#dc2626'};">${(r.fullComment||'').includes('[URL차단작업]')?'✓':'✗'}</span>
-              <span><b>[URL차단작업]</b> javadoc 주석</span>
+              <span style="display:inline-block;width:14px;text-align:center;font-weight:700;color:${hasUrlBlockTag(r.fullComment)?'#16a34a':'#dc2626'};">${hasUrlBlockTag(r.fullComment)?'✓':'✗'}</span>
+              <span><b>[URL…차단…]</b> javadoc 주석 <small style="color:var(--text-muted);">(대괄호 안에 'URL' 과 '차단' 모두 포함 — 오타·공백 허용)</small></span>
             </span>
             ${r.blockMarkingIncomplete ? `<span style="margin-top:4px;padding:6px 10px;background:#fff7ed;border:1px solid #fed7aa;border-radius:4px;color:#b45309;font-weight:600;line-height:1.5;">⚠ 차단처리 미흡 — 차단완료 상태이나 위 ✗ 항목을 보완하고 추출을 재실행하면 자동 해제됩니다.</span>` : ''}
           </div>

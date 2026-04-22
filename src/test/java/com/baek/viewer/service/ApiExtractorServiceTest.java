@@ -330,6 +330,44 @@ class ApiExtractorServiceTest {
     }
 
     @Test
+    @DisplayName("URL차단 태그 변형 표기 인식 — [URL 차단작업] (공백), [URL차단완료], [차단URL작업] 모두 완전 표기로 취급")
+    void urlBlockTag_toleratesTypoAndVariants(@TempDir Path tmp) throws Exception {
+        when(globalConfigRepository.findById(1L)).thenReturn(Optional.empty());
+        Path f = tmp.resolve("VariantController.java");
+        Files.writeString(f, """
+                package test;
+                import org.springframework.web.bind.annotation.*;
+                @RestController
+                public class VariantController {
+                    /** @deprecated [URL 차단작업][2026-04-09][OP-1] 공백 변형 */
+                    @Deprecated
+                    @RequestMapping("/v/a")
+                    public String a() { throw new UnsupportedOperationException("차단"); }
+
+                    /** @deprecated [URL차단완료][2026-04-09][OP-2] 완료 표기 */
+                    @Deprecated
+                    @RequestMapping("/v/b")
+                    public String b() { throw new UnsupportedOperationException("차단"); }
+
+                    /** @deprecated [차단URL작업][2026-04-09][OP-3] 순서 반대 */
+                    @Deprecated
+                    @RequestMapping("/v/c")
+                    public String c() { throw new UnsupportedOperationException("차단"); }
+                }
+                """);
+        ExtractRequest req = new ExtractRequest();
+        req.setRootPath(tmp.toString()); req.setDomain("");
+        List<ApiInfo> result = service.extract(req);
+        assertThat(result).hasSize(3);
+        // 세 변형 모두 태그 인식 → markingIncomplete=false (완전 표기로 간주)
+        for (ApiInfo info : result) {
+            assertThat(info.getHasUrlBlock()).isEqualTo("Y");
+            assertThat(info.getIsDeprecated()).isEqualTo("Y");
+            assertThat(info.isBlockMarkingIncomplete()).isFalse();
+        }
+    }
+
+    @Test
     @DisplayName("차단완료 — throw 가 본문 중간에 있어도 메시지 '차단' 포함 시 hasUrlBlock=Y")
     void urlBlock_trueWhenThrowInMiddleWithBlockMessage(@TempDir Path tmp) throws Exception {
         when(globalConfigRepository.findById(1L)).thenReturn(Optional.empty());
