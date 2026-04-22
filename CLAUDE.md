@@ -81,12 +81,13 @@ Spring Boot 기반 웹 애플리케이션. Controller 소스를 파싱하여 URL
 
 # 접속 URL
 
-네비게이션은 **3개 대영역** (URLViewer / EncryptViewer / 설정) 2단 네비. 공통 네비는 `static/common/nav.js` + `static/common/nav.css` 가 렌더링하며 각 페이지는 `<meta name="nav-segment">`, `<meta name="nav-page">` + `<div id="nav-container">` 만 둔다.
+네비게이션은 **대시보드 + 3개 대영역** (대시보드 / URLViewer / EncryptViewer / 설정) 2단 네비. 공통 네비는 `static/common/nav.js` + `static/common/nav.css` 가 렌더링하며 각 페이지는 `<meta name="nav-segment">`, `<meta name="nav-page">` + `<div id="nav-container">` 만 둔다. 1단 브랜드("IT소스 관리포털") 클릭 시 대시보드로 이동. 대시보드 세그먼트는 서브메뉴 없이 단일 페이지 — `pages: []` 일 때 2단-B 는 렌더링되지 않는다.
 
 | URL | 설명 | 접근 |
 |-----|------|------|
-| `/` | `/url-viewer/` 로 리다이렉트 | — |
-| `/url-viewer/` | 대시보드 (5가지 상태 통계) | 공개 |
+| `/` | `/dashboard/` 로 리다이렉트 | — |
+| `/dashboard/` | IT소스 관리포털 통합 대시보드 (URL 분석·URL 호출·암복호화 모듈·암복호화 사용 프로그램 4개 섹션) | 공개 |
+| `/url-viewer/` | `/url-viewer/viewer.html` 로 리다이렉트 | — |
 | `/url-viewer/viewer.html` | URL 분석 현황 조회 | 공개 |
 | `/url-viewer/call-stats.html` | URL 호출현황 차트 | 공개 |
 | `/url-viewer/url-block-monitor.html` | URL차단 모니터링 (와탭 실시간 — 봇 제외) | 공개 |

@@ -214,9 +214,41 @@
     [data-theme="dark"] [style*="background:#f8fafc"] { background:#1e293b !important; }
     [data-theme="dark"] [style*="color:#991b1b"] { color:#f87171 !important; }
     [data-theme="dark"] [style*="color:#7c2d12"] { color:#fb923c !important; }
+
+    /* 대시보드 섹션 구분 */
+    .section-header {
+      display:flex; align-items:baseline; gap:10px;
+      margin:22px 0 12px; padding:8px 0 6px;
+      border-bottom:2px solid var(--border);
+    }
+    .section-header:first-of-type { margin-top:10px; }
+    .section-header h3 {
+      margin:0; font-size:15px; font-weight:800; color:var(--text);
+      display:inline-flex; align-items:center; gap:6px;
+    }
+    .section-header .section-sub {
+      font-size:11px; color:var(--text-muted); font-weight:500;
+    }
+    .section-header .section-badge {
+      margin-left:auto; padding:2px 10px; border-radius:10px;
+      background:#fef3c7; color:#92400e;
+      font-size:10px; font-weight:700; letter-spacing:.04em;
+    }
+    [data-theme="dark"] .section-header .section-badge {
+      background:#1c1408; color:#fcd34d;
+    }
+
+    /* 차후 오픈 예정 플레이스홀더 */
+    .coming-soon {
+      display:flex; flex-direction:column; align-items:center; justify-content:center;
+      padding:36px 20px; text-align:center;
+      color:var(--text-muted); font-size:12px; line-height:1.7;
+    }
+    .coming-soon .icon { font-size:36px; margin-bottom:8px; opacity:.75; }
+    .coming-soon .title { font-size:13px; font-weight:700; color:var(--text); margin-bottom:4px; }
   </style>
-  <meta name="nav-segment" content="url-viewer">
-  <meta name="nav-page" content="dashboard">
+  <meta name="nav-segment" content="dashboard">
+  <meta name="nav-page" content="home">
   <link rel="stylesheet" href="/common/nav.css">
   <script src="/js/dialog.js"></script>
   <script src="/js/darkmode.js"></script>
@@ -228,7 +260,7 @@
 <div class="main">
 
   <div class="top-bar">
-    <h2>URL 현황 대시보드</h2>
+    <h2>IT소스 관리포털 대시보드</h2>
     <div style="display:flex;align-items:center;gap:12px;">
       <span class="last-updated" id="lastUpdated"></span>
       <button class="btn-refresh" onclick="loadStats()">↻ 새로고침</button>
@@ -241,6 +273,14 @@
   </div>
 
   <div id="dashContent" style="display:none;">
+
+    <!-- ══════════════════════════════════════════════════════════════
+         섹션 1 : URL 분석
+         ══════════════════════════════════════════════════════════════ -->
+    <div class="section-header">
+      <h3>📋 URL 분석</h3>
+      <span class="section-sub">프로젝트 전반의 URL 상태 요약</span>
+    </div>
 
     <!-- ── 요약 카드 ── -->
     <div class="summary-grid">
@@ -381,6 +421,14 @@
       </div>
     </div>
 
+    <!-- ══════════════════════════════════════════════════════════════
+         섹션 2 : URL 호출
+         ══════════════════════════════════════════════════════════════ -->
+    <div class="section-header">
+      <h3>📈 URL 호출</h3>
+      <span class="section-sub">호출건수 기반 TOP 랭킹 (최근 1년)</span>
+    </div>
+
     <!-- ── URL 호출건수 TOP 10 (대시보드 하단) ── -->
     <div class="two-col" style="margin-top:14px;">
       <div class="card">
@@ -399,6 +447,38 @@
         <div id="dashTopRepoApisWrap" style="max-height:360px;overflow:auto;">
           <div style="text-align:center;padding:20px;color:var(--text-muted);font-size:12px;">레포를 선택하세요.</div>
         </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════════════
+         섹션 3 : 암복호화 모듈
+         ══════════════════════════════════════════════════════════════ -->
+    <div class="section-header">
+      <h3>🔐 암복호화 모듈</h3>
+      <span class="section-sub">시스템 내 암복호화 모듈 사용 현황</span>
+      <span class="section-badge">차후 오픈 예정</span>
+    </div>
+    <div class="card">
+      <div class="coming-soon">
+        <div class="icon">🔐</div>
+        <div class="title">암복호화 모듈 현황 대시보드</div>
+        <div>적용된 암복호화 모듈의 버전·취약점·변경 이력 등을 요약하여 제공할 예정입니다.</div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════════════
+         섹션 4 : 암복호화 사용 프로그램
+         ══════════════════════════════════════════════════════════════ -->
+    <div class="section-header">
+      <h3>🔑 암복호화 사용 프로그램</h3>
+      <span class="section-sub">프로그램별 암복호화 호출 현황</span>
+      <span class="section-badge">차후 오픈 예정</span>
+    </div>
+    <div class="card">
+      <div class="coming-soon">
+        <div class="icon">🔑</div>
+        <div class="title">암복호화 사용 프로그램 대시보드</div>
+        <div>암복호화 API를 사용하는 프로그램 목록과 호출 패턴·위험도 등을 집계하여 제공할 예정입니다.</div>
       </div>
     </div>
 

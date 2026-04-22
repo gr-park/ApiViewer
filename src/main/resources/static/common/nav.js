@@ -13,12 +13,18 @@
 (function () {
   const SEGMENTS = [
     {
+      id: 'dashboard',
+      label: '📊 대시보드',
+      icon: '📊',
+      home: '/dashboard/',
+      pages: []   // 서브메뉴 없음 — 단일 페이지. nav.js 가 빈 배열일 때 2단-B 를 렌더하지 않음
+    },
+    {
       id: 'url-viewer',
       label: 'URL 현황관리',
       icon: '🔗',
-      home: '/url-viewer/',
+      home: '/url-viewer/viewer.html',
       pages: [
-        { id: 'dashboard',     label: '📊 대시보드',        href: '/url-viewer/' },
         { id: 'viewer',        label: '📋 URL분석현황',     href: '/url-viewer/viewer.html' },
         { id: 'call-stats',    label: '📈 URL호출현황',     href: '/url-viewer/call-stats.html' },
         { id: 'block-monitor', label: '🚧 차단 모니터링',   href: '/url-viewer/url-block-monitor.html' },
@@ -59,10 +65,11 @@
     if (!segId) {
       // 경로로 추론
       const p = location.pathname;
-      if (p.startsWith('/url-viewer'))      segId = 'url-viewer';
+      if (p.startsWith('/dashboard'))       segId = 'dashboard';
+      else if (p.startsWith('/url-viewer')) segId = 'url-viewer';
       else if (p.startsWith('/encrypt-viewer')) segId = 'encrypt-viewer';
       else if (p.startsWith('/settings'))   segId = 'settings';
-      else segId = 'url-viewer';
+      else segId = 'dashboard';
     }
     return { segId, pageId };
   }
@@ -89,7 +96,7 @@
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
           <polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>
         </svg>
-        <a class="brand" href="/url-viewer/"><h1>IT소스 관리포털 <small>— IT Source Management Portal</small></h1></a>
+        <a class="brand" href="/dashboard/"><h1>IT소스 관리포털 <small>— IT Source Management Portal</small></h1></a>
         <span class="brand-sub">${esc(brandSub)}</span>
         <div class="utils">
           <button class="dark-toggle" onclick="toggleDarkMode && toggleDarkMode()">🌙 다크모드</button>
@@ -105,17 +112,19 @@
       </a>`).join('');
 
     // Tier 2-B: 하위 페이지 ──────────────────────────────────
-    const pages = activeSeg.pages.map(p => `
+    // 서브메뉴가 없는 세그먼트(예: 대시보드)는 2단-B 자체를 렌더링하지 않음
+    const hasSubPages = activeSeg.pages && activeSeg.pages.length > 0;
+    const pages = hasSubPages ? activeSeg.pages.map(p => `
       <a class="nav-page-link${p.id === pageId ? ' active' : ''}"
          href="${esc(p.href)}"${p.adminOnly ? ' data-admin-only' : ''}>
         ${esc(p.label)}
-      </a>`).join('');
+      </a>`).join('') : '';
 
     container.className = 'app-nav';
     container.innerHTML = `
       ${top}
       <div class="app-nav-segments">${segs}</div>
-      <div class="app-nav-pages">${pages}</div>
+      ${hasSubPages ? `<div class="app-nav-pages">${pages}</div>` : ''}
     `;
 
     renderAdminSlot();

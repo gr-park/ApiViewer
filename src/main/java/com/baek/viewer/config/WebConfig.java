@@ -28,13 +28,15 @@ public class WebConfig implements WebMvcConfigurer {
                 .maxAge(3600);                       // preflight 캐시 1시간
     }
 
-    /** 루트 & 구 경로 → 신 경로 리다이렉트 + 디렉토리 welcome page (3개 대영역 구조로 재편) */
+    /** 루트 & 구 경로 → 신 경로 리다이렉트 + 디렉토리 welcome page (대시보드 + 3개 대영역 구조) */
     @Override
     public void addViewControllers(ViewControllerRegistry registry) {
-        // 루트: 기본 랜딩은 URL Viewer 대시보드
-        registry.addRedirectViewController("/",                        "/url-viewer/");
+        // 루트: IT소스 관리포털 통합 대시보드
+        registry.addRedirectViewController("/",                        "/dashboard/");
         // 구 파일 경로 → 신 경로 (북마크/메일링크 보호)
-        registry.addRedirectViewController("/index.html",              "/url-viewer/");
+        registry.addRedirectViewController("/index.html",              "/dashboard/");
+        registry.addRedirectViewController("/url-viewer/",             "/url-viewer/viewer.html");
+        registry.addRedirectViewController("/url-viewer/index.html",   "/dashboard/");
         registry.addRedirectViewController("/viewer.html",             "/url-viewer/viewer.html");
         registry.addRedirectViewController("/extract.html",            "/url-viewer/extract.html");
         registry.addRedirectViewController("/review.html",             "/url-viewer/review.html");
@@ -44,7 +46,7 @@ public class WebConfig implements WebMvcConfigurer {
         registry.addRedirectViewController("/settings.html",           "/settings/");
 
         // 디렉토리 welcome page — Spring Boot는 중첩 디렉토리의 index.html을 자동 매핑하지 않으므로 명시
-        registry.addViewController("/url-viewer/")     .setViewName("forward:/url-viewer/index.html");
+        registry.addViewController("/dashboard/")      .setViewName("forward:/dashboard/index.html");
         registry.addViewController("/encrypt-viewer/") .setViewName("forward:/encrypt-viewer/index.html");
         registry.addViewController("/settings/")       .setViewName("forward:/settings/index.html");
     }
