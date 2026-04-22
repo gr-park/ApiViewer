@@ -23,7 +23,7 @@
       id: 'url-viewer',
       label: 'URL 현황관리',
       icon: '🔗',
-      home: '/url-viewer/viewer.html',
+      home: '/url-viewer/workflow.html',
       pages: [
         { id: 'workflow',      label: '🗺️ 업무 흐름',       href: '/url-viewer/workflow.html' },
         { id: 'viewer',        label: '📋 URL분석현황',     href: '/url-viewer/viewer.html' },

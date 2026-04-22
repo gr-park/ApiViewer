@@ -35,7 +35,7 @@ public class WebConfig implements WebMvcConfigurer {
         registry.addRedirectViewController("/",                        "/dashboard/");
         // 구 파일 경로 → 신 경로 (북마크/메일링크 보호)
         registry.addRedirectViewController("/index.html",              "/dashboard/");
-        registry.addRedirectViewController("/url-viewer/",             "/url-viewer/viewer.html");
+        registry.addRedirectViewController("/url-viewer/",             "/url-viewer/workflow.html");
         registry.addRedirectViewController("/url-viewer/index.html",   "/dashboard/");
         registry.addRedirectViewController("/viewer.html",             "/url-viewer/viewer.html");
         registry.addRedirectViewController("/extract.html",            "/url-viewer/extract.html");
