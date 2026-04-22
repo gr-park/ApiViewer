@@ -108,7 +108,7 @@ public class JenniferBlockMonitorService {
                 log.warn("[URL차단모니터][JENNIFER] {} jenniferUrl 미설정/파싱 실패 — 스킵", r.getRepoName());
                 continue;
             }
-            String instanceId = buildInstanceId(r.getJenniferOids());
+            String instanceId = resolveInstanceId(r, base);
             long stime = from.atStartOfDay(KST).toInstant().toEpochMilli();
             long etime = to.plusDays(1).atStartOfDay(KST).toInstant().toEpochMilli() - 1;
 
@@ -245,6 +245,77 @@ public class JenniferBlockMonitorService {
         if (v.isNumber()) return String.valueOf(v.asLong());
         String s = v.asText("");
         return s.isEmpty() ? null : s;
+    }
+
+    /**
+     * OID 해석 우선순위:
+     * 1) jennifer_oids 설정값이 있으면 그대로 사용
+     * 2) 없으면 {base}/api/instance?domain_id={sid} 조회 후
+     *    name 에 repoName 이 포함된 instanceId 들을 사용
+     */
+    private String resolveInstanceId(RepoConfig repo, String base) {
+        if (repo.getJenniferOids() != null && !repo.getJenniferOids().isBlank()) {
+            log.debug("[URL차단모니터][JENNIFER] OID 설정값 사용: repoName={}", repo.getRepoName());
+            return buildInstanceId(repo.getJenniferOids());
+        }
+        log.debug("[URL차단모니터][JENNIFER] OID 미설정 → instance API 조회: repoName={}", repo.getRepoName());
+        return fetchInstanceIdsFromApi(repo, base);
+    }
+
+    /**
+     * {base}/api/instance?domain_id={sid} 호출 →
+     * 응답 { "result": [ { "instanceId": "", "name": "" } ] } 에서
+     * name 에 repoName 이 포함된 instanceId 들을 콤마 문자열로 반환.
+     */
+    private String fetchInstanceIdsFromApi(RepoConfig repo, String base) {
+        try {
+            String apiUrl = base + "/api/instance?domain_id=" + repo.getJenniferSid();
+            log.debug("[URL차단모니터][JENNIFER] instance API 호출: GET {}", apiUrl);
+
+            HttpRequest.Builder builder = HttpRequest.newBuilder()
+                    .uri(URI.create(apiUrl))
+                    .timeout(Duration.ofSeconds(10))
+                    .GET();
+            if (repo.getJenniferBearerToken() != null && !repo.getJenniferBearerToken().isBlank()) {
+                builder.header("Authorization", "Bearer " + repo.getJenniferBearerToken());
+            }
+
+            HttpResponse<String> resp = httpClient.send(builder.build(), HttpResponse.BodyHandlers.ofString());
+            log.debug("[URL차단모니터][JENNIFER] instance API 응답: HTTP {} length={}",
+                    resp.statusCode(), resp.body().length());
+
+            if (resp.statusCode() != 200) {
+                log.warn("[URL차단모니터][JENNIFER] instance API 실패: HTTP {} — {}", resp.statusCode(), resp.body());
+                return "";
+            }
+
+            JsonNode root = om.readTree(resp.body());
+            JsonNode resultNode = root.path("result");
+            StringJoiner sj = new StringJoiner(",");
+            String repoName = repo.getRepoName();
+
+            if (resultNode.isArray()) {
+                for (JsonNode instance : resultNode) {
+                    String name       = text(instance, "name");
+                    String instanceId = text(instance, "instanceId");
+                    if (name != null && instanceId != null && name.contains(repoName)) {
+                        log.debug("[URL차단모니터][JENNIFER] instance 매칭: name={}, instanceId={}", name, instanceId);
+                        sj.add(instanceId);
+                    }
+                }
+            }
+
+            String matched = sj.toString();
+            if (matched.isBlank()) {
+                log.warn("[URL차단모니터][JENNIFER] instance API 조회 결과 매칭 없음: repoName={}", repoName);
+            } else {
+                log.info("[URL차단모니터][JENNIFER] instance API 조회 완료 — {} → instanceId={}", repoName, matched);
+            }
+            return matched;
+        } catch (Exception e) {
+            log.warn("[URL차단모니터][JENNIFER] instance API 조회 실패: {}", e.getMessage());
+            return "";
+        }
     }
 
     /** jennifer_oids JSON → "10021,10022" */
