@@ -335,7 +335,7 @@ public class CloneService {
                 if (inTargetBlock && trimmed.startsWith("rootPath:")) {
                     // 원래 인덴트 유지
                     String indent = line.substring(0, line.length() - line.stripLeading().length());
-                    result.add(indent + "rootPath: \"" + newPath + "\"");
+                    result.add(indent + "rootPath: " + toYamlSingleQuoted(newPath));
                     replaced = true;
                     continue;
                 }
@@ -353,6 +353,16 @@ public class CloneService {
         Path tmp = filePath.resolveSibling(filePath.getFileName() + ".tmp");
         Files.write(tmp, result, StandardCharsets.UTF_8);
         Files.move(tmp, filePath, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+    }
+
+    /**
+     * YAML single-quoted 스칼라로 감싼다.
+     * Windows 경로(예: `C:\dev\repos\foo`)는 double-quoted 로 저장하면 `\` 가 이스케이프 문자로
+     * 해석되어 로드 시 깨지므로 single-quoted 를 쓴다. single-quoted 내에서 `'` 는 `''` 로 이스케이프.
+     */
+    private static String toYamlSingleQuoted(String value) {
+        if (value == null) return "''";
+        return "'" + value.replace("'", "''") + "'";
     }
 
     public List<RepoCloneStatus> getJobStatus(String jobId) {
