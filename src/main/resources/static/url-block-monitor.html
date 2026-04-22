@@ -389,6 +389,18 @@
 
   function onRepoChange(){
     selectedRepo = document.getElementById('fRepo').value;
+    // 레포 선택 즉시 헤더·요약 레이블 미리 갱신
+    detectedSource = selectedRepoSource(); // 전체 선택 시 null → 와탭 기본 헤더
+    renderTableHeader();
+    updateSummaryLabels();
+    // 기존 조회 데이터가 있으면 초기화 (다른 레포 데이터가 남지 않도록)
+    if (allRows.length) {
+      allRows = [];
+      currentPage = 0;
+      renderSummary();
+      renderTable();
+      document.getElementById('excelBtn').disabled = true;
+    }
   }
 
   /** 선택된 레포의 소스 타입 반환. 미선택(전체)이면 null */
