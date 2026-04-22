@@ -183,6 +183,9 @@
     [data-theme="dark"] [data-enabled="false"] { background:#1e293b !important; border-color:#334155 !important; }
     [data-theme="dark"] [data-enabled="false"] span[style*="border-radius:50%"] { background:#475569 !important; }
   </style>
+  <meta name="nav-segment" content="settings">
+  <meta name="nav-page" content="settings-home">
+  <link rel="stylesheet" href="/common/nav.css">
   <script src="/js/dialog.js"></script>
   <script src="/js/darkmode.js"></script>
 </head>
@@ -240,25 +243,7 @@ function updateAdminBadge(valid) {
   }
 }
 </script>
-<div class="header">
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-    <polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>
-  </svg>
-  <a href="/" style="text-decoration:none;"><h1>URL Viewer</h1></a>
-  <span class="header-sub">설정 관리</span>
-  <div class="header-right">
-    <button class="dark-toggle" onclick="toggleDarkMode()">🌙 다크모드</button>
-    <span id="adminBadge" style="display:none;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:700;background:#dcfce7;color:#166534;border:1px solid #86efac;margin-right:8px;cursor:default;">관리자 인증됨</span>
-    <a href="/"             class="nav-link">📊 대시보드</a>
-    <a href="/viewer.html"  class="nav-link">📋 URL분석현황</a>
-    <a href="/call-stats.html" class="nav-link">📈 URL호출현황</a>
-    <a href="/url-block-monitor.html" class="nav-link">🚧 차단 모니터링</a>
-    <a href="/review.html" class="nav-link">📝 현업 검토</a>
-    <a href="/workflow.html" class="nav-link">🗺️ 업무 흐름</a>
-
-    <a href="/settings.html"class="nav-link nav-active">⚙️ 설정</a>
-  </div>
-</div>
+<div id="nav-container"></div>
 
 <div class="main" style="max-width:1200px;margin:0 auto;padding:20px 24px;">
   <!-- 사이드 탭 레이아웃 -->
@@ -2974,5 +2959,9 @@ function updateAdminBadge(valid) {
   }
 
 </script>
+
+<!-- 공통 네비게이션 (대영역·하위메뉴·관리자 인증 인디케이터) -->
+<script src="/common/auth.js"></script>
+<script src="/common/nav.js"></script>
 </body>
 </html>

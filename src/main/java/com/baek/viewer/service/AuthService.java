@@ -45,6 +45,15 @@ public class AuthService {
         return true;
     }
 
+    /** 토큰 남은 수명(ms). 유효하지 않으면 0. */
+    public long remainingMs(String token) {
+        if (token == null || token.isBlank()) return 0L;
+        Long issued = tokens.get(token);
+        if (issued == null) return 0L;
+        long left = TOKEN_TTL_MS - (System.currentTimeMillis() - issued);
+        return Math.max(0L, left);
+    }
+
     /** 토큰 폐기 (로그아웃) */
     public void revoke(String token) {
         if (token != null) {

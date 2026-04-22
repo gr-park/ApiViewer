@@ -203,28 +203,15 @@
     [data-theme="dark"] [style*="color:#991b1b"] { color:#f87171 !important; }
     [data-theme="dark"] [style*="color:#7c2d12"] { color:#fb923c !important; }
   </style>
+  <meta name="nav-segment" content="url-viewer">
+  <meta name="nav-page" content="review">
+  <link rel="stylesheet" href="/common/nav.css">
   <script src="/exceljs.min.js"></script>
   <script src="/js/dialog.js"></script>
   <script src="/js/darkmode.js"></script>
 </head>
 <body>
-<div class="header">
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
-  <a href="/" style="text-decoration:none;"><h1>URL Viewer</h1></a>
-  <span class="header-sub">현업 검토</span>
-  <div class="header-right">
-    <button class="dark-toggle" onclick="toggleDarkMode()">🌙 다크모드</button>
-    <a href="/" class="nav-link">📊 대시보드</a>
-    <a href="/viewer.html" class="nav-link">📋 URL분석현황</a>
-    <a href="/call-stats.html" class="nav-link">📈 URL호출현황</a>
-    <a href="/url-block-monitor.html" class="nav-link">🚧 차단 모니터링</a>
-    <a href="/review.html" class="nav-link nav-active">📝 현업 검토</a>
-    <a href="/workflow.html" class="nav-link">🗺️ 업무 흐름</a>
-
-    <a href="/settings.html" class="nav-link" id="navSettings" style="display:none;">⚙️ 설정</a>
-    <button class="nav-link" id="adminBtn" onclick="toggleAdmin()" style="background:none;cursor:pointer;">🔑 관리자</button>
-  </div>
-</div>
+<div id="nav-container"></div>
 <div class="main">
   <!-- 가이드 (접기/펼치기) -->
   <div class="guide-box" style="cursor:pointer;" onclick="this.querySelector('.guide-body').style.display=this.querySelector('.guide-body').style.display==='none'?'block':'none';">
@@ -730,8 +717,8 @@
   function applyAdminUI(){
     const admin=isAdmin();
     const _ne=document.getElementById('navExtract'); if(_ne) _ne.style.display=admin?'':'none';
-    document.getElementById('navSettings').style.display=admin?'':'none';
-    document.getElementById('adminBtn').textContent=admin?'🔓 관리자 해제':'🔑 관리자';
+    const _ns=document.getElementById('navSettings'); if(_ns) _ns.style.display=admin?'':'none';
+    const _ab=document.getElementById('adminBtn'); if(_ab) _ab.textContent=admin?'🔓 관리자 해제':'🔑 관리자';
     if(typeof renderRows==='function'&&filteredApis.length) renderRows(filteredApis);
   }
   async function toggleAdmin(){
@@ -925,5 +912,8 @@
     <div id="chartBody" class="chart-body"></div>
   </div>
 </div>
+
+<script src="/common/auth.js"></script>
+<script src="/common/nav.js"></script>
 </body>
 </html>

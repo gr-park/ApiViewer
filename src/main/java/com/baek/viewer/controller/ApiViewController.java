@@ -65,15 +65,16 @@ public class ApiViewController {
         this.authService = authService;
     }
 
-    /** 토큰 유효성 확인 (페이지 로드 시 자동 검증용) */
+    /** 토큰 유효성 확인 (페이지 로드 시 자동 검증용) + 남은 수명 반환 */
     @GetMapping("/auth/check")
     public ResponseEntity<?> checkAuth(@RequestHeader(value = "X-Admin-Token", required = false) String token) {
         boolean valid = token != null && authService.isValid(token);
-        return ResponseEntity.ok(Map.of("valid", valid));
+        long remainingMs = valid ? authService.remainingMs(token) : 0L;
+        return ResponseEntity.ok(Map.of("valid", valid, "remainingMs", remainingMs));
     }
 
     /** 비밀번호 확인 → 토큰 발급 + 쿠키 설정 */
-    @PostMapping("/verify-password")
+    @PostMapping({"/verify-password", "/auth/verify"})
     public ResponseEntity<?> verifyPassword(@RequestBody Map<String, String> body,
                                             jakarta.servlet.http.HttpServletResponse response) {
         String input = body.get("password");
@@ -88,10 +89,22 @@ public class ApiViewController {
             // Set-Cookie 직접 작성: SameSite=Lax 명시 (크로스사이트 안전 + 도메인/ngrok 호환)
             String cookieValue = String.format("adminToken=%s; Path=/; SameSite=Lax", token);
             response.addHeader("Set-Cookie", cookieValue);
-            return ResponseEntity.ok(Map.of("valid", true, "token", token));
+            long remainingMs = authService.remainingMs(token);
+            return ResponseEntity.ok(Map.of("valid", true, "token", token, "remainingMs", remainingMs));
         }
         log.warn("[인증 실패] 비밀번호 불일치");
         return ResponseEntity.ok(Map.of("valid", false));
+    }
+
+    /** 로그아웃 — 서버 토큰 폐기 + 쿠키 제거 */
+    @PostMapping("/auth/logout")
+    public ResponseEntity<?> logout(@RequestHeader(value = "X-Admin-Token", required = false) String token,
+                                     jakarta.servlet.http.HttpServletResponse response) {
+        authService.revoke(token);
+        // 쿠키 만료 — Max-Age=0
+        response.addHeader("Set-Cookie", "adminToken=; Path=/; Max-Age=0; SameSite=Lax");
+        log.info("[로그아웃] 토큰 폐기 완료");
+        return ResponseEntity.ok(Map.of("ok", true));
     }
 
     private String getClientIp(HttpServletRequest req) {

@@ -1,0 +1,166 @@
+/* ═══════════════════════════════════════════════════════════════
+ * URL Viewer — 공통 네비게이션 (선언적 렌더링)
+ *
+ * 사용법: 페이지 <head> 에 아래 2개 meta 태그 추가, <body> 상단에
+ *   <div id="nav-container"></div> 배치.
+ *     <meta name="nav-segment" content="url-viewer">
+ *     <meta name="nav-page"    content="viewer">
+ *   (메타 없으면 현재 URL 기준 자동 매칭)
+ *
+ * 페이지 추가/변경: 아래 SEGMENTS 배열만 수정.
+ * adminOnly: true 항목은 AuthState 구독해 자동 숨김/표시.
+ * ═══════════════════════════════════════════════════════════════ */
+(function () {
+  const SEGMENTS = [
+    {
+      id: 'url-viewer',
+      label: 'URL Viewer',
+      icon: '🔗',
+      home: '/url-viewer/',
+      pages: [
+        { id: 'dashboard',     label: '📊 대시보드',        href: '/url-viewer/' },
+        { id: 'viewer',        label: '📋 URL분석현황',     href: '/url-viewer/viewer.html' },
+        { id: 'call-stats',    label: '📈 URL호출현황',     href: '/url-viewer/call-stats.html' },
+        { id: 'block-monitor', label: '🚧 차단 모니터링',   href: '/url-viewer/url-block-monitor.html' },
+        { id: 'review',        label: '📝 현업 검토',        href: '/url-viewer/review.html' },
+        { id: 'extract',       label: '🔍 URL 분석',         href: '/url-viewer/extract.html', adminOnly: true },
+        { id: 'workflow',      label: '🗺️ 업무 흐름',       href: '/url-viewer/workflow.html' }
+      ]
+    },
+    {
+      id: 'encrypt-viewer',
+      label: '암복호화 현황',
+      icon: '🔐',
+      home: '/encrypt-viewer/',
+      pages: [
+        { id: 'placeholder',   label: '(준비 중)',           href: '/encrypt-viewer/' }
+      ]
+    },
+    {
+      id: 'settings',
+      label: '설정',
+      icon: '⚙️',
+      home: '/settings/',
+      adminOnly: true,
+      pages: [
+        { id: 'settings-home', label: '⚙️ 설정 관리',        href: '/settings/' }
+      ]
+    }
+  ];
+
+  // ─── 현재 페이지 식별 ────────────────────────────────────
+  function meta(name) {
+    const el = document.querySelector(`meta[name="${name}"]`);
+    return el ? el.getAttribute('content') : null;
+  }
+  function resolveCurrent() {
+    let segId  = meta('nav-segment');
+    let pageId = meta('nav-page');
+    if (!segId) {
+      // 경로로 추론
+      const p = location.pathname;
+      if (p.startsWith('/url-viewer'))      segId = 'url-viewer';
+      else if (p.startsWith('/encrypt-viewer')) segId = 'encrypt-viewer';
+      else if (p.startsWith('/settings'))   segId = 'settings';
+      else segId = 'url-viewer';
+    }
+    return { segId, pageId };
+  }
+
+  function esc(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+  }
+
+  // ─── HTML 렌더 ──────────────────────────────────────────
+  function render() {
+    const container = document.getElementById('nav-container');
+    if (!container) return;
+
+    const { segId, pageId } = resolveCurrent();
+    const activeSeg = SEGMENTS.find(s => s.id === segId) || SEGMENTS[0];
+    const activePage = activeSeg.pages.find(p => p.id === pageId);
+    const brandSub = activePage ? activePage.label.replace(/^\S+\s*/, '') : activeSeg.label;
+
+    // Tier 1: 로고 + 유틸 ─────────────────────────────────────
+    const top = `
+      <div class="app-nav-top">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>
+        </svg>
+        <a class="brand" href="/url-viewer/"><h1>URL Viewer</h1></a>
+        <span class="brand-sub">${esc(brandSub)}</span>
+        <div class="utils">
+          <button class="dark-toggle" onclick="toggleDarkMode && toggleDarkMode()">🌙 다크모드</button>
+          <span id="nav-admin-slot"></span>
+        </div>
+      </div>`;
+
+    // Tier 2-A: 대영역 세그먼트 ──────────────────────────────
+    const segs = SEGMENTS.map(s => `
+      <a class="nav-segment${s.id === activeSeg.id ? ' active' : ''}${s.adminOnly ? ' nav-admin-hidden' : ''}"
+         href="${esc(s.home)}"${s.adminOnly ? ' data-admin-only' : ''}>
+        <span>${esc(s.icon)}</span><span>${esc(s.label)}</span>
+      </a>`).join('');
+
+    // Tier 2-B: 하위 페이지 ──────────────────────────────────
+    const pages = activeSeg.pages.map(p => `
+      <a class="nav-page-link${p.id === pageId ? ' active' : ''}"
+         href="${esc(p.href)}"${p.adminOnly ? ' data-admin-only' : ''}>
+        ${esc(p.label)}
+      </a>`).join('');
+
+    container.className = 'app-nav';
+    container.innerHTML = `
+      ${top}
+      <div class="app-nav-segments">${segs}</div>
+      <div class="app-nav-pages">${pages}</div>
+    `;
+
+    renderAdminSlot();
+  }
+
+  // ─── 관리자 인디케이터/버튼 렌더 ─────────────────────────
+  function renderAdminSlot() {
+    const slot = document.getElementById('nav-admin-slot');
+    if (!slot) return;
+    const A = window.AuthState;
+    if (A && A.loggedIn) {
+      slot.innerHTML = `
+        <span class="admin-indicator" title="관리자 세션">👤 관리자 <small>· 남은 ${esc(A.fmtRemaining())}</small></span>
+        <button class="nav-btn" onclick="AuthState.logout()">로그아웃</button>
+      `;
+    } else {
+      slot.innerHTML = `
+        <button class="nav-btn nav-btn-primary" onclick="adminLogin && adminLogin()">🔑 관리자 로그인</button>
+      `;
+    }
+  }
+
+  // ─── data-admin-only 가시성 관리 ─────────────────────────
+  function applyAdminVisibility() {
+    const loggedIn = window.AuthState && window.AuthState.loggedIn;
+    document.querySelectorAll('[data-admin-only]').forEach(el => {
+      el.style.display = loggedIn ? '' : 'none';
+    });
+  }
+
+  // ─── 부팅 ───────────────────────────────────────────────
+  function boot() {
+    render();
+    applyAdminVisibility();
+    window.addEventListener('auth:change', () => {
+      renderAdminSlot();
+      applyAdminVisibility();
+    });
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', boot);
+  } else {
+    boot();
+  }
+
+  // 전역 노출 (필요 시 페이지가 재렌더 호출 가능)
+  window.AppNav = { SEGMENTS, render, renderAdminSlot };
+})();

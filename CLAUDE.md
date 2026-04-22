@@ -81,17 +81,25 @@ Spring Boot 기반 웹 애플리케이션. Controller 소스를 파싱하여 URL
 
 # 접속 URL
 
+네비게이션은 **3개 대영역** (URLViewer / EncryptViewer / 설정) 2단 네비. 공통 네비는 `static/common/nav.js` + `static/common/nav.css` 가 렌더링하며 각 페이지는 `<meta name="nav-segment">`, `<meta name="nav-page">` + `<div id="nav-container">` 만 둔다.
+
 | URL | 설명 | 접근 |
 |-----|------|------|
-| `/` | 대시보드 (5가지 상태 통계) | 공개 |
-| `/extract.html` | URL 분석 | 관리자 전용 |
-| `/viewer.html` | 이력 조회 | 공개 |
-| `/review.html` | 현업 검토 (차단대상만) | 공개 |
-| `/call-stats.html` | URL 호출현황 차트 | 공개 |
-| `/url-block-monitor.html` | URL차단 모니터링 (와탭 /v2/txsearch 실시간 조회 — 봇 제외) | 공개 |
-| `/workflow.html` | 업무 플로우 (스윔레인 다이어그램) | 공개 |
-| `/settings.html` | 설정·로그·배치·데이터관리 | 관리자 전용 |
+| `/` | `/url-viewer/` 로 리다이렉트 | — |
+| `/url-viewer/` | 대시보드 (5가지 상태 통계) | 공개 |
+| `/url-viewer/viewer.html` | URL 분석 현황 조회 | 공개 |
+| `/url-viewer/call-stats.html` | URL 호출현황 차트 | 공개 |
+| `/url-viewer/url-block-monitor.html` | URL차단 모니터링 (와탭 실시간 — 봇 제외) | 공개 |
+| `/url-viewer/review.html` | 현업 검토 (차단대상만) | 공개 |
+| `/url-viewer/extract.html` | URL 분석 | 관리자 전용 |
+| `/url-viewer/workflow.html` | 업무 플로우 (스윔레인 다이어그램) | 공개 |
+| `/encrypt-viewer/` | 암복호화 현황 (준비 중 자리표시자) | 공개 |
+| `/settings/` | 설정·로그·배치·데이터관리 | 관리자 전용 |
 | `/h2-console` | H2 DB 콘솔 (sa / 빈 패스워드) | 관리자 전용 |
+
+**구 경로 호환**: `/viewer.html`·`/extract.html`·`/settings.html` 등 이전 경로는 `WebConfig.addViewControllers` 가 신 경로로 자동 리다이렉트.
+
+**관리자 인증**: `static/common/auth.js` 의 `AuthState` 가 60초 주기 + 포커스 시 `/api/auth/check` 로 능동 검증, 변화 시 `auth:change` CustomEvent 로 전역 전파. 공통 네비는 `data-admin-only` 속성이 붙은 요소를 자동 토글하고, 로그인/로그아웃 인디케이터를 1단에 노출한다.
 
 ---
 

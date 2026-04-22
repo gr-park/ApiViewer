@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>URL Viewer — 암복호화 현황</title>
+<meta name="nav-segment" content="encrypt-viewer">
+<meta name="nav-page" content="placeholder">
+<link rel="stylesheet" href="/css/common.css">
+<link rel="stylesheet" href="/common/nav.css">
+<script src="/js/darkmode.js"></script>
+<style>
+  .empty-state {
+    max-width: 720px;
+    margin: 60px auto;
+    padding: 40px 48px;
+    background: var(--card);
+    border: 1px dashed var(--border-dark);
+    border-radius: var(--radius-xl);
+    text-align: center;
+  }
+  .empty-state .icon { font-size: 48px; margin-bottom: 12px; }
+  .empty-state h2 {
+    font-size: 20px;
+    color: var(--text);
+    margin-bottom: 10px;
+  }
+  .empty-state p {
+    color: var(--text-muted);
+    line-height: 1.7;
+    font-size: var(--fs-md);
+  }
+  .empty-state .note {
+    margin-top: 18px;
+    padding: 12px 16px;
+    background: var(--primary-light);
+    border: 1px solid var(--primary-border);
+    border-radius: var(--radius-md);
+    color: var(--primary-dark);
+    font-size: var(--fs-base);
+    text-align: left;
+    line-height: 1.6;
+  }
+</style>
+</head>
+<body>
+<div id="nav-container"></div>
+
+<div class="main" style="padding: 0 24px;">
+  <div class="empty-state">
+    <div class="icon">🔐</div>
+    <h2>암복호화 현황조사 — 준비 중</h2>
+    <p>
+      시스템 내 암복호화 모듈 사용 현황을 조사·집계하는 기능이 이 영역에 추가될 예정입니다.<br>
+      본 메뉴는 구조만 마련된 자리 표시자이며, 실제 기능은 별도 계획에 따라 개발됩니다.
+    </p>
+    <div class="note">
+      ℹ️ 이 페이지는 상단 네비게이션의 <b>3개 대영역(URL Viewer · 암복호화 현황 · 설정)</b> 구조를 검증하기 위한 플레이스홀더입니다.
+    </div>
+  </div>
+</div>
+
+<script src="/js/common.js"></script>
+<script src="/common/auth.js"></script>
+<script src="/common/nav.js"></script>
+</body>
+</html>

@@ -215,30 +215,15 @@
     [data-theme="dark"] [style*="color:#991b1b"] { color:#f87171 !important; }
     [data-theme="dark"] [style*="color:#7c2d12"] { color:#fb923c !important; }
   </style>
+  <meta name="nav-segment" content="url-viewer">
+  <meta name="nav-page" content="dashboard">
+  <link rel="stylesheet" href="/common/nav.css">
   <script src="/js/dialog.js"></script>
   <script src="/js/darkmode.js"></script>
 </head>
 <body>
 
-<div class="header">
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-    <polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>
-  </svg>
-  <a href="/" style="text-decoration:none;"><h1>URL Viewer</h1></a>
-  <span class="header-sub">대시보드</span>
-  <div class="header-right">
-    <button class="dark-toggle" onclick="toggleDarkMode()">🌙 다크모드</button>
-    <a href="/"             class="nav-link nav-active">📊 대시보드</a>
-    <a href="/viewer.html"  class="nav-link">📋 URL분석현황</a>
-    <a href="/call-stats.html" class="nav-link">📈 URL호출현황</a>
-    <a href="/url-block-monitor.html" class="nav-link">🚧 차단 모니터링</a>
-    <a href="/review.html" class="nav-link">📝 현업 검토</a>
-    <a href="/workflow.html" class="nav-link">🗺️ 업무 흐름</a>
-
-    <a href="/settings.html" class="nav-link" id="navSettings" style="display:none;">⚙️ 설정</a>
-    <button class="nav-link" id="adminBtn" onclick="toggleAdmin()" style="background:none;cursor:pointer;">🔑 관리자</button>
-  </div>
-</div>
+<div id="nav-container"></div>
 
 <div class="main">
 
@@ -787,8 +772,8 @@
   function applyAdminUI() {
     const admin = isAdmin();
     const navExt = document.getElementById('navExtract'); if (navExt) navExt.style.display = admin ? '' : 'none';
-    document.getElementById('navSettings').style.display = admin ? '' : 'none';
-    document.getElementById('adminBtn').textContent = admin ? '🔓 관리자 해제' : '🔑 관리자';
+    const _ns = document.getElementById('navSettings'); if (_ns) _ns.style.display = admin ? '' : 'none';
+    const _ab = document.getElementById('adminBtn'); if (_ab) _ab.textContent = admin ? '🔓 관리자 해제' : '🔑 관리자';
   }
   async function toggleAdmin() {
     if (isAdmin()) { sessionStorage.removeItem('isAdmin'); sessionStorage.removeItem('adminToken'); applyAdminUI(); showToast('관리자 모드 해제','info'); return; }
@@ -815,5 +800,8 @@
     history.replaceState({}, '', '/');
   }
 </script>
+
+<script src="/common/auth.js"></script>
+<script src="/common/nav.js"></script>
 </body>
 </html>
