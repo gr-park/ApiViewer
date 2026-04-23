@@ -531,6 +531,7 @@ function updateAdminBadge(valid) {
       </div>
       <div class="field">빠른 선택
         <div style="display:flex;gap:6px;" id="bhRangeBtns">
+          <button class="btn btn-ghost" onclick="setBhRange(0,this)">당일</button>
           <button class="btn btn-ghost active" onclick="setBhRange(1,this)">전일</button>
           <button class="btn btn-ghost" onclick="setBhRange(3,this)">3일</button>
           <button class="btn btn-ghost" onclick="setBhRange(7,this)">7일</button>
@@ -2264,6 +2265,12 @@ function updateAdminBadge(valid) {
       btn.classList.add('active');
     }
     const today = new Date();
+    if (days === 0) {
+      const t = today.toLocaleDateString('sv-SE');
+      document.getElementById('bhFrom').value = t;
+      document.getElementById('bhTo').value   = t;
+      return;
+    }
     const yesterday = new Date(today); yesterday.setDate(today.getDate() - 1);
     const from = new Date(yesterday); from.setDate(yesterday.getDate() - (days - 1));
     document.getElementById('bhFrom').value = from.toLocaleDateString('sv-SE');
