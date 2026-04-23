@@ -142,11 +142,14 @@ public class ApiExtractorService {
             if (doPull) {
                 try {
                     currentFile = "Git 동기화 실행 중...";
-                    addLog("INFO", "Git 강제 동기화 (fetch + reset --hard + clean) 실행 중...");
+                    addLog("INFO", "Git 강제 동기화 (fetch + checkout -B + clean) 실행 중...");
                     String syncResult = hardSyncToOrigin(root.toFile(), gitBin, gitBranch);
                     addLog("OK", "Git 동기화 완료 — " + syncResult);
                 } catch (Exception syncEx) {
-                    addLog("WARN", "Git 동기화 실패 (분석은 계속): " + syncEx.getMessage());
+                    String repoLabel = (repoName != null && !repoName.isBlank()) ? repoName : rootPath;
+                    addLog("WARN", "Git 동기화 실패 [" + repoLabel + "] (기존 파일로 분석 계속) — "
+                            + syncEx.getMessage()
+                            + " / 해결: repo_config.git_branch 및 원격 브랜치 존재 여부 확인");
                 }
             }
 
@@ -790,13 +793,14 @@ public class ApiExtractorService {
 
     /**
      * 대상 레포 working tree 를 origin/{branch} 기준으로 강제 정렬한다.
-     * 로컬 변경·divergent history·detached HEAD 어느 상태에서도 최신 원격 커밋으로 맞춘다.
+     * 로컬 변경·divergent history·detached HEAD·단일 브랜치 클론 어느 상태에서도 최신 원격 커밋으로 맞춘다.
      *
      * 순서:
-     *   1) git fetch origin --prune
-     *   2) target branch 결정 (인자 비면 현재 HEAD)
-     *   3) git reset --hard origin/{branch}
-     *   4) git clean -fd (.gitignore 대상은 보존)
+     *   1) target branch resolve (인자 비면 원격 기본 브랜치 자동 감지)
+     *   2) 명시 refspec 으로 git fetch origin (--single-branch 클론도 해당 브랜치 수신)
+     *   3) origin/{branch} 존재 검증 — 없으면 명확한 예외
+     *   4) before HEAD 기록 → git checkout -B {branch} origin/{branch} → git clean -fd
+     *   5) after HEAD 비교 — 변경 없음이면 리턴 문자열에 표기
      *
      * 서버의 레포 디렉토리는 읽기 전용 분석 미러이므로 로컬 변경은 폐기가 안전하다.
      * 분석 전용이 아닌 곳에서는 호출하지 말 것.
@@ -805,39 +809,105 @@ public class ApiExtractorService {
         StringBuilder out = new StringBuilder();
         log.debug("[hardSync] 시작 — repo={}, branch={}", repoDir.getAbsolutePath(), branch);
 
-        log.debug("[hardSync] Step1. git fetch origin --prune");
-        String fetchOut = runGitCommand(repoDir, gitBin, "fetch", "origin", "--prune");
-        log.debug("[hardSync] fetch 결과: {}", fetchOut);
-        out.append("fetch: ").append(fetchOut).append(" / ");
-
+        // Step1. 대상 브랜치 resolve
         String targetBranch;
         if (branch != null && !branch.isBlank()) {
             targetBranch = branch.trim();
-            log.debug("[hardSync] Step2. 대상 브랜치 = 설정값 '{}'", targetBranch);
+            log.debug("[hardSync] Step1. 대상 브랜치 = 설정값 '{}'", targetBranch);
         } else {
-            String headRef = runGitCommand(repoDir, gitBin, "rev-parse", "--abbrev-ref", "HEAD").trim();
-            targetBranch = headRef.isEmpty() || "HEAD".equals(headRef) ? "HEAD" : headRef;
-            log.debug("[hardSync] Step2. 대상 브랜치 = 현재 HEAD '{}' (설정 미지정)", targetBranch);
+            targetBranch = resolveRemoteDefaultBranch(repoDir, gitBin);
+            log.debug("[hardSync] Step1. 대상 브랜치 = 원격 기본 브랜치 '{}' (설정 미지정)", targetBranch);
+        }
+        out.append("branch=").append(targetBranch).append(" / ");
+
+        // Step2. 명시 refspec 으로 fetch — --single-branch 클론도 커버
+        String refspec = "+refs/heads/" + targetBranch + ":refs/remotes/origin/" + targetBranch;
+        log.debug("[hardSync] Step2. git fetch origin --prune {}", refspec);
+        String fetchOut;
+        try {
+            fetchOut = runGitCommand(repoDir, gitBin, "fetch", "origin", "--prune", refspec);
+        } catch (Exception fetchEx) {
+            throw new RuntimeException("원격 브랜치 fetch 실패: origin/" + targetBranch
+                    + ". repo_config.git_branch 확인 필요. 원인: " + fetchEx.getMessage());
+        }
+        log.debug("[hardSync] fetch 결과: {}", fetchOut);
+
+        // Step3. origin/{branch} 존재 검증
+        try {
+            runGitCommand(repoDir, gitBin, "rev-parse", "--verify", "--quiet", "refs/remotes/origin/" + targetBranch);
+        } catch (Exception verifyEx) {
+            throw new RuntimeException("원격에 브랜치 없음: origin/" + targetBranch
+                    + ". repo_config.git_branch=" + (branch == null ? "(empty)" : branch) + " 확인 필요");
         }
 
-        log.debug("[hardSync] Step3. git reset --hard origin/{}", targetBranch);
-        String resetOut = runGitCommand(repoDir, gitBin, "reset", "--hard", "origin/" + targetBranch);
-        log.debug("[hardSync] reset 결과: {}", resetOut);
-        out.append("reset: ").append(resetOut).append(" / ");
+        // Step4. before HEAD → checkout -B → clean
+        String beforeSha;
+        try {
+            beforeSha = runGitCommand(repoDir, gitBin, "rev-parse", "--short", "HEAD").trim();
+        } catch (Exception e) {
+            beforeSha = "(detached/empty)";
+        }
+
+        log.debug("[hardSync] Step4. git checkout -B {} origin/{}", targetBranch, targetBranch);
+        String checkoutOut = runGitCommand(repoDir, gitBin, "checkout", "-B", targetBranch, "origin/" + targetBranch);
+        log.debug("[hardSync] checkout 결과: {}", checkoutOut);
 
         log.debug("[hardSync] Step4. git clean -fd");
         String cleanOut = runGitCommand(repoDir, gitBin, "clean", "-fd");
         log.debug("[hardSync] clean 결과: {}", cleanOut);
-        out.append("clean: ").append(cleanOut.isEmpty() ? "(no untracked)" : cleanOut);
 
-        // HEAD 해시 기록 (INFO 로그용)
+        // Step5. after HEAD 비교
+        String afterSha;
         try {
-            String head = runGitCommand(repoDir, gitBin, "rev-parse", "--short", "HEAD").trim();
-            log.info("[hardSync] 완료 — repo={} branch={} HEAD={}", repoDir.getName(), targetBranch, head);
-            out.append(" / HEAD=").append(head);
-        } catch (Exception ignore) {}
+            afterSha = runGitCommand(repoDir, gitBin, "rev-parse", "--short", "HEAD").trim();
+        } catch (Exception e) {
+            afterSha = "(unknown)";
+        }
+        boolean unchanged = beforeSha.equals(afterSha);
+        out.append("HEAD: ").append(beforeSha).append(" → ").append(afterSha);
+        if (unchanged) out.append(" (변경 없음)");
+        out.append(" / clean: ").append(cleanOut.isEmpty() ? "(no untracked)" : cleanOut);
+        out.append(" / fetch: ").append(fetchOut.isEmpty() ? "(up-to-date)" : fetchOut);
+
+        log.info("[hardSync] 완료 — repo={} branch={} HEAD: {} → {}{}",
+                repoDir.getName(), targetBranch, beforeSha, afterSha, unchanged ? " (변경 없음)" : "");
 
         return out.toString();
+    }
+
+    /**
+     * 원격(origin)의 기본 브랜치 이름을 감지한다.
+     * 1차: git ls-remote --symref origin HEAD 출력의 refs/heads/{name} 파싱
+     * 2차: git symbolic-ref --short refs/remotes/origin/HEAD 의 마지막 segment
+     * 둘 다 실패하면 예외 throw.
+     */
+    private String resolveRemoteDefaultBranch(java.io.File repoDir, String gitBin) throws Exception {
+        try {
+            String out = runGitCommand(repoDir, gitBin, "ls-remote", "--symref", "origin", "HEAD");
+            // "ref: refs/heads/main\tHEAD ..." 형태에서 main 추출
+            java.util.regex.Matcher m = java.util.regex.Pattern
+                    .compile("ref:\\s*refs/heads/(\\S+)\\s+HEAD").matcher(out);
+            if (m.find()) {
+                String name = m.group(1);
+                log.debug("[hardSync] 원격 기본 브랜치 감지(ls-remote): {}", name);
+                return name;
+            }
+        } catch (Exception e) {
+            log.debug("[hardSync] ls-remote --symref 실패, symbolic-ref 폴백: {}", e.getMessage());
+        }
+        try {
+            String symRef = runGitCommand(repoDir, gitBin, "symbolic-ref", "--short", "refs/remotes/origin/HEAD").trim();
+            // "origin/main" → "main"
+            int slash = symRef.indexOf('/');
+            String name = (slash >= 0) ? symRef.substring(slash + 1) : symRef;
+            if (!name.isEmpty()) {
+                log.debug("[hardSync] 원격 기본 브랜치 감지(symbolic-ref): {}", name);
+                return name;
+            }
+        } catch (Exception e) {
+            log.debug("[hardSync] symbolic-ref 폴백 실패: {}", e.getMessage());
+        }
+        throw new RuntimeException("원격 기본 브랜치를 확인할 수 없음. repo_config.git_branch 지정 필요");
     }
 
     /** Git 명령 실행 헬퍼 — 출력 문자열 반환, 실패 시 예외 */
