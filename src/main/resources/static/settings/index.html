@@ -511,6 +511,16 @@ function updateAdminBadge(valid) {
         <button class="btn btn-ghost" style="height:28px;padding:4px 14px;font-size:12px;" onclick="loadBatchHistory()">🔄 새로고침</button>
       </div>
     </div>
+    <div style="margin-bottom:12px;">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+        <span style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;">배치 선택 <span style="color:#dc2626;">*</span></span>
+        <button type="button" class="btn btn-ghost" style="font-size:11px;padding:3px 10px;height:auto;" onclick="selectAllJobTypes(true)">전체선택</button>
+        <button type="button" class="btn btn-ghost" style="font-size:11px;padding:3px 10px;height:auto;" onclick="selectAllJobTypes(false)">전체해제</button>
+      </div>
+      <div id="bhJobTypes" style="display:flex;flex-wrap:wrap;gap:6px;">
+        <span style="font-size:11px;color:var(--text-muted);">로딩 중…</span>
+      </div>
+    </div>
     <div style="display:flex;gap:14px;align-items:flex-end;flex-wrap:wrap;margin-bottom:12px;">
       <div class="field">기간
         <div style="display:flex;gap:6px;align-items:center;">
@@ -524,15 +534,6 @@ function updateAdminBadge(valid) {
           <button class="btn btn-ghost active" onclick="setBhRange(1,this)">전일</button>
           <button class="btn btn-ghost" onclick="setBhRange(3,this)">3일</button>
           <button class="btn btn-ghost" onclick="setBhRange(7,this)">7일</button>
-        </div>
-      </div>
-      <div class="field" style="min-width:280px;flex:1;">배치 선택 (필수)
-        <div id="bhJobTypes" style="display:flex;flex-wrap:wrap;gap:6px;min-height:28px;border:1px solid var(--border);border-radius:6px;padding:6px;background:var(--card-bg,#fff);">
-          <span style="font-size:11px;color:var(--text-muted);">로딩 중…</span>
-        </div>
-        <div style="display:flex;gap:6px;margin-top:4px;">
-          <button type="button" class="btn btn-ghost" style="font-size:11px;padding:3px 10px;height:auto;" onclick="selectAllJobTypes(true)">전체선택</button>
-          <button type="button" class="btn btn-ghost" style="font-size:11px;padding:3px 10px;height:auto;" onclick="selectAllJobTypes(false)">전체해제</button>
         </div>
       </div>
       <button class="btn btn-blue" style="height:34px;" onclick="loadBatchHistory()">🔍 조회</button>
@@ -2279,24 +2280,43 @@ function updateAdminBadge(valid) {
         box.innerHTML = '<span style="font-size:11px;color:var(--text-muted);">등록된 배치가 없습니다.</span>';
         return;
       }
-      box.innerHTML = list.map(s => `
-        <label style="display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border:1px solid var(--border);border-radius:12px;font-size:11px;cursor:pointer;background:var(--card-bg,#fff);">
-          <input type="checkbox" class="bh-jt" value="${s.jobType}" checked>
-          <span>${s.jobType}</span>
-          <span style="color:var(--text-muted);font-size:10px;">${s.description ? ' · ' + s.description : ''}</span>
-        </label>`).join('');
+      box.innerHTML = list.map(s => {
+        const desc = s.description ? `<span class="bh-jt-desc" style="opacity:.75;font-weight:400;">· ${esc(s.description)}</span>` : '';
+        return `<button type="button" class="bh-jt on" data-job="${esc(s.jobType)}" onclick="toggleJobType(this)"
+          style="display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border:1px solid #7c3aed;border-radius:999px;font-size:11px;font-weight:600;cursor:pointer;background:#7c3aed;color:#fff;transition:background .15s,border-color .15s,color .15s;">
+          <span>${esc(s.jobType)}</span>${desc}
+        </button>`;
+      }).join('');
     } catch (e) {
       document.getElementById('bhJobTypes').innerHTML =
         '<span style="font-size:11px;color:#dc2626;">배치 목록 로드 실패</span>';
     }
   }
 
+  function toggleJobType(btn) {
+    const on = !btn.classList.contains('on');
+    applyJobTypeStyle(btn, on);
+  }
+
+  function applyJobTypeStyle(btn, on) {
+    btn.classList.toggle('on', on);
+    if (on) {
+      btn.style.background = '#7c3aed';
+      btn.style.borderColor = '#7c3aed';
+      btn.style.color = '#fff';
+    } else {
+      btn.style.background = 'transparent';
+      btn.style.borderColor = 'var(--border)';
+      btn.style.color = 'var(--text-muted)';
+    }
+  }
+
   function selectAllJobTypes(on) {
-    document.querySelectorAll('#bhJobTypes .bh-jt').forEach(cb => { cb.checked = on; });
+    document.querySelectorAll('#bhJobTypes .bh-jt').forEach(btn => applyJobTypeStyle(btn, on));
   }
 
   function getSelectedJobTypes() {
-    return Array.from(document.querySelectorAll('#bhJobTypes .bh-jt:checked')).map(cb => cb.value);
+    return Array.from(document.querySelectorAll('#bhJobTypes .bh-jt.on')).map(b => b.dataset.job);
   }
 
   function bhFmtTime(s) { return !s ? '-' : s.substring(11, 16); }
