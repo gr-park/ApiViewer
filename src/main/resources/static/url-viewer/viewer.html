@@ -876,12 +876,16 @@
         repo:           colMap['레포지토리'],
         apiPath:        colMap['URL 경로'],
         httpMethod:     colMap['HTTP Method'],
+        team:           colMap['팀'],
+        manager:        colMap['담당자'],
+        relatedMenu:    colMap['관련 메뉴(또는 기능)'],
         status:         colMap['상태'],
         statusOverridden: colMap['상태확정'],
         blockCriteria:  colMap['차단기준'],
         memo:           colMap['비고'],
         reviewResult:       colMap['현업검토결과'],
         reviewOpinion:      colMap['현업검토의견'],
+        reviewStage:        colMap['검토단계'],
         cboScheduledDate:   colMap['CBO예정일자'],
         deployScheduledDate: colMap['배포예정일자'],
         deployCsr:          colMap['배포CSR'],
@@ -900,12 +904,16 @@
           apiPath,
           httpMethod: get(C.httpMethod) || 'GET',
         };
+        if (C.team)             item.teamOverride = get(C.team);
+        if (C.manager)          item.managerOverride = get(C.manager);
+        if (C.relatedMenu)      item.descriptionOverride = get(C.relatedMenu);
         if (C.status)           item.status = get(C.status);
         if (C.statusOverridden) item.statusOverridden = get(C.statusOverridden);
         if (C.blockCriteria)    item.blockCriteria = get(C.blockCriteria);
         if (C.memo)             item.memo = get(C.memo);
         if (C.reviewResult)     item.reviewResult = get(C.reviewResult);
         if (C.reviewOpinion)    item.reviewOpinion = get(C.reviewOpinion);
+        if (C.reviewStage)      item.reviewStage = get(C.reviewStage);
         if (C.cboScheduledDate)   item.cboScheduledDate = get(C.cboScheduledDate);
         if (C.deployScheduledDate) item.deployScheduledDate = get(C.deployScheduledDate);
         if (C.deployCsr)          item.deployCsr = get(C.deployCsr);
@@ -913,7 +921,7 @@
       });
       if (!rows.length) throw new Error('유효한 데이터 행이 없습니다.');
 
-      if (!await customConfirm(`${rows.length.toLocaleString()}건을 업로드하겠습니까?\n상태 · 비고 · 현업검토결과 · 예정일자 등이 업데이트됩니다.\n(분석일시는 업로드 시각으로 자동 설정)`)) return;
+      if (!await customConfirm(`${rows.length.toLocaleString()}건을 업로드하겠습니까?\n팀 · 담당자 · 관련 메뉴 · 상태 · 비고 · 현업검토 · 검토단계 · 예정일자 등이 업데이트됩니다.\n(차단완료 행은 상태/상태확정은 변경되지 않으며, 분석일시는 업로드 시각으로 자동 설정)`)) return;
 
       showToast('업로드 중...', 'info');
       const res = await fetch('/api/upload/excel-viewer', {
