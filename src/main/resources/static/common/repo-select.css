@@ -28,6 +28,7 @@
 
 .rs-panel {
   display: none;
+  flex-direction: column;
   position: absolute; z-index: 1000;
   top: 100%; left: 0;
   margin-top: 4px;
@@ -38,7 +39,6 @@
   min-width: 240px; max-width: 380px;
   max-height: 340px;
   overflow: hidden;
-  display: flex; flex-direction: column;
 }
 .rs-panel.is-open { display: flex; }
 .rs-panel-actions {
