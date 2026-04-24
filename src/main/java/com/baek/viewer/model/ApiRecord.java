@@ -220,11 +220,13 @@ public class ApiRecord {
 
     /**
      * 담당자 수동 지정 플래그.
-     * true = 사용자가 UI에서 직접 수정 → 추출 시 programId 매핑이 덮어쓰지 않음
+     * true  = 사용자가 UI에서 직접 수정 → 추출 시 programId 매핑이 덮어쓰지 않음
      * false = 매핑에 의한 자동 설정이거나 미지정 → 추출 시 매핑으로 재갱신됨
+     * 기존 레코드(컬럼 추가 전 저장된 행)의 DB 값은 NULL 일 수 있어 Boolean 래퍼 사용.
+     * getter 에서 null → false 로 안전 변환.
      */
     @Column(name = "manager_overridden")
-    private boolean managerOverridden = false;
+    private Boolean managerOverridden = Boolean.FALSE;
 
     /** 내용(관련 메뉴/기능) 오버라이드 — 자동 파싱값(ApiOperation/DescriptionTag/컨트롤러주석)보다 우선 사용 */
     @Column(name = "description_override", columnDefinition = "TEXT")
@@ -363,7 +365,7 @@ public class ApiRecord {
     public String getManagerOverride() { return managerOverride; }
     public void setManagerOverride(String managerOverride) { this.managerOverride = managerOverride; }
 
-    public boolean isManagerOverridden() { return managerOverridden; }
+    public boolean isManagerOverridden() { return Boolean.TRUE.equals(managerOverridden); }
     public void setManagerOverridden(boolean managerOverridden) { this.managerOverridden = managerOverridden; }
     public String getDescriptionOverride() { return descriptionOverride; }
     public void setDescriptionOverride(String descriptionOverride) { this.descriptionOverride = descriptionOverride; }
