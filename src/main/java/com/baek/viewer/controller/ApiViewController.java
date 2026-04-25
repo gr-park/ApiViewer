@@ -485,15 +485,28 @@ public class ApiViewController {
 
     /** viewer 배지용 서버 집계 — 전량 로드 없이 COUNT 쿼리만 사용 */
     @GetMapping("/db/apis/counts")
-    public ResponseEntity<?> dbApisCounts(@RequestParam(required = false) String repository) {
+    public ResponseEntity<?> dbApisCounts(@RequestParam(required = false) String repository,
+                                          @RequestParam(required = false) String repositories) {
         long start = System.currentTimeMillis();
-        boolean hasRepo = repository != null && !repository.isBlank();
+
+        // 단일/복수 레포 파라미터 통합 → repos 리스트로 정규화
+        List<String> repos = null;
+        if (repositories != null && !repositories.isBlank()) {
+            repos = Arrays.stream(repositories.split(","))
+                    .map(String::trim).filter(s -> !s.isEmpty()).toList();
+            if (repos.isEmpty()) repos = null;
+        }
+        if (repos == null && repository != null && !repository.isBlank()) {
+            repos = List.of(repository);
+        }
+        boolean hasRepo = repos != null;
+        final List<String> repoFilter = repos;
 
         List<Object[]> statusRows = hasRepo
-                ? recordRepository.countGroupByStatusForRepo(repository)
+                ? recordRepository.countGroupByStatusForRepos(repoFilter)
                 : recordRepository.countGroupByStatus();
         List<Object[]> methodRows = hasRepo
-                ? recordRepository.countGroupByMethodForRepo(repository)
+                ? recordRepository.countGroupByMethodForRepos(repoFilter)
                 : recordRepository.countGroupByMethod();
 
         Map<String, Long> byStatus = new LinkedHashMap<>();
@@ -509,16 +522,16 @@ public class ApiViewController {
             byMethod.put(row[0] != null ? row[0].toString() : "?", ((Number) row[1]).longValue());
         }
 
-        long newCount        = hasRepo ? recordRepository.countNewForRepo(repository)             : recordRepository.countNew();
-        long changedCount    = hasRepo ? recordRepository.countStatusChangedForRepo(repository)   : recordRepository.countStatusChanged();
-        long reviewedCount   = hasRepo ? recordRepository.countReviewedForRepo(repository)        : recordRepository.countReviewed();
-        long deprecatedCount = hasRepo ? recordRepository.countDeprecatedForRepo(repository)      : recordRepository.countDeprecated();
+        long newCount        = hasRepo ? recordRepository.countNewForRepos(repoFilter)             : recordRepository.countNew();
+        long changedCount    = hasRepo ? recordRepository.countStatusChangedForRepos(repoFilter)   : recordRepository.countStatusChanged();
+        long reviewedCount   = hasRepo ? recordRepository.countReviewedForRepos(repoFilter)        : recordRepository.countReviewed();
+        long deprecatedCount = hasRepo ? recordRepository.countDeprecatedForRepos(repoFilter)      : recordRepository.countDeprecated();
         long markingIncompleteCount = hasRepo
-                ? recordRepository.countBlockMarkingIncompleteForRepo(repository)
+                ? recordRepository.countBlockMarkingIncompleteForRepos(repoFilter)
                 : recordRepository.countBlockMarkingIncomplete();
         // 최우선 차단대상 중 "로그작업이력 제외" 집계 (logWorkExcluded=false 만)
         long priorityPureCount = hasRepo
-                ? recordRepository.countByStatusAndLogNotExcludedForRepo("최우선 차단대상", repository)
+                ? recordRepository.countByStatusAndLogNotExcludedForRepos("최우선 차단대상", repoFilter)
                 : recordRepository.countByStatusAndLogNotExcluded("최우선 차단대상");
 
         Map<String, Object> response = new LinkedHashMap<>();
@@ -533,7 +546,7 @@ public class ApiViewController {
         response.put("byMethod",     byMethod);
         response.put("priorityPureCount", priorityPureCount);
 
-        log.info("[목록 카운트] repo={}, total={}, 삭제={}, 소요={}ms", repository, total, deleted, System.currentTimeMillis() - start);
+        log.info("[목록 카운트] repos={}, total={}, 삭제={}, 소요={}ms", repoFilter, total, deleted, System.currentTimeMillis() - start);
         return ResponseEntity.ok(response);
     }
 

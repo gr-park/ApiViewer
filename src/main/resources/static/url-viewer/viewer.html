@@ -1026,14 +1026,18 @@
   }
 
   // ── 카운트 로드 (배지/알림용) ──────────────────────────────
-  // repos 파라미터는 CSV ("repo1,repo2") 또는 빈 문자열 ("전체"). 현재 counts 엔드포인트는 단일 repo 만
-  // 지원하므로 1개 선택일 때만 필터 적용, 0개 또는 복수 선택일 땐 전체 집계를 사용한다.
+  // repos 파라미터는 CSV ("repo1,repo2") 또는 빈 문자열 ("전체"). 선택이 1개이면 repository=,
+  // 2개 이상이면 repositories= (CSV) 로 보내고, 빈 문자열이면 필터 없이 전체 집계.
   async function loadCounts(reposCsv) {
     if (uploadedIdsFilter) return true;
     try {
       const list = (reposCsv || '').split(',').filter(Boolean);
-      const single = list.length === 1 ? list[0] : null;
-      const url = `/api/db/apis/counts${single ? '?repository=' + encodeURIComponent(single) : ''}`;
+      let url = '/api/db/apis/counts';
+      if (list.length === 1) {
+        url += '?repository=' + encodeURIComponent(list[0]);
+      } else if (list.length > 1) {
+        url += '?repositories=' + encodeURIComponent(list.join(','));
+      }
       const res = await fetch(url);
       if (!res.ok) return false;
       serverCounts = await res.json();
