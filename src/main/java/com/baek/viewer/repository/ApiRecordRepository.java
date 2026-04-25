@@ -76,44 +76,44 @@ public interface ApiRecordRepository extends JpaRepository<ApiRecord, Long>,
     @Query("SELECT COALESCE(r.status, '사용'), COUNT(r) FROM ApiRecord r GROUP BY r.status")
     List<Object[]> countGroupByStatus();
 
-    @Query("SELECT COALESCE(r.status, '사용'), COUNT(r) FROM ApiRecord r WHERE r.repositoryName = :repo GROUP BY r.status")
-    List<Object[]> countGroupByStatusForRepo(@Param("repo") String repo);
+    @Query("SELECT COALESCE(r.status, '사용'), COUNT(r) FROM ApiRecord r WHERE r.repositoryName IN :repos GROUP BY r.status")
+    List<Object[]> countGroupByStatusForRepos(@Param("repos") List<String> repos);
 
     @Query("SELECT COALESCE(r.httpMethod, '?'), COUNT(r) FROM ApiRecord r GROUP BY r.httpMethod")
     List<Object[]> countGroupByMethod();
 
-    @Query("SELECT COALESCE(r.httpMethod, '?'), COUNT(r) FROM ApiRecord r WHERE r.repositoryName = :repo GROUP BY r.httpMethod")
-    List<Object[]> countGroupByMethodForRepo(@Param("repo") String repo);
+    @Query("SELECT COALESCE(r.httpMethod, '?'), COUNT(r) FROM ApiRecord r WHERE r.repositoryName IN :repos GROUP BY r.httpMethod")
+    List<Object[]> countGroupByMethodForRepos(@Param("repos") List<String> repos);
 
     @Query("SELECT COUNT(r) FROM ApiRecord r WHERE r.isNew = true")
     long countNew();
 
-    @Query("SELECT COUNT(r) FROM ApiRecord r WHERE r.isNew = true AND r.repositoryName = :repo")
-    long countNewForRepo(@Param("repo") String repo);
+    @Query("SELECT COUNT(r) FROM ApiRecord r WHERE r.isNew = true AND r.repositoryName IN :repos")
+    long countNewForRepos(@Param("repos") List<String> repos);
 
     @Query("SELECT COUNT(r) FROM ApiRecord r WHERE r.statusChanged = true")
     long countStatusChanged();
 
-    @Query("SELECT COUNT(r) FROM ApiRecord r WHERE r.statusChanged = true AND r.repositoryName = :repo")
-    long countStatusChangedForRepo(@Param("repo") String repo);
+    @Query("SELECT COUNT(r) FROM ApiRecord r WHERE r.statusChanged = true AND r.repositoryName IN :repos")
+    long countStatusChangedForRepos(@Param("repos") List<String> repos);
 
     @Query("SELECT COUNT(r) FROM ApiRecord r WHERE r.reviewResult IS NOT NULL AND r.reviewResult <> ''")
     long countReviewed();
 
-    @Query("SELECT COUNT(r) FROM ApiRecord r WHERE r.reviewResult IS NOT NULL AND r.reviewResult <> '' AND r.repositoryName = :repo")
-    long countReviewedForRepo(@Param("repo") String repo);
+    @Query("SELECT COUNT(r) FROM ApiRecord r WHERE r.reviewResult IS NOT NULL AND r.reviewResult <> '' AND r.repositoryName IN :repos")
+    long countReviewedForRepos(@Param("repos") List<String> repos);
 
     @Query("SELECT COUNT(r) FROM ApiRecord r WHERE r.isDeprecated = 'Y'")
     long countDeprecated();
 
-    @Query("SELECT COUNT(r) FROM ApiRecord r WHERE r.isDeprecated = 'Y' AND r.repositoryName = :repo")
-    long countDeprecatedForRepo(@Param("repo") String repo);
+    @Query("SELECT COUNT(r) FROM ApiRecord r WHERE r.isDeprecated = 'Y' AND r.repositoryName IN :repos")
+    long countDeprecatedForRepos(@Param("repos") List<String> repos);
 
     @Query("SELECT COUNT(r) FROM ApiRecord r WHERE r.blockMarkingIncomplete = true")
     long countBlockMarkingIncomplete();
 
-    @Query("SELECT COUNT(r) FROM ApiRecord r WHERE r.blockMarkingIncomplete = true AND r.repositoryName = :repo")
-    long countBlockMarkingIncompleteForRepo(@Param("repo") String repo);
+    @Query("SELECT COUNT(r) FROM ApiRecord r WHERE r.blockMarkingIncomplete = true AND r.repositoryName IN :repos")
+    long countBlockMarkingIncompleteForRepos(@Param("repos") List<String> repos);
 
     // ── 전체 선택/벌크 작업용 ID 목록 조회 (경량) ─────────────────────────
     @Query("SELECT r.id FROM ApiRecord r")
@@ -147,9 +147,9 @@ public interface ApiRecordRepository extends JpaRepository<ApiRecord, Long>,
 
     /** 레포별 동일 집계 */
     @Query("SELECT COUNT(r) FROM ApiRecord r WHERE r.status = :status "
-            + "AND r.repositoryName = :repo "
+            + "AND r.repositoryName IN :repos "
             + "AND (r.logWorkExcluded IS NULL OR r.logWorkExcluded = false)")
-    long countByStatusAndLogNotExcludedForRepo(@Param("status") String status, @Param("repo") String repo);
+    long countByStatusAndLogNotExcludedForRepos(@Param("status") String status, @Param("repos") List<String> repos);
 
     // ── 호출현황(call-stats) fast-path ──────────────────────────────────
     /**
