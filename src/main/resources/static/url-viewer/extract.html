@@ -251,6 +251,29 @@
 
 <div class="main">
 
+  <!-- ─── 테스트용 의심 키워드 (최상단 — 분석 시 매칭에 사용) ─── -->
+  <div class="card" data-admin-only>
+    <div class="card-title">
+      <span class="dot dot-purple"></span>🧪 테스트용 의심 키워드 (분석 시 매칭)
+    </div>
+    <p style="font-size:12px;color:var(--text-muted);margin-bottom:8px;line-height:1.6;">
+      URL 경로 / 메소드명 / 컨트롤러명 / 파일경로 / 메소드주석 / 컨트롤러주석 / @ApiOperation / @Description 에서
+      부분일치 (대소문자 무시). fullUrl 은 도메인 false positive 방지로 제외.
+      매칭 결과는 분석현황의 "테스트용 의심" 컬럼에 자동 표시됩니다.
+    </p>
+    <label class="field" style="display:block;">
+      <div id="testSuspectKwList" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px;min-height:28px;"></div>
+      <div style="display:flex;gap:6px;align-items:center;">
+        <input type="text" id="newTestKwInput" placeholder="키워드 입력 후 Enter"
+               style="flex:1;max-width:320px;padding:5px 8px;border:1px solid var(--border);border-radius:4px;font-size:12px;"
+               onkeydown="if(event.key==='Enter'){event.preventDefault();addTestKeyword();}">
+        <button type="button" class="btn btn-ghost" onclick="addTestKeyword()">+ 추가</button>
+        <button type="button" class="btn btn-primary" onclick="saveTestKeywordsAndRecalc()"
+                style="margin-left:auto;">💾 저장 + 전체 재평가</button>
+      </div>
+    </label>
+  </div>
+
   <!-- ─── API 추출 설정 ─── -->
   <div class="card">
     <div class="card-title">
@@ -299,29 +322,6 @@
     <div id="allRepoBtn" style="display:none;margin-top:12px;text-align:right;">
       <button class="btn btn-blue" id="extractAllBtn" onclick="doExtract()">전체 추출 시작</button>
     </div>
-  </div>
-
-  <!-- ─── 테스트용 의심 키워드 ─── -->
-  <div class="card" data-admin-only>
-    <div class="card-title">
-      <span class="dot dot-purple"></span>🧪 테스트용 의심 키워드 (분석 시 매칭)
-    </div>
-    <p style="font-size:12px;color:var(--text-muted);margin-bottom:8px;line-height:1.6;">
-      URL 경로 / 메소드명 / 컨트롤러명 / 파일경로 / 메소드주석 / 컨트롤러주석 / @ApiOperation / @Description 에서
-      부분일치 (대소문자 무시). fullUrl 은 도메인 false positive 방지로 제외.
-      매칭 결과는 분석현황의 "테스트용 의심" 컬럼에 자동 표시됩니다.
-    </p>
-    <label class="field" style="display:block;">
-      <div id="testSuspectKwList" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px;min-height:28px;"></div>
-      <div style="display:flex;gap:6px;align-items:center;">
-        <input type="text" id="newTestKwInput" placeholder="키워드 입력 후 Enter"
-               style="flex:1;max-width:320px;padding:5px 8px;border:1px solid var(--border);border-radius:4px;font-size:12px;"
-               onkeydown="if(event.key==='Enter'){event.preventDefault();addTestKeyword();}">
-        <button type="button" class="btn btn-ghost" onclick="addTestKeyword()">+ 추가</button>
-        <button type="button" class="btn btn-primary" onclick="saveTestKeywordsAndRecalc()"
-                style="margin-left:auto;">💾 저장 + 전체 재평가</button>
-      </div>
-    </label>
   </div>
 
   <!-- ─── APM 호출건수 수집 ─── -->

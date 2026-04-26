@@ -322,16 +322,6 @@ function updateAdminBadge(valid) {
         <span class="field-hint">clientType / clientName / userAgent 부분일치 제외 (대소문자 구분)</span>
       </label>
 
-      <label class="field" style="display:block;margin-top:10px;">테스트용 의심 키워드 (대소문자 무시 부분일치)
-        <div id="testSuspectKwListSettings" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px;min-height:28px;"></div>
-        <div style="display:flex;gap:6px;align-items:center;">
-          <input type="text" id="newTestKwInputSettings" placeholder="키워드 입력 후 Enter"
-                 style="flex:1;max-width:320px;padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;"
-                 onkeydown="if(event.key==='Enter'){event.preventDefault();addSettingsTestKeyword();}">
-          <button type="button" class="btn btn-ghost" style="font-size:11px;padding:4px 12px;height:auto;" onclick="addSettingsTestKeyword()">+ 추가</button>
-        </div>
-        <span class="field-hint">URL/메소드/주석 등에서 대소문자 무시 부분일치. 저장만 수행하며 전체 재평가는 분석 화면에서 별도 실행</span>
-      </label>
 
       <!-- 와탭 연결 테스트 (쿠키 세션 keepalive 검증용) -->
       <div style="margin-top:12px;padding-top:10px;border-top:1px dashed var(--border);">
@@ -1114,13 +1104,7 @@ function updateAdminBadge(valid) {
       document.getElementById('botKeywordsList').innerHTML = '';
       const _bkDefault = 'Googlebot,AdsBot,bingbot,YandexBot,DuckDuckBot,facebookexternalhit,Slackbot,Twitterbot,LinkedInBot,crawler,spider';
       (g.botKeywords || _bkDefault).split(',').map(s => s.trim()).filter(Boolean).forEach(renderBotKeywordTag);
-      // 테스트용 의심 키워드
-      const _tsKwDefault = 'test,sample,mock,테스트,샘플,demo,dummy,fixture,스텁';
-      const _tsListEl = document.getElementById('testSuspectKwListSettings');
-      if (_tsListEl) {
-        _tsListEl.innerHTML = '';
-        (g.testSuspectKeywords || _tsKwDefault).split(',').map(s => s.trim()).filter(Boolean).forEach(renderTestKwTagSettings);
-      }
+      // 테스트용 의심 키워드 — URL 분석 화면 (extract.html) 에서 별도 관리. settings 에서는 손대지 않음.
       // 로그 tail 줄수 — 공통설정 + 로그조회 화면 모두 세팅
       const tailVal = g.logTailLines ?? 1000;
       document.getElementById('gLogTailLines').value   = tailVal;
@@ -1206,34 +1190,8 @@ function updateAdminBadge(valid) {
     return Array.from(document.querySelectorAll('#botKeywordsList .bot-keyword-tag')).map(t => t.dataset.name);
   }
 
-  // ── 테스트용 의심 키워드 관리 ─────────────────────────────
-  function renderTestKwTagSettings(name) {
-    const _dark = document.documentElement.getAttribute('data-theme') === 'dark';
-    const list = document.getElementById('testSuspectKwListSettings');
-    if (!list) return;
-    const tag = document.createElement('span');
-    tag.className = 'test-kw-tag';
-    tag.style.cssText = `display:inline-flex;align-items:center;gap:4px;padding:4px 8px 4px 10px;background:${_dark?'#2a1942':'#fdf4ff'};border:1px solid ${_dark?'#5b21b6':'#e9d5ff'};border-radius:12px;font-size:11px;color:${_dark?'#c4b5fd':'#7c3aed'};font-weight:600;`;
-    tag.innerHTML = `<span>${esc(name)}</span><button type="button" style="background:none;border:none;color:${_dark?'#c4b5fd':'#9333ea'};cursor:pointer;font-size:14px;padding:0 2px;line-height:1;" onclick="this.parentElement.remove()">×</button>`;
-    tag.dataset.name = name;
-    list.appendChild(tag);
-  }
-  function addSettingsTestKeyword() {
-    const input = document.getElementById('newTestKwInputSettings');
-    const name = (input.value || '').trim();
-    if (!name) return;
-    const existing = Array.from(document.querySelectorAll('#testSuspectKwListSettings .test-kw-tag')).map(t => t.dataset.name);
-    if (existing.includes(name)) { showToast('이미 등록된 키워드입니다.', 'error'); return; }
-    if (name.length === 1) {
-      if (!confirm(`'${name}' 1자 키워드는 매칭 범위가 매우 넓어집니다. 계속하시겠어요?`)) return;
-    }
-    renderTestKwTagSettings(name);
-    input.value = '';
-    input.focus();
-  }
-  function collectSettingsTestKeywords() {
-    return Array.from(document.querySelectorAll('#testSuspectKwListSettings .test-kw-tag')).map(t => t.dataset.name);
-  }
+  // 테스트용 의심 키워드 관리는 URL 분석 화면 (extract.html) 으로 이동 — settings 에서는 미관리
+
 
   async function saveGlobal() {
     try {
@@ -1255,8 +1213,7 @@ function updateAdminBadge(valid) {
       cur.blockMonitorWhatapReferer = document.getElementById('gBlockMonitorWhatapReferer').value.trim() || null;
       const _bkList = collectBotKeywords();
       cur.botKeywords = _bkList.length ? _bkList.join(',') : null;
-      const _tsKwList = collectSettingsTestKeywords();
-      cur.testSuspectKeywords = _tsKwList.length ? _tsKwList.join(',') : null;
+      // testSuspectKeywords 는 URL 분석 화면에서 별도 관리 — cur 에 이미 GET 으로 로드된 값 그대로 보존
       cur.teams = (() => { const t = collectTeams(); return t.length ? JSON.stringify(t) : null; })();
       cur.whatapProfiles = wpList.length ? JSON.stringify(wpList) : null;
       cur.jenniferProfiles = jpList.length ? JSON.stringify(jpList) : null;
@@ -2989,7 +2946,7 @@ function updateAdminBadge(valid) {
     const wrap = document.getElementById('extractContent');
     wrap.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-muted);"><div class="spinner" style="display:inline-block;width:20px;height:20px;border:2px solid var(--border);border-top-color:var(--primary);border-radius:50%;animation:spin .7s linear infinite;"></div><br>로딩 중...</div>';
     try {
-      const res = await fetch('/extract.html?embedded=1');
+      const res = await fetch('/url-viewer/extract.html?embedded=1');
       const html = await res.text();
       const parser = new DOMParser();
       const doc = parser.parseFromString(html, 'text/html');
