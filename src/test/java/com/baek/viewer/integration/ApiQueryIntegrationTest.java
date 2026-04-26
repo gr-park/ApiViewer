@@ -214,4 +214,42 @@ class ApiQueryIntegrationTest {
         mockMvc.perform(get("/api/db/record/9999999"))
                 .andExpect(status().isNotFound());
     }
+
+    @Test
+    @DisplayName("?testSuspect=true — testSuspectReason 가 NOT NULL & 빈문자열 아닌 레코드만 매칭")
+    void queryTestSuspectTrue() throws Exception {
+        // /a/3 에 의심 사유 세팅
+        ApiRecord target = recordRepo.findByRepositoryNameAndApiPathAndHttpMethod(REPO_A, "/a/3", "GET").orElseThrow();
+        target.setTestSuspectReason("URL-test");
+        recordRepo.save(target);
+
+        MvcResult res = mockMvc.perform(get("/api/db/apis")
+                        .param("testSuspect", "true")
+                        .param("page", "0")
+                        .param("size", "100"))
+                .andExpect(status().isOk()).andReturn();
+        String b = body(res);
+        assertThat(b).contains("/a/3");
+        assertThat(b).contains("URL-test");
+        // 의심 사유 없는 다른 레코드는 제외
+        assertThat(b).doesNotContain("/b/1");
+        assertThat(b).doesNotContain("/c/1");
+    }
+
+    @Test
+    @DisplayName("?testSuspect=false — testSuspectReason NULL 또는 빈문자열 레코드만 매칭")
+    void queryTestSuspectFalse() throws Exception {
+        ApiRecord susp = recordRepo.findByRepositoryNameAndApiPathAndHttpMethod(REPO_A, "/a/3", "GET").orElseThrow();
+        susp.setTestSuspectReason("URL-test");
+        recordRepo.save(susp);
+
+        MvcResult res = mockMvc.perform(get("/api/db/apis")
+                        .param("testSuspect", "false")
+                        .param("page", "0")
+                        .param("size", "100"))
+                .andExpect(status().isOk()).andReturn();
+        String b = body(res);
+        assertThat(b).doesNotContain("/a/3");  // 의심 사유 있어 제외
+        assertThat(b).contains("/c/1");        // 의심 없음
+    }
 }

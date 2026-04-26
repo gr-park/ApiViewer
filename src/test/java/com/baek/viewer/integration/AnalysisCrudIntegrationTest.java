@@ -180,6 +180,38 @@ class AnalysisCrudIntegrationTest {
     }
 
     @Test
+    @DisplayName("save — 테스트 키워드 매칭 시 testSuspectReason 자동 세팅")
+    void save_testSuspectKeywordMatched() {
+        ApiInfo a = info("/api/test/foo", "GET");
+        a.setMethodName("getSampleUser");
+        storage.save(REPO, List.of(a), "1.1.1.1");
+
+        ApiRecord r = recordRepo.findByRepositoryNameAndApiPathAndHttpMethod(REPO, "/api/test/foo", "GET").orElseThrow();
+        assertThat(r.getTestSuspectReason()).isNotNull();
+        assertThat(r.getTestSuspectReason()).contains("URL-test");
+        assertThat(r.getTestSuspectReason()).contains("메소드-sample");
+    }
+
+    @Test
+    @DisplayName("save — 테스트 키워드 미매칭 시 testSuspectReason null")
+    void save_testSuspectNotMatched() {
+        // 명시적으로 모든 필드를 키워드 미포함으로 세팅 (info() 헬퍼는 Test.java 컨트롤러 사용)
+        ApiInfo a = new ApiInfo();
+        a.setApiPath("/api/users/profile");
+        a.setHttpMethod("GET");
+        a.setMethodName("getUserProfile");
+        a.setControllerName("UserController");
+        a.setRepoPath("src/main/java/UserController.java");
+        a.setIsDeprecated("N");
+        a.setGit1(new String[]{LocalDate.now().minusYears(2).toString(), "alice", "old commit"});
+
+        storage.save(REPO, List.of(a), "1.1.1.1");
+
+        ApiRecord r = recordRepo.findByRepositoryNameAndApiPathAndHttpMethod(REPO, "/api/users/profile", "GET").orElseThrow();
+        assertThat(r.getTestSuspectReason()).isNull();
+    }
+
+    @Test
     @DisplayName("updateBulk — 수동 leaf 선택 시 statusOverridden 자동 ON")
     void updateBulk_manualLeaf_setsOverridden() {
         storage.save(REPO, List.of(info("/api/bulk", "GET")), "1.1.1.1");

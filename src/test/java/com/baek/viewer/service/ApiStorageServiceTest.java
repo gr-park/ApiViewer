@@ -41,6 +41,9 @@ class ApiStorageServiceTest {
     @Mock
     private RepoConfigRepository repoConfigRepository;
 
+    @Mock
+    private TestSuspectMatcher testSuspectMatcher;
+
     @InjectMocks
     private ApiStorageService service;
 

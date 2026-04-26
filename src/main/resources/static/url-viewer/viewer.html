@@ -423,6 +423,7 @@
     <div class="stat-pill sg-hist" id="pill-changed" onclick="setFilter('changed')"><span>상태변경</span><strong id="stat-changed" style="color:#6d28d9;">0</strong></div>
     <div class="stat-pill sg-hist" id="pill-deleted" onclick="setFilter('deleted')"><span>삭제</span><strong id="stat-deleted" style="color:#6d28d9;">0</strong></div>
     <div class="stat-pill" id="pill-marking-incomplete" style="background:#fff7ed;border-color:#fed7aa;" onclick="setFilter('marking-incomplete')" title="차단완료이지만 @Deprecated 또는 [URL차단작업] 주석 누락"><span>📝 차단처리미흡</span><strong id="stat-marking-incomplete" style="color:#b45309;">0</strong></div>
+    <div class="stat-pill" id="pill-test-suspect" style="background:#fdf4ff;border-color:#e9d5ff;" onclick="setFilter('testSuspect')" title="URL/메소드/주석 등에 test, sample, mock 등 키워드가 포함된 의심 URL"><span>🧪 테스트용 의심</span><strong id="stat-test-suspect" style="color:#9333ea;">0</strong></div>
     <!-- 메소드/Deprecated — 소형 chip, 별도 줄 -->
     <div style="width:100%;height:0;"></div>
     <div class="stat-chip" id="pill-GET"        onclick="setFilter('method:GET')"   ><span>GET</span><strong id="statGet">0</strong></div>
@@ -598,6 +599,7 @@
           <!-- 상태 / 상태확정 -->
           <th class="hg-info" onclick="sortBy('status')">상태 <span class="sort-icon">↕</span></th>
           <th class="hg-info no-sort">상태확정</th>
+          <th class="hg-info no-sort" style="min-width:140px;">테스트용 의심</th>
           <!-- 개발 메타 -->
           <th class="hg-dev" onclick="sortBy('controllerName')">컨트롤러 <span class="sort-icon">↕</span></th>
           <th class="hg-dev" style="min-width:160px;" onclick="sortBy('methodName')">메소드명 <span class="sort-icon">↕</span></th>
@@ -623,7 +625,7 @@
         </tr>
       </thead>
       <tbody id="tbody">
-        <tr><td colspan="30"><div class="state-box">레포지토리를 선택하고 <b>조회</b>를 클릭하세요.</div></td></tr>
+        <tr><td colspan="31"><div class="state-box">레포지토리를 선택하고 <b>조회</b>를 클릭하세요.</div></td></tr>
       </tbody>
     </table>
   </div>
@@ -868,7 +870,7 @@
   async function loadApis() {
     document.getElementById('loadBtn').disabled = true;
     document.getElementById('tbody').innerHTML =
-      '<tr><td colspan="30"><div class="state-box"><div class="spinner"></div><br>조회 중...</div></td></tr>';
+      '<tr><td colspan="31"><div class="state-box"><div class="spinner"></div><br>조회 중...</div></td></tr>';
     clearSelection();
     vCurrentPage = 0;
     activeFilter = '';
@@ -903,7 +905,7 @@
     } catch(e) {
       showToast(e.message || '조회 실패', 'error');
       document.getElementById('tbody').innerHTML =
-        `<tr><td colspan="30"><div class="state-box">조회 오류: ${esc(e.message || '')}</div></td></tr>`;
+        `<tr><td colspan="31"><div class="state-box">조회 오류: ${esc(e.message || '')}</div></td></tr>`;
     } finally {
       document.getElementById('loadBtn').disabled = false;
     }
@@ -1166,6 +1168,7 @@
     else if (activeFilter === 'reviewed') params.set('alert', 'reviewed');
     else if (activeFilter === 'deleted')  params.set('alert', 'deleted');
     else if (activeFilter === 'marking-incomplete') params.set('alert', 'marking-incomplete');
+    else if (activeFilter === 'testSuspect') params.set('testSuspect', 'true');
     else if (activeFilter === 'deprecated') params.set('isDeprecated', 'Y');
     else if (activeFilter.startsWith('method:')) params.set('httpMethod', activeFilter.slice(7));
     else if (activeFilter === 'group:block')  params.set('statusGroup', 'block');
@@ -1203,7 +1206,7 @@
     const timeoutId = setTimeout(() => pageLoadCtrl.abort(), 30000);
     if (!preloadFirst) {
       document.getElementById('tbody').innerHTML =
-        '<tr><td colspan="30"><div class="state-box"><div class="spinner"></div><br>조회 중...</div></td></tr>';
+        '<tr><td colspan="31"><div class="state-box"><div class="spinner"></div><br>조회 중...</div></td></tr>';
     }
     try {
       let res;
@@ -1231,7 +1234,7 @@
         const totalFmt = (data.total || 0).toLocaleString();
         showToast(`데이터가 너무 많습니다 (${totalFmt}건). 레포지토리를 선택해 주세요.`, 'error');
         document.getElementById('tbody').innerHTML =
-          `<tr><td colspan="30"><div class="state-box">⚠ 전체 조회 제한<br><small>${totalFmt}건<br>레포지토리를 선택하여 조회해 주세요.</small></div></td></tr>`;
+          `<tr><td colspan="31"><div class="state-box">⚠ 전체 조회 제한<br><small>${totalFmt}건<br>레포지토리를 선택하여 조회해 주세요.</small></div></td></tr>`;
         return false;
       }
       if (!res.ok) throw new Error(data.error || '서버 오류');
@@ -1256,7 +1259,7 @@
       if (e.name === 'AbortError') return false;
       showToast(e.message || '페이지 조회 실패', 'error');
       document.getElementById('tbody').innerHTML =
-        `<tr><td colspan="30"><div class="state-box">조회 오류: ${esc(e.message || '')}</div></td></tr>`;
+        `<tr><td colspan="31"><div class="state-box">조회 오류: ${esc(e.message || '')}</div></td></tr>`;
       return false;
     } finally {
       clearTimeout(timeoutId);
@@ -1391,6 +1394,7 @@
     document.getElementById('stat-changed').textContent   = c.changedCount || 0;
     document.getElementById('stat-deleted').textContent   = c.deletedCount || 0;
     { const el = document.getElementById('stat-marking-incomplete'); if (el) el.textContent = c.markingIncompleteCount || 0; }
+    { const el = document.getElementById('stat-test-suspect'); if (el) el.textContent = c.testSuspectCount || 0; }
     document.getElementById('statGet').textContent        = byMethod['GET']    || 0;
     document.getElementById('statPost').textContent       = byMethod['POST']   || 0;
     document.getElementById('statPut').textContent        = byMethod['PUT']    || 0;
@@ -1460,6 +1464,7 @@
     else if (val === 'changed') { document.getElementById('pill-changed').classList.add('active-filter'); }
     else if (val === 'deleted') { document.getElementById('pill-deleted').classList.add('active-filter'); }
     else if (val === 'marking-incomplete') { document.getElementById('pill-marking-incomplete').classList.add('active-filter'); }
+    else if (val === 'testSuspect') { const e = document.getElementById('pill-test-suspect'); if (e) e.classList.add('active-filter'); }
     else if (val === 'method:GET')    { document.getElementById('pill-GET').classList.add('active-filter'); }
     else if (val === 'method:POST')   { document.getElementById('pill-POST').classList.add('active-filter'); }
     else if (val === 'method:PUT')    { document.getElementById('pill-PUT').classList.add('active-filter'); }
@@ -1539,7 +1544,7 @@
     const off = startOffset || 0;
     const tbody = document.getElementById('tbody');
     if (!list.length) {
-      tbody.innerHTML = '<tr><td colspan="30"><div class="state-box">검색 결과가 없습니다.</div></td></tr>';
+      tbody.innerHTML = '<tr><td colspan="31"><div class="state-box">검색 결과가 없습니다.</div></td></tr>';
       return;
     }
     tbody.innerHTML = list.map((a, idx) => {
@@ -1565,6 +1570,7 @@
         <!-- 상태 / 상태확정 -->
         <td>${statusBadge(a.status, a.logWorkExcluded)}${a.isNew ? `<br><span style="display:inline-block;margin-top:2px;padding:1px 5px;background:#dbeafe;border:1px solid #93c5fd;border-radius:3px;color:#1e40af;font-size:9px;font-weight:600;cursor:pointer;white-space:nowrap;" onclick="clearNewFlag(event,${a.id})" title="클릭하여 확인 완료">🆕 신규추가</span>` : ''}${(() => { if (!a.statusChanged) return ''; const logs = parseChangeLog(a.statusChangeLog); const last = logs.length ? logs[logs.length-1] : '변경감지'; const extra = logs.length > 1 ? ` <span style="color:#f87171;">(외 ${logs.length-1}건)</span>` : ''; return `<br><span style="display:inline-block;margin-top:2px;padding:1px 5px;background:#fef2f2;border:1px solid #fca5a5;border-radius:3px;color:#dc2626;font-size:9px;font-weight:600;cursor:pointer;white-space:nowrap;" onclick="clearStatusFlag(event,${a.id})" title="클릭: 확인 완료 | 상세보기에서 전체 이력 확인">⚠️ ${esc(last)}${extra}</span>`; })()}${a.blockMarkingIncomplete ? `<br><span style="display:inline-block;margin-top:2px;padding:1px 5px;background:#fff7ed;border:1px solid #fed7aa;border-radius:3px;color:#b45309;font-size:9px;font-weight:600;white-space:nowrap;cursor:help;" title="차단완료 상태이나 @Deprecated 또는 [URL차단작업] 주석이 누락됨 — 주석 보완 후 다음 추출 시 자동 해제.">📝 차단처리미흡</span>` : ''}</td>
         <td style="text-align:center;">${lockIcon}</td>
+        <td style="font-size:11px;">${testSuspectBadge(a.testSuspectReason)}</td>
         <!-- 개발 메타 -->
         <td class="ctrl-name"><div style="display:flex;align-items:center;gap:4px;"><button class="copy-btn" onclick="copyText(event,'${esc(a.controllerName)}')" title="컨트롤러명 복사"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>${esc(a.controllerName)}</div></td>
         <td style="font-size:12px;min-width:160px;"><div style="display:flex;align-items:center;gap:4px;"><button class="copy-btn" onclick="copyText(event,'${esc(a.methodName)}')" title="메소드명 복사"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>${esc(a.methodName)}</div></td>
@@ -1635,6 +1641,15 @@
       ? `<div style="font-size:10px;color:var(--text-muted);line-height:1.2;">${esc(upper)}</div>`
       : '';
     return `${upperLine}<span class="status-badge" style="${sty}" title="${esc(tip)}">${esc(status || '사용')}</span>`;
+  }
+
+  function testSuspectBadge(reason) {
+    if (!reason) return '<span style="color:#cbd5e1;">·</span>';
+    return String(reason).split(',').map(r => {
+      const t = r.trim();
+      if (!t) return '';
+      return `<span style="display:inline-block;margin:1px 2px;padding:1px 5px;background:#fdf4ff;border:1px solid #e9d5ff;border-radius:3px;font-size:10px;color:#7c3aed;font-weight:600;white-space:nowrap;">${esc(t)}</span>`;
+    }).join('');
   }
 
   function blockTargetBadge(bt) {
@@ -2055,7 +2070,7 @@
       'HTTP Method','컨트롤러파일경로','컨트롤러','메소드명','프로그램ID',
       'ApiOperation','Description주석','메소드주석','컨트롤러주석','RequestProperty','컨트롤러RequestProperty',
       '관련 메뉴(또는 기능)','Deprecated','1년 호출건','1달 호출건','1주 호출건',
-      '상태','상태확정','침해사고 로그 제외대상','차단기준','차단일자','차단근거',
+      '상태','상태확정','테스트용 의심 여부','테스트용 의심 사유','침해사고 로그 제외대상','차단기준','차단일자','차단근거',
       '비고','현업검토결과','현업검토의견',
       'SmartWay 티켓번호','검토단계',
       'CBO예정일자','배포예정일자','배포CSR','배포담당자',
@@ -2063,6 +2078,7 @@
     ];
     const blue='E0F2FE', yellow='FEF3C7', purple='E0E7FF', pink='FFE4E6';
     const jiraPurple='EDE9FE';
+    const testPurple='FDF4FF';
     const g1='D1FAE5', g2='DCFCE7', g3='ECFDF5', g4='F0FDF4', g5='F5FFF9';
     const headerColors = [
       blue,blue,blue,blue,blue,blue,   // 0~5: 레포~FullURL
@@ -2071,21 +2087,23 @@
       yellow,yellow,yellow,yellow,yellow,yellow, // 11~16: 참고용 6개
       purple,purple,purple,purple,purple, // 17~21: 메뉴~1주호출건
       pink,pink,                         // 22~23: 상태,상태확정 ★유효성검증컬럼
-      pink,pink,pink,pink,               // 24~27: 침해사고,차단기준,차단일자,차단근거
-      pink,pink,pink,                    // 28~30: 비고,검토결과,검토의견
-      jiraPurple,jiraPurple,             // 31~32: Jira 티켓, 검토단계
-      pink,pink,pink,pink,               // 33~36: CBO예정일자,배포예정일자,배포CSR,배포담당자
-      g1,g1,g1, g2,g2,g2, g3,g3,g3, g4,g4,g4, g5,g5,g5, // 37~51: 변경이력1~5
-      blue,blue                          // 52~53: 분석/변경일시
+      testPurple,testPurple,             // 24~25: 테스트용 의심 여부/사유
+      pink,pink,pink,pink,               // 26~29: 침해사고,차단기준,차단일자,차단근거
+      pink,pink,pink,                    // 30~32: 비고,검토결과,검토의견
+      jiraPurple,jiraPurple,             // 33~34: Jira 티켓, 검토단계
+      pink,pink,pink,pink,               // 35~38: CBO예정일자,배포예정일자,배포CSR,배포담당자
+      g1,g1,g1, g2,g2,g2, g3,g3,g3, g4,g4,g4, g5,g5,g5, // 39~53: 변경이력1~5
+      blue,blue                          // 54~55: 분석/변경일시
     ];
-    // 색 변경 경계
-    const groupBorders = new Set([6, 16, 21, 30, 32, 36, 39, 42, 45, 48, 51]);
+    // 색 변경 경계 (테스트용 컬럼 추가로 +2 시프트)
+    const groupBorders = new Set([6, 16, 21, 23, 25, 32, 34, 38, 41, 44, 47, 50, 53]);
     // 데이터 유효성 검증: 0-based 컬럼 인덱스 → 허용 값 목록
     const validations = [
       { colIdx:18, values:['Y','N'] },                                                                       // Deprecated
       { colIdx:22, values:['사용','①-① 차단완료','①-② 호출0건+변경없음','①-③ 호출0건+변경있음(로그)','①-④ 업무종료','①-⑤ 현업요청 차단제외','①-⑥ 사용으로 변경','②-① 호출0건+로그건','②-② 호출0건+변경있음','②-③ 호출 1~reviewThreshold건','②-④ 호출 reviewThreshold+1건↑','②-⑤ 사용으로 변경'] }, // 상태 — 13 leaf
       { colIdx:23, values:['확정','미확정'] },                                                               // 상태확정
-      { colIdx:29, values:['차단대상 제외','차단확정','판단불가'] },                                         // 현업검토결과
+      { colIdx:24, values:['Y','N'] },                                                                       // 테스트용 의심 여부
+      { colIdx:31, values:['차단대상 제외','차단확정','판단불가'] },                                         // 현업검토결과 (28 → 31)
     ];
     const rows = details.map(a => {
       const cfg = repoConfigMap[a.repositoryName] || {};
@@ -2117,6 +2135,8 @@
         a.callCountWeek != null ? a.callCountWeek : '',
         a.status || '',
         a.statusOverridden ? '확정' : '미확정',
+        a.testSuspectReason ? 'Y' : 'N',
+        a.testSuspectReason || '',
         (a.status === '①-③ 호출0건+변경있음(로그)' || (a.status === '①-② 호출0건+변경없음' && a.logWorkExcluded)) ? '대상' : '',
         a.blockCriteria || '',
         a.blockedDate || '',
@@ -2150,13 +2170,13 @@
       'HTTP Method','컨트롤러파일경로','컨트롤러','메소드명','프로그램ID',
       'ApiOperation','Description주석','메소드주석','컨트롤러주석','RequestProperty','컨트롤러RequestProperty',
       '관련 메뉴(또는 기능)','Deprecated','1년 호출건','1달 호출건','1주 호출건',
-      '상태','상태확정','침해사고 로그 제외대상','차단기준','차단일자','차단근거',
+      '상태','상태확정','테스트용 의심 여부','테스트용 의심 사유','침해사고 로그 제외대상','차단기준','차단일자','차단근거',
       '비고','현업검토결과','현업검토의견',
       'SmartWay 티켓번호','검토단계',
       'CBO예정일자','배포예정일자','배포CSR','배포담당자',
       ...commitHeaders, '분석일시', '변경일시'
     ];
-    const blue='E0F2FE', yellow='FEF3C7', purple='E0E7FF', pink='FFE4E6', jiraPurple='EDE9FE';
+    const blue='E0F2FE', yellow='FEF3C7', purple='E0E7FF', pink='FFE4E6', jiraPurple='EDE9FE', testPurple='FDF4FF';
     const g1='D1FAE5', g2='DCFCE7', g3='ECFDF5', g4='F0FDF4', g5='F5FFF9';
     const headerColors = [
       blue,blue,blue,blue,blue,blue,blue,
@@ -2164,6 +2184,7 @@
       yellow,yellow,yellow,yellow,yellow,yellow,
       purple,purple,purple,purple,purple,
       pink,pink,
+      testPurple,testPurple,
       pink,pink,pink,pink,
       pink,pink,pink,
       jiraPurple,jiraPurple,
@@ -2171,12 +2192,13 @@
       g1,g1,g1, g2,g2,g2, g3,g3,g3, g4,g4,g4, g5,g5,g5,
       blue,blue
     ];
-    const groupBorders = new Set([6, 16, 21, 30, 32, 35, 38, 41, 44, 47, 50]);
+    const groupBorders = new Set([6, 16, 21, 23, 25, 32, 34, 37, 40, 43, 46, 49, 52]);
     const validations = [
       { colIdx:18, values:['Y','N'] },
       { colIdx:22, values:['사용','①-① 차단완료','①-② 호출0건+변경없음','①-③ 호출0건+변경있음(로그)','①-④ 업무종료','①-⑤ 현업요청 차단제외','①-⑥ 사용으로 변경','②-① 호출0건+로그건','②-② 호출0건+변경있음','②-③ 호출 1~reviewThreshold건','②-④ 호출 reviewThreshold+1건↑','②-⑤ 사용으로 변경'] }, // 13 leaf
       { colIdx:23, values:['확정','미확정'] },
-      { colIdx:29, values:['차단대상 제외','차단확정','판단불가'] },
+      { colIdx:24, values:['Y','N'] },
+      { colIdx:31, values:['차단대상 제외','차단확정','판단불가'] },
     ];
     // 샘플 데이터 3행
     const today = new Date().toISOString().slice(0,10);
@@ -2185,7 +2207,7 @@
        'GET','/my-repo/src/main/java/com/example/ExampleController.java','ExampleController','getExample','example01',
        '예제 API','','','','','',
        '메인화면','N',100,50,10,
-       '사용','미확정','','','','',
+       '사용','미확정','N','','','','','',
        '','','',
        '','',
        '','','',
@@ -2195,17 +2217,17 @@
        'POST','/my-repo/src/main/java/com/example/OldController.java','OldController','oldAction','old01',
        '','','','','','',
        '','N',0,0,0,
-       '①-② 호출0건+변경없음','미확정','','호출 0건 + 커밋 1년 경과','','',
+       '①-② 호출0건+변경없음','미확정','N','','','호출 0건 + 커밋 1년 경과','','',
        '','','',
        '','',
        '','','',
        '','','', '','','', '','','', '','','', '','','',
        today, today],
-      ['my-repo','업무명 예시','IT커머스개발팀','김철수','/api/review-target','https://api.example.com/api/review-target',
-       'DELETE','/my-repo/src/main/java/com/example/ReviewController.java','ReviewController','deleteItem','review01',
+      ['my-repo','업무명 예시','IT커머스개발팀','김철수','/api/test-target','https://api.example.com/api/test-target',
+       'DELETE','/my-repo/src/main/java/com/example/TestController.java','TestController','deleteItem','test01',
        '','','','','','',
        '','N',5,2,1,
-       '②-③ 호출 1~reviewThreshold건','미확정','','','','',
+       '②-③ 호출 1~reviewThreshold건','미확정','Y','URL-test, 컨트롤러-Test','','','','',
        '','차단확정','불필요한 API로 확인',
        '','',
        '','','',
@@ -2677,6 +2699,8 @@
             </span>
             ${r.blockMarkingIncomplete ? `<span style="margin-top:4px;padding:6px 10px;background:#fff7ed;border:1px solid #fed7aa;border-radius:4px;color:#b45309;font-weight:600;line-height:1.5;">⚠ 차단처리 미흡 — 차단완료 상태이나 위 ✗ 항목을 보완하고 추출을 재실행하면 자동 해제됩니다.</span>` : ''}
           </div>
+          <div class="detail-label">테스트용 의심</div>
+          <div class="detail-value">${r.testSuspectReason ? testSuspectBadge(r.testSuspectReason) : '<span style="color:var(--text-muted);">없음</span>'}</div>
           <div class="detail-label">비고 <span style="color:var(--primary);font-size:10px;">✎</span></div>
           <div class="detail-value"><textarea id="df-memo" class="df-textarea" rows="2" ${dis}>${esc(r.memo || '')}</textarea></div>
         </div>
