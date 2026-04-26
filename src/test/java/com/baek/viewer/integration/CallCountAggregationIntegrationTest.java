@@ -66,7 +66,7 @@ class CallCountAggregationIntegrationTest {
         storage.save(REPO, List.of(info("/api/a", recentCommit())), "ip");
         ApiRecord r = recordRepo.findByRepositoryNameAndApiPathAndHttpMethod(REPO, "/api/a", "GET").orElseThrow();
         // 신규 + 1년 미만 커밋 + call=0 → ②-② (umbrella REVIEW)
-        assertThat(r.getStatus()).isEqualTo("②-② 호출0건+변경있음");
+        assertThat(r.getStatus()).isEqualTo("②-① 호출0건+변경있음");
 
         // 호출건수 100 부여
         storage.updateCallCounts(REPO, Map.of("/api/a", 100L));
@@ -82,13 +82,13 @@ class CallCountAggregationIntegrationTest {
         // 1년 경과 → 신규 분석 시 ①-② (호출 0 + fullOld → BLOCK)
         storage.save(REPO, List.of(info("/api/b", oldCommit())), "ip");
         ApiRecord r = recordRepo.findByRepositoryNameAndApiPathAndHttpMethod(REPO, "/api/b", "GET").orElseThrow();
-        assertThat(r.getStatus()).isEqualTo("①-② 호출0건+변경없음");
+        assertThat(r.getStatus()).isEqualTo("①-① 차단대상");
 
         // 호출 2건 발생 → target=REVIEW (callMid + fullOld) 이지만 sticky 로 ①-② 보존
         storage.updateCallCounts(REPO, Map.of("/api/b", 2L));
         ApiRecord after = recordRepo.findByRepositoryNameAndApiPathAndHttpMethod(REPO, "/api/b", "GET").orElseThrow();
         assertThat(after.getCallCount()).isEqualTo(2L);
-        assertThat(after.getStatus()).isEqualTo("①-② 호출0건+변경없음");  // 보존
+        assertThat(after.getStatus()).isEqualTo("①-① 차단대상");  // 보존
     }
 
     @Test
@@ -96,14 +96,14 @@ class CallCountAggregationIntegrationTest {
     void updateCallCounts_statusOverridden_preserved() {
         storage.save(REPO, List.of(info("/api/c", oldCommit())), "ip");
         ApiRecord r = recordRepo.findByRepositoryNameAndApiPathAndHttpMethod(REPO, "/api/c", "GET").orElseThrow();
-        r.setStatus("①-⑥ 사용으로 변경");
+        r.setStatus("①-④ 사용으로 변경");
         r.setStatusOverridden(true);
         recordRepo.save(r);
 
         storage.updateCallCounts(REPO, Map.of("/api/c", 50L));
         ApiRecord after = recordRepo.findByRepositoryNameAndApiPathAndHttpMethod(REPO, "/api/c", "GET").orElseThrow();
         assertThat(after.getCallCount()).isEqualTo(50L);
-        assertThat(after.getStatus()).isEqualTo("①-⑥ 사용으로 변경");  // 보존
+        assertThat(after.getStatus()).isEqualTo("①-④ 사용으로 변경");  // 보존
     }
 
     @Test
@@ -115,14 +115,14 @@ class CallCountAggregationIntegrationTest {
                 info("/api/y", oldCommit())
         ), "ip");
 
-        // /api/x 만 호출건수 매핑
-        storage.updateCallCounts(REPO, Map.of("/api/x", 5L));
+        // /api/x 만 호출건수 2건 매핑 — callLow + fullOld → target=REVIEW, sticky 로 ①-① 보존
+        storage.updateCallCounts(REPO, Map.of("/api/x", 2L));
 
         ApiRecord rx = recordRepo.findByRepositoryNameAndApiPathAndHttpMethod(REPO, "/api/x", "GET").orElseThrow();
         ApiRecord ry = recordRepo.findByRepositoryNameAndApiPathAndHttpMethod(REPO, "/api/y", "GET").orElseThrow();
-        assertThat(rx.getCallCount()).isEqualTo(5L);
-        // /api/y 는 매핑에 없었으므로 변경 없음 (call_count 는 신규 INSERT 시 0이거나 null)
-        assertThat(rx.getStatus()).isEqualTo("①-② 호출0건+변경없음");  // sticky
-        assertThat(ry.getStatus()).isEqualTo("①-② 호출0건+변경없음");
+        assertThat(rx.getCallCount()).isEqualTo(2L);
+        assertThat(rx.getStatus()).isEqualTo("①-① 차단대상");  // sticky
+        // /api/y 는 매핑에 없었으므로 호출 0 그대로 → ①-① 보존
+        assertThat(ry.getStatus()).isEqualTo("①-① 차단대상");
     }
 }

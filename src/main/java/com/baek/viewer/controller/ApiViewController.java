@@ -179,14 +179,13 @@ public class ApiViewController {
      * ①-⑤ 현업요청 차단제외는 reviewResult 자동 → 일반 차단 워크플로우에서는 제외되지만 배포 등 전체 집계에 포함.
      */
     private static final List<String> BLOCK_TARGET_STATUSES = List.of(
-            "①-② 호출0건+변경없음",
-            "①-③ 호출0건+변경있음(로그)",
-            "①-④ 업무종료",
-            "①-⑤ 현업요청 차단제외",
-            "②-① 호출0건+로그건",
-            "②-② 호출0건+변경있음",
-            "②-③ 호출 1~reviewThreshold건",
-            "②-④ 호출 reviewThreshold+1건↑");
+            "①-① 차단대상",
+            "①-② 담당자 판단",
+            "①-③ 현업요청 제외대상",
+            "①-④ 사용으로 변경",
+            "②-① 호출0건+변경있음",
+            "②-② 호출 3건 이하+변경없음",
+            "②-③ 사용으로 변경");
 
     /** DB에서 API 목록 조회 — 경량 프로젝션 (fullComment, controllerComment, blockedReason 제외)
      *
@@ -385,13 +384,13 @@ public class ApiViewController {
             }
             // statusGroup: 'block' = ①-* leaf 모두, 'review' = ②-* leaf 모두
             if (statusGroup != null && !statusGroup.isBlank()) {
-                String prefix = switch (statusGroup) {
-                    case "block"  -> "①-";
-                    case "review" -> "②-";
-                    default -> null;
-                };
-                if (prefix != null) {
-                    ps.add(cb.like(root.get("status"), prefix + "%"));
+                switch (statusGroup) {
+                    case "block" -> // 차단완료 + ①-* leaf 모두 (① 차단대상 카테고리)
+                        ps.add(cb.or(
+                                cb.equal(root.get("status"), "차단완료"),
+                                cb.like(root.get("status"), "①-%")));
+                    case "review" -> ps.add(cb.like(root.get("status"), "②-%"));
+                    default -> { }
                 }
             }
             // testSuspect: true = 의심 사유 NOT NULL & 빈문자열 아님, false = NULL 또는 빈문자열
@@ -623,7 +622,24 @@ public class ApiViewController {
                 ? recordRepository.countBlockMarkingIncompleteForRepos(repoFilter)
                 : recordRepository.countBlockMarkingIncomplete();
         // ①-② 호출0건+변경없음 — 옛 "최우선 차단대상" + logWorkExcluded=false. 이제 status 자체가 leaf 이므로 단순 countByStatus.
-        long priorityPureCount = byStatus.getOrDefault("①-② 호출0건+변경없음", 0L);
+        long priorityPureCount = byStatus.getOrDefault("①-① 차단대상", 0L);
+
+        // 7카드 통합 집계 (대시보드 한 줄)
+        long blockResidual = byStatus.getOrDefault("①-① 차단대상", 0L);
+        long blockException = byStatus.getOrDefault("①-② 담당자 판단", 0L)
+                + byStatus.getOrDefault("①-③ 현업요청 제외대상", 0L)
+                + byStatus.getOrDefault("①-④ 사용으로 변경", 0L);
+        long reviewSum = byStatus.getOrDefault("②-① 호출0건+변경있음", 0L)
+                + byStatus.getOrDefault("②-② 호출 3건 이하+변경없음", 0L)
+                + byStatus.getOrDefault("②-③ 사용으로 변경", 0L);
+        Map<String, Long> byCategory = new LinkedHashMap<>();
+        byCategory.put("totalExcludingDeleted", total);
+        byCategory.put("use",            byStatus.getOrDefault("사용", 0L));
+        byCategory.put("blockDone",      byStatus.getOrDefault("차단완료", 0L));
+        byCategory.put("blockResidual",  blockResidual);
+        byCategory.put("blockException", blockException);
+        byCategory.put("review",         reviewSum);
+        byCategory.put("deleted",        deleted);
 
         Map<String, Object> response = new LinkedHashMap<>();
         response.put("total",        total);       // 삭제 제외
@@ -634,6 +650,7 @@ public class ApiViewController {
         response.put("deprecated",   deprecatedCount);
         response.put("markingIncompleteCount", markingIncompleteCount);
         response.put("byStatus",     byStatus);
+        response.put("byCategory",   byCategory);  // 7카드 통합
         response.put("byMethod",     byMethod);
         response.put("priorityPureCount", priorityPureCount);
 
@@ -954,7 +971,7 @@ public class ApiViewController {
 
         // ①-② 호출0건+변경없음 전체 카운트 — UI 에서 별도 표시용
         long priorityPureCount = all.stream()
-                .filter(r -> "①-② 호출0건+변경없음".equals(r.getStatus()))
+                .filter(r -> "①-① 차단대상".equals(r.getStatus()))
                 .count();
 
         // HTTP Method별 (전체)
@@ -997,7 +1014,7 @@ public class ApiViewController {
                                     r -> r.getHttpMethod() != null ? r.getHttpMethod() : "?",
                                     Collectors.counting()));
                     long groupPriorityPure = records.stream()
-                            .filter(r -> "①-② 호출0건+변경없음".equals(r.getStatus()))
+                            .filter(r -> "①-① 차단대상".equals(r.getStatus()))
                             .count();
                     String lastDate = records.stream()
                             .filter(r -> r.getLastAnalyzedAt() != null)
@@ -1025,7 +1042,7 @@ public class ApiViewController {
             byTeamCount.merge(team, 1L, Long::sum);
             String status = r.getStatus() != null ? r.getStatus() : "사용";
             byTeamStatus.computeIfAbsent(team, k -> new LinkedHashMap<>()).merge(status, 1L, Long::sum);
-            if ("①-② 호출0건+변경없음".equals(status)) {
+            if ("①-① 차단대상".equals(status)) {
                 byTeamPriorityPure.merge(team, 1L, Long::sum);
             }
         });
@@ -1060,7 +1077,7 @@ public class ApiViewController {
             managerToTeam.putIfAbsent(mgr, team);
             String status = r.getStatus() != null ? r.getStatus() : "사용";
             byManagerStatus.computeIfAbsent(mgr, k -> new LinkedHashMap<>()).merge(status, 1L, Long::sum);
-            if ("①-② 호출0건+변경없음".equals(status)) {
+            if ("①-① 차단대상".equals(status)) {
                 byManagerPriorityPure.merge(mgr, 1L, Long::sum);
             }
         });
@@ -1099,7 +1116,7 @@ public class ApiViewController {
         long start = System.currentTimeMillis();
 
         List<String> targetStatuses = new ArrayList<>(BLOCK_TARGET_STATUSES);
-        targetStatuses.add("①-① 차단완료");
+        targetStatuses.add("차단완료");
         List<DeployScheduleDto> all = recordRepository.findForDeploySchedule(targetStatuses);
 
         Map<String, RepoConfig> repoConfigMap = repoConfigRepository.findAll().stream()
@@ -1147,7 +1164,7 @@ public class ApiViewController {
                     return m;
                 });
                 bucket.put("total", (Long) bucket.get("total") + 1L);
-                if ("①-① 차단완료".equals(r.getStatus())) {
+                if ("차단완료".equals(r.getStatus())) {
                     bucket.put("completed", (Long) bucket.get("completed") + 1L);
                 } else if (r.getDeployScheduledDate() == null) {
                     bucket.put("scheduled", (Long) bucket.get("scheduled") + 1L);
@@ -1278,68 +1295,52 @@ public class ApiViewController {
                 List<BlockOverviewDto>, Map<String, long[]>> aggregate = (keyFn, recs) -> {
             Map<String, long[]> acc = new LinkedHashMap<>();
             for (BlockOverviewDto r : recs) {
-                long[] c = acc.computeIfAbsent(keyFn.apply(r), k -> new long[13]);
+                long[] c = acc.computeIfAbsent(keyFn.apply(r), k -> new long[10]);
                 String s = r.getStatus();
 
-                // 0: 사용
-                if ("사용".equals(s)) c[0]++;
-                // 1: ①-① 차단완료
-                else if ("①-① 차단완료".equals(s)) c[1]++;
-                // 2: ①-② 호출0건+변경없음
-                else if ("①-② 호출0건+변경없음".equals(s)) c[2]++;
-                // 3: ①-③ 호출0건+변경있음(로그)
-                else if ("①-③ 호출0건+변경있음(로그)".equals(s)) c[3]++;
-                // 4: ①-④ 업무종료
-                else if ("①-④ 업무종료".equals(s)) c[4]++;
-                // 5: ①-⑤ 현업요청 차단제외
-                else if ("①-⑤ 현업요청 차단제외".equals(s)) c[5]++;
-                // 6: ①-⑥ = "①-⑥ 사용으로 변경" 수동
-                else if ("①-⑥ 사용으로 변경".equals(s)) c[6]++;
-                // 7: ②-① 호출0건+로그건
-                else if ("②-① 호출0건+로그건".equals(s)) c[7]++;
-                // 8: ②-② 호출0건+변경있음
-                else if ("②-② 호출0건+변경있음".equals(s)) c[8]++;
-                // 9: ②-③ 호출 1~reviewThreshold건
-                else if ("②-③ 호출 1~reviewThreshold건".equals(s)) c[9]++;
-                // 10: ②-④ 호출 reviewThreshold+1건↑
-                else if ("②-④ 호출 reviewThreshold+1건↑".equals(s)) c[10]++;
-                // 11: ②-⑤ = "②-⑤ 사용으로 변경" 수동
-                else if ("②-⑤ 사용으로 변경".equals(s)) c[11]++;
+                // 9 leaf v2 매핑
+                if ("사용".equals(s))                          c[0]++;
+                else if ("차단완료".equals(s))                  c[1]++;
+                else if ("①-① 차단대상".equals(s))             c[2]++;
+                else if ("①-② 담당자 판단".equals(s))           c[3]++;
+                else if ("①-③ 현업요청 제외대상".equals(s))      c[4]++;
+                else if ("①-④ 사용으로 변경".equals(s))          c[5]++;
+                else if ("②-① 호출0건+변경있음".equals(s))       c[6]++;
+                else if ("②-② 호출 3건 이하+변경없음".equals(s)) c[7]++;
+                else if ("②-③ 사용으로 변경".equals(s))          c[8]++;
 
-                // 12: 총합 (각 행의 grandTotal)
-                c[12]++;
+                // 9: 총합 (사용+차단완료+차단대상 leaf 4 + 검토대상 leaf 3, 삭제 제외)
+                c[9]++;
             }
             return acc;
         };
 
         java.util.function.Function<Map.Entry<String, long[]>, Map<String, Object>> rowOf = e -> {
             long[] c = e.getValue();
-            long blockTotal = c[1] + c[2] + c[3] + c[4] + c[5] + c[6];
-            long holdTotal  = c[7] + c[8] + c[9] + c[10] + c[11];
+            // 9 leaf v2: 차단대상 = ①-① + ①-② + ①-③ + ①-④, 검토대상 = ②-① + ②-② + ②-③
+            long blockTotal = c[2] + c[3] + c[4] + c[5];
+            long reviewTotal = c[6] + c[7] + c[8];
             Map<String, Object> m = new LinkedHashMap<>();
-            // upper-tier counts
-            m.put("use",        c[0]);
-            m.put("blockTotal", blockTotal);
-            m.put("blockDone",  c[1]);
-            m.put("btTopPure",  c[2]);
-            m.put("btTopLog",  c[3]);
-            m.put("btLow",      c[4]);
-            m.put("exReview",   c[5]);
-            m.put("exManUse",   c[6]);
-            m.put("holdTotal",  holdTotal);
-            m.put("rev0Log",    c[7]);
-            m.put("rev0Chg",    c[8]);
-            m.put("revLow",     c[9]);
-            m.put("revHigh",    c[10]);
-            m.put("holdManUse", c[11]);
-            m.put("grandTotal", c[12]);
+            m.put("use",         c[0]);
+            m.put("blockDone",   c[1]);                          // 차단완료 (단일)
+            m.put("blockTotal",  blockTotal);                    // 차단대상 합계
+            m.put("blockResidual", c[2]);                        // ①-① 차단대상 잔여
+            m.put("blockExceptionTotal", c[3] + c[4] + c[5]);     // 예외건 소계
+            m.put("blockExManager", c[3]);                       // ①-② 담당자 판단
+            m.put("blockExReview",  c[4]);                       // ①-③ 현업요청 제외대상
+            m.put("blockExManUse",  c[5]);                       // ①-④ 사용으로 변경
+            m.put("reviewTotal",  reviewTotal);                  // 검토대상 합계
+            m.put("review0Chg",   c[6]);                         // ②-① 호출0+변경있음
+            m.put("reviewLow",    c[7]);                         // ②-② 호출 3건 이하
+            m.put("reviewManUse", c[8]);                         // ②-③ 사용으로 변경
+            m.put("grandTotal",   c[9]);
             return m;
         };
 
         // 팀별
         Map<String, long[]> teamAcc = aggregate.apply(teamOf, all);
         List<Map<String, Object>> byTeam = teamAcc.entrySet().stream()
-                .sorted((a, b) -> Long.compare(b.getValue()[12], a.getValue()[12]))
+                .sorted((a, b) -> Long.compare(b.getValue()[9], a.getValue()[9]))
                 .map(e -> {
                     Map<String, Object> m = new LinkedHashMap<>();
                     m.put("team", e.getKey());
@@ -1351,7 +1352,7 @@ public class ApiViewController {
         java.util.function.Function<BlockOverviewDto, String> mgrKey = r -> teamOf.apply(r) + "|" + managerOf.apply(r);
         Map<String, long[]> mgrAcc = aggregate.apply(mgrKey, all);
         List<Map<String, Object>> byManager = mgrAcc.entrySet().stream()
-                .sorted((a, b) -> Long.compare(b.getValue()[12], a.getValue()[12]))
+                .sorted((a, b) -> Long.compare(b.getValue()[9], a.getValue()[9]))
                 .map(e -> {
                     String[] parts = e.getKey().split("\\|", 2);
                     Map<String, Object> m = new LinkedHashMap<>();

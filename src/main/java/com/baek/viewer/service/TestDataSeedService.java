@@ -129,35 +129,37 @@ public class TestDataSeedService {
             String hasUrlBlock = "N";
             String isDeprecated = "N";
             int r = i % 100;
-            // 분포: 사용 60 / ②-① 3 / ②-② 5 / ②-③ 4 / ②-④ 3 / ①-② 5 / ①-③ 5 / ①-④ 8 / ①-① 7
+            // 분포 v2 (9 leaf): 사용 60 / ②-① 8 / ②-② 5 / ②-③ 2 / ①-① 8 / ①-② 4 / ①-③ 2 / ①-④ 4 / 차단완료 7
             if (r < 60) {
                 status = "사용";
-            } else if (r < 63) {
-                status = "②-① 호출0건+로그건";
             } else if (r < 68) {
-                status = "②-② 호출0건+변경있음";
-            } else if (r < 72) {
-                status = "②-③ 호출 1~reviewThreshold건";
+                status = "②-① 호출0건+변경있음";
+            } else if (r < 73) {
+                status = "②-② 호출 3건 이하+변경없음";
             } else if (r < 75) {
-                status = "②-④ 호출 reviewThreshold+1건↑";
-            } else if (r < 80) {
-                status = "①-② 호출0건+변경없음";
-            } else if (r < 85) {
-                status = "①-③ 호출0건+변경있음(로그)";
+                status = "②-③ 사용으로 변경";
+                overridden = true;
+            } else if (r < 83) {
+                status = "①-① 차단대상";
+            } else if (r < 87) {
+                status = "①-② 담당자 판단";
+                blockTarget = "①-② 담당자 판단";
+                blockCriteria = "(테스트) 담당자 결정";
+                overridden = true;
+            } else if (r < 89) {
+                status = "①-③ 현업요청 제외대상";
             } else if (r < 93) {
-                status = "①-④ 업무종료";
-                blockTarget = "①-④ 업무종료";
-                blockCriteria = "(테스트) 수동 지정";
+                status = "①-④ 사용으로 변경";
                 overridden = true;
             } else {
-                status = "①-① 차단완료";
+                status = "차단완료";
                 hasUrlBlock = "Y";
                 isDeprecated = "Y";
             }
 
             // 배포일자: ①-① 차단완료는 과거 / 차단대상·추가검토대상 leaf는 70%만 미래 일자
             LocalDate deployDate = null;
-            if ("①-① 차단완료".equals(status)) {
+            if ("차단완료".equals(status)) {
                 deployDate = today.minusDays(7 + (i % 180));
             } else if (status.startsWith("①-") || status.startsWith("②-")) {
                 if (i % 10 < 7) {
@@ -171,8 +173,8 @@ public class TestDataSeedService {
                 deployManager = DEPLOY_MANAGERS[i % DEPLOY_MANAGERS.length];
             }
 
-            // recentLogOnly: ②-① 호출0+로그건 분포 시뮬레이션은 status 자체가 leaf 이므로 단순 매칭
-            boolean recentLogOnly = "②-① 호출0건+로그건".equals(status);
+            // recentLogOnly 는 v2 에서 분기 미사용 — 하위호환 위해 컬럼만 false 시드
+            boolean recentLogOnly = false;
 
             rows.add(new ApiRow(repo, apiPath, method, status, overridden,
                     blockTarget, blockCriteria, hasUrlBlock, isDeprecated, moduleIdx, i,
@@ -234,7 +236,7 @@ public class TestDataSeedService {
                     ps.setBoolean(p++, false);
                     ps.setString(p++, "[]");
                     ps.setString(p++, "src/main/java/com/test/Mod" + row.module + "Controller.java");
-                    ps.setString(p++, "①-① 차단완료".equals(row.status) ? "[URL차단작업][2026-01-15][CSR-99999] 테스트 차단" : null);
+                    ps.setString(p++, "차단완료".equals(row.status) ? "[URL차단작업][2026-01-15][CSR-99999] 테스트 차단" : null);
                     if (row.deployDate != null) {
                         ps.setDate(p++, java.sql.Date.valueOf(row.deployDate));
                     } else {
@@ -265,16 +267,14 @@ public class TestDataSeedService {
 
         for (int ri = 0; ri < rows.size(); ri++) {
             ApiRow row = rows.get(ri);
-            // 상태별 호출량 분포 — 사용은 10~1000, 차단대상/추가검토는 적거나 0
+            // 상태별 호출량 분포 v2 — 차단완료/차단대상/예외건 → 0건 의미, 검토대상 → 1~3건, 사용 → 다수
             int baseMin = 0;
             int baseMax;
             String s = row.status != null ? row.status : "";
-            if (s.startsWith("①-①") || s.startsWith("①-②") || s.startsWith("①-③") || s.startsWith("①-⑤")) {
-                baseMax = 1;  // 호출 0건이 의미 있는 부류
-            } else if (s.startsWith("①-④")) {
-                baseMax = 5;  // 업무종료 (수동) — 적게
+            if ("차단완료".equals(s) || s.startsWith("①-")) {
+                baseMax = 1;  // 호출 0건 의미
             } else if (s.startsWith("②-")) {
-                baseMax = 20; // 추가검토대상
+                baseMax = 4;  // 검토대상 (1~3건)
             } else {
                 baseMin = 10;
                 baseMax = 1000; // 사용

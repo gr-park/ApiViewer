@@ -277,9 +277,9 @@ function updateAdminBadge(valid) {
         <input id="gReviewThreshold" type="number" min="0" placeholder="3" style="width:120px;">
         <span class="field-hint">이 값 이하 + 소스변경 1년 초과 시 차단검토</span>
       </label>
-      <label class="field">보류 호출 상한
+      <label class="field">보류 호출 상한 <span style="color:#92400e;font-weight:400;font-size:10px;">(v2 에서 사실상 무시)</span>
         <input id="gReviewUpperThreshold" type="number" min="0" placeholder="10" style="width:120px;">
-        <span class="field-hint">이 값 이하 + 소스변경 1년 초과 시 검토필요대상으로 분류 (대시보드 보류 ②-④ 컬럼)</span>
+        <span class="field-hint">9 leaf v2 에서는 호출 reviewThreshold+1↑ 가 자동으로 "사용"에 흡수되어 사실상 무시됨</span>
       </label>
       <label class="field">페이지당 건수 (URL현황/호출현황)
         <input id="gPageSize" type="number" min="10" max="1000" placeholder="200" style="width:120px;">
@@ -891,19 +891,23 @@ function updateAdminBadge(valid) {
   <!-- 현업검토 화면 설정 (공통설정에서 이동) -->
   <div class="card" style="margin-bottom:14px;">
     <div class="card-title"><span class="dot dot-blue"></span>현업검토 화면 설정</div>
-    <div style="font-size:11px;font-weight:700;color:var(--text-muted);margin-bottom:6px;letter-spacing:.05em;">현업검토 화면 표시 상태</div>
+    <div style="font-size:11px;font-weight:700;color:var(--text-muted);margin-bottom:6px;letter-spacing:.05em;">현업검토 화면 표시 상태 (9 leaf v2)</div>
     <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px;">
       <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;">
-        <input type="checkbox" id="gReviewStatus1" value="최우선 차단대상" style="width:14px;height:14px;accent-color:#dc2626;">
-        <span style="background:#fee2e2;color:#991b1b;padding:2px 8px;border-radius:10px;font-weight:600;">①-②/①-③ 최우선 차단대상</span>
+        <input type="checkbox" id="gReviewStatus1" value="①-① 차단대상" style="width:14px;height:14px;accent-color:#dc2626;">
+        <span style="background:#fee2e2;color:#991b1b;padding:2px 8px;border-radius:10px;font-weight:600;">①-① 차단대상</span>
       </label>
       <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;">
-        <input type="checkbox" id="gReviewStatus2" value="후순위 차단대상" style="width:14px;height:14px;accent-color:#c2410c;">
-        <span style="background:#ffedd5;color:#c2410c;padding:2px 8px;border-radius:10px;font-weight:600;">①-④ 업무종료</span>
+        <input type="checkbox" id="gReviewStatus2" value="①-② 담당자 판단" style="width:14px;height:14px;accent-color:#ea580c;">
+        <span style="background:#ffedd5;color:#c2410c;padding:2px 8px;border-radius:10px;font-weight:600;">①-② 담당자 판단</span>
       </label>
       <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;">
-        <input type="checkbox" id="gReviewStatus3" value="검토필요대상" style="width:14px;height:14px;accent-color:#d97706;">
-        <span style="background:#fef3c7;color:#92400e;padding:2px 8px;border-radius:10px;font-weight:600;">②-①~②-④ 검토필요대상</span>
+        <input type="checkbox" id="gReviewStatus3" value="②-① 호출0건+변경있음" style="width:14px;height:14px;accent-color:#d97706;">
+        <span style="background:#fef3c7;color:#92400e;padding:2px 8px;border-radius:10px;font-weight:600;">②-① 호출0건+변경있음</span>
+      </label>
+      <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;">
+        <input type="checkbox" id="gReviewStatus4" value="②-② 호출 3건 이하+변경없음" style="width:14px;height:14px;accent-color:#d97706;">
+        <span style="background:#fef3c7;color:#92400e;padding:2px 8px;border-radius:10px;font-weight:600;">②-② 호출 3건 이하+변경없음</span>
       </label>
       <span style="font-size:11px;color:var(--text-muted);align-self:center;">체크된 상태만 현업검토 화면에 표시됩니다</span>
     </div>
@@ -1121,11 +1125,12 @@ function updateAdminBadge(valid) {
       const tailVal = g.logTailLines ?? 1000;
       document.getElementById('gLogTailLines').value   = tailVal;
       document.getElementById('logTailLines').value    = tailVal;
-      // 현업검토 대상 상태 체크박스 로드
-      const reviewStatuses = (g.reviewTargetStatuses || '최우선 차단대상,후순위 차단대상,검토필요대상').split(',').map(s => s.trim());
-      document.getElementById('gReviewStatus1').checked = reviewStatuses.includes('최우선 차단대상');
-      document.getElementById('gReviewStatus2').checked = reviewStatuses.includes('후순위 차단대상');
-      document.getElementById('gReviewStatus3').checked = reviewStatuses.includes('검토필요대상');
+      // 현업검토 대상 상태 체크박스 로드 (9 leaf v2)
+      const reviewStatuses = (g.reviewTargetStatuses || '①-① 차단대상,①-② 담당자 판단,②-① 호출0건+변경있음,②-② 호출 3건 이하+변경없음').split(',').map(s => s.trim());
+      document.getElementById('gReviewStatus1').checked = reviewStatuses.includes('①-① 차단대상');
+      document.getElementById('gReviewStatus2').checked = reviewStatuses.includes('①-② 담당자 판단');
+      document.getElementById('gReviewStatus3').checked = reviewStatuses.includes('②-① 호출0건+변경있음');
+      const _r4 = document.getElementById('gReviewStatus4'); if (_r4) _r4.checked = reviewStatuses.includes('②-② 호출 3건 이하+변경없음');
       // 팀 목록 로드
       document.getElementById('teamsList').innerHTML = '';
       try {
@@ -1256,10 +1261,11 @@ function updateAdminBadge(valid) {
       cur.whatapProfiles = wpList.length ? JSON.stringify(wpList) : null;
       cur.jenniferProfiles = jpList.length ? JSON.stringify(jpList) : null;
       cur.reviewTargetStatuses = [
-        {id:'gReviewStatus1', val:'최우선 차단대상'},
-        {id:'gReviewStatus2', val:'후순위 차단대상'},
-        {id:'gReviewStatus3', val:'검토필요대상'}
-      ].filter(x => document.getElementById(x.id).checked).map(x => x.val).join(',') || '최우선 차단대상,후순위 차단대상,검토필요대상';
+        {id:'gReviewStatus1', val:'①-① 차단대상'},
+        {id:'gReviewStatus2', val:'①-② 담당자 판단'},
+        {id:'gReviewStatus3', val:'②-① 호출0건+변경있음'},
+        {id:'gReviewStatus4', val:'②-② 호출 3건 이하+변경없음'}
+      ].filter(x => document.getElementById(x.id)?.checked).map(x => x.val).join(',') || '①-① 차단대상,①-② 담당자 판단,②-① 호출0건+변경있음,②-② 호출 3건 이하+변경없음';
 
       const res = await adminFetch('/api/config/global', {
         method: 'PUT', body: JSON.stringify(cur)
@@ -1272,11 +1278,12 @@ function updateAdminBadge(valid) {
   // ── 현업검토 화면 설정 저장 (URL분석/검토 탭 내 독립 저장) ──────────────────
   async function saveReviewStatus() {
     const statuses = [
-      {id:'gReviewStatus1', val:'최우선 차단대상'},
-      {id:'gReviewStatus2', val:'후순위 차단대상'},
-      {id:'gReviewStatus3', val:'검토필요대상'}
+      {id:'gReviewStatus1', val:'①-① 차단대상'},
+      {id:'gReviewStatus2', val:'①-② 담당자 판단'},
+      {id:'gReviewStatus3', val:'②-① 호출0건+변경있음'},
+      {id:'gReviewStatus4', val:'②-② 호출 3건 이하+변경없음'}
     ].filter(x => document.getElementById(x.id)?.checked).map(x => x.val).join(',')
-      || '최우선 차단대상,후순위 차단대상,검토필요대상';
+      || '①-① 차단대상,①-② 담당자 판단,②-① 호출0건+변경있음,②-② 호출 3건 이하+변경없음';
     try {
       // 기존 설정을 먼저 읽어 password 등 누락 방지
       const curRes = await adminFetch('/api/config/global');

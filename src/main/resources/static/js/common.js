@@ -116,11 +116,17 @@ async function adminFetch(url, options = {}) {
   return res;
 }
 
-// ─── 상태 배지 ──────────────────────────────────────────────
+// ─── 상태 배지 (9 leaf v2) ──────────────────────────────────
 function statusBadge(status) {
   const cls = {
     '사용': 'st-use', '차단완료': 'st-done', '삭제': 'st-del',
-    '최우선 차단대상': 'bt-top', '후순위 차단대상': 'bt-low', '검토필요 차단대상': 'bt-rev'
+    '①-① 차단대상': 'bt-top',
+    '①-② 담당자 판단': 'bt-low',
+    '①-③ 현업요청 제외대상': 'bt-low',
+    '①-④ 사용으로 변경': 'st-use',
+    '②-① 호출0건+변경있음': 'bt-rev',
+    '②-② 호출 3건 이하+변경없음': 'bt-rev',
+    '②-③ 사용으로 변경': 'st-use'
   };
   const c = cls[status] || 'st-use';
   return `<span class="status-badge ${c}">${esc(status || '사용')}</span>`;

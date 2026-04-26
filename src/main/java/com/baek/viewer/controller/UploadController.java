@@ -25,7 +25,7 @@ public class UploadController {
         this.repository = repository;
     }
 
-    private static final String BLOCKED = "①-① 차단완료";
+    private static final String BLOCKED = "차단완료";
 
     /**
      * viewer.html 엑셀 업로드 — 기존 레코드의 편집 가능 필드 일괄 업데이트 (신규 생성 없음).

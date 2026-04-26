@@ -24,42 +24,42 @@ public class ApiStorageService {
 
     private static final Logger log = LoggerFactory.getLogger(ApiStorageService.class);
 
-    // ── 상태값 상수 (DB 값 = 화면 라벨, 13 leaf) ────────────────────────────
-    public static final String STATUS_USE        = "사용";
-    public static final String STATUS_DELETED    = "삭제";
-    /** ①-① 차단완료 — hasUrlBlock=Y 자동 */
-    public static final String S_1_1 = "①-① 차단완료";
-    /** ①-② 호출0건+변경없음 — 옛 '최우선 차단대상' + logWorkExcluded=false */
-    public static final String S_1_2 = "①-② 호출0건+변경없음";
-    /** ①-③ 호출0건+변경있음(로그) — 옛 '최우선 차단대상' + logWorkExcluded=true */
-    public static final String S_1_3 = "①-③ 호출0건+변경있음(로그)";
-    /** ①-④ 업무종료 — 옛 '후순위 차단대상' (수동) */
-    public static final String S_1_4 = "①-④ 업무종료";
-    /** ①-⑤ 현업요청 차단제외 — reviewResult='차단대상 제외' 자동 */
-    public static final String S_1_5 = "①-⑤ 현업요청 차단제외";
-    /** ②-① 호출0건+로그건 — 옛 '검토필요대상' + callZero + recentLogOnly=true */
-    public static final String S_2_1 = "②-① 호출0건+로그건";
-    /** ②-② 호출0건+변경있음 — 옛 '검토필요대상' + callZero + recentLogOnly=false */
-    public static final String S_2_2 = "②-② 호출0건+변경있음";
-    /** ②-③ 호출 1~reviewThreshold건 — 옛 '검토필요대상' + 1~threshold */
-    public static final String S_2_3 = "②-③ 호출 1~reviewThreshold건";
-    /** ②-④ 호출 reviewThreshold+1건↑ — 옛 '검토필요대상' + threshold+1~upper */
-    public static final String S_2_4 = "②-④ 호출 reviewThreshold+1건↑";
+    // ── 상태값 상수 (DB 값 = 화면 라벨, 9 leaf v2) ────────────────────────────
+    public static final String STATUS_USE     = "사용";
+    public static final String STATUS_DELETED = "삭제";
+    /** 차단완료 — hasUrlBlock=Y 자동, 별도 카테고리 (번호 prefix 없음) */
+    public static final String STATUS_DONE    = "차단완료";
 
-    /** 차단대상 umbrella 의 leaf 5종 (자동/수동 모두 포함) */
-    public static final List<String> BLOCK_LEAVES = List.of(S_1_1, S_1_2, S_1_3, S_1_4, S_1_5);
-    /** 추가검토대상 umbrella 의 leaf 4종 (자동) */
-    public static final List<String> REVIEW_LEAVES = List.of(S_2_1, S_2_2, S_2_3, S_2_4);
+    /** ①-① 차단대상 — 자동 (callZero + 1년 경과). 옛 ①-②/①-③ 통합 */
+    public static final String S_1_1 = "①-① 차단대상";
+    /** ①-② 담당자 판단 — 수동. 옛 ①-④ 업무종료 */
+    public static final String S_1_2 = "①-② 담당자 판단";
+    /** ①-③ 현업요청 제외대상 — 자동 (reviewResult='차단대상 제외'). 옛 ①-⑤ */
+    public static final String S_1_3 = "①-③ 현업요청 제외대상";
+    /** ①-④ 사용으로 변경 — 수동. 옛 ①-⑥ */
+    public static final String S_1_4 = "①-④ 사용으로 변경";
+
+    /** ②-① 호출0건+변경있음 — 자동. 옛 ②-① 호출0건+로그건 + ②-② 호출0건+변경있음 통합 */
+    public static final String S_2_1 = "②-① 호출0건+변경있음";
+    /** ②-② 호출 3건 이하+변경없음 — 자동. 옛 ②-③ 호출 1~reviewThreshold건 */
+    public static final String S_2_2 = "②-② 호출 3건 이하+변경없음";
+    /** ②-③ 사용으로 변경 — 수동. 옛 ②-⑤ */
+    public static final String S_2_3 = "②-③ 사용으로 변경";
+
+    /** 차단대상 umbrella leaf (자동/수동 모두) */
+    public static final List<String> BLOCK_LEAVES = List.of(S_1_1, S_1_2, S_1_3, S_1_4);
+    /** 추가검토대상 umbrella leaf (자동/수동 모두) */
+    public static final List<String> REVIEW_LEAVES = List.of(S_2_1, S_2_2, S_2_3);
 
     /**
      * 수동 판단 전용 상태값 — 자동 재계산(calculateStatus)에서 보존되며,
      * 일괄 수정 시 selecting 만으로 statusOverridden=true 가 자동 적용된다.
-     * 모두 의미상 "사용" 계열이며, 차단대상에서 사용으로 전환된 건과 추가검토대상에서
-     * 사용으로 전환된 건을 구분 (차단대상 ①-⑥ / 추가검토대상 ②-⑤ 컬럼).
+     * 담당자가 명시적으로 결정한 leaf — 자동 분류로 덮이지 않아야 함.
      */
     public static final List<String> MANUAL_STATUSES = List.of(
-            "①-⑥ 사용으로 변경",
-            "②-⑤ 사용으로 변경"
+            S_1_2,  // ①-② 담당자 판단
+            S_1_4,  // ①-④ 사용으로 변경
+            S_2_3   // ②-③ 사용으로 변경
     );
 
     private final ApiRecordRepository repository;
@@ -131,7 +131,7 @@ public class ApiStorageService {
 
             if (existing != null) {
                 // ② 차단완료 → SKIP
-                if (S_1_1.equals(existing.getStatus())) continue;
+                if (STATUS_DONE.equals(existing.getStatus())) continue;
 
                 // ③ 기존 + 차단완료 아님 → 추출 필드만 업데이트
                 existing.setNew(false); // 재분석 시 신규 플래그 해제
@@ -142,12 +142,12 @@ public class ApiStorageService {
                 if (!existing.isStatusOverridden()) {
                     String newStatus = calculateStatus(existing, reviewThreshold, reviewUpper);
                     if (!Objects.equals(oldStatus, newStatus)) {
-                        if (!S_1_1.equals(newStatus)) {
+                        if (!STATUS_DONE.equals(newStatus)) {
                             String logMsg = oldStatus + " → " + newStatus;
-                            if (S_1_5.equals(newStatus) && "차단대상 제외".equals(existing.getReviewResult())) {
+                            if (S_1_3.equals(newStatus) && "차단대상 제외".equals(existing.getReviewResult())) {
                                 logMsg += " (현업검토결과=차단대상 제외)";
                                 revertedToUsed++;
-                                log.info("[차단대상→①-⑤ 전환] id={} repo={} path={}",
+                                log.info("[현업요청 제외대상 전환] id={} repo={} path={}",
                                         existing.getId(), repositoryName, existing.getApiPath());
                             }
                             appendChangeLog(existing, logMsg);
@@ -155,7 +155,7 @@ public class ApiStorageService {
                     }
                     existing.setStatus(newStatus);
                 }
-                if (S_1_1.equals(existing.getStatus())) {
+                if (STATUS_DONE.equals(existing.getStatus())) {
                     existing.setBlockedDate(parseBlockedDate(existing.getFullComment()));
                     existing.setBlockedReason(parseBlockedReason(existing.getFullComment()));
                 }
@@ -176,7 +176,7 @@ public class ApiStorageService {
                 updateExtractedFields(r, a, now);
                 applyManagerMapping(r, managerMappings);
                 r.setStatus(calculateStatus(r, reviewThreshold, reviewUpper));
-                if (S_1_1.equals(r.getStatus())) {
+                if (STATUS_DONE.equals(r.getStatus())) {
                     r.setBlockedDate(parseBlockedDate(r.getFullComment()));
                     r.setBlockedReason(parseBlockedReason(r.getFullComment()));
                 }
@@ -189,7 +189,7 @@ public class ApiStorageService {
         for (ApiInfo a : apis) extractedKeys.add(a.getApiPath() + "|" + a.getHttpMethod());
         List<ApiRecord> toMarkDeleted = new ArrayList<>();
         for (ApiRecord r : allInRepo) {
-            if (S_1_1.equals(r.getStatus()) || "삭제".equals(r.getStatus())) continue;
+            if (STATUS_DONE.equals(r.getStatus()) || "삭제".equals(r.getStatus())) continue;
             String key = r.getApiPath() + "|" + r.getHttpMethod();
             if (!extractedKeys.contains(key)) {
                 String oldStatus = r.getStatus();
@@ -334,7 +334,7 @@ public class ApiStorageService {
 
         for (ApiRecord r : records) {
             // 차단완료 SKIP
-            if (S_1_1.equals(r.getStatus())) continue;
+            if (STATUS_DONE.equals(r.getStatus())) continue;
 
             Long newCount = pathToCount.get(r.getApiPath());
             if (newCount != null) {
@@ -491,17 +491,19 @@ public class ApiStorageService {
     }
 
     /**
-     * 자동 상태 판정 (umbrella sticky 규칙).
+     * 자동 상태 판정 v2 (umbrella sticky, 9 leaf).
      *
      * 규칙:
-     *   1. MANUAL_STATUSES 보존 (수동 → 사용)
-     *   2. hasUrlBlock=Y → ①-① 차단완료 (강한 신호, umbrella 무시)
-     *   3. reviewResult='차단대상 제외' → ①-⑤ 현업요청 차단제외 (강한 신호)
+     *   1. MANUAL_STATUSES 보존 (①-② 담당자 판단 / ①-④ 사용으로 변경 / ②-③ 사용으로 변경)
+     *   2. hasUrlBlock=Y → '차단완료' (강한 신호, umbrella 무시)
+     *   3. reviewResult='차단대상 제외' → '①-③ 현업요청 제외대상' (강한 신호)
      *   4. 현재 status가 BLOCK_LEAVES 또는 REVIEW_LEAVES umbrella 내:
      *        - 조건이 '사용'을 가리키면 → '사용'
      *        - 그 외에는 현재 leaf 보존 (차단↔검토 전이 / leaf 변경 없음)
-     *   5. 현재 status가 사용/null/'차단완료' 등 umbrella 외부:
+     *   5. 현재 status가 사용/'차단완료'/null 등 umbrella 외부:
      *        - 조건에 따라 leaf 자유 할당
+     *
+     * 옛 ②-④ 호출 reviewThreshold+1↑ 는 사용으로 흡수 — `upper` 파라미터 사실상 무시.
      */
     String calculateStatus(ApiRecord r, int reviewThreshold, int reviewUpperThreshold) {
         // 1. 수동 판단 상태 보존
@@ -510,80 +512,47 @@ public class ApiStorageService {
         }
         // 2. 차단완료 — hasUrlBlock 자동
         if ("Y".equals(r.getHasUrlBlock())) {
-            r.setLogWorkExcluded(false);
-            r.setRecentLogOnly(false);
-            return S_1_1;
+            return STATUS_DONE;
         }
-        // 3. 현업요청 차단제외 — reviewResult 자동
+        // 3. 현업요청 제외대상 — reviewResult 자동
         if ("차단대상 제외".equals(r.getReviewResult())) {
-            r.setLogWorkExcluded(false);
-            r.setRecentLogOnly(false);
-            return S_1_5;
+            return S_1_3;
         }
 
         // 조건 평가
         Long call = r.getCallCount();
         boolean callZero = (call == null || call == 0);
-        int upper = Math.max(reviewThreshold, reviewUpperThreshold);
-        boolean callMid  = (call != null && call >= 1 && call <= upper);
+        boolean callLow  = (call != null && call >= 1 && call <= reviewThreshold);
         boolean fullOld  = areAllCommitsOlderThanOneYear(r.getGitHistory(), false);
         boolean bizOld   = areAllCommitsOlderThanOneYear(r.getGitHistory(), true);
-        // target umbrella 결정
+        // target umbrella — 옛 ②-④(호출 threshold+1↑)는 USE 흡수
         Umbrella target;
         if (callZero && (fullOld || bizOld)) target = Umbrella.BLOCK;
-        else if ((callZero && !fullOld) || (callMid && fullOld)) target = Umbrella.REVIEW;
+        else if ((callZero && !fullOld) || (callLow && fullOld)) target = Umbrella.REVIEW;
         else target = Umbrella.USE;
 
-        // 4. umbrella sticky — 현재가 차단대상/추가검토대상 leaf 면 USE 전이만 허용
+        // 4. umbrella sticky
         String current = r.getStatus();
         boolean inBlock  = BLOCK_LEAVES.contains(current);
         boolean inReview = REVIEW_LEAVES.contains(current);
         if (inBlock || inReview) {
-            if (target == Umbrella.USE) {
-                r.setLogWorkExcluded(false);
-                r.setRecentLogOnly(false);
-                return STATUS_USE;
-            }
-            // umbrella 내부 보존 — leaf 변경 없음, 보조 플래그도 안 갱신
-            return current;
+            if (target == Umbrella.USE) return STATUS_USE;
+            return current;  // umbrella 내부 보존
         }
 
-        // 5. 현재 사용/차단완료/null 등 외부 → 자유 할당
-        return assignLeaf(target, r, callZero, fullOld, bizOld, call, reviewThreshold);
+        // 5. 외부 (사용/차단완료/null) → 자유 할당
+        return assignLeaf(target, callZero, fullOld);
     }
 
-    /** 외부 → umbrella 첫 진입 시 leaf 결정 + 보조 플래그 갱신 */
-    private String assignLeaf(Umbrella target, ApiRecord r,
-                              boolean callZero, boolean fullOld, boolean bizOld,
-                              Long call, int reviewThreshold) {
+    /** 외부 → umbrella 첫 진입 시 leaf 결정. 9 leaf v2 통합으로 BLOCK은 단일, REVIEW도 단순. */
+    private String assignLeaf(Umbrella target, boolean callZero, boolean fullOld) {
         switch (target) {
-            case BLOCK -> {
-                if (callZero && fullOld) {
-                    r.setLogWorkExcluded(false);
-                    r.setRecentLogOnly(false);
-                    return S_1_2; // 호출0건+변경없음
-                }
-                // callZero && bizOld (logWork 제외 시 1년 경과)
-                r.setLogWorkExcluded(true);
-                r.setRecentLogOnly(false);
-                return S_1_3; // 호출0건+변경있음(로그)
-            }
+            case BLOCK  -> { return S_1_1; }                          // ①-① 차단대상 (옛 ①-②/①-③ 통합)
             case REVIEW -> {
-                r.setLogWorkExcluded(false);
-                if (callZero) {
-                    boolean logOnly = recentCommitsAllLogOnly(r.getGitHistory());
-                    r.setRecentLogOnly(logOnly);
-                    return logOnly ? S_2_1 : S_2_2;
-                }
-                r.setRecentLogOnly(false);
-                if (call != null && call <= reviewThreshold) return S_2_3;
-                return S_2_4;
+                if (callZero) return S_2_1;                            // ②-① 호출0건+변경있음
+                return S_2_2;                                          // ②-② 호출 3건 이하+변경없음 (callLow + fullOld)
             }
-            case USE -> {
-                r.setLogWorkExcluded(false);
-                r.setRecentLogOnly(false);
-                return STATUS_USE;
-            }
+            case USE    -> { return STATUS_USE; }
         }
         return STATUS_USE;
     }

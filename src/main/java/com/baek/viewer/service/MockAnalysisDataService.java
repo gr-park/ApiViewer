@@ -215,7 +215,7 @@ public class MockAnalysisDataService {
         r.setRepoPath("src/main/java/com/mock/" + DOMAINS[domIdx] + "/" + controllerName + ".java");
         r.setControllerFilePath("/" + repoName + "/" + r.getRepoPath());
 
-        // 상태 분포: 사용 60 / 검토필요 15 / 최우선 10 / 후순위 8 / 차단완료 7
+        // 상태 분포 v2 (9 leaf): 사용 60 / 검토대상 ②-① 8 / ②-② 5 / ②-③ 2 / ①-① 8 / ①-② 4 / ①-③ 2 / ①-④ 4 / 차단완료 7
         int pick = rnd.nextInt(100);
         String status;
         String hasBlock = "N";
@@ -229,24 +229,30 @@ public class MockAnalysisDataService {
         boolean markingIncomplete = false;
         if (pick < 60) {
             status = "사용";
-        } else if (pick < 70) {
-            status = "②-② 호출0건+변경있음";  // 추가검토대상 자동
+        } else if (pick < 68) {
+            status = "②-① 호출0건+변경있음";        // 검토대상 자동
+        } else if (pick < 73) {
+            status = "②-② 호출 3건 이하+변경없음";   // 검토대상 자동
         } else if (pick < 75) {
-            status = "②-③ 호출 1~reviewThreshold건";
-        } else if (pick < 82) {
-            status = "①-② 호출0건+변경없음";  // 차단대상 자동
-        } else if (pick < 85) {
-            status = "①-③ 호출0건+변경있음(로그)";
+            status = "②-③ 사용으로 변경";          // 검토대상 수동
+            overridden = true;
+        } else if (pick < 83) {
+            status = "①-① 차단대상";               // 차단대상 잔여 자동
+        } else if (pick < 87) {
+            status = "①-② 담당자 판단";             // 차단대상 예외건 수동
+            blockTarget = "①-② 담당자 판단";
+            blockCriteria = "(Mock) 담당자 결정";
+            overridden = true;
+        } else if (pick < 89) {
+            status = "①-③ 현업요청 제외대상";       // 차단대상 예외건 자동 (reviewResult 기반)
         } else if (pick < 93) {
-            status = "①-④ 업무종료";          // 차단대상 수동
-            blockTarget = "①-④ 업무종료";
-            blockCriteria = "(Mock) 수동 지정";
+            status = "①-④ 사용으로 변경";           // 차단대상 예외건 수동
             overridden = true;
         } else {
-            // ①-① 차단완료 — 메서드 첫 줄에 throw new UnsupportedOperationException 존재.
+            // 차단완료 — 메서드 첫 줄에 throw new UnsupportedOperationException 존재.
             // 하위 분포: 40% 는 차단처리미흡 (@Deprecated/[URL차단작업] 주석 일부 누락),
             //           60% 는 완전 표기 (둘 다 존재).
-            status = "①-① 차단완료";
+            status = "차단완료";
             hasBlock = "Y";
             int prop = rnd.nextInt(100);
             if (prop < 40) {
@@ -300,7 +306,7 @@ public class MockAnalysisDataService {
         for (int c = 0; c < commits; c++) {
             if (c > 0) sb.append(",");
             int daysAgo;
-            if (status != null && status.startsWith("①-②") && c == 0) {
+            if (status != null && status.startsWith("①-①") && c == 0) {
                 daysAgo = 366 + rnd.nextInt(365); // 1~2년 경과
             } else {
                 daysAgo = rnd.nextInt(600);

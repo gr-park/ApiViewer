@@ -282,10 +282,10 @@
       <span class="section-sub">프로젝트 전반의 URL 상태 요약</span>
     </div>
 
-    <!-- ── 요약 카드 ── -->
+    <!-- ── 요약 카드 (9 leaf v2 — 7장) ── -->
     <div class="summary-grid">
       <div class="sum-card c-total">
-        <div class="sum-label">활성 URL (삭제 제외)</div>
+        <div class="sum-label">총 URL (삭제 제외)</div>
         <div class="sum-value" id="sTotal">0</div>
         <div class="sum-sub" id="sRepoCount"></div>
       </div>
@@ -295,54 +295,42 @@
         <div class="sum-sub" id="sUsePct"></div>
       </div>
       <div class="sum-card c-done">
-        <div class="sum-label">①-① 차단완료</div>
+        <div class="sum-label">차단완료</div>
         <div class="sum-value" id="sDone">0</div>
         <div class="sum-sub" id="sDonePct"></div>
       </div>
       <div class="sum-card c-bt-top">
-        <div class="sum-label">①-②/①-③ 최우선 차단대상</div>
+        <div class="sum-label">차단대상 잔여 <span style="font-weight:400;color:var(--text-muted);font-size:10px;">(①-①)</span></div>
         <div class="sum-value" id="sBtTop">0</div>
         <div class="sum-sub" id="sBtTopPct"></div>
       </div>
       <div class="sum-card c-bt-low">
-        <div class="sum-label">①-④ 업무종료</div>
+        <div class="sum-label">차단대상 예외건 <span style="font-weight:400;color:var(--text-muted);font-size:10px;">(①-②/③/④)</span></div>
         <div class="sum-value" id="sBtLow">0</div>
         <div class="sum-sub" id="sBtLowPct"></div>
       </div>
       <div class="sum-card" style="border-left:4px solid #d97706;">
-        <div class="sum-label">②-①~②-④ 검토필요대상</div>
+        <div class="sum-label">검토대상 <span style="font-weight:400;color:var(--text-muted);font-size:10px;">(②-①/②/③)</span></div>
         <div class="sum-value" id="sBtRev">0</div>
         <div class="sum-sub" id="sBtRevPct"></div>
       </div>
       <div class="sum-card" style="border-left:4px solid #7c2d12;">
         <div class="sum-label">삭제 이력</div>
         <div class="sum-value" id="sDeleted" style="color:#7c2d12;">0</div>
-        <div class="sum-sub">활성 URL 합계 제외</div>
+        <div class="sum-sub">총합 제외</div>
       </div>
     </div>
 
-    <!-- 수동 판단 카드 (담당자 결정) — ①-⑥ 사용으로 변경 / ②-⑤ 사용으로 변경 -->
-    <div class="summary-grid" style="margin-top:8px;">
-      <div class="sum-card" style="border-left:4px solid #65a30d;">
-        <div class="sum-label">①-⑥ 사용으로 변경 <span style="font-weight:400;color:var(--text-muted);font-size:10px;">(수동, 최우선/후순위/담당자 판단 통합)</span></div>
-        <div class="sum-value" id="sManBtUse" style="color:#3f6212;">0</div>
-        <div class="sum-sub" id="sManBtUsePct"></div>
-      </div>
-      <div class="sum-card" style="border-left:4px solid #65a30d;">
-        <div class="sum-label">②-⑤ 사용으로 변경 <span style="font-weight:400;color:var(--text-muted);font-size:10px;">(수동)</span></div>
-        <div class="sum-value" id="sManRevUse" style="color:#3f6212;">0</div>
-        <div class="sum-sub" id="sManRevUsePct"></div>
-      </div>
-    </div>
-
-    <!-- ── 상태 구분 안내 ── -->
+    <!-- ── 상태 구분 안내 (9 leaf v2) ── -->
     <div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:10px 16px;margin-bottom:14px;font-size:11px;color:#0c4a6e;line-height:1.8;">
       <b>상태 구분 안내</b><br>
       <span style="background:#dcfce7;padding:1px 6px;border-radius:3px;">사용</span> 실제 또는 현업검토 결과 사용중인 URL &nbsp;|&nbsp;
-      <span style="background:#f1f5f9;padding:1px 6px;border-radius:3px;color:#64748b;">①-① 차단완료</span> @Deprecated + javadoc표기 + UnsupportedOperationException<br>
-      <span style="background:#fee2e2;padding:1px 6px;border-radius:3px;color:#991b1b;">①-②/①-③ 최우선 차단대상</span> 호출 0건 + 소스변경 1년 경과 (침해사고 로그작업은 이력에서 제외) &nbsp;|&nbsp;
-      <span style="background:#fef3c7;padding:1px 6px;border-radius:3px;color:#ea580c;">①-④ 업무종료</span> IT담당자 검토결과 미사용 또는 업무종료로 인지된 건 &nbsp;|&nbsp;
-      <span style="background:#fef3c7;padding:1px 6px;border-radius:3px;color:#92400e;">②-①~②-④ 검토필요대상</span> 호출 0건 + 소스변경 1년 미만, 호출 1~<span id="guideReviewThreshold">3</span>건 + 소스변경 1년 경과
+      <span style="background:#f1f5f9;padding:1px 6px;border-radius:3px;color:#64748b;">차단완료</span> @Deprecated + javadoc표기 + UnsupportedOperationException<br>
+      <span style="background:#fee2e2;padding:1px 6px;border-radius:3px;color:#991b1b;">①-① 차단대상</span> 호출 0건 + 소스변경 1년 경과 &nbsp;|&nbsp;
+      <span style="background:#ffedd5;padding:1px 6px;border-radius:3px;color:#ea580c;">①-② 담당자 판단</span> IT담당자 검토결과 미사용/업무종료 &nbsp;|&nbsp;
+      <span style="background:#f3e8ff;padding:1px 6px;border-radius:3px;color:#7c3aed;">①-③ 현업요청 제외대상</span> 현업요청 차단 제외<br>
+      <span style="background:#ecfccb;padding:1px 6px;border-radius:3px;color:#3f6212;">①-④/②-③ 사용으로 변경</span> 담당자 수동 판단 &nbsp;|&nbsp;
+      <span style="background:#fef3c7;padding:1px 6px;border-radius:3px;color:#92400e;">②-①/②-② 추가검토대상</span> 호출 0건 + 1년 미만 변경, 호출 1~<span id="guideReviewThreshold">3</span>건 + 1년 경과
     </div>
 
     <!-- ── 상태 분포 + HTTP Method ── -->
@@ -352,10 +340,10 @@
         <div class="status-dist" id="distBar"></div>
         <div class="status-legend">
           <div class="legend-item"><div class="legend-dot seg-use"></div>사용</div>
-          <div class="legend-item"><div class="legend-dot seg-done"></div>①-① 차단완료</div>
-          <div class="legend-item"><div class="legend-dot" style="background:#dc2626;"></div>①-②/①-③ 최우선 차단대상</div>
-          <div class="legend-item"><div class="legend-dot" style="background:#ea580c;"></div>①-④ 업무종료</div>
-          <div class="legend-item"><div class="legend-dot" style="background:#d97706;"></div>②-①~②-④ 검토필요대상</div>
+          <div class="legend-item"><div class="legend-dot seg-done"></div>차단완료</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#dc2626;"></div>차단대상 잔여 (①-①)</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#ea580c;"></div>차단대상 예외건 (①-②/③/④)</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#d97706;"></div>검토대상 (②-①/②/③)</div>
         </div>
         <div style="margin-top:16px;" id="distDetail"></div>
       </div>
@@ -381,10 +369,10 @@
               <th>팀명</th>
               <th style="text-align:right;">합계</th>
               <th style="text-align:right;">사용</th>
-              <th style="text-align:right;">①-① 차단완료</th>
-              <th style="text-align:right;">①-②/①-③ 최우선</th>
-              <th style="text-align:right;">①-④ 업무종료</th>
-              <th style="text-align:right;">②-①~②-④ 검토필요대상</th>
+              <th style="text-align:right;">차단완료</th>
+              <th style="text-align:right;">차단대상 잔여</th>
+              <th style="text-align:right;">차단대상 예외건</th>
+              <th style="text-align:right;">검토대상</th>
               <th></th>
             </tr></thead>
             <tbody id="teamTbody"></tbody>
@@ -402,10 +390,10 @@
               <th>업무명</th>
               <th style="text-align:right;">합계</th>
               <th style="text-align:right;">사용</th>
-              <th style="text-align:right;">①-① 차단완료</th>
-              <th style="text-align:right;">①-②/①-③ 최우선</th>
-              <th style="text-align:right;">①-④ 업무종료</th>
-              <th style="text-align:right;">②-①~②-④ 검토필요대상</th>
+              <th style="text-align:right;">차단완료</th>
+              <th style="text-align:right;">차단대상 잔여</th>
+              <th style="text-align:right;">차단대상 예외건</th>
+              <th style="text-align:right;">검토대상</th>
               <th>마지막 분석일</th>
               <th></th>
             </tr></thead>
@@ -423,10 +411,10 @@
               <th>담당자</th>
               <th style="text-align:right;">합계</th>
               <th style="text-align:right;">사용</th>
-              <th style="text-align:right;">①-① 차단완료</th>
-              <th style="text-align:right;">①-②/①-③ 최우선</th>
-              <th style="text-align:right;">①-④ 업무종료</th>
-              <th style="text-align:right;">②-①~②-④ 검토필요대상</th>
+              <th style="text-align:right;">차단완료</th>
+              <th style="text-align:right;">차단대상 잔여</th>
+              <th style="text-align:right;">차단대상 예외건</th>
+              <th style="text-align:right;">검토대상</th>
               <th></th>
             </tr></thead>
             <tbody id="managerTbody"></tbody>
@@ -440,7 +428,7 @@
          ══════════════════════════════════════════════════════════════ -->
     <div class="section-header">
       <h3>📅 배포일자 분포</h3>
-      <span class="section-sub">차단대상(①-②/①-③ 최우선 / ①-④ 업무종료 / ②-①~②-④ 검토필요대상) 의 배포 예정일 분포 — 일자 미정은 "예정", 차단완료는 별도 컬럼</span>
+      <span class="section-sub">차단대상(①-①/②/③/④) · 검토대상(②-①/②/③) 의 배포 예정일 분포 — 일자 미정은 "예정", 차단완료는 별도 컬럼</span>
     </div>
     <div class="card">
       <div class="tabs">
@@ -478,11 +466,11 @@
     </div>
 
     <!-- ══════════════════════════════════════════════════════════════
-         섹션 1.7 : 차단대상 진행사항 (사용 / 차단 / 보류 3-tier)
+         섹션 1.7 : 차단대상 진행사항 (9 leaf v2 — 15컬럼)
          ══════════════════════════════════════════════════════════════ -->
     <div class="section-header">
       <h3>🚦 차단대상 진행사항</h3>
-      <span class="section-sub">총합계 / 사용 / 차단대상(A·B·C) / 보류 3단 헤더 × 18컬럼 — 운영 엑셀 동일 레이아웃, 팀/레포/담당자 그룹별 집계</span>
+      <span class="section-sub">검토부서 / 총합계 / 사용 / 차단완료 / 차단대상(소계·비율·①-①·②·③·④) / 검토대상(소계·비율·②-①·②·③) — 9 leaf v2, 팀/레포/담당자 그룹별 집계</span>
     </div>
     <div class="card">
       <div class="tabs">
@@ -690,45 +678,44 @@
     }
   }
 
-  // ── 렌더 ──────────────────────────────────────────────────
+  // ── 렌더 (9 leaf v2 — byCategory 우선, byStatus 폴백) ────────
   function render(s) {
     const total = s.total || 0;
     const st = s.byStatus || {};
-    const use    = st['사용']             || 0;
-    const done   = st['차단완료']         || 0;
-    const btTop     = st['최우선 차단대상']      || 0;
-    const btLow     = st['후순위 차단대상']      || 0;
-    const btRev     = st['검토필요대상'] || 0;
-    const manBtUse  = st['①-⑥ 사용으로 변경']  || 0;
-    const manRevUse = st['②-⑤ 사용으로 변경']  || 0;
+    const cat = s.byCategory || {};
+    // byCategory 가 백엔드에 있으면 우선, 없으면 byStatus 9 leaf 합산으로 폴백
+    const use      = (cat.use      != null) ? cat.use      : (st['사용'] || 0);
+    const done     = (cat.blockDone!= null) ? cat.blockDone: (st['차단완료'] || 0);
+    const btTop    = (cat.blockResidual    != null) ? cat.blockResidual    : (st['①-① 차단대상'] || 0);
+    const btLow    = (cat.blockException   != null) ? cat.blockException
+                       : ((st['①-② 담당자 판단'] || 0) + (st['①-③ 현업요청 제외대상'] || 0) + (st['①-④ 사용으로 변경'] || 0));
+    const btRev    = (cat.review   != null) ? cat.review
+                       : ((st['②-① 호출0건+변경있음'] || 0) + (st['②-② 호출 3건 이하+변경없음'] || 0) + (st['②-③ 사용으로 변경'] || 0));
+    const totalExcludingDeleted = (cat.totalExcludingDeleted != null) ? cat.totalExcludingDeleted : total;
 
     // 요약 카드
-    document.getElementById('sTotal').textContent  = total.toLocaleString();
-    document.getElementById('sDeleted').textContent = (s.deletedCount || 0).toLocaleString();
+    document.getElementById('sTotal').textContent  = totalExcludingDeleted.toLocaleString();
+    document.getElementById('sDeleted').textContent = (s.deletedCount || cat.deleted || 0).toLocaleString();
     document.getElementById('sRepoCount').textContent =
       `레포지토리 ${(s.byRepo || []).length}개`;
     document.getElementById('sUse').textContent     = use.toLocaleString();
-    document.getElementById('sUsePct').textContent  = pct(use, total);
+    document.getElementById('sUsePct').textContent  = pct(use, totalExcludingDeleted);
     document.getElementById('sDone').textContent    = done.toLocaleString();
-    document.getElementById('sDonePct').textContent = pct(done, total);
+    document.getElementById('sDonePct').textContent = pct(done, totalExcludingDeleted);
     document.getElementById('sBtTop').textContent   = btTop.toLocaleString();
-    document.getElementById('sBtTopPct').textContent = pct(btTop, total);
+    document.getElementById('sBtTopPct').textContent = pct(btTop, totalExcludingDeleted);
     document.getElementById('sBtLow').textContent   = btLow.toLocaleString();
-    document.getElementById('sBtLowPct').textContent = pct(btLow, total);
+    document.getElementById('sBtLowPct').textContent = pct(btLow, totalExcludingDeleted);
     document.getElementById('sBtRev').textContent   = btRev.toLocaleString();
-    document.getElementById('sBtRevPct').textContent = pct(btRev, total);
-    { const e = document.getElementById('sManBtUse'); if (e) { e.textContent = manBtUse.toLocaleString();
-        document.getElementById('sManBtUsePct').textContent = pct(manBtUse, total); } }
-    { const e = document.getElementById('sManRevUse'); if (e) { e.textContent = manRevUse.toLocaleString();
-        document.getElementById('sManRevUsePct').textContent = pct(manRevUse, total); } }
+    document.getElementById('sBtRevPct').textContent = pct(btRev, totalExcludingDeleted);
 
-    // 상태 분포 바
+    // 상태 분포 바 (9 leaf v2)
     const distData = [
       ['사용', use, '#22c55e'],
-      ['①-① 차단완료', done, '#6b7280'],
-      ['①-②/①-③ 최우선 차단대상', btTop, '#dc2626'],
-      ['①-④ 업무종료', btLow, '#ea580c'],
-      ['②-①~②-④ 검토필요대상', btRev, '#d97706']
+      ['차단완료', done, '#6b7280'],
+      ['차단대상 잔여', btTop, '#dc2626'],
+      ['차단대상 예외건', btLow, '#ea580c'],
+      ['검토대상', btRev, '#d97706']
     ];
     const bar = document.getElementById('distBar');
     bar.innerHTML = distData.filter(([,v]) => v > 0).map(([,v,c]) =>
@@ -774,19 +761,20 @@
     el.innerHTML = data.map(row => {
       const sd  = row.statusDetail || {};
       const bd  = row.statusDetail || {};
-      const use = sd['사용'] || 0;
-      const done = sd['차단완료'] || 0;
-      const btTop = bd['최우선 차단대상'] || 0;
-      const btLow = bd['후순위 차단대상'] || 0;
-      const btRev = bd['검토필요대상'] || 0;
+      const cd  = row.byCategory || {};
+      const use = (cd.use != null) ? cd.use : (sd['사용'] || 0);
+      const done = (cd.blockDone != null) ? cd.blockDone : (sd['차단완료'] || 0);
+      const btTop = (cd.blockResidual != null) ? cd.blockResidual : (sd['①-① 차단대상'] || 0);
+      const btLow = (cd.blockException != null) ? cd.blockException : ((sd['①-② 담당자 판단']||0) + (sd['①-③ 현업요청 제외대상']||0) + (sd['①-④ 사용으로 변경']||0));
+      const btRev = (cd.review != null) ? cd.review : ((sd['②-① 호출0건+변경있음']||0) + (sd['②-② 호출 3건 이하+변경없음']||0) + (sd['②-③ 사용으로 변경']||0));
       const cnt = row.count || 0;
       const label = labelKey === 'repo' ? `[${esc(row.team||'-')}] ${esc(row.repo)} (${esc(row.businessName||'')})` : esc(row.team);
       const items = [
         ['사용', use, barColor('사용')],
-        ['①-① 차단완료', done, '#6b7280'],
-        ['①-②/①-③ 최우선', btTop, '#dc2626'],
-        ['①-④ 업무종료', btLow, '#ea580c'],
-        ['②-①~②-④ 검토필요대상', btRev, '#d97706']
+        ['차단완료', done, '#6b7280'],
+        ['차단대상 잔여', btTop, '#dc2626'],
+        ['차단대상 예외건', btLow, '#ea580c'],
+        ['검토대상', btRev, '#d97706']
       ];
       const bars = items.map(([label, v, color]) =>
         `<div style="display:flex;align-items:center;gap:4px;">
@@ -813,19 +801,20 @@
     el.innerHTML = data.map(row => {
       const sd  = row.statusDetail || {};
       const bd  = row.statusDetail || {};
-      const use = sd['사용'] || 0;
-      const done = sd['차단완료'] || 0;
-      const btTop = bd['최우선 차단대상'] || 0;
-      const btLow = bd['후순위 차단대상'] || 0;
-      const btRev = bd['검토필요대상'] || 0;
+      const cd  = row.byCategory || {};
+      const use = (cd.use != null) ? cd.use : (sd['사용'] || 0);
+      const done = (cd.blockDone != null) ? cd.blockDone : (sd['차단완료'] || 0);
+      const btTop = (cd.blockResidual != null) ? cd.blockResidual : (sd['①-① 차단대상'] || 0);
+      const btLow = (cd.blockException != null) ? cd.blockException : ((sd['①-② 담당자 판단']||0) + (sd['①-③ 현업요청 제외대상']||0) + (sd['①-④ 사용으로 변경']||0));
+      const btRev = (cd.review != null) ? cd.review : ((sd['②-① 호출0건+변경있음']||0) + (sd['②-② 호출 3건 이하+변경없음']||0) + (sd['②-③ 사용으로 변경']||0));
       const cnt = row.count || 0;
       const label = labelKey === 'manager' ? `${esc(row.team||'-')} / ${esc(row[labelKey])}` : esc(row[labelKey]);
       const details = [
         use  ? `<span class="st st-use" style="font-size:10px;">사용 ${use}</span>` : '',
-        done ? `<span class="st st-done" style="font-size:10px;">①-① 차단완료 ${done}</span>` : '',
-        btTop? `<span style="font-size:10px;color:#dc2626;font-weight:600;">①-②/①-③ 최우선 ${btTop}</span>` : '',
-        btLow? `<span style="font-size:10px;color:#ea580c;font-weight:600;">①-④ 업무종료 ${btLow}</span>` : '',
-        btRev? `<span style="font-size:10px;color:#d97706;font-weight:600;">②-①~②-④ 검토필요대상 ${btRev}</span>` : ''
+        done ? `<span class="st st-done" style="font-size:10px;">차단완료 ${done}</span>` : '',
+        btTop? `<span style="font-size:10px;color:#dc2626;font-weight:600;">차단대상 잔여 ${btTop}</span>` : '',
+        btLow? `<span style="font-size:10px;color:#ea580c;font-weight:600;">차단대상 예외 ${btLow}</span>` : '',
+        btRev? `<span style="font-size:10px;color:#d97706;font-weight:600;">검토대상 ${btRev}</span>` : ''
       ].filter(Boolean).join(' ');
       return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
         <span style="width:140px;font-size:11px;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(row[labelKey])}">${label}</span>
@@ -844,10 +833,13 @@
     if (!data.length) { tbody.innerHTML = `<tr><td colspan="8" class="empty">데이터 없음</td></tr>`; return; }
     tbody.innerHTML = data.map(row => {
       const sd = row.statusDetail || {};
-      const bd = row.statusDetail || {};
-      const use=sd['사용']||0, done=sd['차단완료']||0, cnt=row.count||0;
-      const btTop=bd['최우선 차단대상']||0,
-            btLow=bd['후순위 차단대상']||0, btRev=bd['검토필요대상']||0;
+      const cd = row.byCategory || {};
+      const cnt=row.count||0;
+      const use   = (cd.use != null) ? cd.use : (sd['사용'] || 0);
+      const done  = (cd.blockDone != null) ? cd.blockDone : (sd['차단완료'] || 0);
+      const btTop = (cd.blockResidual != null) ? cd.blockResidual : (sd['①-① 차단대상'] || 0);
+      const btLow = (cd.blockException != null) ? cd.blockException : ((sd['①-② 담당자 판단']||0) + (sd['①-③ 현업요청 제외대상']||0) + (sd['①-④ 사용으로 변경']||0));
+      const btRev = (cd.review != null) ? cd.review : ((sd['②-① 호출0건+변경있음']||0) + (sd['②-② 호출 3건 이하+변경없음']||0) + (sd['②-③ 사용으로 변경']||0));
       const qp = key === 'team' ? `team=${encodeURIComponent(row[key]||'')}` : `manager=${encodeURIComponent(row[key]||'')}`;
       return `<tr>
         <td><b>${esc(row[key])}</b></td>
@@ -869,10 +861,13 @@
     data.sort((a, b) => (a.team||'').localeCompare(b.team||'') || (b.count||0) - (a.count||0));
     tbody.innerHTML = data.map(row => {
       const sd = row.statusDetail || {};
-      const bd = row.statusDetail || {};
-      const use=sd['사용']||0, done=sd['차단완료']||0, cnt=row.count||0;
-      const btTop=bd['최우선 차단대상']||0,
-            btLow=bd['후순위 차단대상']||0, btRev=bd['검토필요대상']||0;
+      const cd = row.byCategory || {};
+      const cnt=row.count||0;
+      const use   = (cd.use != null) ? cd.use : (sd['사용'] || 0);
+      const done  = (cd.blockDone != null) ? cd.blockDone : (sd['차단완료'] || 0);
+      const btTop = (cd.blockResidual != null) ? cd.blockResidual : (sd['①-① 차단대상'] || 0);
+      const btLow = (cd.blockException != null) ? cd.blockException : ((sd['①-② 담당자 판단']||0) + (sd['①-③ 현업요청 제외대상']||0) + (sd['①-④ 사용으로 변경']||0));
+      const btRev = (cd.review != null) ? cd.review : ((sd['②-① 호출0건+변경있음']||0) + (sd['②-② 호출 3건 이하+변경없음']||0) + (sd['②-③ 사용으로 변경']||0));
       return `<tr>
         <td style="color:var(--text-muted);">${esc(row.team || '-')}</td>
         <td><b>${esc(row.manager)}</b></td>
@@ -894,10 +889,13 @@
     data.sort((a, b) => (a.team||'').localeCompare(b.team||'') || (b.count||0) - (a.count||0));
     tbody.innerHTML = data.map(row => {
       const sd = row.statusDetail || {};
-      const bd = row.statusDetail || {};
-      const use=sd['사용']||0, done=sd['차단완료']||0, cnt=row.count||0;
-      const btTop=bd['최우선 차단대상']||0,
-            btLow=bd['후순위 차단대상']||0, btRev=bd['검토필요대상']||0;
+      const cd = row.byCategory || {};
+      const cnt=row.count||0;
+      const use   = (cd.use != null) ? cd.use : (sd['사용'] || 0);
+      const done  = (cd.blockDone != null) ? cd.blockDone : (sd['차단완료'] || 0);
+      const btTop = (cd.blockResidual != null) ? cd.blockResidual : (sd['①-① 차단대상'] || 0);
+      const btLow = (cd.blockException != null) ? cd.blockException : ((sd['①-② 담당자 판단']||0) + (sd['①-③ 현업요청 제외대상']||0) + (sd['①-④ 사용으로 변경']||0));
+      const btRev = (cd.review != null) ? cd.review : ((sd['②-① 호출0건+변경있음']||0) + (sd['②-② 호출 3건 이하+변경없음']||0) + (sd['②-③ 사용으로 변경']||0));
       return `<tr>
         <td style="color:var(--text-muted);">${esc(row.team)}</td>
         <td><b>${esc(row.repo)}</b></td>
@@ -944,12 +942,9 @@
     document.getElementById('panel-overview-' + name).classList.add('active');
   }
 
-  // ── 차단대상 진행사항 렌더 ─────────────────────────────────
-  // 18컬럼 운영 엑셀 레이아웃 — 검토부서 / 총합계 / 사용 / 차단대상(7) / 보류(7)
-  // 차단대상 7 = 소계 + 비율 + 차단완료(A) + 잔여(B:①②③) + 예외건(C:현업·사용변경)
-  // 보류    7 = 소계 + 비율 + ④ + ⑤ + ⑥ + ⑦ + 사용변경
+  // ── 차단대상 진행사항 렌더 (9 leaf v2 — 15컬럼) ──────────────
+  // 검토부서 / 총합계 / 사용 / 차단완료 / 차단대상(소계·비율·①-①·②·③·④) / 검토대상(소계·비율·②-①·②·③)
   function renderBlockOverview(d) {
-    // colspan="100" — 헤더 컬럼 수가 탭별로 다름 (팀=17, 담당자=18, 레포=19). 큰 값으로 모두 커버.
     const empty = '<tr><td colspan="100" class="empty" style="padding:18px;text-align:center;color:var(--text-muted);">데이터 없음</td></tr>';
     if (!d) {
       ['overviewTeamThead','overviewRepoThead','overviewManagerThead'].forEach(id => document.getElementById(id).innerHTML = '');
@@ -958,49 +953,44 @@
     }
     const threshold = d.reviewThreshold || 3;
 
-    // 3단 헤더 — 운영 엑셀과 동일
-    //   1단: 검토부서 / 총합계 / 사용 / 차단대상(colspan=7) / 보류(colspan=7)
-    //   2단: 차단대상 → 소계 / 비율 / 차단완료(A) / 잔여(B colspan=3) / 예외건(C 현업) / 예외건(C 사용변경)
-    //         보류    → 소계 / 비율 / ④ / ⑤ / ⑥ / ⑦ / 사용변경
-    //   3단: 잔여(B) → ① / ② / ③ (업무종료)
+    // 2단 헤더
+    //   1단: 검토부서(rowspan=2) / 총합계(r=2) / 사용(r=2) / 차단완료(r=2) / 차단대상(colspan=6) / 검토대상(colspan=5)
+    //   2단: 차단대상 → 소계/비율/①-① 차단대상/①-② 담당자판단/①-③ 현업요청제외/①-④ 사용변경
+    //         검토대상 → 소계/비율/②-①/②-②/②-③
     const headerHtml = (firstSpan) => {
       const yL = 'background:#fde68a;color:#92400e;';   // 차단대상 1단
-      const yM = 'background:#fef3c7;color:#92400e;';   // 차단대상 2/3단 (잔여·차단완료)
-      const oL = 'background:#fed7aa;color:#9a3412;';   // 예외건(C)
-      const bL = 'background:#dbeafe;color:#1e40af;';   // 보류 1단
-      const bM = 'background:#eff6ff;color:#1e40af;';   // 보류 2단
+      const yM = 'background:#fef3c7;color:#92400e;';   // 차단대상 2단
+      const oM = 'background:#ffedd5;color:#9a3412;';   // 차단대상 예외건 2단
+      const pM = 'background:#f3e8ff;color:#7c3aed;';   // 현업요청 제외 2단
+      const limeM = 'background:#ecfccb;color:#3f6212;'; // 사용변경 2단
+      const bL = 'background:#dbeafe;color:#1e40af;';   // 검토대상 1단
+      const bM = 'background:#eff6ff;color:#1e40af;';   // 검토대상 2단
+      const greyDone = 'background:#f1f5f9;color:#64748b;'; // 차단완료
       const greenLight = 'background:#dcfce7;color:#166534;';
 
       const tier1 = `<tr>
         ${firstSpan.tier1}
-        <th rowspan="3" style="text-align:right;font-weight:800;border-right:2px solid #999;">총합계</th>
-        <th rowspan="3" style="${greenLight}text-align:right;border-right:2px solid #999;">사용</th>
-        <th colspan="7" style="${yL}text-align:center;border-right:2px solid #999;">차단대상</th>
-        <th colspan="7" style="${bL}text-align:center;">보류</th>
+        <th rowspan="2" style="text-align:right;font-weight:800;border-right:2px solid #999;">총합계</th>
+        <th rowspan="2" style="${greenLight}text-align:right;">사용</th>
+        <th rowspan="2" style="${greyDone}text-align:right;border-right:2px solid #999;">차단완료</th>
+        <th colspan="6" style="${yL}text-align:center;border-right:2px solid #999;">차단대상</th>
+        <th colspan="5" style="${bL}text-align:center;">검토대상</th>
       </tr>`;
       const tier2 = `<tr>
         ${firstSpan.tier2}
-        <th rowspan="2" style="${yL}text-align:right;">소계<br><span style="font-weight:400;font-size:10px;">(A+B+C)</span></th>
-        <th rowspan="2" style="${yL}text-align:right;">비율</th>
-        <th rowspan="2" style="${yM}text-align:right;">차단완료<br>(~4/23)<br>(A)</th>
-        <th colspan="3" style="${yM}text-align:center;">잔여 (B)</th>
-        <th rowspan="2" style="${oL}text-align:right;">예외건(C)<br>현업요청<br>차단제외</th>
-        <th rowspan="2" style="${oL}text-align:right;border-right:2px solid #999;">예외건(C)<br>사용으로<br>변경</th>
-        <th rowspan="2" style="${bL}text-align:right;">소계</th>
-        <th rowspan="2" style="${bL}text-align:right;">비율</th>
-        <th rowspan="2" style="${bM}text-align:right;">④ 호출0건<br>+로그건</th>
-        <th rowspan="2" style="${bM}text-align:right;">⑤ 호출0건<br>+변경있음</th>
-        <th rowspan="2" style="${bM}text-align:right;">⑥ 호출<br>1~${threshold}건</th>
-        <th rowspan="2" style="${bM}text-align:right;">⑦ 호출<br>${threshold+1}건이상</th>
-        <th rowspan="2" style="${bM}text-align:right;">사용으로<br>변경</th>
+        <th style="${yL}text-align:right;">소계</th>
+        <th style="${yL}text-align:right;">비율</th>
+        <th style="${yM}text-align:right;">①-①<br>차단대상</th>
+        <th style="${oM}text-align:right;">①-②<br>담당자<br>판단</th>
+        <th style="${pM}text-align:right;">①-③<br>현업요청<br>제외</th>
+        <th style="${limeM}text-align:right;border-right:2px solid #999;">①-④<br>사용으로<br>변경</th>
+        <th style="${bL}text-align:right;">소계</th>
+        <th style="${bL}text-align:right;">비율</th>
+        <th style="${bM}text-align:right;">②-①<br>호출0건<br>+변경있음</th>
+        <th style="${bM}text-align:right;">②-②<br>호출 1~${threshold}건<br>+변경없음</th>
+        <th style="${limeM}text-align:right;">②-③<br>사용으로<br>변경</th>
       </tr>`;
-      const tier3 = `<tr>
-        ${firstSpan.tier3 || ''}
-        <th style="${yM}text-align:right;">① 호출0건<br>+변경없음</th>
-        <th style="${yM}text-align:right;">② 호출0건<br>+변경있음<br>(로그)</th>
-        <th style="${yM}text-align:right;">③ 업무<br>종료</th>
-      </tr>`;
-      return tier1 + tier2 + tier3;
+      return tier1 + tier2;
     };
 
     const cellNum = (n, opts) => {
@@ -1011,42 +1001,44 @@
       const border = o.borderRight ? 'border-right:2px solid #e5e7eb;' : '';
       return `<td style="text-align:right;${styleColor}${fontWeight}${border}">${v ? v.toLocaleString() : '·'}</td>`;
     };
-    const pct = (a, b) => {
+    const pctF = (a, b) => {
       if (!b) return '-';
       return ((a / b) * 100).toFixed(1) + '%';
     };
 
-    // 18컬럼 행: firstCells + (총합계, 사용) + 차단대상 7 + 보류 7
+    // 15컬럼 행: firstCells + 총합계 + 사용 + 차단완료 + 차단대상[6] + 검토대상[5]
     const rowOf = (firstCells, row, opts) => {
       const o = opts || {};
       const total = row.grandTotal || 0;
       const trStyle = o.isTotal ? 'background:#f1f5f9;font-weight:700;' : '';
       const totalCell = `<td style="text-align:right;font-weight:800;border-right:2px solid #999;">${total.toLocaleString()}</td>`;
-      const useCell   = `<td style="text-align:right;color:#166534;font-weight:600;border-right:2px solid #999;">${(row.use||0).toLocaleString()}</td>`;
+      const useCell   = `<td style="text-align:right;color:#166534;font-weight:600;">${(row.use||0).toLocaleString()}</td>`;
+      const doneCell  = `<td style="text-align:right;color:#64748b;font-weight:600;border-right:2px solid #999;">${(row.blockDone||0).toLocaleString()}</td>`;
+      const blockTotal  = row.blockTotal != null ? row.blockTotal
+                         : ((row.blockResidual||0) + (row.blockExManager||0) + (row.blockExReview||0) + (row.blockExManUse||0));
+      const reviewTotal = row.reviewTotal != null ? row.reviewTotal
+                         : ((row.review0Chg||0) + (row.reviewLow||0) + (row.reviewManUse||0));
       return `<tr style="${trStyle}">${firstCells}
         ${totalCell}
         ${useCell}
-        <td style="text-align:right;font-weight:700;color:#92400e;">${(row.blockTotal||0).toLocaleString()}</td>
-        <td style="text-align:right;color:#92400e;">${pct(row.blockTotal, total)}</td>
-        ${cellNum(row.blockDone, {color:'#64748b'})}
-        ${cellNum(row.btTopPure, {color:'#dc2626'})}
-        ${cellNum(row.btTopLog, {color:'#dc2626'})}
-        ${cellNum(row.btLow, {color:'#ea580c'})}
-        ${cellNum(row.exReview, {color:'#7c3aed'})}
-        ${cellNum(row.exManUse, {color:'#3f6212', borderRight:true})}
-        <td style="text-align:right;font-weight:700;color:#1e40af;">${(row.holdTotal||0).toLocaleString()}</td>
-        <td style="text-align:right;color:#1e40af;">${pct(row.holdTotal, total)}</td>
-        ${cellNum(row.rev0Log, {color:'#1e40af'})}
-        ${cellNum(row.rev0Chg, {color:'#1e40af'})}
-        ${cellNum(row.revLow, {color:'#1e40af'})}
-        ${cellNum(row.revHigh, {color:'#1e40af'})}
-        ${cellNum(row.holdManUse, {color:'#3f6212'})}
+        ${doneCell}
+        <td style="text-align:right;font-weight:700;color:#92400e;">${blockTotal.toLocaleString()}</td>
+        <td style="text-align:right;color:#92400e;">${pctF(blockTotal, total)}</td>
+        ${cellNum(row.blockResidual, {color:'#dc2626'})}
+        ${cellNum(row.blockExManager, {color:'#ea580c'})}
+        ${cellNum(row.blockExReview,  {color:'#7c3aed'})}
+        ${cellNum(row.blockExManUse,  {color:'#3f6212', borderRight:true})}
+        <td style="text-align:right;font-weight:700;color:#1e40af;">${reviewTotal.toLocaleString()}</td>
+        <td style="text-align:right;color:#1e40af;">${pctF(reviewTotal, total)}</td>
+        ${cellNum(row.review0Chg,  {color:'#d97706'})}
+        ${cellNum(row.reviewLow,   {color:'#d97706'})}
+        ${cellNum(row.reviewManUse,{color:'#3f6212'})}
       </tr>`;
     };
 
     // 합계 행 — byTeam/byRepo/byManager 배열을 reduce 해 마지막 행에 추가
-    const SUM_KEYS = ['use','blockTotal','blockDone','btTopPure','btTopLog','btLow','exReview','exManUse',
-                      'holdTotal','rev0Log','rev0Chg','revLow','revHigh','holdManUse','grandTotal'];
+    const SUM_KEYS = ['use','blockDone','blockTotal','blockResidual','blockExManager','blockExReview','blockExManUse',
+                      'reviewTotal','review0Chg','reviewLow','reviewManUse','grandTotal'];
     const sumRows = (arr) => {
       const acc = {};
       SUM_KEYS.forEach(k => acc[k] = 0);
@@ -1056,9 +1048,8 @@
 
     // 팀별 (검토부서 = 팀)
     document.getElementById('overviewTeamThead').innerHTML = headerHtml({
-      tier1: `<th rowspan="3" style="text-align:left;border-right:2px solid #999;">검토부서</th>`,
-      tier2: ``,
-      tier3: ``
+      tier1: `<th rowspan="2" style="text-align:left;border-right:2px solid #999;">검토부서</th>`,
+      tier2: ``
     });
     {
       const arr = d.byTeam || [];
@@ -1069,9 +1060,8 @@
 
     // 레포지토리별 — 첫 셀 한 묶음 (팀 + 레포 + 업무명, 두 줄 구성)
     document.getElementById('overviewRepoThead').innerHTML = headerHtml({
-      tier1: `<th rowspan="3" style="text-align:left;border-right:2px solid #999;">검토부서</th>`,
-      tier2: ``,
-      tier3: ``
+      tier1: `<th rowspan="2" style="text-align:left;border-right:2px solid #999;">검토부서</th>`,
+      tier2: ``
     });
     {
       const arr = d.byRepo || [];
@@ -1087,9 +1077,8 @@
 
     // 담당자별 — 첫 셀 한 묶음 (팀 + 담당자, 두 줄 구성)
     document.getElementById('overviewManagerThead').innerHTML = headerHtml({
-      tier1: `<th rowspan="3" style="text-align:left;border-right:2px solid #999;">검토부서</th>`,
-      tier2: ``,
-      tier3: ``
+      tier1: `<th rowspan="2" style="text-align:left;border-right:2px solid #999;">검토부서</th>`,
+      tier2: ``
     });
     {
       const arr = d.byManager || [];
@@ -1115,7 +1104,7 @@
     // 일자 컬럼 헤더 (YYYY-MM-DD → MM/DD 단축 표시, 툴팁에 풀일자)
     const dateThs = dates.map(dt => `<th title="${dt}" style="text-align:right;white-space:nowrap;font-size:10px;">${dt.substring(5).replace('-','/')}</th>`).join('');
     const fixedTail = `<th style="text-align:right;white-space:nowrap;color:#7c3aed;">예정</th>
-                       <th style="text-align:right;white-space:nowrap;color:#64748b;">①-① 차단완료</th>
+                       <th style="text-align:right;white-space:nowrap;color:#64748b;">차단완료</th>
                        <th style="text-align:right;white-space:nowrap;">합계</th>`;
 
     const renderRow = (firstCells, row) => {

@@ -26,7 +26,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  *   - 신규 레코드 INSERT
  *   - 기존 레코드 추출 시 필드 업데이트 (필요한 필드만)
  *   - umbrella sticky: ① 차단대상 / ② 추가검토대상 leaf 보존
- *   - ①-① 차단완료 레코드는 SKIP (수정 없음)
+ *   - 차단완료 레코드는 SKIP (수정 없음)
  *   - DB에 있지만 추출 결과에 없는 건 → '삭제' 마킹
  *   - statusOverridden=true 레코드는 자동 재계산 미적용
  */
@@ -68,7 +68,7 @@ class AnalysisCrudIntegrationTest {
 
         Optional<ApiRecord> saved = recordRepo.findByRepositoryNameAndApiPathAndHttpMethod(REPO, "/api/x", "GET");
         assertThat(saved).isPresent();
-        assertThat(saved.get().getStatus()).isEqualTo("①-② 호출0건+변경없음");
+        assertThat(saved.get().getStatus()).isEqualTo("①-① 차단대상");
         assertThat(saved.get().isNew()).isTrue();
     }
 
@@ -95,14 +95,14 @@ class AnalysisCrudIntegrationTest {
     }
 
     @Test
-    @DisplayName("save — ①-① 차단완료 레코드는 재추출 시 SKIP")
+    @DisplayName("save — 차단완료 레코드는 재추출 시 SKIP")
     void save_blockedRecord_skipped() {
         // 차단완료 상태 레코드 사전 입력
         ApiRecord blocked = new ApiRecord();
         blocked.setRepositoryName(REPO);
         blocked.setApiPath("/api/blocked");
         blocked.setHttpMethod("GET");
-        blocked.setStatus("①-① 차단완료");
+        blocked.setStatus("차단완료");
         blocked.setMemo("차단 메모");
         recordRepo.save(blocked);
 
@@ -110,7 +110,7 @@ class AnalysisCrudIntegrationTest {
         storage.save(REPO, List.of(info("/api/blocked", "GET")), "1.1.1.1");
 
         ApiRecord after = recordRepo.findByRepositoryNameAndApiPathAndHttpMethod(REPO, "/api/blocked", "GET").orElseThrow();
-        assertThat(after.getStatus()).isEqualTo("①-① 차단완료");
+        assertThat(after.getStatus()).isEqualTo("차단완료");
         assertThat(after.getMemo()).isEqualTo("차단 메모");  // 변경 없음
     }
 
@@ -134,7 +134,7 @@ class AnalysisCrudIntegrationTest {
         // 1차 — ①-② 분류
         storage.save(REPO, List.of(info("/api/sticky", "GET")), "1.1.1.1");
         ApiRecord r1 = recordRepo.findByRepositoryNameAndApiPathAndHttpMethod(REPO, "/api/sticky", "GET").orElseThrow();
-        assertThat(r1.getStatus()).isEqualTo("①-② 호출0건+변경없음");
+        assertThat(r1.getStatus()).isEqualTo("①-① 차단대상");
 
         // 호출건수 발생 (umbrella 내부에 머무는 한 leaf 보존)
         r1.setCallCount(2L);
@@ -143,7 +143,7 @@ class AnalysisCrudIntegrationTest {
         // 2차 분석 — 조건상 ②-③ 매칭이지만, 현재가 ①-② 이므로 보존
         storage.save(REPO, List.of(info("/api/sticky", "GET")), "1.1.1.1");
         ApiRecord r2 = recordRepo.findByRepositoryNameAndApiPathAndHttpMethod(REPO, "/api/sticky", "GET").orElseThrow();
-        assertThat(r2.getStatus()).isEqualTo("①-② 호출0건+변경없음");
+        assertThat(r2.getStatus()).isEqualTo("①-① 차단대상");
     }
 
     @Test
@@ -168,14 +168,14 @@ class AnalysisCrudIntegrationTest {
     void save_statusOverridden_preserved() {
         storage.save(REPO, List.of(info("/api/manual", "GET")), "1.1.1.1");
         ApiRecord r = recordRepo.findByRepositoryNameAndApiPathAndHttpMethod(REPO, "/api/manual", "GET").orElseThrow();
-        r.setStatus("①-④ 업무종료");
+        r.setStatus("①-② 담당자 판단");
         r.setStatusOverridden(true);
         recordRepo.save(r);
 
         // 재분석
         storage.save(REPO, List.of(info("/api/manual", "GET")), "1.1.1.1");
         ApiRecord after = recordRepo.findByRepositoryNameAndApiPathAndHttpMethod(REPO, "/api/manual", "GET").orElseThrow();
-        assertThat(after.getStatus()).isEqualTo("①-④ 업무종료");
+        assertThat(after.getStatus()).isEqualTo("①-② 담당자 판단");
         assertThat(after.isStatusOverridden()).isTrue();
     }
 
@@ -217,11 +217,11 @@ class AnalysisCrudIntegrationTest {
         storage.save(REPO, List.of(info("/api/bulk", "GET")), "1.1.1.1");
         ApiRecord r = recordRepo.findByRepositoryNameAndApiPathAndHttpMethod(REPO, "/api/bulk", "GET").orElseThrow();
 
-        int updated = storage.updateBulk(List.of(r.getId()), Map.of("status", "①-⑥ 사용으로 변경"), "1.1.1.1");
+        int updated = storage.updateBulk(List.of(r.getId()), Map.of("status", "①-④ 사용으로 변경"), "1.1.1.1");
         assertThat(updated).isEqualTo(1);
 
         ApiRecord after = recordRepo.findById(r.getId()).orElseThrow();
-        assertThat(after.getStatus()).isEqualTo("①-⑥ 사용으로 변경");
+        assertThat(after.getStatus()).isEqualTo("①-④ 사용으로 변경");
         assertThat(after.isStatusOverridden()).isTrue();
     }
 }

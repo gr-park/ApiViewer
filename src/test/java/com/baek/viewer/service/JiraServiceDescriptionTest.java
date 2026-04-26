@@ -49,7 +49,7 @@ class JiraServiceDescriptionTest {
         r.setFullComment("메소드 주석 본문");
         r.setControllerComment("컨트롤러 클래스 주석");
         r.setDescriptionOverride("카드-한도-조회(사용자지정)");
-        r.setStatus("①-② 호출0건+변경없음");
+        r.setStatus("①-① 차단대상");
         r.setStatusOverridden(true);
         r.setCallCount(0L);
         r.setCallCountMonth(0L);
@@ -141,7 +141,7 @@ class JiraServiceDescriptionTest {
     @DisplayName("URL상태정보: 최우선 차단대상은 빨강(#991b1b) + bold, 상태확정 행 없음, 4-열 헤더 포함")
     void status_topPriority_coloredRed_and_4colHeader() {
         String desc = svc.buildDescriptionTables(cfg, repoCfg, baseRecord(), "카드업무");
-        assertThat(desc).contains("{color:#991b1b}*①-② 호출0건+변경없음*{color}");
+        assertThat(desc).contains("{color:#991b1b}*①-① 차단대상*{color}");
         assertThat(desc).contains("||항목||값||항목||값||");
         assertThat(desc).contains("1년 호출건");
         // 상태확정 행은 제거됨
@@ -157,17 +157,17 @@ class JiraServiceDescriptionTest {
         assertThat(svc.buildDescriptionTables(cfg, repoCfg, r, "x"))
                 .contains("{color:#166534}*사용*{color}");
 
-        r.setStatus("①-④ 업무종료");
+        r.setStatus("①-② 담당자 판단");
         assertThat(svc.buildDescriptionTables(cfg, repoCfg, r, "x"))
-                .contains("{color:#c2410c}*①-④ 업무종료*{color}");
+                .contains("{color:#c2410c}*①-② 담당자 판단*{color}");
 
-        r.setStatus("②-③ 호출 1~reviewThreshold건");
+        r.setStatus("②-② 호출 3건 이하+변경없음");
         assertThat(svc.buildDescriptionTables(cfg, repoCfg, r, "x"))
-                .contains("{color:#92400e}*②-③ 호출 1~reviewThreshold건*{color}");
+                .contains("{color:#92400e}*②-② 호출 3건 이하+변경없음*{color}");
 
-        r.setStatus("①-① 차단완료");
+        r.setStatus("차단완료");
         assertThat(svc.buildDescriptionTables(cfg, repoCfg, r, "x"))
-                .contains("{color:#166534}*①-① 차단완료*{color}");
+                .contains("{color:#475569}*차단완료*{color}");
     }
 
     @Test

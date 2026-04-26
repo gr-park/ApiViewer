@@ -922,7 +922,7 @@ public class JiraService {
         String s = r.getStatus();
         if (s == null) return false;
         // (1)-(*) 차단대상 leaf, (2)-(*) 추가검토대상 leaf 모두 후보
-        return s.startsWith("①-") || s.startsWith("②-");
+        return "차단완료".equals(s) || s.startsWith("①-") || s.startsWith("②-");
     }
 
     /**
@@ -1021,10 +1021,13 @@ public class JiraService {
 
         String descText = buildDescriptionTables(cfg, repoCfg, record, businessName);
 
-        // ①-②/①-③ 호출0건 → Highest, ①-④ 업무종료/①-⑤ 현업제외 → Medium, (2)-(*) 추가검토 → Low
+        // 9 leaf v2 우선순위:
+        //   차단완료 / ①-① 차단대상 → Highest (즉시 차단 필요)
+        //   ①-* (담당자 판단/현업제외/사용변경) → Medium
+        //   ②-* (검토대상) → Low
         String s = record.getStatus() != null ? record.getStatus() : "";
         String priority;
-        if (s.startsWith("①-②") || s.startsWith("①-③") || s.startsWith("①-①")) priority = "Highest";
+        if ("차단완료".equals(s) || s.startsWith("①-①")) priority = "Highest";
         else if (s.startsWith("①-")) priority = "Medium";
         else priority = "Low";
 
@@ -1187,17 +1190,18 @@ public class JiraService {
     }
 
     /**
-     * 상태값을 viewer.html 배지 색상으로 채색.
-     * 사용/①-① 차단완료: 초록, ①-②/①-③ 호출0건: 빨강, ①-④/①-⑤ 업무종료/현업제외: 주황,
-     * (2)-(*) 추가검토대상: 노랑
+     * 상태값을 viewer.html 배지 색상으로 채색 (9 leaf v2).
+     *   사용 → 초록 / 차단완료 → 회색 / ①-① 차단대상 → 빨강 /
+     *   ①-* 예외건 → 주황 / ②-* 검토대상 → 노랑
      */
     private String colorizeStatus(String status) {
         if (status == null || status.isBlank()) return "-";
         String color;
-        if ("사용".equals(status) || status.startsWith("①-①")) color = "#166534";
-        else if (status.startsWith("①-②") || status.startsWith("①-③")) color = "#991b1b";
-        else if (status.startsWith("①-")) color = "#c2410c";
-        else if (status.startsWith("②-")) color = "#92400e";
+        if ("사용".equals(status))             color = "#166534";
+        else if ("차단완료".equals(status))     color = "#475569";
+        else if (status.startsWith("①-①"))    color = "#991b1b";
+        else if (status.startsWith("①-"))     color = "#c2410c";
+        else if (status.startsWith("②-"))     color = "#92400e";
         else color = "#475569";
         return "{color:" + color + "}*" + status + "*{color}";
     }

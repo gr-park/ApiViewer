@@ -51,14 +51,14 @@ class ApiQueryIntegrationTest {
         recordRepo.saveAll(List.of(
                 rec(REPO_A, "/a/1", "GET",  "사용"),
                 rec(REPO_A, "/a/2", "POST", "사용"),
-                rec(REPO_A, "/a/3", "GET",  "①-② 호출0건+변경없음"),
-                rec(REPO_A, "/a/4", "GET",  "②-③ 호출 1~reviewThreshold건")
+                rec(REPO_A, "/a/3", "GET",  "①-① 차단대상"),
+                rec(REPO_A, "/a/4", "GET",  "②-② 호출 3건 이하+변경없음")
         ));
         // REPO_B: ①-① 1 / ①-④ 1 / ②-② 1 = 3건
         recordRepo.saveAll(List.of(
-                rec(REPO_B, "/b/1", "GET", "①-① 차단완료"),
-                rec(REPO_B, "/b/2", "GET", "①-④ 업무종료"),
-                rec(REPO_B, "/b/3", "GET", "②-② 호출0건+변경있음")
+                rec(REPO_B, "/b/1", "GET", "차단완료"),
+                rec(REPO_B, "/b/2", "GET", "①-② 담당자 판단"),
+                rec(REPO_B, "/b/3", "GET", "②-① 호출0건+변경있음")
         ));
         // REPO_C: 사용 1
         recordRepo.saveAll(List.of(
@@ -122,7 +122,7 @@ class ApiQueryIntegrationTest {
     @DisplayName("status 필터 — 단건 leaf 매칭")
     void queryByStatus() throws Exception {
         MvcResult res = mockMvc.perform(get("/api/db/apis")
-                        .param("status", "①-① 차단완료")
+                        .param("status", "차단완료")
                         .param("page", "0")
                         .param("size", "100"))
                 .andExpect(status().isOk())
@@ -188,9 +188,9 @@ class ApiQueryIntegrationTest {
     @Test
     @DisplayName("상세조회 GET /api/db/record/{id} — 신규 leaf status + 모든 필드 응답")
     void detailRecord_returnsAllFields() throws Exception {
-        // /b/2 = ①-④ 업무종료 — 상세 응답에 leaf 라벨, recentLogOnly, logWorkExcluded, statusChangeLog 포함
+        // /b/2 = ①-② 담당자 판단 — 상세 응답에 leaf 라벨, recentLogOnly, logWorkExcluded, statusChangeLog 포함
         ApiRecord target = recordRepo.findByRepositoryNameAndApiPathAndHttpMethod(REPO_B, "/b/2", "GET").orElseThrow();
-        target.setStatusChangeLog("①-② 호출0건+변경없음 → ①-④ 업무종료 | 호출건수 0→5건 발생");
+        target.setStatusChangeLog("①-① 차단대상 → ①-② 담당자 판단 | 호출건수 0→5건 발생");
         target.setStatusChanged(true);
         target.setRecentLogOnly(false);
         recordRepo.save(target);
@@ -199,7 +199,7 @@ class ApiQueryIntegrationTest {
                 .andExpect(status().isOk()).andReturn();
         String b = body(res);
         // 신규 leaf 라벨이 그대로 응답
-        assertThat(b).contains("①-④ 업무종료");
+        assertThat(b).contains("①-② 담당자 판단");
         // statusChangeLog 가 응답에 포함 (상세 화면이 이력 렌더링에 사용)
         assertThat(b).contains("호출건수 0→5건 발생");
         // 보조 플래그 필드도 응답
