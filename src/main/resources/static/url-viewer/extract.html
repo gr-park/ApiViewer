@@ -863,67 +863,91 @@
   }
 
   async function collectOneMock() {
-    const repoName = document.getElementById('mockRepoSelect').value;
-    if (!repoName) { showToast('레포지토리를 선택하세요.','error'); return; }
+    // RepoSelect 다중 — 0개 선택 = 전체 레포
+    const targets = getMockSelectedRepos();
+    if (!targets.length) { showToast('수집 대상 레포가 없습니다.','error'); return; }
     clearLogs(); hideResult();
     showWorkCard(true, `MOCK 수집`);
-    addLocalLog('INFO', `── MOCK 수집 시작: ${repoName} ──`);
-    document.getElementById('progCount').textContent = '수집 중...';
-    try {
-      const res = await fetch('/api/apm/mock/generate', {
-        method:'POST',
-        headers:{'Content-Type':'application/json','X-Admin-Token':sessionStorage.getItem('adminToken')||''},
-        body: JSON.stringify({ repoName, days: 365, source: 'MOCK' })
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || '수집 실패');
-      document.getElementById('progFill').style.width = '100%';
-      document.getElementById('progPct').textContent = '100%';
-      document.getElementById('progSpinner').style.display = 'none';
-      document.getElementById('progStatus').textContent = '완료';
-      document.getElementById('progCount').textContent = `수집 완료`;
-      showResult('ok', `"${repoName}" MOCK 수집 완료`);
-      showToast(`"${repoName}" MOCK 수집 완료`,'success');
-    } catch(e) {
-      document.getElementById('progSpinner').style.display = 'none';
-      document.getElementById('progStatus').textContent = '실패';
-      addLocalLog('ERROR', `MOCK 수집 실패: ${e.message}`);
-      showToast(e.message,'error');
+    addLocalLog('INFO', `── MOCK 수집 시작: ${targets.length}개 레포 (${targets.join(', ')}) ──`);
+    let okCount = 0, failCount = 0;
+    for (let i = 0; i < targets.length; i++) {
+      const repoName = targets[i];
+      document.getElementById('progCount').textContent = `${i+1}/${targets.length} — ${repoName} 수집 중...`;
+      try {
+        const res = await fetch('/api/apm/mock/generate', {
+          method:'POST',
+          headers:{'Content-Type':'application/json','X-Admin-Token':sessionStorage.getItem('adminToken')||''},
+          body: JSON.stringify({ repoName, days: 365, source: 'MOCK' })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || '수집 실패');
+        addLocalLog('INFO', `[${i+1}/${targets.length}] ${repoName} 수집 완료`);
+        okCount++;
+      } catch(e) {
+        addLocalLog('ERROR', `[${i+1}/${targets.length}] ${repoName} 실패: ${e.message}`);
+        failCount++;
+      }
+    }
+    document.getElementById('progFill').style.width = '100%';
+    document.getElementById('progPct').textContent = '100%';
+    document.getElementById('progSpinner').style.display = 'none';
+    document.getElementById('progStatus').textContent = failCount === 0 ? '완료' : '일부 실패';
+    document.getElementById('progCount').textContent = `완료 ${okCount} / 실패 ${failCount}`;
+    if (failCount === 0) {
+      showResult('ok', `MOCK 수집 완료 — ${okCount}개 레포`);
+      showToast(`MOCK 수집 완료 (${okCount}개 레포)`,'success');
+    } else {
+      showResult('fail', `MOCK 수집 일부 실패 — 성공 ${okCount} / 실패 ${failCount}`);
+      showToast(`수집 실패 ${failCount}건 — 로그 확인`,'error');
     }
   }
 
   async function deleteMockData(scope) {
-    const repoName = scope === 'all' ? 'ALL' : document.getElementById('mockRepoSelect').value;
-    if (scope !== 'all' && !repoName) { showToast('레포지토리를 선택하세요.','error'); return; }
-    const label = scope === 'all' ? '전체 레포의 MOCK 데이터' : `"${repoName}"의 MOCK 데이터`;
+    let targets;
+    if (scope === 'all') {
+      targets = ['ALL'];
+    } else {
+      targets = getMockSelectedRepos();
+      if (!targets.length) { showToast('레포지토리를 선택하세요.','error'); return; }
+    }
+    const label = scope === 'all'
+      ? '전체 레포의 MOCK 데이터'
+      : `${targets.length}개 레포의 MOCK 데이터 (${targets.join(', ')})`;
     if (!await customConfirm(`${label}를 삭제하시겠습니까?\nWHATAP/JENNIFER 데이터는 유지됩니다.`)) return;
     clearLogs(); hideResult();
     showWorkCard(true, `MOCK 삭제`);
     addLocalLog('INFO', `── MOCK 삭제 시작: ${label} ──`);
-    document.getElementById('progCount').textContent = '삭제 중...';
-    try {
-      const res = await fetch(`/api/apm/data?repoName=${encodeURIComponent(repoName)}&source=MOCK`, {
-        method:'DELETE',
-        headers:{'X-Admin-Token':sessionStorage.getItem('adminToken')||''}
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || '삭제 실패');
-      addLocalLog('INFO', `MOCK 삭제 완료: ${data.deleted}건`);
-      document.getElementById('progFill').style.width = '100%';
-      document.getElementById('progPct').textContent = '100%';
-      document.getElementById('progSpinner').style.display = 'none';
-      document.getElementById('progStatus').textContent = '완료';
-      document.getElementById('progCount').textContent = `${data.deleted}건 삭제 완료`;
-      document.getElementById('apmCollectResult').innerHTML =
-        `<span style="color:var(--success);">✓ ${label} 삭제 완료: ${data.deleted}건</span>`;
-      showResult('ok', `${label} 삭제 완료 — ${data.deleted}건`);
-      showToast(`MOCK ${data.deleted}건 삭제 완료`,'success');
-    } catch(e) {
-      document.getElementById('progSpinner').style.display = 'none';
-      document.getElementById('progStatus').textContent = '실패';
-      addLocalLog('ERROR', `MOCK 삭제 실패: ${e.message}`);
-      showResult('fail', `MOCK 삭제 실패: ${e.message}`);
-      showToast(e.message,'error');
+    let totalDeleted = 0, failCount = 0;
+    for (let i = 0; i < targets.length; i++) {
+      const repoName = targets[i];
+      document.getElementById('progCount').textContent = `${i+1}/${targets.length} — ${repoName} 삭제 중...`;
+      try {
+        const res = await fetch(`/api/apm/data?repoName=${encodeURIComponent(repoName)}&source=MOCK`, {
+          method:'DELETE',
+          headers:{'X-Admin-Token':sessionStorage.getItem('adminToken')||''}
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || '삭제 실패');
+        totalDeleted += (data.deleted || 0);
+        addLocalLog('INFO', `[${i+1}/${targets.length}] ${repoName} 삭제: ${data.deleted}건`);
+      } catch(e) {
+        addLocalLog('ERROR', `[${i+1}/${targets.length}] ${repoName} 실패: ${e.message}`);
+        failCount++;
+      }
+    }
+    document.getElementById('progFill').style.width = '100%';
+    document.getElementById('progPct').textContent = '100%';
+    document.getElementById('progSpinner').style.display = 'none';
+    document.getElementById('progStatus').textContent = failCount === 0 ? '완료' : '일부 실패';
+    document.getElementById('progCount').textContent = `${totalDeleted}건 삭제 / 실패 ${failCount}`;
+    document.getElementById('apmCollectResult').innerHTML =
+      `<span style="color:var(--success);">✓ ${label} 삭제 완료: ${totalDeleted}건${failCount?` (실패 ${failCount})`:''}</span>`;
+    if (failCount === 0) {
+      showResult('ok', `${label} 삭제 완료 — ${totalDeleted}건`);
+      showToast(`MOCK ${totalDeleted}건 삭제 완료`,'success');
+    } else {
+      showResult('fail', `MOCK 삭제 일부 실패 — 성공 ${totalDeleted}건 / 실패 ${failCount}`);
+      showToast(`삭제 실패 ${failCount}건 — 로그 확인`,'error');
     }
   }
 
@@ -1400,54 +1424,77 @@
   // mock 식별자는 apiPath 가 "/mock-test/" 로 시작하는지 여부.
 
   async function generateMockAnalysis() {
-    const repoName = document.getElementById('mockAnRepoSelect').value;
+    // 다중 — 0개 선택 = 전체 레포
+    const targets = getMockAnSelectedRepos();
     const count = parseInt(document.getElementById('mockAnCount').value, 10);
-    if (!repoName) { showToast('레포지토리를 선택하세요', 'error'); return; }
+    if (!targets.length) { showToast('대상 레포가 없습니다', 'error'); return; }
     if (!Number.isFinite(count) || count < 1 || count > 5000) {
       showToast('생성 건수: 1 ~ 5000', 'error'); return;
     }
-    if (!await customConfirm(`Mock 분석데이터를 생성합니다.\n\n대상 레포: ${repoName}\n생성 건수: ${count.toLocaleString()}건\nURL 형식: /mock-test/...\n\n기존과 중복되는 (경로+메서드)는 자동 스킵됩니다.`)) return;
+    if (!await customConfirm(`Mock 분석데이터를 생성합니다.\n\n대상 레포: ${targets.length}개 (${targets.join(', ')})\n레포당 생성 건수: ${count.toLocaleString()}건\nURL 형식: /mock-test/...\n\n기존과 중복되는 (경로+메서드)는 자동 스킵됩니다.`)) return;
     if (!await verifyPwPrompt()) return;
-    showDelProgress(`Mock 분석데이터 생성 중...`);
-    try {
-      const url = `/api/mock/analysis/generate?repoName=${encodeURIComponent(repoName)}&count=${count}`;
-      const res = await adminFetch(url, { method:'POST' });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || '생성 실패');
-      document.getElementById('mockAnResult').innerHTML =
-        `<span style="color:var(--success);">✓ ${esc(data.repositoryName)} — 생성 ${data.inserted}건 / 중복스킵 ${data.skippedDuplicate}건 (요청 ${data.requested}건)</span>`;
-      showToast(`Mock 분석데이터 ${data.inserted}건 생성`, 'success');
-    } catch(e) {
-      document.getElementById('mockAnResult').innerHTML = `<span style="color:var(--danger);">${esc(e.message)}</span>`;
-      showToast(e.message || '생성 실패', 'error');
-    } finally { hideDelProgress(); }
+    showDelProgress(`Mock 분석데이터 생성 중... (0/${targets.length})`);
+    let totalInserted = 0, totalSkipped = 0, failCount = 0;
+    const lines = [];
+    for (let i = 0; i < targets.length; i++) {
+      const repoName = targets[i];
+      showDelProgress(`Mock 분석데이터 생성 중... (${i+1}/${targets.length} — ${repoName})`);
+      try {
+        const url = `/api/mock/analysis/generate?repoName=${encodeURIComponent(repoName)}&count=${count}`;
+        const res = await adminFetch(url, { method:'POST' });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || '생성 실패');
+        totalInserted += (data.inserted || 0);
+        totalSkipped  += (data.skippedDuplicate || 0);
+        lines.push(`✓ ${esc(data.repositoryName)} — 생성 ${data.inserted}건 / 스킵 ${data.skippedDuplicate}건`);
+      } catch(e) {
+        failCount++;
+        lines.push(`<span style="color:var(--danger);">✗ ${esc(repoName)} — ${esc(e.message)}</span>`);
+      }
+    }
+    hideDelProgress();
+    document.getElementById('mockAnResult').innerHTML =
+      `<div style="color:var(--success);font-weight:600;margin-bottom:4px;">✓ ${targets.length}개 레포 처리 완료 — 총 생성 ${totalInserted}건 / 스킵 ${totalSkipped}건${failCount?` / 실패 ${failCount}`:''}</div>`
+      + `<div style="font-size:11px;line-height:1.5;">${lines.join('<br>')}</div>`;
+    showToast(`Mock 분석데이터 ${totalInserted}건 생성${failCount?` (실패 ${failCount})`:''}`, failCount ? 'error' : 'success');
   }
 
   async function deleteMockAnalysis(scope) {
-    let target, msg;
+    let targets, msg;
     if (scope === 'all') {
-      target = 'ALL';
+      targets = ['ALL'];
       msg = '모든 레포의 /mock-test/* URL 분석데이터와 호출이력을 삭제합니다.\n(실제 URL 데이터는 보존됩니다.)\n\n계속하시겠습니까?';
     } else {
-      target = document.getElementById('mockAnRepoSelect').value;
-      if (!target) { showToast('레포지토리를 선택하세요', 'error'); return; }
-      msg = `"${target}" 레포의 /mock-test/* URL 분석데이터와 호출이력을 삭제합니다.\n(실제 URL 데이터는 보존됩니다.)\n\n계속하시겠습니까?`;
+      targets = getMockAnSelectedRepos();
+      if (!targets.length) { showToast('레포지토리를 선택하세요', 'error'); return; }
+      msg = `${targets.length}개 레포 (${targets.join(', ')})의 /mock-test/* URL 분석데이터와 호출이력을 삭제합니다.\n(실제 URL 데이터는 보존됩니다.)\n\n계속하시겠습니까?`;
     }
     if (!await customConfirm(msg)) return;
     if (!await verifyPwPrompt()) return;
-    showDelProgress('Mock 분석데이터 삭제 중...');
-    try {
-      const url = `/api/mock/analysis?repoName=${encodeURIComponent(target)}`;
-      const res = await adminFetch(url, { method:'DELETE' });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || '삭제 실패');
-      document.getElementById('mockAnResult').innerHTML =
-        `<span style="color:var(--success);">✓ ${esc(data.target)} (${esc(data.pathPrefix || '/mock-test/')}*) — api_record ${data.apiRecordDeleted}건, apm_call_data ${data.apmCallDataDeleted}건 삭제</span>`;
-      showToast('Mock 분석데이터 삭제 완료', 'success');
-    } catch(e) {
-      document.getElementById('mockAnResult').innerHTML = `<span style="color:var(--danger);">${esc(e.message)}</span>`;
-      showToast(e.message || '삭제 실패', 'error');
-    } finally { hideDelProgress(); }
+    showDelProgress(`Mock 분석데이터 삭제 중... (0/${targets.length})`);
+    let totalApi = 0, totalApm = 0, failCount = 0;
+    const lines = [];
+    for (let i = 0; i < targets.length; i++) {
+      const repoName = targets[i];
+      showDelProgress(`Mock 분석데이터 삭제 중... (${i+1}/${targets.length} — ${repoName})`);
+      try {
+        const url = `/api/mock/analysis?repoName=${encodeURIComponent(repoName)}`;
+        const res = await adminFetch(url, { method:'DELETE' });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || '삭제 실패');
+        totalApi += (data.apiRecordDeleted || 0);
+        totalApm += (data.apmCallDataDeleted || 0);
+        lines.push(`✓ ${esc(data.target)} — api_record ${data.apiRecordDeleted}건, apm_call_data ${data.apmCallDataDeleted}건`);
+      } catch(e) {
+        failCount++;
+        lines.push(`<span style="color:var(--danger);">✗ ${esc(repoName)} — ${esc(e.message)}</span>`);
+      }
+    }
+    hideDelProgress();
+    document.getElementById('mockAnResult').innerHTML =
+      `<div style="color:var(--success);font-weight:600;margin-bottom:4px;">✓ 삭제 완료 — api_record ${totalApi}건 / apm_call_data ${totalApm}건${failCount?` / 실패 ${failCount}`:''}</div>`
+      + `<div style="font-size:11px;line-height:1.5;">${lines.join('<br>')}</div>`;
+    showToast(`Mock 분석데이터 삭제 완료${failCount?` (실패 ${failCount})`:''}`, failCount ? 'error' : 'success');
   }
 
   // ── ③ 성능 테스트 시드 데이터 ───────────────────────────

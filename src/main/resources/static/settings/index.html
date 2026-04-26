@@ -838,9 +838,7 @@ function updateAdminBadge(valid) {
     </div>
     <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">
       <label class="field" style="margin:0;">대상 레포지토리
-        <select id="jiraSyncRepoSelect" style="min-width:200px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-size:13px;">
-          <option value="">(전체 레포)</option>
-        </select>
+        <div id="jiraSyncRepoSelect" style="min-width:200px;"></div>
       </label>
       <button class="btn" style="background:var(--purple);color:#fff;" onclick="syncToJira()">🔗 SmartWay 발행</button>
       <button class="btn btn-ghost" onclick="pullFromJira()">🔄 역방향 동기화</button>
@@ -3043,20 +3041,24 @@ function updateAdminBadge(valid) {
   async function loadJiraSyncRepoOptions() {
     try {
       const repos = await fetch('/api/config/repos').then(r => r.json());
-      const sel = document.getElementById('jiraSyncRepoSelect');
-      if (!sel) return;
-      while (sel.options.length > 1) sel.remove(1);
-      (repos || []).forEach(r => {
-        const opt = document.createElement('option');
-        opt.value = r.repoName;
-        opt.textContent = r.businessName ? `${r.repoName} | ${r.businessName}` : r.repoName;
-        sel.appendChild(opt);
+      const mountEl = document.getElementById('jiraSyncRepoSelect');
+      if (!mountEl) return;
+      window._jiraSyncRepoSel = RepoSelect.mountCompact(mountEl, {
+        repos: repos || [],
+        selected: [],
+        singleMode: true,
+        placeholder: '(전체 레포)'
       });
     } catch(e) { /* 레포 없음 */ }
   }
 
+  function getJiraSyncRepoValue() {
+    const sel = window._jiraSyncRepoSel ? window._jiraSyncRepoSel.getSelected() : [];
+    return sel[0] || '';
+  }
+
   async function syncToJira() {
-    const repo = document.getElementById('jiraSyncRepoSelect').value;
+    const repo = getJiraSyncRepoValue();
     const scope = repo ? `"${repo}"` : '전체 레포';
     if (!await customConfirm(`${scope}의 차단대상을 SmartWay로 발행하시겠습니까?`)) return;
     showToast('SmartWay 발행 중...', 'info');
@@ -3076,7 +3078,7 @@ function updateAdminBadge(valid) {
   }
 
   async function pullFromJira() {
-    const repo = document.getElementById('jiraSyncRepoSelect').value;
+    const repo = getJiraSyncRepoValue();
     const scope = repo ? `"${repo}"` : '전체 레포';
     if (!await customConfirm(`SmartWay에서 ${scope} 역방향 동기화하시겠습니까?`)) return;
     showToast('역방향 동기화 중...', 'info');
