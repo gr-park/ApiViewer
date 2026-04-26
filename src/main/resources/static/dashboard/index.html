@@ -422,6 +422,48 @@
     </div>
 
     <!-- ══════════════════════════════════════════════════════════════
+         섹션 1.5 : 배포일자 분포 (차단대상 / 차단완료)
+         ══════════════════════════════════════════════════════════════ -->
+    <div class="section-header">
+      <h3>📅 배포일자 분포</h3>
+      <span class="section-sub">차단대상(① 최우선 / ② 후순위 / ③ 추가검토필요) 의 배포 예정일 분포 — 일자 미정은 "예정", 차단완료는 별도 컬럼</span>
+    </div>
+    <div class="card">
+      <div class="tabs">
+        <div class="tab active" onclick="switchDeployTab('team',this)">팀별</div>
+        <div class="tab" onclick="switchDeployTab('repo',this)">레포지토리별</div>
+        <div class="tab" onclick="switchDeployTab('manager',this)">담당자별</div>
+      </div>
+
+      <div class="tab-panel active" id="panel-deploy-team">
+        <div class="tbl-wrap" style="overflow:auto;">
+          <table id="deployTeamTable" style="min-width:100%;">
+            <thead id="deployTeamThead"></thead>
+            <tbody id="deployTeamTbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="tab-panel" id="panel-deploy-repo">
+        <div class="tbl-wrap" style="overflow:auto;">
+          <table id="deployRepoTable" style="min-width:100%;">
+            <thead id="deployRepoThead"></thead>
+            <tbody id="deployRepoTbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="tab-panel" id="panel-deploy-manager">
+        <div class="tbl-wrap" style="overflow:auto;">
+          <table id="deployManagerTable" style="min-width:100%;">
+            <thead id="deployManagerThead"></thead>
+            <tbody id="deployManagerTbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════════════
          섹션 2 : URL 호출
          ══════════════════════════════════════════════════════════════ -->
     <div class="section-header">
@@ -563,10 +605,18 @@
     document.getElementById('loadingArea').style.display = 'block';
     document.getElementById('dashContent').style.display = 'none';
     try {
-      const res = await fetch('/api/db/stats');
-      if (!res.ok) throw new Error('서버 오류');
-      stats = await res.json();
+      const [statsRes, deployRes] = await Promise.all([
+        fetch('/api/db/stats'),
+        fetch('/api/db/stats/deploy-schedule')
+      ]);
+      if (!statsRes.ok) throw new Error('서버 오류');
+      stats = await statsRes.json();
       render(stats);
+      if (deployRes.ok) {
+        renderDeploySchedule(await deployRes.json());
+      } else {
+        renderDeploySchedule(null);
+      }
       document.getElementById('lastUpdated').textContent =
         '최종 갱신: ' + new Date().toLocaleTimeString('ko-KR');
       document.getElementById('loadingArea').style.display = 'none';
@@ -798,10 +848,78 @@
 
   // ── 탭 전환 ─────────────────────────────────────────────
   function switchTab(name, el) {
-    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    // 같은 카드 내(섹션1 탭) 만 토글 — 섹션1.5 의 deploy 탭은 영향 없도록 부모 카드 범위로 제한
+    const card = el.closest('.card');
+    if (card) {
+      card.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      card.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    }
     el.classList.add('active');
     document.getElementById('panel-' + name).classList.add('active');
+  }
+  function switchDeployTab(name, el) {
+    const card = el.closest('.card');
+    if (card) {
+      card.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      card.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    }
+    el.classList.add('active');
+    document.getElementById('panel-deploy-' + name).classList.add('active');
+  }
+
+  // ── 배포일자 분포 렌더 ───────────────────────────────────
+  function renderDeploySchedule(d) {
+    const empty = '<tr><td class="empty" style="padding:18px;text-align:center;color:var(--text-muted);">데이터 없음</td></tr>';
+    if (!d) {
+      ['deployTeamThead','deployRepoThead','deployManagerThead'].forEach(id => document.getElementById(id).innerHTML = '');
+      ['deployTeamTbody','deployRepoTbody','deployManagerTbody'].forEach(id => document.getElementById(id).innerHTML = empty);
+      return;
+    }
+    const dates = d.dates || [];
+    // 일자 컬럼 헤더 (YYYY-MM-DD → MM/DD 단축 표시, 툴팁에 풀일자)
+    const dateThs = dates.map(dt => `<th title="${dt}" style="text-align:right;white-space:nowrap;font-size:10px;">${dt.substring(5).replace('-','/')}</th>`).join('');
+    const fixedTail = `<th style="text-align:right;white-space:nowrap;color:#7c3aed;">예정</th>
+                       <th style="text-align:right;white-space:nowrap;color:#64748b;">차단완료</th>
+                       <th style="text-align:right;white-space:nowrap;">합계</th>`;
+
+    const renderRow = (firstCells, row) => {
+      const byDate = row.byDate || {};
+      const cells = dates.map(dt => {
+        const v = byDate[dt] || 0;
+        return `<td style="text-align:right;${v? '': 'color:#cbd5e1;'}">${v? v.toLocaleString(): '·'}</td>`;
+      }).join('');
+      const sched = row.scheduled || 0;
+      const compl = row.completed || 0;
+      const total = row.total || 0;
+      return `<tr>${firstCells}${cells}
+        <td style="text-align:right;color:#7c3aed;font-weight:${sched? '700':'400'};">${sched? sched.toLocaleString(): '·'}</td>
+        <td style="text-align:right;color:#64748b;font-weight:${compl? '700':'400'};">${compl? compl.toLocaleString(): '·'}</td>
+        <td style="text-align:right;font-weight:700;">${total.toLocaleString()}</td>
+      </tr>`;
+    };
+
+    // 팀별
+    document.getElementById('deployTeamThead').innerHTML =
+      `<tr><th style="text-align:left;">팀명</th>${dateThs}${fixedTail}</tr>`;
+    const teamRows = (d.byTeam || []).map(r => renderRow(`<td><b>${esc(r.team)}</b></td>`, r)).join('');
+    document.getElementById('deployTeamTbody').innerHTML = teamRows || empty;
+
+    // 레포별
+    document.getElementById('deployRepoThead').innerHTML =
+      `<tr><th style="text-align:left;">팀</th><th style="text-align:left;">레포지토리</th><th style="text-align:left;">업무명</th>${dateThs}${fixedTail}</tr>`;
+    const repoRows = (d.byRepo || []).map(r => renderRow(
+      `<td style="color:var(--text-muted);">${esc(r.team)}</td>
+       <td><b>${esc(r.repo)}</b></td>
+       <td style="color:var(--text-muted);">${esc(r.businessName || '-')}</td>`, r)).join('');
+    document.getElementById('deployRepoTbody').innerHTML = repoRows || empty;
+
+    // 담당자별 (배포담당자 우선, 없으면 폴백)
+    document.getElementById('deployManagerThead').innerHTML =
+      `<tr><th style="text-align:left;">팀</th><th style="text-align:left;">담당자<span style="font-weight:400;color:var(--text-muted);font-size:10px;margin-left:4px;">(배포담당자 우선)</span></th>${dateThs}${fixedTail}</tr>`;
+    const mgrRows = (d.byManager || []).map(r => renderRow(
+      `<td style="color:var(--text-muted);">${esc(r.team)}</td>
+       <td><b>${esc(r.manager)}</b></td>`, r)).join('');
+    document.getElementById('deployManagerTbody').innerHTML = mgrRows || empty;
   }
 
   // ── 헬퍼 ─────────────────────────────────────────────────

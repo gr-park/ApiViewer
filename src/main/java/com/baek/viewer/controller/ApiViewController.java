@@ -4,6 +4,7 @@ import com.baek.viewer.model.ApiInfo;
 import com.baek.viewer.model.ApiRecord;
 import com.baek.viewer.model.ApiRecordStatsDto;
 import com.baek.viewer.model.ApiRecordSummary;
+import com.baek.viewer.model.DeployScheduleDto;
 import com.baek.viewer.model.ExtractRequest;
 import com.baek.viewer.model.RepoConfig;
 import com.baek.viewer.model.WhatapRequest;
@@ -995,6 +996,144 @@ public class ApiViewController {
         result.put("byTeam",        byTeam);
         result.put("byManager",     byManager);
         log.info("[통계 조회] 건수={}, 삭제={}, 소요={}ms", all.size(), deletedCount, System.currentTimeMillis() - start);
+        return ResponseEntity.ok(result);
+    }
+
+    /**
+     * 배포일자 분포 통계 — 차단완료 + 차단대상(최우선/후순위/추가검토필요) 만 집계.
+     * 행: 팀/담당자/레포 별 (탭). 열: 배포일자(YYYY-MM-DD) + "예정"(차단대상 중 일자 미정) + "차단완료".
+     * 담당자 컬럼은 deployManager 우선, 없으면 managerOverride → 매핑 → 팀대표 폴백.
+     */
+    @GetMapping("/db/stats/deploy-schedule")
+    public ResponseEntity<?> dbDeployScheduleStats() {
+        long start = System.currentTimeMillis();
+
+        List<String> targetStatuses = new ArrayList<>(BLOCK_TARGET_STATUSES);
+        targetStatuses.add("차단완료");
+        List<DeployScheduleDto> all = recordRepository.findForDeploySchedule(targetStatuses);
+
+        Map<String, RepoConfig> repoConfigMap = repoConfigRepository.findAll().stream()
+                .collect(Collectors.toMap(RepoConfig::getRepoName, r -> r, (a, b) -> a));
+        Map<String, List<Map<String, String>>> mappingCache = new HashMap<>();
+        for (RepoConfig cfg : repoConfigMap.values()) {
+            mappingCache.put(cfg.getRepoName(), parseManagerMappings(cfg.getManagerMappings()));
+        }
+
+        java.util.function.Function<DeployScheduleDto, String> teamOf = r -> {
+            if (r.getTeamOverride() != null && !r.getTeamOverride().isBlank()) return r.getTeamOverride();
+            RepoConfig c = repoConfigMap.get(r.getRepositoryName());
+            return (c != null && c.getTeamName() != null && !c.getTeamName().isBlank()) ? c.getTeamName() : "(팀 미지정)";
+        };
+        java.util.function.Function<DeployScheduleDto, String> managerOf = r -> {
+            if (r.getDeployManager() != null && !r.getDeployManager().isBlank()) return r.getDeployManager();
+            RepoConfig c = repoConfigMap.get(r.getRepositoryName());
+            List<Map<String, String>> mappings = mappingCache.getOrDefault(r.getRepositoryName(), List.of());
+            return resolveManager(r.getManagerOverride(), r.getApiPath(), c, mappings);
+        };
+
+        // 모든 차단대상 레코드의 deployScheduledDate (null 제외) 수집 → 정렬된 unique 컬럼
+        List<String> dateColumns = all.stream()
+                .filter(r -> BLOCK_TARGET_STATUSES.contains(r.getStatus()))
+                .map(DeployScheduleDto::getDeployScheduledDate)
+                .filter(Objects::nonNull)
+                .map(LocalDate::toString)
+                .distinct()
+                .sorted()
+                .collect(Collectors.toList());
+
+        // 그룹별 집계 헬퍼 — keyFn 으로 그룹 키 추출 후 byDate / scheduled / completed / total 누적
+        java.util.function.BiFunction<java.util.function.Function<DeployScheduleDto, String>,
+                List<DeployScheduleDto>,
+                Map<String, Map<String, Object>>> aggregate = (keyFn, records) -> {
+            Map<String, Map<String, Object>> acc = new LinkedHashMap<>();
+            for (DeployScheduleDto r : records) {
+                String key = keyFn.apply(r);
+                Map<String, Object> bucket = acc.computeIfAbsent(key, k -> {
+                    Map<String, Object> m = new LinkedHashMap<>();
+                    m.put("byDate", new LinkedHashMap<String, Long>());
+                    m.put("scheduled", 0L);
+                    m.put("completed", 0L);
+                    m.put("total", 0L);
+                    return m;
+                });
+                bucket.put("total", (Long) bucket.get("total") + 1L);
+                if ("차단완료".equals(r.getStatus())) {
+                    bucket.put("completed", (Long) bucket.get("completed") + 1L);
+                } else if (r.getDeployScheduledDate() == null) {
+                    bucket.put("scheduled", (Long) bucket.get("scheduled") + 1L);
+                } else {
+                    @SuppressWarnings("unchecked")
+                    Map<String, Long> byDate = (Map<String, Long>) bucket.get("byDate");
+                    byDate.merge(r.getDeployScheduledDate().toString(), 1L, Long::sum);
+                }
+            }
+            return acc;
+        };
+
+        // 팀별
+        Map<String, Map<String, Object>> teamAcc = aggregate.apply(teamOf, all);
+        List<Map<String, Object>> byTeam = teamAcc.entrySet().stream()
+                .sorted((a, b) -> Long.compare((Long) b.getValue().get("total"), (Long) a.getValue().get("total")))
+                .map(e -> {
+                    Map<String, Object> m = new LinkedHashMap<>();
+                    m.put("team", e.getKey());
+                    m.putAll(e.getValue());
+                    return m;
+                }).collect(Collectors.toList());
+
+        // 담당자별 — 그룹 키는 팀+담당자 조합 (팀 다르면 별도 행)
+        Map<String, String> mgrToTeam = new HashMap<>();
+        java.util.function.Function<DeployScheduleDto, String> mgrKey = r -> {
+            String t = teamOf.apply(r);
+            String m = managerOf.apply(r);
+            String composite = t + "|" + m;
+            mgrToTeam.putIfAbsent(composite, t);
+            return composite;
+        };
+        Map<String, Map<String, Object>> mgrAcc = aggregate.apply(mgrKey, all);
+        List<Map<String, Object>> byManager = mgrAcc.entrySet().stream()
+                .sorted((a, b) -> Long.compare((Long) b.getValue().get("total"), (Long) a.getValue().get("total")))
+                .map(e -> {
+                    String[] parts = e.getKey().split("\\|", 2);
+                    Map<String, Object> m = new LinkedHashMap<>();
+                    m.put("team",    parts[0]);
+                    m.put("manager", parts.length > 1 ? parts[1] : "(미지정)");
+                    m.putAll(e.getValue());
+                    return m;
+                }).collect(Collectors.toList());
+
+        // 레포별 — 그룹 키는 팀+레포명 조합 (호환: 다른 팀 오버라이드가 있으면 별도 행)
+        java.util.function.Function<DeployScheduleDto, String> repoKey = r -> teamOf.apply(r) + "|" + r.getRepositoryName();
+        Map<String, Map<String, Object>> repoAcc = aggregate.apply(repoKey, all);
+        List<Map<String, Object>> byRepo = repoAcc.entrySet().stream()
+                .sorted((a, b) -> {
+                    String[] ka = a.getKey().split("\\|", 2);
+                    String[] kb = b.getKey().split("\\|", 2);
+                    int tc = ka[0].compareTo(kb[0]);
+                    return tc != 0 ? tc : Long.compare((Long) b.getValue().get("total"), (Long) a.getValue().get("total"));
+                })
+                .map(e -> {
+                    String[] parts = e.getKey().split("\\|", 2);
+                    String teamVal = parts[0];
+                    String repoName = parts[1];
+                    RepoConfig cfg = repoConfigMap.get(repoName);
+                    Map<String, Object> m = new LinkedHashMap<>();
+                    m.put("team",         teamVal);
+                    m.put("repo",         repoName);
+                    m.put("businessName", cfg != null && cfg.getBusinessName() != null ? cfg.getBusinessName() : "-");
+                    m.putAll(e.getValue());
+                    return m;
+                }).collect(Collectors.toList());
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("dates",     dateColumns);
+        result.put("byTeam",    byTeam);
+        result.put("byManager", byManager);
+        result.put("byRepo",    byRepo);
+        result.put("totalRecords", all.size());
+
+        log.info("[배포일자 통계] 건수={}, 일자수={}, 소요={}ms",
+                all.size(), dateColumns.size(), System.currentTimeMillis() - start);
         return ResponseEntity.ok(result);
     }
 

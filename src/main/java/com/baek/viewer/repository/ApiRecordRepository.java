@@ -3,6 +3,7 @@ package com.baek.viewer.repository;
 import com.baek.viewer.model.ApiRecord;
 import com.baek.viewer.model.ApiRecordStatsDto;
 import com.baek.viewer.model.ApiRecordSummary;
+import com.baek.viewer.model.DeployScheduleDto;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -134,6 +135,15 @@ public interface ApiRecordRepository extends JpaRepository<ApiRecord, Long>,
             + "r.id, r.repositoryName, r.status, r.httpMethod, r.teamOverride, r.managerOverride, r.apiPath, r.lastAnalyzedAt, r.logWorkExcluded) "
             + "FROM ApiRecord r WHERE r.status IS NULL OR r.status <> '삭제'")
     List<ApiRecordStatsDto> findAllForStats();
+
+    /**
+     * 배포일자 분포 집계용 — 차단완료 + 차단대상(최우선/후순위/추가검토필요) 만 로드.
+     * deployScheduledDate, deployManager 포함.
+     */
+    @Query("SELECT new com.baek.viewer.model.DeployScheduleDto("
+            + "r.id, r.repositoryName, r.status, r.teamOverride, r.managerOverride, r.deployManager, r.apiPath, r.deployScheduledDate) "
+            + "FROM ApiRecord r WHERE r.status IN :statuses")
+    List<DeployScheduleDto> findForDeploySchedule(@Param("statuses") List<String> statuses);
 
     long countByStatus(String status);
 

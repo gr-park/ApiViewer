@@ -105,8 +105,14 @@ public class TestDataSeedService {
 
     // ─────────────────────────────────────────────────────────────
 
+    /** 배포일자 분포용 — 차단대상이 분산될 공통 배포 후보일 (오늘 기준 미래) */
+    private static final int[] DEPLOY_DATE_OFFSETS = {14, 21, 30, 45, 60, 90, 120};
+    /** 배포담당자 후보 — 일부 레코드에만 지정해 폴백(담당자) 동작도 검증되도록 함 */
+    private static final String[] DEPLOY_MANAGERS = {"김배포", "이릴리스", "박운영", "최CSR"};
+
     List<ApiRow> buildApiRows(int apiCount) {
         List<ApiRow> rows = new ArrayList<>(apiCount);
+        LocalDate today = LocalDate.now();
         for (int i = 0; i < apiCount; i++) {
             int repoIdx = (i / APIS_PER_REPO) + 1;
             int moduleIdx = (i / 50) % 40 + 1;
@@ -115,7 +121,7 @@ public class TestDataSeedService {
             String apiPath = String.format("/api/test/mod%02d/op%03d/%06d", moduleIdx, opIdx, i);
             String method = HTTP_METHODS[i % HTTP_METHODS.length];
 
-            // 상태 분포: 사용 60 / 검토필요 15 / 최우선 10 / 후순위 8 / 차단완료 7
+            // 상태 분포: 사용 60 / 추가검토필요 15 / 최우선 10 / 후순위 8 / 차단완료 7
             String status;
             boolean overridden = false;
             String blockTarget = null;
@@ -126,7 +132,7 @@ public class TestDataSeedService {
             if (r < 60) {
                 status = "사용";
             } else if (r < 75) {
-                status = "검토필요 차단대상";
+                status = "추가검토필요 차단대상";
             } else if (r < 85) {
                 status = "최우선 차단대상";
             } else if (r < 93) {
@@ -139,8 +145,28 @@ public class TestDataSeedService {
                 hasUrlBlock = "Y";
                 isDeprecated = "Y";
             }
+
+            // 배포일자: 차단완료는 과거(이미 배포됨) / 차단대상 3종은 70%만 미래 일자, 30%는 null("예정")
+            LocalDate deployDate = null;
+            if ("차단완료".equals(status)) {
+                deployDate = today.minusDays(7 + (i % 180));
+            } else if ("최우선 차단대상".equals(status)
+                    || "후순위 차단대상".equals(status)
+                    || "추가검토필요 차단대상".equals(status)) {
+                if (i % 10 < 7) {
+                    deployDate = today.plusDays(DEPLOY_DATE_OFFSETS[i % DEPLOY_DATE_OFFSETS.length]);
+                }
+            }
+
+            // 배포담당자: 차단완료/차단대상 중 60% 만 명시, 나머지는 null → 폴백(담당자) 으로 표기
+            String deployManager = null;
+            if (!"사용".equals(status) && i % 10 < 6) {
+                deployManager = DEPLOY_MANAGERS[i % DEPLOY_MANAGERS.length];
+            }
+
             rows.add(new ApiRow(repo, apiPath, method, status, overridden,
-                    blockTarget, blockCriteria, hasUrlBlock, isDeprecated, moduleIdx, i));
+                    blockTarget, blockCriteria, hasUrlBlock, isDeprecated, moduleIdx, i,
+                    deployDate, deployManager));
         }
         return rows;
     }
@@ -153,8 +179,9 @@ public class TestDataSeedService {
                 "method_name, controller_name, program_id, " +
                 "api_operation_value, description_tag, full_url, controller_file_path, " +
                 "last_analyzed_at, created_ip, modified_at, modified_ip, " +
-                "data_source, is_new, status_changed, git_history, repo_path, full_comment" +
-                ") VALUES (?,?,?,?,?, ?,?,?,?, ?,?,?, ?,?,?, ?,?,?,?, ?,?,?,?, ?,?,?,?,?,?)";
+                "data_source, is_new, status_changed, git_history, repo_path, full_comment, " +
+                "deploy_scheduled_date, deploy_manager" +
+                ") VALUES (?,?,?,?,?, ?,?,?,?, ?,?,?, ?,?,?, ?,?,?,?, ?,?,?,?, ?,?,?,?,?,?, ?,?)";
 
         LocalDateTime now = LocalDateTime.now();
         Timestamp nowTs = Timestamp.valueOf(now);
@@ -198,6 +225,12 @@ public class TestDataSeedService {
                     ps.setString(p++, "[]");
                     ps.setString(p++, "src/main/java/com/test/Mod" + row.module + "Controller.java");
                     ps.setString(p++, "차단완료".equals(row.status) ? "[URL차단작업][2026-01-15][CSR-99999] 테스트 차단" : null);
+                    if (row.deployDate != null) {
+                        ps.setDate(p++, java.sql.Date.valueOf(row.deployDate));
+                    } else {
+                        ps.setNull(p++, java.sql.Types.DATE);
+                    }
+                    ps.setString(p++, row.deployManager);
                 }
 
                 @Override
@@ -234,7 +267,7 @@ public class TestDataSeedService {
                     baseMin = 0;
                     baseMax = 5;
                     break;
-                case "검토필요 차단대상":
+                case "추가검토필요 차단대상":
                     baseMin = 0;
                     baseMax = 20;
                     break;
@@ -306,10 +339,13 @@ public class TestDataSeedService {
         final String isDeprecated;
         final int module;
         final int uniq;
+        final LocalDate deployDate;
+        final String deployManager;
 
         ApiRow(String repo, String apiPath, String method, String status, boolean overridden,
                String blockTarget, String blockCriteria, String hasUrlBlock, String isDeprecated,
-               int module, int uniq) {
+               int module, int uniq,
+               LocalDate deployDate, String deployManager) {
             this.repo = repo;
             this.apiPath = apiPath;
             this.method = method;
@@ -321,6 +357,8 @@ public class TestDataSeedService {
             this.isDeprecated = isDeprecated;
             this.module = module;
             this.uniq = uniq;
+            this.deployDate = deployDate;
+            this.deployManager = deployManager;
         }
     }
 }

@@ -173,6 +173,10 @@ public class ApiRecord {
     @Column(name = "deploy_csr", length = 50)
     private String deployCsr;
 
+    /** 배포담당자 — 미설정 시 managerOverride/매핑/팀대표 폴백 사용 */
+    @Column(name = "deploy_manager", length = 100)
+    private String deployManager;
+
     /** 현업 팀 */
     @Column(name = "review_team", length = 100)
     private String reviewTeam;
@@ -342,6 +346,8 @@ public class ApiRecord {
     public void setDeployScheduledDate(java.time.LocalDate v) { this.deployScheduledDate = v; }
     public String getDeployCsr() { return deployCsr; }
     public void setDeployCsr(String v) { this.deployCsr = v; }
+    public String getDeployManager() { return deployManager; }
+    public void setDeployManager(String v) { this.deployManager = v; }
     public LocalDate getBlockedDate() { return blockedDate; }
     public void setBlockedDate(LocalDate blockedDate) { this.blockedDate = blockedDate; }
     public String getBlockedReason() { return blockedReason; }

@@ -47,9 +47,9 @@ class TestDataSeedServiceTest {
         List<TestDataSeedService.ApiRow> rows = service.buildApiRows(100);
 
         assertThat(rows).hasSize(100);
-        // 분포 — i%100 기준: 0~59 사용(60), 60~74 검토필요(15), 75~84 최우선(10), 85~92 후순위(8), 93~99 차단완료(7)
+        // 분포 — i%100 기준: 0~59 사용(60), 60~74 추가검토필요(15), 75~84 최우선(10), 85~92 후순위(8), 93~99 차단완료(7)
         assertThat(rows.stream().filter(r -> "사용".equals(r.status)).count()).isEqualTo(60);
-        assertThat(rows.stream().filter(r -> "검토필요 차단대상".equals(r.status)).count()).isEqualTo(15);
+        assertThat(rows.stream().filter(r -> "추가검토필요 차단대상".equals(r.status)).count()).isEqualTo(15);
         assertThat(rows.stream().filter(r -> "최우선 차단대상".equals(r.status)).count()).isEqualTo(10);
         assertThat(rows.stream().filter(r -> "후순위 차단대상".equals(r.status)).count()).isEqualTo(8);
         assertThat(rows.stream().filter(r -> "차단완료".equals(r.status)).count()).isEqualTo(7);
