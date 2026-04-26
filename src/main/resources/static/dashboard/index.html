@@ -942,12 +942,9 @@
     document.getElementById('panel-overview-' + name).classList.add('active');
   }
 
-  // ── 차단대상 진행사항 렌더 ─────────────────────────────────
-  // 18컬럼 운영 엑셀 레이아웃 — 검토부서 / 총합계 / 사용 / 차단대상(7) / 보류(7)
-  // 차단대상 7 = 소계 + 비율 + 차단완료(A) + 잔여(B:①②③) + 예외건(C:현업·사용변경)
-  // 보류    7 = 소계 + 비율 + ④ + ⑤ + ⑥ + ⑦ + 사용변경
+  // ── 차단대상 진행사항 렌더 (9 leaf v2 — 15컬럼) ──────────────
+  // 검토부서 / 총합계 / 사용 / 차단완료 / 차단대상(소계·비율·①-①·②·③·④) / 검토대상(소계·비율·②-①·②·③)
   function renderBlockOverview(d) {
-    // colspan="100" — 헤더 컬럼 수가 탭별로 다름 (팀=17, 담당자=18, 레포=19). 큰 값으로 모두 커버.
     const empty = '<tr><td colspan="100" class="empty" style="padding:18px;text-align:center;color:var(--text-muted);">데이터 없음</td></tr>';
     if (!d) {
       ['overviewTeamThead','overviewRepoThead','overviewManagerThead'].forEach(id => document.getElementById(id).innerHTML = '');
@@ -956,49 +953,44 @@
     }
     const threshold = d.reviewThreshold || 3;
 
-    // 3단 헤더 — 운영 엑셀과 동일
-    //   1단: 검토부서 / 총합계 / 사용 / 차단대상(colspan=7) / 보류(colspan=7)
-    //   2단: 차단대상 → 소계 / 비율 / 차단완료(A) / 잔여(B colspan=3) / 예외건(C 현업) / 예외건(C 사용변경)
-    //         보류    → 소계 / 비율 / ④ / ⑤ / ⑥ / ⑦ / 사용변경
-    //   3단: 잔여(B) → ① / ② / ③ (업무종료)
+    // 2단 헤더
+    //   1단: 검토부서(rowspan=2) / 총합계(r=2) / 사용(r=2) / 차단완료(r=2) / 차단대상(colspan=6) / 검토대상(colspan=5)
+    //   2단: 차단대상 → 소계/비율/①-① 차단대상/①-② 담당자판단/①-③ 현업요청제외/①-④ 사용변경
+    //         검토대상 → 소계/비율/②-①/②-②/②-③
     const headerHtml = (firstSpan) => {
       const yL = 'background:#fde68a;color:#92400e;';   // 차단대상 1단
-      const yM = 'background:#fef3c7;color:#92400e;';   // 차단대상 2/3단 (잔여·차단완료)
-      const oL = 'background:#fed7aa;color:#9a3412;';   // 예외건(C)
-      const bL = 'background:#dbeafe;color:#1e40af;';   // 보류 1단
-      const bM = 'background:#eff6ff;color:#1e40af;';   // 보류 2단
+      const yM = 'background:#fef3c7;color:#92400e;';   // 차단대상 2단
+      const oM = 'background:#ffedd5;color:#9a3412;';   // 차단대상 예외건 2단
+      const pM = 'background:#f3e8ff;color:#7c3aed;';   // 현업요청 제외 2단
+      const limeM = 'background:#ecfccb;color:#3f6212;'; // 사용변경 2단
+      const bL = 'background:#dbeafe;color:#1e40af;';   // 검토대상 1단
+      const bM = 'background:#eff6ff;color:#1e40af;';   // 검토대상 2단
+      const greyDone = 'background:#f1f5f9;color:#64748b;'; // 차단완료
       const greenLight = 'background:#dcfce7;color:#166534;';
 
       const tier1 = `<tr>
         ${firstSpan.tier1}
-        <th rowspan="3" style="text-align:right;font-weight:800;border-right:2px solid #999;">총합계</th>
-        <th rowspan="3" style="${greenLight}text-align:right;border-right:2px solid #999;">사용</th>
-        <th colspan="7" style="${yL}text-align:center;border-right:2px solid #999;">차단대상</th>
-        <th colspan="7" style="${bL}text-align:center;">보류</th>
+        <th rowspan="2" style="text-align:right;font-weight:800;border-right:2px solid #999;">총합계</th>
+        <th rowspan="2" style="${greenLight}text-align:right;">사용</th>
+        <th rowspan="2" style="${greyDone}text-align:right;border-right:2px solid #999;">차단완료</th>
+        <th colspan="6" style="${yL}text-align:center;border-right:2px solid #999;">차단대상</th>
+        <th colspan="5" style="${bL}text-align:center;">검토대상</th>
       </tr>`;
       const tier2 = `<tr>
         ${firstSpan.tier2}
-        <th rowspan="2" style="${yL}text-align:right;">소계<br><span style="font-weight:400;font-size:10px;">(A+B+C)</span></th>
-        <th rowspan="2" style="${yL}text-align:right;">비율</th>
-        <th rowspan="2" style="${yM}text-align:right;">차단완료<br>(~4/23)<br>(A)</th>
-        <th colspan="3" style="${yM}text-align:center;">잔여 (B)</th>
-        <th rowspan="2" style="${oL}text-align:right;">예외건(C)<br>현업요청<br>차단제외</th>
-        <th rowspan="2" style="${oL}text-align:right;border-right:2px solid #999;">예외건(C)<br>사용으로<br>변경</th>
-        <th rowspan="2" style="${bL}text-align:right;">소계</th>
-        <th rowspan="2" style="${bL}text-align:right;">비율</th>
-        <th rowspan="2" style="${bM}text-align:right;">④ 호출0건<br>+로그건</th>
-        <th rowspan="2" style="${bM}text-align:right;">⑤ 호출0건<br>+변경있음</th>
-        <th rowspan="2" style="${bM}text-align:right;">⑥ 호출<br>1~${threshold}건</th>
-        <th rowspan="2" style="${bM}text-align:right;">⑦ 호출<br>${threshold+1}건이상</th>
-        <th rowspan="2" style="${bM}text-align:right;">사용으로<br>변경</th>
+        <th style="${yL}text-align:right;">소계</th>
+        <th style="${yL}text-align:right;">비율</th>
+        <th style="${yM}text-align:right;">①-①<br>차단대상</th>
+        <th style="${oM}text-align:right;">①-②<br>담당자<br>판단</th>
+        <th style="${pM}text-align:right;">①-③<br>현업요청<br>제외</th>
+        <th style="${limeM}text-align:right;border-right:2px solid #999;">①-④<br>사용으로<br>변경</th>
+        <th style="${bL}text-align:right;">소계</th>
+        <th style="${bL}text-align:right;">비율</th>
+        <th style="${bM}text-align:right;">②-①<br>호출0건<br>+변경있음</th>
+        <th style="${bM}text-align:right;">②-②<br>호출 1~${threshold}건<br>+변경없음</th>
+        <th style="${limeM}text-align:right;">②-③<br>사용으로<br>변경</th>
       </tr>`;
-      const tier3 = `<tr>
-        ${firstSpan.tier3 || ''}
-        <th style="${yM}text-align:right;">① 호출0건<br>+변경없음</th>
-        <th style="${yM}text-align:right;">② 호출0건<br>+변경있음<br>(로그)</th>
-        <th style="${yM}text-align:right;">③ 업무<br>종료</th>
-      </tr>`;
-      return tier1 + tier2 + tier3;
+      return tier1 + tier2;
     };
 
     const cellNum = (n, opts) => {
@@ -1009,42 +1001,44 @@
       const border = o.borderRight ? 'border-right:2px solid #e5e7eb;' : '';
       return `<td style="text-align:right;${styleColor}${fontWeight}${border}">${v ? v.toLocaleString() : '·'}</td>`;
     };
-    const pct = (a, b) => {
+    const pctF = (a, b) => {
       if (!b) return '-';
       return ((a / b) * 100).toFixed(1) + '%';
     };
 
-    // 18컬럼 행: firstCells + (총합계, 사용) + 차단대상 7 + 보류 7
+    // 15컬럼 행: firstCells + 총합계 + 사용 + 차단완료 + 차단대상[6] + 검토대상[5]
     const rowOf = (firstCells, row, opts) => {
       const o = opts || {};
       const total = row.grandTotal || 0;
       const trStyle = o.isTotal ? 'background:#f1f5f9;font-weight:700;' : '';
       const totalCell = `<td style="text-align:right;font-weight:800;border-right:2px solid #999;">${total.toLocaleString()}</td>`;
-      const useCell   = `<td style="text-align:right;color:#166534;font-weight:600;border-right:2px solid #999;">${(row.use||0).toLocaleString()}</td>`;
+      const useCell   = `<td style="text-align:right;color:#166534;font-weight:600;">${(row.use||0).toLocaleString()}</td>`;
+      const doneCell  = `<td style="text-align:right;color:#64748b;font-weight:600;border-right:2px solid #999;">${(row.blockDone||0).toLocaleString()}</td>`;
+      const blockTotal  = row.blockTotal != null ? row.blockTotal
+                         : ((row.blockResidual||0) + (row.blockExManager||0) + (row.blockExReview||0) + (row.blockExManUse||0));
+      const reviewTotal = row.reviewTotal != null ? row.reviewTotal
+                         : ((row.review0Chg||0) + (row.reviewLow||0) + (row.reviewManUse||0));
       return `<tr style="${trStyle}">${firstCells}
         ${totalCell}
         ${useCell}
-        <td style="text-align:right;font-weight:700;color:#92400e;">${(row.blockTotal||0).toLocaleString()}</td>
-        <td style="text-align:right;color:#92400e;">${pct(row.blockTotal, total)}</td>
-        ${cellNum(row.blockDone, {color:'#64748b'})}
-        ${cellNum(row.btTopPure, {color:'#dc2626'})}
-        ${cellNum(row.btTopLog, {color:'#dc2626'})}
-        ${cellNum(row.btLow, {color:'#ea580c'})}
-        ${cellNum(row.exReview, {color:'#7c3aed'})}
-        ${cellNum(row.exManUse, {color:'#3f6212', borderRight:true})}
-        <td style="text-align:right;font-weight:700;color:#1e40af;">${(row.holdTotal||0).toLocaleString()}</td>
-        <td style="text-align:right;color:#1e40af;">${pct(row.holdTotal, total)}</td>
-        ${cellNum(row.rev0Log, {color:'#1e40af'})}
-        ${cellNum(row.rev0Chg, {color:'#1e40af'})}
-        ${cellNum(row.revLow, {color:'#1e40af'})}
-        ${cellNum(row.revHigh, {color:'#1e40af'})}
-        ${cellNum(row.holdManUse, {color:'#3f6212'})}
+        ${doneCell}
+        <td style="text-align:right;font-weight:700;color:#92400e;">${blockTotal.toLocaleString()}</td>
+        <td style="text-align:right;color:#92400e;">${pctF(blockTotal, total)}</td>
+        ${cellNum(row.blockResidual, {color:'#dc2626'})}
+        ${cellNum(row.blockExManager, {color:'#ea580c'})}
+        ${cellNum(row.blockExReview,  {color:'#7c3aed'})}
+        ${cellNum(row.blockExManUse,  {color:'#3f6212', borderRight:true})}
+        <td style="text-align:right;font-weight:700;color:#1e40af;">${reviewTotal.toLocaleString()}</td>
+        <td style="text-align:right;color:#1e40af;">${pctF(reviewTotal, total)}</td>
+        ${cellNum(row.review0Chg,  {color:'#d97706'})}
+        ${cellNum(row.reviewLow,   {color:'#d97706'})}
+        ${cellNum(row.reviewManUse,{color:'#3f6212'})}
       </tr>`;
     };
 
     // 합계 행 — byTeam/byRepo/byManager 배열을 reduce 해 마지막 행에 추가
-    const SUM_KEYS = ['use','blockTotal','blockDone','btTopPure','btTopLog','btLow','exReview','exManUse',
-                      'holdTotal','rev0Log','rev0Chg','revLow','revHigh','holdManUse','grandTotal'];
+    const SUM_KEYS = ['use','blockDone','blockTotal','blockResidual','blockExManager','blockExReview','blockExManUse',
+                      'reviewTotal','review0Chg','reviewLow','reviewManUse','grandTotal'];
     const sumRows = (arr) => {
       const acc = {};
       SUM_KEYS.forEach(k => acc[k] = 0);
@@ -1054,9 +1048,8 @@
 
     // 팀별 (검토부서 = 팀)
     document.getElementById('overviewTeamThead').innerHTML = headerHtml({
-      tier1: `<th rowspan="3" style="text-align:left;border-right:2px solid #999;">검토부서</th>`,
-      tier2: ``,
-      tier3: ``
+      tier1: `<th rowspan="2" style="text-align:left;border-right:2px solid #999;">검토부서</th>`,
+      tier2: ``
     });
     {
       const arr = d.byTeam || [];
@@ -1067,9 +1060,8 @@
 
     // 레포지토리별 — 첫 셀 한 묶음 (팀 + 레포 + 업무명, 두 줄 구성)
     document.getElementById('overviewRepoThead').innerHTML = headerHtml({
-      tier1: `<th rowspan="3" style="text-align:left;border-right:2px solid #999;">검토부서</th>`,
-      tier2: ``,
-      tier3: ``
+      tier1: `<th rowspan="2" style="text-align:left;border-right:2px solid #999;">검토부서</th>`,
+      tier2: ``
     });
     {
       const arr = d.byRepo || [];
@@ -1085,9 +1077,8 @@
 
     // 담당자별 — 첫 셀 한 묶음 (팀 + 담당자, 두 줄 구성)
     document.getElementById('overviewManagerThead').innerHTML = headerHtml({
-      tier1: `<th rowspan="3" style="text-align:left;border-right:2px solid #999;">검토부서</th>`,
-      tier2: ``,
-      tier3: ``
+      tier1: `<th rowspan="2" style="text-align:left;border-right:2px solid #999;">검토부서</th>`,
+      tier2: ``
     });
     {
       const arr = d.byManager || [];
