@@ -52,6 +52,7 @@ public class ApiViewController {
     private final ApiStorageService storageService;
     private final com.baek.viewer.service.AuthService authService;
     private final com.baek.viewer.service.TestSuspectMatcher testSuspectMatcher;
+    private final com.baek.viewer.service.YamlConfigService yamlConfigService;
 
     public ApiViewController(ApiExtractorService extractorService,
                              WhatapService whatapService,
@@ -60,7 +61,8 @@ public class ApiViewController {
                              GlobalConfigRepository globalConfigRepository,
                              ApiStorageService storageService,
                              com.baek.viewer.service.AuthService authService,
-                             com.baek.viewer.service.TestSuspectMatcher testSuspectMatcher) {
+                             com.baek.viewer.service.TestSuspectMatcher testSuspectMatcher,
+                             com.baek.viewer.service.YamlConfigService yamlConfigService) {
         this.extractorService = extractorService;
         this.whatapService = whatapService;
         this.recordRepository = recordRepository;
@@ -69,6 +71,7 @@ public class ApiViewController {
         this.storageService = storageService;
         this.authService = authService;
         this.testSuspectMatcher = testSuspectMatcher;
+        this.yamlConfigService = yamlConfigService;
     }
 
     /** 토큰 유효성 확인 (페이지 로드 시 자동 검증용) + 남은 수명 반환 */
@@ -84,9 +87,23 @@ public class ApiViewController {
     public ResponseEntity<?> verifyPassword(@RequestBody Map<String, String> body,
                                             jakarta.servlet.http.HttpServletResponse response) {
         String input = body.get("password");
-        String stored = globalConfigRepository.findById(1L)
-                .map(g -> g.getPassword()).orElse(null);
-        if (stored == null || stored.isBlank()) stored = "lotte1!";
+        com.baek.viewer.model.GlobalConfig gc = globalConfigRepository.findById(1L).orElse(null);
+        String stored = gc != null ? gc.getPassword() : null;
+        // DB password 가 비어있으면 활성 yml(외부→classpath) 의 password 를 폴백으로 사용 + 일치 시 DB 자동 동기화
+        if (stored == null || stored.isBlank()) {
+            String ymlPwd = yamlConfigService.readActivePasswordFromYaml();
+            if (ymlPwd != null && !ymlPwd.isBlank()) {
+                stored = ymlPwd;
+                if (stored.equals(input)) {
+                    // 인증 성공 시 DB 에 저장 (이후 yml 재조회 불필요)
+                    if (gc == null) gc = new com.baek.viewer.model.GlobalConfig();
+                    gc.setPassword(stored);
+                    globalConfigRepository.save(gc);
+                    log.info("[인증] yml password 폴백 → DB 자동 동기화 완료");
+                }
+            }
+        }
+        if (stored == null || stored.isBlank()) stored = "lotte1!";  // 최종 폴백
         boolean ok = stored.equals(input);
         if (ok) {
             String token = authService.issueToken();

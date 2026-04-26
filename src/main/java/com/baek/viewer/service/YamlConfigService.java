@@ -69,6 +69,35 @@ public class YamlConfigService {
         return processYamlConfig(config);
     }
 
+    /**
+     * 활성 yml (외부 파일 우선, 없으면 classpath) 에서 global.password 만 읽어 반환.
+     * DB password 가 비어있을 때 인증 폴백용.
+     */
+    public String readActivePasswordFromYaml() {
+        Yaml yaml = new Yaml(new Constructor(ReposYamlConfig.class, new LoaderOptions()));
+        ReposYamlConfig config = null;
+        // 1. 외부 파일
+        java.io.File external = new java.io.File(getDefaultConfigPath());
+        if (external.exists()) {
+            try (InputStream is = new FileInputStream(external)) {
+                config = yaml.load(is);
+            } catch (Exception e) {
+                log.warn("[YAML password 조회] 외부 파일 파싱 실패: {}", e.getMessage());
+            }
+        }
+        // 2. classpath 폴백
+        if (config == null) {
+            try (InputStream is = new org.springframework.core.io.ClassPathResource("repos-config.yml").getInputStream()) {
+                config = yaml.load(is);
+            } catch (Exception e) {
+                log.warn("[YAML password 조회] classpath 파싱 실패: {}", e.getMessage());
+                return null;
+            }
+        }
+        if (config == null || config.getGlobal() == null) return null;
+        return config.getGlobal().getPassword();
+    }
+
     public Map<String, Object> importFromYamlContent(String content) throws Exception {
         log.info("[YAML 내용 임포트] 크기={}bytes", content.length());
         Yaml yaml = new Yaml(new Constructor(ReposYamlConfig.class, new LoaderOptions()));
