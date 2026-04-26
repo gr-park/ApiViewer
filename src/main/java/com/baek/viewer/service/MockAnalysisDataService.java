@@ -239,14 +239,14 @@ public class MockAnalysisDataService {
         } else if (pick < 83) {
             status = "①-① 차단대상";               // 차단대상 잔여 자동
         } else if (pick < 87) {
-            status = "①-② 담당자 판단";             // 차단대상 예외건 수동
+            status = "①-② 담당자 판단";             // 차단대상 제외건 수동
             blockTarget = "①-② 담당자 판단";
             blockCriteria = "(Mock) 담당자 결정";
             overridden = true;
         } else if (pick < 89) {
-            status = "①-③ 현업요청 제외대상";       // 차단대상 예외건 자동 (reviewResult 기반)
+            status = "①-③ 현업요청 제외대상";       // 차단대상 제외건 자동 (reviewResult 기반)
         } else if (pick < 93) {
-            status = "①-④ 사용으로 변경";           // 차단대상 예외건 수동
+            status = "①-④ 사용으로 변경";           // 차단대상 제외건 수동
             overridden = true;
         } else {
             // 차단완료 — 메서드 첫 줄에 throw new UnsupportedOperationException 존재.

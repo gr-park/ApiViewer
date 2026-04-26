@@ -305,7 +305,7 @@
         <div class="sum-sub" id="sBtTopPct"></div>
       </div>
       <div class="sum-card c-bt-low">
-        <div class="sum-label">차단대상 예외건 <span style="font-weight:400;color:var(--text-muted);font-size:10px;">(①-②/③/④)</span></div>
+        <div class="sum-label">차단대상 제외건 <span style="font-weight:400;color:var(--text-muted);font-size:10px;">(①-②/③/④)</span></div>
         <div class="sum-value" id="sBtLow">0</div>
         <div class="sum-sub" id="sBtLowPct"></div>
       </div>
@@ -342,7 +342,7 @@
           <div class="legend-item"><div class="legend-dot seg-use"></div>사용</div>
           <div class="legend-item"><div class="legend-dot seg-done"></div>차단완료</div>
           <div class="legend-item"><div class="legend-dot" style="background:#dc2626;"></div>차단대상 잔여 (①-①)</div>
-          <div class="legend-item"><div class="legend-dot" style="background:#ea580c;"></div>차단대상 예외건 (①-②/③/④)</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#ea580c;"></div>차단대상 제외건 (①-②/③/④)</div>
           <div class="legend-item"><div class="legend-dot" style="background:#d97706;"></div>검토대상 (②-①/②/③)</div>
         </div>
         <div style="margin-top:16px;" id="distDetail"></div>
@@ -371,7 +371,7 @@
               <th style="text-align:right;">사용</th>
               <th style="text-align:right;">차단완료</th>
               <th style="text-align:right;">차단대상 잔여</th>
-              <th style="text-align:right;">차단대상 예외건</th>
+              <th style="text-align:right;">차단대상 제외건</th>
               <th style="text-align:right;">검토대상</th>
               <th></th>
             </tr></thead>
@@ -392,7 +392,7 @@
               <th style="text-align:right;">사용</th>
               <th style="text-align:right;">차단완료</th>
               <th style="text-align:right;">차단대상 잔여</th>
-              <th style="text-align:right;">차단대상 예외건</th>
+              <th style="text-align:right;">차단대상 제외건</th>
               <th style="text-align:right;">검토대상</th>
               <th>마지막 분석일</th>
               <th></th>
@@ -413,7 +413,7 @@
               <th style="text-align:right;">사용</th>
               <th style="text-align:right;">차단완료</th>
               <th style="text-align:right;">차단대상 잔여</th>
-              <th style="text-align:right;">차단대상 예외건</th>
+              <th style="text-align:right;">차단대상 제외건</th>
               <th style="text-align:right;">검토대상</th>
               <th></th>
             </tr></thead>
@@ -714,7 +714,7 @@
       ['사용', use, '#22c55e'],
       ['차단완료', done, '#6b7280'],
       ['차단대상 잔여', btTop, '#dc2626'],
-      ['차단대상 예외건', btLow, '#ea580c'],
+      ['차단대상 제외건', btLow, '#ea580c'],
       ['검토대상', btRev, '#d97706']
     ];
     const bar = document.getElementById('distBar');
@@ -773,7 +773,7 @@
         ['사용', use, barColor('사용')],
         ['차단완료', done, '#6b7280'],
         ['차단대상 잔여', btTop, '#dc2626'],
-        ['차단대상 예외건', btLow, '#ea580c'],
+        ['차단대상 제외건', btLow, '#ea580c'],
         ['검토대상', btRev, '#d97706']
       ];
       const bars = items.map(([label, v, color]) =>
@@ -960,7 +960,7 @@
     const headerHtml = (firstSpan) => {
       const yL = 'background:#fde68a;color:#92400e;';   // 차단대상 1단
       const yM = 'background:#fef3c7;color:#92400e;';   // 차단대상 2단
-      const oM = 'background:#ffedd5;color:#9a3412;';   // 차단대상 예외건 2단
+      const oM = 'background:#ffedd5;color:#9a3412;';   // 차단대상 제외건 2단
       const pM = 'background:#f3e8ff;color:#7c3aed;';   // 현업요청 제외 2단
       const limeM = 'background:#ecfccb;color:#3f6212;'; // 사용변경 2단
       const bL = 'background:#dbeafe;color:#1e40af;';   // 검토대상 1단

@@ -1498,12 +1498,17 @@
     return [...document.querySelectorAll('#testSuspectKwList .test-kw-tag')].map(t => t.dataset.name);
   }
   async function loadTestKeywords() {
+    const list = document.getElementById('testSuspectKwList');
+    if (!list) return;
+    // 1) 클라이언트 기본 폴백 즉시 표시 (네트워크 실패해도 빈 카드 노출 방지)
+    list.innerHTML = '';
+    _testKwDefault.split(',').map(s => s.trim()).filter(Boolean).forEach(renderTestKwTag);
+    // 2) 서버 응답으로 갱신 (저장된 값이 있으면 폴백 대체)
     try {
       const res = await fetch('/api/config/global');
+      if (!res.ok) return;
       const g = await res.json();
-      const csv = (g.testSuspectKeywords || _testKwDefault);
-      const list = document.getElementById('testSuspectKwList');
-      if (!list) return;
+      const csv = (g.testSuspectKeywords && g.testSuspectKeywords.trim()) || _testKwDefault;
       list.innerHTML = '';
       csv.split(',').map(s => s.trim()).filter(Boolean).forEach(renderTestKwTag);
     } catch (e) { console.error('[테스트키워드 로드 실패]', e); }
@@ -1513,6 +1518,9 @@
     if (!list.length) {
       if (!confirm('키워드가 비어 있습니다. 모든 레코드의 의심 사유가 비워집니다. 계속?')) return;
     }
+    const btn = event && event.target ? event.target : null;
+    const origText = btn ? btn.textContent : '';
+    if (btn) { btn.disabled = true; btn.textContent = '재평가 중...'; }
     const token = (window.AuthState && AuthState.token) || '';
     try {
       const cur = await fetch('/api/config/global').then(r => r.json());
@@ -1531,10 +1539,17 @@
       showToast(`✅ 키워드 저장 + 재평가 완료 — 전체 ${r.total}건 중 ${r.updated}건 갱신 (${r.elapsedMs}ms)`, 'success');
     } catch (e) {
       showToast('❌ ' + (e.message || e), 'error');
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = origText; }
     }
   }
 
-  document.addEventListener('DOMContentLoaded', loadTestKeywords);
+  // DOMContentLoaded 가 이미 발생한 경우(settings 의 embedded 로드)에도 즉시 실행
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', loadTestKeywords);
+  } else {
+    loadTestKeywords();
+  }
 </script>
 
 <script src="/common/auth.js"></script>
