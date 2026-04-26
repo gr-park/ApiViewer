@@ -412,6 +412,11 @@
     <div class="stat-pill sg-pri2" id="pill-후순위"      onclick="setFilter('후순위 차단대상')"      ><span>② 후순위 차단대상</span><strong id="stat-후순위"      style="color:#ea580c;">0</strong></div>
     <div class="stat-pill sg-pri3" id="pill-추가검토필요" onclick="setFilter('추가검토필요 차단대상')"><span>③ 추가검토필요 차단대상</span><strong id="stat-추가검토필요" style="color:#d97706;">0</strong></div>
     <span style="border-left:2px solid var(--border);height:28px;margin:0 2px;"></span>
+    <!-- 수동 판단 그룹 (담당자 수동 결정) -->
+    <div class="stat-pill" id="pill-최우선use" style="background:#ecfccb;border-color:#bef264;" onclick="setFilter('최우선 차단대상 → 사용')" title="① 최우선 차단대상 → 사용 (수동)"><span>① → 사용</span><strong id="stat-최우선use" style="color:#3f6212;">0</strong></div>
+    <div class="stat-pill" id="pill-후순위use" style="background:#ecfccb;border-color:#bef264;" onclick="setFilter('후순위 차단대상 → 사용')" title="② 후순위 차단대상 → 사용 (수동)"><span>② → 사용</span><strong id="stat-후순위use" style="color:#3f6212;">0</strong></div>
+    <div class="stat-pill" id="pill-현업요청"  style="background:#ecfccb;border-color:#bef264;" onclick="setFilter('현업요청 사용')" title="현업요청 사용 (수동)"><span>현업요청 사용</span><strong id="stat-현업요청" style="color:#3f6212;">0</strong></div>
+    <span style="border-left:2px solid var(--border);height:28px;margin:0 2px;"></span>
     <!-- 검토 그룹 -->
     <div class="stat-pill sg-review" id="pill-reviewed" onclick="setFilter('reviewed')"><span>현업검토완료</span><strong id="stat-reviewed" style="color:#1e40af;">0</strong></div>
     <span style="border-left:2px solid var(--border);height:28px;margin:0 2px;"></span>
@@ -434,6 +439,7 @@
     <input type="text" id="searchInput" placeholder="URL, 메소드명, 메뉴명, 비고 검색" oninput="filterTable()" style="width:260px;">
     <input type="text" id="searchTeam" placeholder="팀 검색" oninput="filterTable()" style="width:100px;">
     <input type="text" id="searchManager" placeholder="담당자 검색" oninput="filterTable()" style="width:100px;">
+    <input type="text" id="searchDeployManager" placeholder="배포담당자 검색" oninput="filterTable()" style="width:120px;">
     <span class="filter-count" id="filterCount"></span>
     <!-- 변경일시 범위 필터 -->
     <div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;">
@@ -445,6 +451,18 @@
       <button type="button" onclick="setDatePreset(1,'hours')"   style="font-size:11px;padding:2px 7px;border:1px solid var(--border);border-radius:4px;background:#f8fafc;cursor:pointer;height:28px;">최근 1시간</button>
       <button type="button" onclick="setDatePreset(0,'today')"   style="font-size:11px;padding:2px 7px;border:1px solid var(--border);border-radius:4px;background:#f8fafc;cursor:pointer;height:28px;">오늘</button>
       <button type="button" onclick="clearDateFilter()"          style="font-size:11px;padding:2px 7px;border:1px solid var(--border);border-radius:4px;background:#f8fafc;cursor:pointer;height:28px;color:#6b7280;">초기화</button>
+    </div>
+    <!-- CBO/배포 예정일자 범위 필터 -->
+    <div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;">
+      <span style="font-size:12px;color:var(--text-muted);white-space:nowrap;">CBO일자</span>
+      <input type="date" id="cboFrom" onchange="filterTable({immediate:true,page:0})" style="font-size:12px;padding:2px 6px;border:1px solid var(--border);border-radius:4px;height:28px;">
+      <span style="font-size:12px;color:var(--text-muted);">~</span>
+      <input type="date" id="cboTo"   onchange="filterTable({immediate:true,page:0})" style="font-size:12px;padding:2px 6px;border:1px solid var(--border);border-radius:4px;height:28px;">
+      <span style="font-size:12px;color:var(--text-muted);white-space:nowrap;margin-left:6px;">배포일자</span>
+      <input type="date" id="deployFrom" onchange="filterTable({immediate:true,page:0})" style="font-size:12px;padding:2px 6px;border:1px solid var(--border);border-radius:4px;height:28px;">
+      <span style="font-size:12px;color:var(--text-muted);">~</span>
+      <input type="date" id="deployTo"   onchange="filterTable({immediate:true,page:0})" style="font-size:12px;padding:2px 6px;border:1px solid var(--border);border-radius:4px;height:28px;">
+      <button type="button" onclick="clearScheduleFilter()" style="font-size:11px;padding:2px 7px;border:1px solid var(--border);border-radius:4px;background:#f8fafc;cursor:pointer;height:28px;color:#6b7280;">초기화</button>
     </div>
   </div>
 
@@ -513,6 +531,10 @@
         <option value="최우선 차단대상">① 최우선 차단대상</option>
         <option value="후순위 차단대상">② 후순위 차단대상</option>
         <option value="추가검토필요 차단대상">③ 추가검토필요 차단대상</option>
+        <option disabled>──── 수동 판단 ────</option>
+        <option value="최우선 차단대상 → 사용">① 차단대상 → 사용</option>
+        <option value="후순위 차단대상 → 사용">② 차단대상 → 사용</option>
+        <option value="현업요청 사용">현업요청 사용</option>
         <option value="">자동계산 (초기화)</option>
       </select>
       <select id="bulkBlockCriteria">
@@ -520,6 +542,9 @@
       </select>
       <input id="bulkTeam" type="text" list="teamsDatalist" placeholder="팀 변경" style="width:110px;">
       <input id="bulkManager" type="text" placeholder="담당자 변경" style="width:90px;">
+      <input id="bulkCboDate" type="date" title="CBO 예정일자" style="width:130px;">
+      <input id="bulkDeployDate" type="date" title="배포 예정일자" style="width:130px;">
+      <input id="bulkDeployManager" type="text" placeholder="배포담당자" style="width:90px;" title="배포담당자 변경">
       <datalist id="teamsDatalist"></datalist>
       <button class="btn-apply" onclick="applyBulk()">적용</button>
     </span>
@@ -588,12 +613,13 @@
           <th class="hg-deploy" onclick="sortBy('cboScheduledDate')">CBO예정일자 <span class="sort-icon">↕</span></th>
           <th class="hg-deploy" onclick="sortBy('deployScheduledDate')">배포예정일자 <span class="sort-icon">↕</span></th>
           <th class="hg-deploy no-sort">배포CSR</th>
+          <th class="hg-deploy no-sort">배포담당자</th>
           <th class="hg-info" onclick="sortBy('lastAnalyzedAt')">분석일시 <span class="sort-icon">↕</span></th>
           <th class="hg-info" onclick="sortBy('modifiedAt')">변경일시 <span class="sort-icon">↕</span></th>
         </tr>
       </thead>
       <tbody id="tbody">
-        <tr><td colspan="28"><div class="state-box">레포지토리를 선택하고 <b>조회</b>를 클릭하세요.</div></td></tr>
+        <tr><td colspan="30"><div class="state-box">레포지토리를 선택하고 <b>조회</b>를 클릭하세요.</div></td></tr>
       </tbody>
     </table>
   </div>
@@ -817,7 +843,7 @@
   async function loadApis() {
     document.getElementById('loadBtn').disabled = true;
     document.getElementById('tbody').innerHTML =
-      '<tr><td colspan="27"><div class="state-box"><div class="spinner"></div><br>조회 중...</div></td></tr>';
+      '<tr><td colspan="30"><div class="state-box"><div class="spinner"></div><br>조회 중...</div></td></tr>';
     clearSelection();
     vCurrentPage = 0;
     activeFilter = '';
@@ -852,7 +878,7 @@
     } catch(e) {
       showToast(e.message || '조회 실패', 'error');
       document.getElementById('tbody').innerHTML =
-        `<tr><td colspan="27"><div class="state-box">조회 오류: ${esc(e.message || '')}</div></td></tr>`;
+        `<tr><td colspan="30"><div class="state-box">조회 오류: ${esc(e.message || '')}</div></td></tr>`;
     } finally {
       document.getElementById('loadBtn').disabled = false;
     }
@@ -903,6 +929,7 @@
         cboScheduledDate:   colMap['CBO예정일자'],
         deployScheduledDate: colMap['배포예정일자'],
         deployCsr:          colMap['배포CSR'],
+        deployManager:      colMap['배포담당자'],
       };
       if (!C.repo || !C.apiPath || !C.httpMethod)
         throw new Error('레포지토리 / URL 경로 / HTTP Method 컬럼이 필수입니다.');
@@ -931,6 +958,7 @@
         if (C.cboScheduledDate)   item.cboScheduledDate = get(C.cboScheduledDate);
         if (C.deployScheduledDate) item.deployScheduledDate = get(C.deployScheduledDate);
         if (C.deployCsr)          item.deployCsr = get(C.deployCsr);
+        if (C.deployManager)      item.deployManager = get(C.deployManager);
         rows.push(item);
       });
       if (!rows.length) throw new Error('유효한 데이터 행이 없습니다.');
@@ -1017,6 +1045,13 @@
     filterTable({immediate: true, page: 0});
   }
 
+  function clearScheduleFilter() {
+    ['cboFrom','cboTo','deployFrom','deployTo'].forEach(id => {
+      const el = document.getElementById(id); if (el) el.value = '';
+    });
+    filterTable({immediate: true, page: 0});
+  }
+
   async function refreshAll() {
     await Promise.all([ loadCounts(getSelectedReposCsv()), loadPage(vCurrentPage) ]);
     renderStats();
@@ -1088,6 +1123,18 @@
     if (modFrom) params.set('modifiedFrom', modFrom + ':00');  // datetime-local → HH:MM → HH:MM:SS
     if (modTo)   params.set('modifiedTo',   modTo   + ':00');
 
+    // CBO/배포 예정일자 범위 + 배포담당자 검색
+    const cboF = document.getElementById('cboFrom')?.value;
+    const cboT = document.getElementById('cboTo')?.value;
+    const depF = document.getElementById('deployFrom')?.value;
+    const depT = document.getElementById('deployTo')?.value;
+    const depMgr = (document.getElementById('searchDeployManager')?.value || '').trim();
+    if (cboF) params.set('cboFrom', cboF);
+    if (cboT) params.set('cboTo',   cboT);
+    if (depF) params.set('deployFrom', depF);
+    if (depT) params.set('deployTo',   depT);
+    if (depMgr) params.set('deployManager', depMgr);
+
     // activeFilter → status 또는 alert 또는 method/deprecated
     if (activeFilter === 'new')           params.set('alert', 'new');
     else if (activeFilter === 'changed')  params.set('alert', 'changed');
@@ -1121,7 +1168,7 @@
     const timeoutId = setTimeout(() => pageLoadCtrl.abort(), 30000);
     if (!preloadFirst) {
       document.getElementById('tbody').innerHTML =
-        '<tr><td colspan="27"><div class="state-box"><div class="spinner"></div><br>조회 중...</div></td></tr>';
+        '<tr><td colspan="30"><div class="state-box"><div class="spinner"></div><br>조회 중...</div></td></tr>';
     }
     try {
       let res;
@@ -1149,7 +1196,7 @@
         const totalFmt = (data.total || 0).toLocaleString();
         showToast(`데이터가 너무 많습니다 (${totalFmt}건). 레포지토리를 선택해 주세요.`, 'error');
         document.getElementById('tbody').innerHTML =
-          `<tr><td colspan="27"><div class="state-box">⚠ 전체 조회 제한<br><small>${totalFmt}건<br>레포지토리를 선택하여 조회해 주세요.</small></div></td></tr>`;
+          `<tr><td colspan="30"><div class="state-box">⚠ 전체 조회 제한<br><small>${totalFmt}건<br>레포지토리를 선택하여 조회해 주세요.</small></div></td></tr>`;
         return false;
       }
       if (!res.ok) throw new Error(data.error || '서버 오류');
@@ -1174,7 +1221,7 @@
       if (e.name === 'AbortError') return false;
       showToast(e.message || '페이지 조회 실패', 'error');
       document.getElementById('tbody').innerHTML =
-        `<tr><td colspan="27"><div class="state-box">조회 오류: ${esc(e.message || '')}</div></td></tr>`;
+        `<tr><td colspan="30"><div class="state-box">조회 오류: ${esc(e.message || '')}</div></td></tr>`;
       return false;
     } finally {
       clearTimeout(timeoutId);
@@ -1299,6 +1346,9 @@
     document.getElementById('stat-최우선').textContent    = get('최우선 차단대상');
     document.getElementById('stat-후순위').textContent    = get('후순위 차단대상');
     document.getElementById('stat-추가검토필요').textContent = get('추가검토필요 차단대상');
+    { const e1 = document.getElementById('stat-최우선use'); if (e1) e1.textContent = get('최우선 차단대상 → 사용'); }
+    { const e2 = document.getElementById('stat-후순위use'); if (e2) e2.textContent = get('후순위 차단대상 → 사용'); }
+    { const e3 = document.getElementById('stat-현업요청');  if (e3) e3.textContent = get('현업요청 사용'); }
     document.getElementById('stat-reviewed').textContent  = c.reviewedCount || 0;
     document.getElementById('stat-new').textContent       = c.newCount || 0;
     document.getElementById('stat-changed').textContent   = c.changedCount || 0;
@@ -1451,7 +1501,7 @@
     const off = startOffset || 0;
     const tbody = document.getElementById('tbody');
     if (!list.length) {
-      tbody.innerHTML = '<tr><td colspan="28"><div class="state-box">검색 결과가 없습니다.</div></td></tr>';
+      tbody.innerHTML = '<tr><td colspan="30"><div class="state-box">검색 결과가 없습니다.</div></td></tr>';
       return;
     }
     tbody.innerHTML = list.map((a, idx) => {
@@ -1496,6 +1546,7 @@
         <td class="${locked?'':'memo-editable'}" onclick="${locked?'':('editField(this,'+a.id+',&apos;cboScheduledDate&apos;)')}" title="${locked?'수정불가':'클릭하여 날짜 선택'}" style="font-size:11px;white-space:nowrap;">${esc(a.cboScheduledDate || '')}</td>
         <td class="${locked?'':'memo-editable'}" onclick="${locked?'':('editField(this,'+a.id+',&apos;deployScheduledDate&apos;)')}" title="${locked?'수정불가':'클릭하여 날짜 선택'}" style="font-size:11px;white-space:nowrap;">${esc(a.deployScheduledDate || '')}</td>
         <td class="${locked?'':'memo-editable'}" onclick="${locked?'':('editField(this,'+a.id+',&apos;deployCsr&apos;)')}" title="${locked?'수정불가':'클릭하여 입력'}" style="font-size:11px;">${esc(a.deployCsr || '')}</td>
+        <td class="${locked?'':'memo-editable'}" onclick="${locked?'':('editField(this,'+a.id+',&apos;deployManager&apos;)')}" title="${locked?'수정불가':'클릭하여 입력'}" style="font-size:11px;">${esc(a.deployManager || '')}</td>
         <td style="font-size:10px;color:var(--text-muted);white-space:nowrap;">${fmtDt(a.lastAnalyzedAt)}${isAdmin()&&a.createdIp ? `<br><span style="color:#94a3b8;font-size:9px;">${esc(a.createdIp)}</span>` : ''}</td>
         <td style="font-size:10px;color:var(--text-muted);white-space:nowrap;">${fmtDt(a.modifiedAt)}${isAdmin()&&a.modifiedIp ? `<br><span style="color:#94a3b8;font-size:9px;">${esc(a.modifiedIp)}</span>` : ''}</td>
       </tr>`;
@@ -1745,13 +1796,13 @@
   // 1:cb, 2:레포, 3:업무명, 4:팀, 5:담당자, 6:URL경로, 7:URL호출, 8:상태, 9:상태확정
   // 10:컨트롤러, 11:메소드명, 12:최근변경, 13:관련메뉴, 14:1년, 15:1달, 16:1주
   // 17:차단일자, 18:차단근거, 19:비고, 20:현업검토결과, 21:현업검토의견
-  // 22:CBO예정일자, 23:배포예정일자, 24:배포CSR, 25:분석일시, 26:변경일시
+  // 22:CBO예정일자, 23:배포예정일자, 24:배포CSR, 25:배포담당자, 26:분석일시, 27:변경일시
   const colIndexMap = { repositoryName:2, businessName:3, teamName:4, managerName:5, apiPath:6,
                         status:8, controllerName:10, methodName:11,
                         apiOperationValue:13, callCount:14, callCountMonth:15, callCountWeek:16,
                         blockedDate:17, reviewResult:20,
-                        cboScheduledDate:22, deployScheduledDate:23,
-                        lastAnalyzedAt:25, modifiedAt:26 };
+                        cboScheduledDate:22, deployScheduledDate:23, deployManager:25,
+                        lastAnalyzedAt:26, modifiedAt:27 };
   function sortBy(key) {
     if (sortKey === key) sortAsc = !sortAsc; else { sortKey = key; sortAsc = true; }
     document.querySelectorAll('thead th').forEach(th => th.classList.remove('sorted'));
@@ -1856,8 +1907,14 @@
     }
     const teamVal = document.getElementById('bulkTeam').value.trim();
     const mgrVal  = document.getElementById('bulkManager').value.trim();
+    const cboVal  = document.getElementById('bulkCboDate').value;       // YYYY-MM-DD or ''
+    const depVal  = document.getElementById('bulkDeployDate').value;
+    const depMgr  = document.getElementById('bulkDeployManager').value.trim();
     if (teamVal) { body.teamOverride = teamVal; parts.push('팀→' + teamVal); }
     if (mgrVal)  { body.managerOverride = mgrVal; parts.push('담당자→' + mgrVal); }
+    if (cboVal)  { body.cboScheduledDate = cboVal; parts.push('CBO일자→' + cboVal); }
+    if (depVal)  { body.deployScheduledDate = depVal; parts.push('배포일자→' + depVal); }
+    if (depMgr)  { body.deployManager = depMgr; parts.push('배포담당자→' + depMgr); }
 
     if (!parts.length) { showToast('변경할 항목을 선택하세요.', 'error'); return; }
     if (!await customConfirm(`선택된 ${selectedIds.size}개 항목: ${parts.join(', ')} 변경하시겠습니까?`)) return;
@@ -1933,7 +1990,7 @@
       '상태','상태확정','침해사고 로그 제외대상','차단기준','차단일자','차단근거',
       '비고','현업검토결과','현업검토의견',
       'SmartWay 티켓번호','검토단계',
-      'CBO예정일자','배포예정일자','배포CSR',
+      'CBO예정일자','배포예정일자','배포CSR','배포담당자',
       ...commitHeaders, '분석일시', '변경일시'
     ];
     const blue='E0F2FE', yellow='FEF3C7', purple='E0E7FF', pink='FFE4E6';
@@ -1949,16 +2006,16 @@
       pink,pink,pink,pink,               // 24~27: 침해사고,차단기준,차단일자,차단근거
       pink,pink,pink,                    // 28~30: 비고,검토결과,검토의견
       jiraPurple,jiraPurple,             // 31~32: Jira 티켓, 검토단계
-      pink,pink,pink,                    // 33~35: CBO예정일자,배포예정일자,배포CSR
-      g1,g1,g1, g2,g2,g2, g3,g3,g3, g4,g4,g4, g5,g5,g5, // 36~50: 변경이력1~5
-      blue,blue                          // 51~52: 분석/변경일시
+      pink,pink,pink,pink,               // 33~36: CBO예정일자,배포예정일자,배포CSR,배포담당자
+      g1,g1,g1, g2,g2,g2, g3,g3,g3, g4,g4,g4, g5,g5,g5, // 37~51: 변경이력1~5
+      blue,blue                          // 52~53: 분석/변경일시
     ];
     // 색 변경 경계
-    const groupBorders = new Set([6, 16, 21, 30, 32, 35, 38, 41, 44, 47, 50]);
+    const groupBorders = new Set([6, 16, 21, 30, 32, 36, 39, 42, 45, 48, 51]);
     // 데이터 유효성 검증: 0-based 컬럼 인덱스 → 허용 값 목록
     const validations = [
       { colIdx:18, values:['Y','N'] },                                                                       // Deprecated
-      { colIdx:22, values:['사용','차단완료','최우선 차단대상','후순위 차단대상','추가검토필요 차단대상'] }, // 상태
+      { colIdx:22, values:['사용','차단완료','최우선 차단대상','후순위 차단대상','추가검토필요 차단대상','최우선 차단대상 → 사용','후순위 차단대상 → 사용','현업요청 사용'] }, // 상태
       { colIdx:23, values:['확정','미확정'] },                                                               // 상태확정
       { colIdx:29, values:['차단대상 제외','차단확정','판단불가'] },                                         // 현업검토결과
     ];
@@ -2004,6 +2061,7 @@
         a.cboScheduledDate ? String(a.cboScheduledDate) : '',
         a.deployScheduledDate ? String(a.deployScheduledDate) : '',
         a.deployCsr || '',
+        a.deployManager || '',
         ...commitCols,
         fmtDt(a.lastAnalyzedAt), fmtDt(a.modifiedAt)
       ];
@@ -2027,7 +2085,7 @@
       '상태','상태확정','침해사고 로그 제외대상','차단기준','차단일자','차단근거',
       '비고','현업검토결과','현업검토의견',
       'SmartWay 티켓번호','검토단계',
-      'CBO예정일자','배포예정일자','배포CSR',
+      'CBO예정일자','배포예정일자','배포CSR','배포담당자',
       ...commitHeaders, '분석일시', '변경일시'
     ];
     const blue='E0F2FE', yellow='FEF3C7', purple='E0E7FF', pink='FFE4E6', jiraPurple='EDE9FE';

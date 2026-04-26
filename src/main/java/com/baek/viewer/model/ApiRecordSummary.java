@@ -37,6 +37,10 @@ public interface ApiRecordSummary {
     String getMemo();
     String getReviewResult();
     String getReviewOpinion();
+    LocalDate getCboScheduledDate();
+    LocalDate getDeployScheduledDate();
+    String getDeployCsr();
+    String getDeployManager();
     String getReviewTeam();
     String getReviewManager();
     LocalDateTime getReviewedAt();

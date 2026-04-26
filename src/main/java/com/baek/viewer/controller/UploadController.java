@@ -96,6 +96,7 @@ public class UploadController {
                 r.setDeployScheduledDate(ds == null || ds.isBlank() ? null : java.time.LocalDate.parse(ds));
             }
             if (row.containsKey("deployCsr")) r.setDeployCsr(str(row, "deployCsr"));
+            if (row.containsKey("deployManager")) r.setDeployManager(str(row, "deployManager"));
             if (row.containsKey("reviewResult"))  r.setReviewResult(str(row, "reviewResult"));
             if (row.containsKey("reviewOpinion")) r.setReviewOpinion(str(row, "reviewOpinion"));
 

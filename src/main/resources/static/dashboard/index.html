@@ -321,6 +321,25 @@
       </div>
     </div>
 
+    <!-- 수동 판단 카드 (담당자 결정) — 차단대상 → 사용 / 현업요청 사용 -->
+    <div class="summary-grid" style="margin-top:8px;">
+      <div class="sum-card" style="border-left:4px solid #65a30d;">
+        <div class="sum-label">① 차단대상 → 사용 <span style="font-weight:400;color:var(--text-muted);font-size:10px;">(수동)</span></div>
+        <div class="sum-value" id="sManTop" style="color:#3f6212;">0</div>
+        <div class="sum-sub" id="sManTopPct"></div>
+      </div>
+      <div class="sum-card" style="border-left:4px solid #65a30d;">
+        <div class="sum-label">② 차단대상 → 사용 <span style="font-weight:400;color:var(--text-muted);font-size:10px;">(수동)</span></div>
+        <div class="sum-value" id="sManLow" style="color:#3f6212;">0</div>
+        <div class="sum-sub" id="sManLowPct"></div>
+      </div>
+      <div class="sum-card" style="border-left:4px solid #65a30d;">
+        <div class="sum-label">현업요청 사용 <span style="font-weight:400;color:var(--text-muted);font-size:10px;">(수동)</span></div>
+        <div class="sum-value" id="sManBiz" style="color:#3f6212;">0</div>
+        <div class="sum-sub" id="sManBizPct"></div>
+      </div>
+    </div>
+
     <!-- ── 상태 구분 안내 ── -->
     <div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:10px 16px;margin-bottom:14px;font-size:11px;color:#0c4a6e;line-height:1.8;">
       <b>상태 구분 안내</b><br>
@@ -637,6 +656,9 @@
     const btTop     = st['최우선 차단대상']      || 0;
     const btLow     = st['후순위 차단대상']      || 0;
     const btRev     = st['추가검토필요 차단대상'] || 0;
+    const manTop    = st['최우선 차단대상 → 사용'] || 0;
+    const manLow    = st['후순위 차단대상 → 사용'] || 0;
+    const manBiz    = st['현업요청 사용']         || 0;
 
     // 요약 카드
     document.getElementById('sTotal').textContent  = total.toLocaleString();
@@ -653,6 +675,12 @@
     document.getElementById('sBtLowPct').textContent = pct(btLow, total);
     document.getElementById('sBtRev').textContent   = btRev.toLocaleString();
     document.getElementById('sBtRevPct').textContent = pct(btRev, total);
+    { const e = document.getElementById('sManTop'); if (e) { e.textContent = manTop.toLocaleString();
+        document.getElementById('sManTopPct').textContent = pct(manTop, total); } }
+    { const e = document.getElementById('sManLow'); if (e) { e.textContent = manLow.toLocaleString();
+        document.getElementById('sManLowPct').textContent = pct(manLow, total); } }
+    { const e = document.getElementById('sManBiz'); if (e) { e.textContent = manBiz.toLocaleString();
+        document.getElementById('sManBizPct').textContent = pct(manBiz, total); } }
 
     // 상태 분포 바
     const distData = [

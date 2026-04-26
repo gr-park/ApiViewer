@@ -200,6 +200,11 @@ public class ApiViewController {
                                      @RequestParam(required = false) String ids,
                                      @RequestParam(required = false) String modifiedFrom,
                                      @RequestParam(required = false) String modifiedTo,
+                                     @RequestParam(required = false) String cboFrom,
+                                     @RequestParam(required = false) String cboTo,
+                                     @RequestParam(required = false) String deployFrom,
+                                     @RequestParam(required = false) String deployTo,
+                                     @RequestParam(required = false) String deployManager,
                                      @RequestParam(required = false) Integer page,
                                      @RequestParam(required = false) Integer size,
                                      @RequestParam(required = false) String sort) {
@@ -225,7 +230,12 @@ public class ApiViewController {
                 || repoList != null
                 || (ids != null && !ids.isBlank())
                 || (modifiedFrom != null && !modifiedFrom.isBlank())
-                || (modifiedTo != null && !modifiedTo.isBlank());
+                || (modifiedTo != null && !modifiedTo.isBlank())
+                || (cboFrom != null && !cboFrom.isBlank())
+                || (cboTo != null && !cboTo.isBlank())
+                || (deployFrom != null && !deployFrom.isBlank())
+                || (deployTo != null && !deployTo.isBlank())
+                || (deployManager != null && !deployManager.isBlank());
 
         if (paged || hasDynamicFilter) {
             int pageIdx  = paged ? Math.max(0, page) : 0;
@@ -234,7 +244,8 @@ public class ApiViewController {
             Pageable pageable = PageRequest.of(pageIdx, pageSize, sortSpec);
 
             Specification<ApiRecord> spec = buildSpec(repository, repoList, blockTargetOnly,
-                    status, logWorkExcluded, httpMethod, isDeprecated, q, alert, ids, modifiedFrom, modifiedTo);
+                    status, logWorkExcluded, httpMethod, isDeprecated, q, alert, ids,
+                    modifiedFrom, modifiedTo, cboFrom, cboTo, deployFrom, deployTo, deployManager);
 
             Page<ApiRecord> entityPage = recordRepository.findAll(spec, pageable);
             // 엔티티 → 경량 summary Map 변환 (TEXT 필드 강제 제외)
@@ -331,7 +342,10 @@ public class ApiViewController {
     private Specification<ApiRecord> buildSpec(String repository, List<String> repoList, boolean blockTargetOnly,
                                                 String status, Boolean logWorkExcluded,
                                                 String httpMethod, String isDeprecated, String q, String alert,
-                                                String ids, String modifiedFrom, String modifiedTo) {
+                                                String ids, String modifiedFrom, String modifiedTo,
+                                                String cboFrom, String cboTo,
+                                                String deployFrom, String deployTo,
+                                                String deployManager) {
         return (root, query, cb) -> {
             List<Predicate> ps = new ArrayList<>();
             if (repository != null && !repository.isBlank()) {
@@ -404,6 +418,26 @@ public class ApiViewController {
                     ps.add(cb.lessThanOrEqualTo(root.get("modifiedAt"), to));
                 } catch (Exception ignored) {}
             }
+            // CBO 예정일자 / 배포 예정일자 범위 필터 (yyyy-MM-dd)
+            if (cboFrom != null && !cboFrom.isBlank()) {
+                try { ps.add(cb.greaterThanOrEqualTo(root.get("cboScheduledDate"), LocalDate.parse(cboFrom))); }
+                catch (Exception ignored) {}
+            }
+            if (cboTo != null && !cboTo.isBlank()) {
+                try { ps.add(cb.lessThanOrEqualTo(root.get("cboScheduledDate"), LocalDate.parse(cboTo))); }
+                catch (Exception ignored) {}
+            }
+            if (deployFrom != null && !deployFrom.isBlank()) {
+                try { ps.add(cb.greaterThanOrEqualTo(root.get("deployScheduledDate"), LocalDate.parse(deployFrom))); }
+                catch (Exception ignored) {}
+            }
+            if (deployTo != null && !deployTo.isBlank()) {
+                try { ps.add(cb.lessThanOrEqualTo(root.get("deployScheduledDate"), LocalDate.parse(deployTo))); }
+                catch (Exception ignored) {}
+            }
+            if (deployManager != null && !deployManager.isBlank()) {
+                ps.add(cb.like(cb.lower(root.get("deployManager")), "%" + deployManager.toLowerCase() + "%"));
+            }
             // alert!="deleted" 기본: 삭제 제외
             if (alert == null || !"deleted".equals(alert)) {
                 ps.add(cb.or(cb.isNull(root.get("status")), cb.notEqual(root.get("status"), "삭제")));
@@ -448,6 +482,7 @@ public class ApiViewController {
         m.put("cboScheduledDate",   r.getCboScheduledDate());
         m.put("deployScheduledDate", r.getDeployScheduledDate());
         m.put("deployCsr",          r.getDeployCsr());
+        m.put("deployManager",      r.getDeployManager());
         m.put("reviewTeam",         r.getReviewTeam());
         m.put("reviewManager",      r.getReviewManager());
         m.put("reviewedAt",         r.getReviewedAt());

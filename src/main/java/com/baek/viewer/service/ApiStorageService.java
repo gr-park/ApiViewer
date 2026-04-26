@@ -24,6 +24,17 @@ public class ApiStorageService {
 
     private static final Logger log = LoggerFactory.getLogger(ApiStorageService.class);
 
+    /**
+     * 수동 판단 전용 상태값 — 자동 재계산(calculateStatus)에서 보존되며,
+     * 일괄 수정 시 selecting 만으로 statusOverridden=true 가 자동 적용된다.
+     * 모두 의미상 "사용" 계열이지만, 원래 어떤 차단대상이었는지를 추적한다.
+     */
+    public static final List<String> MANUAL_STATUSES = List.of(
+            "최우선 차단대상 → 사용",
+            "후순위 차단대상 → 사용",
+            "현업요청 사용"
+    );
+
     private final ApiRecordRepository repository;
     private final GlobalConfigRepository globalConfigRepository;
     private final RepoConfigRepository repoConfigRepository;
@@ -344,6 +355,10 @@ public class ApiStorageService {
                         r.setStatus(calculateStatus(r, reviewThreshold));
                     } else {
                         r.setStatus(status);
+                        // 수동 판단 상태는 자동 재계산되지 않도록 statusOverridden 자동 ON
+                        if (MANUAL_STATUSES.contains(status)) {
+                            r.setStatusOverridden(true);
+                        }
                     }
                 }
 
@@ -374,6 +389,11 @@ public class ApiStorageService {
                 if (fields.containsKey("reviewManager")) { r.setReviewManager(toNullableStr(fields.get("reviewManager"))); reviewChanged = true; }
                 if (reviewChanged) r.setReviewedAt(now);
 
+                // CBO/배포 일정 + 배포담당자 — 빈 문자열은 null 로 clear
+                if (fields.containsKey("cboScheduledDate"))    r.setCboScheduledDate(toNullableDate(fields.get("cboScheduledDate")));
+                if (fields.containsKey("deployScheduledDate")) r.setDeployScheduledDate(toNullableDate(fields.get("deployScheduledDate")));
+                if (fields.containsKey("deployManager"))       r.setDeployManager(toNullableStr(fields.get("deployManager")));
+
                 r.setModifiedAt(now);
                 if (clientIp != null) r.setModifiedIp(clientIp);
                 dirty.add(r);
@@ -391,6 +411,18 @@ public class ApiStorageService {
         return s.isEmpty() ? null : s;
     }
 
+    /** ISO yyyy-MM-dd 문자열 → LocalDate. 빈값/null/parse 실패 시 null. */
+    private LocalDate toNullableDate(Object v) {
+        if (v == null) return null;
+        String s = v.toString().trim();
+        if (s.isEmpty()) return null;
+        try { return LocalDate.parse(s); }
+        catch (Exception e) {
+            log.warn("[일괄 변경] 날짜 파싱 실패: '{}' — null 처리", s);
+            return null;
+        }
+    }
+
     /** 기존 호환용 — 상태만 변경 */
     @Transactional
     public int updateStatus(List<Long> ids, String status) {
@@ -400,7 +432,11 @@ public class ApiStorageService {
     // ── 상태 계산 ────────────────────────────────────────────────────────────
 
     String calculateStatus(ApiRecord r, int reviewThreshold) {
-        // 0. 현업검토결과 "차단대상 제외" → 차단 조건과 무관하게 "사용" 강제
+        // 0-a. 수동 판단 상태(MANUAL_STATUSES)는 보존 — statusOverridden 이 잠깐 풀려도 자동계산이 덮어쓰지 않게 가드
+        if (MANUAL_STATUSES.contains(r.getStatus())) {
+            return r.getStatus();
+        }
+        // 0-b. 현업검토결과 "차단대상 제외" → 차단 조건과 무관하게 "사용" 강제
         if ("차단대상 제외".equals(r.getReviewResult())) {
             return "사용";
         }
