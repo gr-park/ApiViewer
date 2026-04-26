@@ -288,10 +288,29 @@ public class ApiStorageService {
         // 매핑에 해당하지 않으면 기존 managerOverride 유지
     }
 
+    /** 한 레코드 당 보존할 최근 상태변경 이력 최대 개수 — 초과 시 오래된 항목부터 제거 (FIFO). */
+    static final int MAX_CHANGE_LOG_ENTRIES = 50;
+    /** 이력 항목 구분자 */
+    private static final String CHANGE_LOG_DELIM = " | ";
+
     private void appendChangeLog(ApiRecord r, String msg) {
         r.setStatusChanged(true);
         String existing = r.getStatusChangeLog();
-        r.setStatusChangeLog(existing != null ? existing + " | " + msg : msg);
+        String combined = (existing != null && !existing.isEmpty()) ? existing + CHANGE_LOG_DELIM + msg : msg;
+        // 최근 MAX_CHANGE_LOG_ENTRIES 개만 보존 (FIFO 트리밍)
+        if (combined.contains(CHANGE_LOG_DELIM)) {
+            String[] parts = combined.split("\\s\\|\\s");
+            if (parts.length > MAX_CHANGE_LOG_ENTRIES) {
+                int from = parts.length - MAX_CHANGE_LOG_ENTRIES;
+                StringBuilder sb = new StringBuilder();
+                for (int i = from; i < parts.length; i++) {
+                    if (i > from) sb.append(CHANGE_LOG_DELIM);
+                    sb.append(parts[i]);
+                }
+                combined = sb.toString();
+            }
+        }
+        r.setStatusChangeLog(combined);
     }
 
     /**

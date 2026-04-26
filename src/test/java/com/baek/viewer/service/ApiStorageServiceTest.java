@@ -386,4 +386,40 @@ class ApiStorageServiceTest {
         assertThat(blocked.getCallCount()).isZero();
         verify(repository, never()).save(any(ApiRecord.class));
     }
+
+    // ═══════════════════ statusChangeLog FIFO trimming ═══════════════════
+
+    @Test
+    @DisplayName("appendChangeLog FIFO — 50개 초과 시 가장 오래된 항목부터 제거")
+    void appendChangeLog_trimsToMax() throws Exception {
+        ApiRecord r = new ApiRecord();
+        // 60개 push → 가장 최근 50개만 보존
+        java.lang.reflect.Method m = ApiStorageService.class.getDeclaredMethod("appendChangeLog", ApiRecord.class, String.class);
+        m.setAccessible(true);
+        for (int i = 1; i <= 60; i++) {
+            m.invoke(service, r, "msg-" + i);
+        }
+        String log = r.getStatusChangeLog();
+        String[] parts = log.split("\\s\\|\\s");
+        assertThat(parts).hasSize(ApiStorageService.MAX_CHANGE_LOG_ENTRIES);
+        // 가장 오래된 (msg-1 ~ msg-10) 은 제거되고 msg-11 ~ msg-60 만 남음
+        assertThat(parts[0]).isEqualTo("msg-11");
+        assertThat(parts[parts.length - 1]).isEqualTo("msg-60");
+        assertThat(r.isStatusChanged()).isTrue();
+    }
+
+    @Test
+    @DisplayName("appendChangeLog — 50개 미만은 그대로 보존")
+    void appendChangeLog_keepsAllUnderLimit() throws Exception {
+        ApiRecord r = new ApiRecord();
+        java.lang.reflect.Method m = ApiStorageService.class.getDeclaredMethod("appendChangeLog", ApiRecord.class, String.class);
+        m.setAccessible(true);
+        for (int i = 1; i <= 10; i++) {
+            m.invoke(service, r, "msg-" + i);
+        }
+        String[] parts = r.getStatusChangeLog().split("\\s\\|\\s");
+        assertThat(parts).hasSize(10);
+        assertThat(parts[0]).isEqualTo("msg-1");
+        assertThat(parts[9]).isEqualTo("msg-10");
+    }
 }
