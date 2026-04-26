@@ -56,6 +56,11 @@ public class StatusRenameMigrator implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
+        // 0단계: status 컬럼 폭 확장 — 옛 VARCHAR(20) 환경에서 새 leaf 라벨(최대 ~30자) 저장 시 too-long 에러 방지.
+        //   H2/PostgreSQL 양쪽 동일 문법. ddl-auto=update 가 자동 ALTER 하지 않으므로 명시적으로 처리.
+        tryUpdate("ALTER TABLE api_record ALTER COLUMN status SET DATA TYPE VARCHAR(50)",
+                new Object[]{}, "status 컬럼 VARCHAR(50) 확장");
+
         // 1단계: 단순 리네임
         for (String[] r : RENAMES) {
             String newStatus = r[0];

@@ -60,7 +60,7 @@ public class ApiRecord {
      * 상태: 사용 / 차단완료
      * statusOverridden=true이면 수동 설정 유지 (자동 재계산 안 함)
      */
-    @Column(name = "status", length = 20)
+    @Column(name = "status", length = 50)
     private String status = "사용";
 
     @Column(name = "status_overridden")
