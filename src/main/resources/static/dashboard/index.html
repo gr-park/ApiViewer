@@ -949,7 +949,8 @@
   // 차단대상 7 = 소계 + 비율 + 차단완료(A) + 잔여(B:①②③) + 예외건(C:현업·사용변경)
   // 보류    7 = 소계 + 비율 + ④ + ⑤ + ⑥ + ⑦ + 사용변경
   function renderBlockOverview(d) {
-    const empty = '<tr><td class="empty" style="padding:18px;text-align:center;color:var(--text-muted);">데이터 없음</td></tr>';
+    // colspan="100" — 헤더 컬럼 수가 탭별로 다름 (팀=17, 담당자=18, 레포=19). 큰 값으로 모두 커버.
+    const empty = '<tr><td colspan="100" class="empty" style="padding:18px;text-align:center;color:var(--text-muted);">데이터 없음</td></tr>';
     if (!d) {
       ['overviewTeamThead','overviewRepoThead','overviewManagerThead'].forEach(id => document.getElementById(id).innerHTML = '');
       ['overviewTeamTbody','overviewRepoTbody','overviewManagerTbody'].forEach(id => document.getElementById(id).innerHTML = empty);
@@ -1104,7 +1105,7 @@
 
   // ── 배포일자 분포 렌더 ───────────────────────────────────
   function renderDeploySchedule(d) {
-    const empty = '<tr><td class="empty" style="padding:18px;text-align:center;color:var(--text-muted);">데이터 없음</td></tr>';
+    const empty = '<tr><td colspan="100" class="empty" style="padding:18px;text-align:center;color:var(--text-muted);">데이터 없음</td></tr>';
     if (!d) {
       ['deployTeamThead','deployRepoThead','deployManagerThead'].forEach(id => document.getElementById(id).innerHTML = '');
       ['deployTeamTbody','deployRepoTbody','deployManagerTbody'].forEach(id => document.getElementById(id).innerHTML = empty);
