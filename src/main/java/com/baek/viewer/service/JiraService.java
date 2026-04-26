@@ -920,10 +920,9 @@ public class JiraService {
 
     private boolean isBlockCandidate(ApiRecord r) {
         String s = r.getStatus();
-        return "최우선 차단대상".equals(s)
-                || "후순위 차단대상".equals(s)
-                || "검토필요대상".equals(s)
-                || "차단완료".equals(s);
+        if (s == null) return false;
+        // (1)-(*) 차단대상 leaf, (2)-(*) 추가검토대상 leaf 모두 후보
+        return s.startsWith("(1)-") || s.startsWith("(2)-");
     }
 
     /**
@@ -1022,11 +1021,12 @@ public class JiraService {
 
         String descText = buildDescriptionTables(cfg, repoCfg, record, businessName);
 
-        String priority = switch (record.getStatus()) {
-            case "최우선 차단대상" -> "Highest";
-            case "후순위 차단대상" -> "Medium";
-            default -> "Low";
-        };
+        // (1)-(2)/(1)-(3) 호출0건 → Highest, (1)-(4) 업무종료/(1)-(5) 현업제외 → Medium, (2)-(*) 추가검토 → Low
+        String s = record.getStatus() != null ? record.getStatus() : "";
+        String priority;
+        if (s.startsWith("(1)-(2)") || s.startsWith("(1)-(3)") || s.startsWith("(1)-(1)")) priority = "Highest";
+        else if (s.startsWith("(1)-")) priority = "Medium";
+        else priority = "Low";
 
         Map<String, Object> fields = new LinkedHashMap<>();
         fields.put("project", Map.of("key", cfg.getProjectKey()));
@@ -1188,18 +1188,17 @@ public class JiraService {
 
     /**
      * 상태값을 viewer.html 배지 색상으로 채색.
-     * 사용/차단완료: 초록(#166534), 최우선: 빨강(#991b1b), 후순위: 주황(#c2410c),
-     * 검토필요대상: 노랑(#92400e)
+     * 사용/(1)-(1) 차단완료: 초록, (1)-(2)/(1)-(3) 호출0건: 빨강, (1)-(4)/(1)-(5) 업무종료/현업제외: 주황,
+     * (2)-(*) 추가검토대상: 노랑
      */
     private String colorizeStatus(String status) {
         if (status == null || status.isBlank()) return "-";
-        String color = switch (status) {
-            case "사용", "차단완료" -> "#166534";
-            case "최우선 차단대상"   -> "#991b1b";
-            case "후순위 차단대상"   -> "#c2410c";
-            case "검토필요대상"          -> "#92400e";
-            default                   -> "#475569";
-        };
+        String color;
+        if ("사용".equals(status) || status.startsWith("(1)-(1)")) color = "#166534";
+        else if (status.startsWith("(1)-(2)") || status.startsWith("(1)-(3)")) color = "#991b1b";
+        else if (status.startsWith("(1)-")) color = "#c2410c";
+        else if (status.startsWith("(2)-")) color = "#92400e";
+        else color = "#475569";
         return "{color:" + color + "}*" + status + "*{color}";
     }
 

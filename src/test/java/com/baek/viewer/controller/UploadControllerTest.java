@@ -104,7 +104,7 @@ class UploadControllerTest {
     @Test
     @DisplayName("차단완료 행도 비(非)상태 필드는 업데이트")
     void blockedRow_allowsNonStatusFields() {
-        ApiRecord r = existing("차단완료");
+        ApiRecord r = existing("(1)-(1) 차단완료");
         r.setStatusOverridden(true);
         when(repository.findByRepositoryNameAndApiPathAndHttpMethod(any(), any(), any()))
                 .thenReturn(Optional.of(r));
@@ -122,13 +122,13 @@ class UploadControllerTest {
         assertThat(saved.getManagerOverride()).isEqualTo("이몽룡");
         assertThat(saved.isManagerOverridden()).isTrue();
         // 상태는 그대로 유지
-        assertThat(saved.getStatus()).isEqualTo("차단완료");
+        assertThat(saved.getStatus()).isEqualTo("(1)-(1) 차단완료");
     }
 
     @Test
     @DisplayName("차단완료 행에서 상태/상태확정 변경은 무시")
     void blockedRow_ignoresStatusChange() {
-        ApiRecord r = existing("차단완료");
+        ApiRecord r = existing("(1)-(1) 차단완료");
         r.setStatusOverridden(true);
         when(repository.findByRepositoryNameAndApiPathAndHttpMethod(any(), any(), any()))
                 .thenReturn(Optional.of(r));
@@ -142,7 +142,7 @@ class UploadControllerTest {
         ArgumentCaptor<ApiRecord> cap = ArgumentCaptor.forClass(ApiRecord.class);
         verify(repository).save(cap.capture());
         ApiRecord saved = cap.getValue();
-        assertThat(saved.getStatus()).isEqualTo("차단완료");
+        assertThat(saved.getStatus()).isEqualTo("(1)-(1) 차단완료");
         assertThat(saved.isStatusOverridden()).isTrue();
     }
 
@@ -154,7 +154,7 @@ class UploadControllerTest {
                 .thenReturn(Optional.of(r));
 
         Map<String, Object> row = row("repo", "/foo", "GET");
-        row.put("status", "차단완료");
+        row.put("status", "(1)-(1) 차단완료");
 
         controller.uploadExcelViewer(body(row), req);
 

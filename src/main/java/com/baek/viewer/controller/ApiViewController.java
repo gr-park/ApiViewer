@@ -171,8 +171,19 @@ public class ApiViewController {
     /** 페이징 미지정 전체 로드 시 최대 행수 — 초과하면 safety cap 적용 */
     private static final int MAX_UNPAGED_ROWS = 50_000;
 
-    private static final List<String> BLOCK_TARGET_STATUSES =
-            List.of("최우선 차단대상", "후순위 차단대상", "검토필요대상");
+    /**
+     * 차단/추가검토대상 leaf 8종 — viewer 의 blockTargetOnly 필터 / 배포 분포 / Jira 동기화 후보 등에 사용.
+     * (1)-(5) 현업요청 차단제외는 reviewResult 자동 → 일반 차단 워크플로우에서는 제외되지만 배포 등 전체 집계에 포함.
+     */
+    private static final List<String> BLOCK_TARGET_STATUSES = List.of(
+            "(1)-(2) 호출0건+변경없음",
+            "(1)-(3) 호출0건+변경있음(로그)",
+            "(1)-(4) 업무종료",
+            "(1)-(5) 현업요청 차단제외",
+            "(2)-(1) 호출0건+로그건",
+            "(2)-(2) 호출0건+변경있음",
+            "(2)-(3) 호출 1~reviewThreshold건",
+            "(2)-(4) 호출 reviewThreshold+1건↑");
 
     /** DB에서 API 목록 조회 — 경량 프로젝션 (fullComment, controllerComment, blockedReason 제외)
      *
@@ -579,10 +590,8 @@ public class ApiViewController {
         long markingIncompleteCount = hasRepo
                 ? recordRepository.countBlockMarkingIncompleteForRepos(repoFilter)
                 : recordRepository.countBlockMarkingIncomplete();
-        // 최우선 차단대상 중 "로그작업이력 제외" 집계 (logWorkExcluded=false 만)
-        long priorityPureCount = hasRepo
-                ? recordRepository.countByStatusAndLogNotExcludedForRepos("최우선 차단대상", repoFilter)
-                : recordRepository.countByStatusAndLogNotExcluded("최우선 차단대상");
+        // (1)-(2) 호출0건+변경없음 — 옛 "최우선 차단대상" + logWorkExcluded=false. 이제 status 자체가 leaf 이므로 단순 countByStatus.
+        long priorityPureCount = byStatus.getOrDefault("(1)-(2) 호출0건+변경없음", 0L);
 
         Map<String, Object> response = new LinkedHashMap<>();
         response.put("total",        total);       // 삭제 제외
@@ -911,9 +920,9 @@ public class ApiViewController {
                         r -> r.getStatus() != null ? r.getStatus() : "사용",
                         Collectors.counting()));
 
-        // 최우선 차단대상(로그작업이력 제외) 전체 카운트 — UI 에서 (1)최우선 / (1)최우선(로그제외) 2분할 표시용
+        // (1)-(2) 호출0건+변경없음 전체 카운트 — UI 에서 별도 표시용
         long priorityPureCount = all.stream()
-                .filter(r -> "최우선 차단대상".equals(r.getStatus()) && !r.isLogWorkExcluded())
+                .filter(r -> "(1)-(2) 호출0건+변경없음".equals(r.getStatus()))
                 .count();
 
         // HTTP Method별 (전체)
@@ -956,7 +965,7 @@ public class ApiViewController {
                                     r -> r.getHttpMethod() != null ? r.getHttpMethod() : "?",
                                     Collectors.counting()));
                     long groupPriorityPure = records.stream()
-                            .filter(r -> "최우선 차단대상".equals(r.getStatus()) && !r.isLogWorkExcluded())
+                            .filter(r -> "(1)-(2) 호출0건+변경없음".equals(r.getStatus()))
                             .count();
                     String lastDate = records.stream()
                             .filter(r -> r.getLastAnalyzedAt() != null)
@@ -984,7 +993,7 @@ public class ApiViewController {
             byTeamCount.merge(team, 1L, Long::sum);
             String status = r.getStatus() != null ? r.getStatus() : "사용";
             byTeamStatus.computeIfAbsent(team, k -> new LinkedHashMap<>()).merge(status, 1L, Long::sum);
-            if ("최우선 차단대상".equals(status) && !r.isLogWorkExcluded()) {
+            if ("(1)-(2) 호출0건+변경없음".equals(status)) {
                 byTeamPriorityPure.merge(team, 1L, Long::sum);
             }
         });
@@ -1019,7 +1028,7 @@ public class ApiViewController {
             managerToTeam.putIfAbsent(mgr, team);
             String status = r.getStatus() != null ? r.getStatus() : "사용";
             byManagerStatus.computeIfAbsent(mgr, k -> new LinkedHashMap<>()).merge(status, 1L, Long::sum);
-            if ("최우선 차단대상".equals(status) && !r.isLogWorkExcluded()) {
+            if ("(1)-(2) 호출0건+변경없음".equals(status)) {
                 byManagerPriorityPure.merge(mgr, 1L, Long::sum);
             }
         });
@@ -1058,7 +1067,7 @@ public class ApiViewController {
         long start = System.currentTimeMillis();
 
         List<String> targetStatuses = new ArrayList<>(BLOCK_TARGET_STATUSES);
-        targetStatuses.add("차단완료");
+        targetStatuses.add("(1)-(1) 차단완료");
         List<DeployScheduleDto> all = recordRepository.findForDeploySchedule(targetStatuses);
 
         Map<String, RepoConfig> repoConfigMap = repoConfigRepository.findAll().stream()
@@ -1106,7 +1115,7 @@ public class ApiViewController {
                     return m;
                 });
                 bucket.put("total", (Long) bucket.get("total") + 1L);
-                if ("차단완료".equals(r.getStatus())) {
+                if ("(1)-(1) 차단완료".equals(r.getStatus())) {
                     bucket.put("completed", (Long) bucket.get("completed") + 1L);
                 } else if (r.getDeployScheduledDate() == null) {
                     bucket.put("scheduled", (Long) bucket.get("scheduled") + 1L);
@@ -1187,23 +1196,24 @@ public class ApiViewController {
     }
 
     /**
-     * 차단대상 진행사항 대시보드 — 사용/차단/보류 3-tier × 13컬럼 그룹별 집계.
+     * 차단대상 진행사항 대시보드 — 사용 / (1) 차단대상 / (2) 추가검토대상 3-tier × 13컬럼 그룹별 집계.
+     * 모든 분류는 leaf status 직접 매칭 (보조 플래그 분기 없음).
      *
-     * 컬럼 정의:
-     *   사용: status='사용' AND reviewResult <> '차단대상 제외'
-     *   차단:
-     *     A. 차단완료: status='차단완료'
-     *     B-① 호출0+변경없음: status='최우선 차단대상' AND logWorkExcluded=false
-     *     B-② 호출0+변경있음(로그): status='최우선 차단대상' AND logWorkExcluded=true
-     *     B-③ 업무종료: status='후순위 차단대상'
-     *     C-1 현업요청 차단제외: reviewResult='차단대상 제외'
-     *     C-2 사용으로 변경: status='차단대상 → 사용'
-     *   보류:
-     *     ④ 호출0+로그건: status='검토필요대상' AND callCount=0 AND recentLogOnly=true
-     *     ⑤ 호출0+변경있음: status='검토필요대상' AND callCount=0 AND recentLogOnly=false
-     *     ⑥ 호출 1~reviewThreshold: status='검토필요대상' AND callCount BETWEEN 1 AND threshold
-     *     ⑦ 호출 threshold+1~upper: status='검토필요대상' AND callCount > threshold
-     *     사용으로 변경: status='검토필요 → 사용'
+     * 컬럼:
+     *   사용: status='사용'
+     *   (1) 차단대상:
+     *     (1)-(1) 차단완료
+     *     (1)-(2) 호출0건+변경없음
+     *     (1)-(3) 호출0건+변경있음(로그)
+     *     (1)-(4) 업무종료
+     *     (1)-(5) 현업요청 차단제외
+     *     (1)-(6) "차단대상 → 사용" (수동, 라벨 그대로)
+     *   (2) 추가검토대상:
+     *     (2)-(1) 호출0건+로그건
+     *     (2)-(2) 호출0건+변경있음
+     *     (2)-(3) 호출 1~reviewThreshold건
+     *     (2)-(4) 호출 reviewThreshold+1건↑
+     *     (2)-(5) "검토필요 → 사용" (수동, 라벨 그대로)
      */
     @GetMapping("/db/stats/block-overview")
     public ResponseEntity<?> dbBlockOverview() {
@@ -1238,35 +1248,31 @@ public class ApiViewController {
             for (BlockOverviewDto r : recs) {
                 long[] c = acc.computeIfAbsent(keyFn.apply(r), k -> new long[13]);
                 String s = r.getStatus();
-                String rev = r.getReviewResult();
-                long call = r.getCallCountValue();
-                boolean reviewExcluded = "차단대상 제외".equals(rev);
 
                 // 0: 사용
-                if ("사용".equals(s) && !reviewExcluded) c[0]++;
-                // 1: A. 차단완료
-                else if ("차단완료".equals(s)) c[1]++;
-                // 2: B-① 호출0+변경없음 (최우선, logWorkExcluded=false)
-                else if ("최우선 차단대상".equals(s) && !r.isLogWorkExcluded()) c[2]++;
-                // 3: B-② 호출0+변경있음(로그) (최우선, logWorkExcluded=true)
-                else if ("최우선 차단대상".equals(s) && r.isLogWorkExcluded()) c[3]++;
-                // 4: B-③ 업무종료 (후순위 차단대상)
-                else if ("후순위 차단대상".equals(s)) c[4]++;
-                // 6: C-2 사용으로 변경 (차단대상→사용 수동)
+                if ("사용".equals(s)) c[0]++;
+                // 1: (1)-(1) 차단완료
+                else if ("(1)-(1) 차단완료".equals(s)) c[1]++;
+                // 2: (1)-(2) 호출0건+변경없음
+                else if ("(1)-(2) 호출0건+변경없음".equals(s)) c[2]++;
+                // 3: (1)-(3) 호출0건+변경있음(로그)
+                else if ("(1)-(3) 호출0건+변경있음(로그)".equals(s)) c[3]++;
+                // 4: (1)-(4) 업무종료
+                else if ("(1)-(4) 업무종료".equals(s)) c[4]++;
+                // 5: (1)-(5) 현업요청 차단제외
+                else if ("(1)-(5) 현업요청 차단제외".equals(s)) c[5]++;
+                // 6: (1)-(6) = "차단대상 → 사용" 수동
                 else if ("차단대상 → 사용".equals(s)) c[6]++;
-                // 7~10: 검토필요대상 분류
-                else if ("검토필요대상".equals(s)) {
-                    if (call == 0) {
-                        if (r.isRecentLogOnly()) c[7]++;     // ④ 호출0+로그건
-                        else c[8]++;                          // ⑤ 호출0+변경있음
-                    } else if (call <= reviewThreshold) c[9]++;  // ⑥ 호출 1~3
-                    else c[10]++;                                 // ⑦ 호출 4건이상
-                }
-                // 11: 검토필요 → 사용 (수동)
+                // 7: (2)-(1) 호출0건+로그건
+                else if ("(2)-(1) 호출0건+로그건".equals(s)) c[7]++;
+                // 8: (2)-(2) 호출0건+변경있음
+                else if ("(2)-(2) 호출0건+변경있음".equals(s)) c[8]++;
+                // 9: (2)-(3) 호출 1~reviewThreshold건
+                else if ("(2)-(3) 호출 1~reviewThreshold건".equals(s)) c[9]++;
+                // 10: (2)-(4) 호출 reviewThreshold+1건↑
+                else if ("(2)-(4) 호출 reviewThreshold+1건↑".equals(s)) c[10]++;
+                // 11: (2)-(5) = "검토필요 → 사용" 수동
                 else if ("검토필요 → 사용".equals(s)) c[11]++;
-
-                // 5: C-1 현업요청 차단제외 (status 무관, reviewResult 매칭) — 사용 컬럼과 중복 방지 위해 사용 분기에서 이미 제외함
-                if (reviewExcluded) c[5]++;
 
                 // 12: 총합 (각 행의 grandTotal)
                 c[12]++;

@@ -129,46 +129,50 @@ public class TestDataSeedService {
             String hasUrlBlock = "N";
             String isDeprecated = "N";
             int r = i % 100;
+            // 분포: 사용 60 / (2)-(1) 3 / (2)-(2) 5 / (2)-(3) 4 / (2)-(4) 3 / (1)-(2) 5 / (1)-(3) 5 / (1)-(4) 8 / (1)-(1) 7
             if (r < 60) {
                 status = "사용";
+            } else if (r < 63) {
+                status = "(2)-(1) 호출0건+로그건";
+            } else if (r < 68) {
+                status = "(2)-(2) 호출0건+변경있음";
+            } else if (r < 72) {
+                status = "(2)-(3) 호출 1~reviewThreshold건";
             } else if (r < 75) {
-                status = "검토필요대상";
+                status = "(2)-(4) 호출 reviewThreshold+1건↑";
+            } else if (r < 80) {
+                status = "(1)-(2) 호출0건+변경없음";
             } else if (r < 85) {
-                status = "최우선 차단대상";
+                status = "(1)-(3) 호출0건+변경있음(로그)";
             } else if (r < 93) {
-                status = "후순위 차단대상";
-                blockTarget = "후순위 차단대상";
+                status = "(1)-(4) 업무종료";
+                blockTarget = "(1)-(4) 업무종료";
                 blockCriteria = "(테스트) 수동 지정";
                 overridden = true;
             } else {
-                status = "차단완료";
+                status = "(1)-(1) 차단완료";
                 hasUrlBlock = "Y";
                 isDeprecated = "Y";
             }
 
-            // 배포일자: 차단완료는 과거(이미 배포됨) / 차단대상 3종은 70%만 미래 일자, 30%는 null("예정")
+            // 배포일자: (1)-(1) 차단완료는 과거 / 차단대상·추가검토대상 leaf는 70%만 미래 일자
             LocalDate deployDate = null;
-            if ("차단완료".equals(status)) {
+            if ("(1)-(1) 차단완료".equals(status)) {
                 deployDate = today.minusDays(7 + (i % 180));
-            } else if ("최우선 차단대상".equals(status)
-                    || "후순위 차단대상".equals(status)
-                    || "검토필요대상".equals(status)) {
+            } else if (status.startsWith("(1)-") || status.startsWith("(2)-")) {
                 if (i % 10 < 7) {
                     deployDate = today.plusDays(DEPLOY_DATE_OFFSETS[i % DEPLOY_DATE_OFFSETS.length]);
                 }
             }
 
-            // 배포담당자: 차단완료/차단대상 중 60% 만 명시, 나머지는 null → 폴백(담당자) 으로 표기
+            // 배포담당자: 사용 외에서 60% 만 명시
             String deployManager = null;
             if (!"사용".equals(status) && i % 10 < 6) {
                 deployManager = DEPLOY_MANAGERS[i % DEPLOY_MANAGERS.length];
             }
 
-            // recentLogOnly: 검토필요대상의 일부(40%) 에 true 분포 → 보류 ④ 카운트 검증용
-            boolean recentLogOnly = false;
-            if ("검토필요대상".equals(status) && (i % 5) < 2) {
-                recentLogOnly = true;
-            }
+            // recentLogOnly: (2)-(1) 호출0+로그건 분포 시뮬레이션은 status 자체가 leaf 이므로 단순 매칭
+            boolean recentLogOnly = "(2)-(1) 호출0건+로그건".equals(status);
 
             rows.add(new ApiRow(repo, apiPath, method, status, overridden,
                     blockTarget, blockCriteria, hasUrlBlock, isDeprecated, moduleIdx, i,
@@ -230,7 +234,7 @@ public class TestDataSeedService {
                     ps.setBoolean(p++, false);
                     ps.setString(p++, "[]");
                     ps.setString(p++, "src/main/java/com/test/Mod" + row.module + "Controller.java");
-                    ps.setString(p++, "차단완료".equals(row.status) ? "[URL차단작업][2026-01-15][CSR-99999] 테스트 차단" : null);
+                    ps.setString(p++, "(1)-(1) 차단완료".equals(row.status) ? "[URL차단작업][2026-01-15][CSR-99999] 테스트 차단" : null);
                     if (row.deployDate != null) {
                         ps.setDate(p++, java.sql.Date.valueOf(row.deployDate));
                     } else {
@@ -261,26 +265,19 @@ public class TestDataSeedService {
 
         for (int ri = 0; ri < rows.size(); ri++) {
             ApiRow row = rows.get(ri);
-            // 상태별 호출량 분포 — 사용은 10~1000, 차단대상은 적거나 0
-            int baseMin;
+            // 상태별 호출량 분포 — 사용은 10~1000, 차단대상/추가검토는 적거나 0
+            int baseMin = 0;
             int baseMax;
-            switch (row.status) {
-                case "차단완료":
-                case "최우선 차단대상":
-                    baseMin = 0;
-                    baseMax = 1;
-                    break;
-                case "후순위 차단대상":
-                    baseMin = 0;
-                    baseMax = 5;
-                    break;
-                case "검토필요대상":
-                    baseMin = 0;
-                    baseMax = 20;
-                    break;
-                default: // 사용
-                    baseMin = 10;
-                    baseMax = 1000;
+            String s = row.status != null ? row.status : "";
+            if (s.startsWith("(1)-(1)") || s.startsWith("(1)-(2)") || s.startsWith("(1)-(3)") || s.startsWith("(1)-(5)")) {
+                baseMax = 1;  // 호출 0건이 의미 있는 부류
+            } else if (s.startsWith("(1)-(4)")) {
+                baseMax = 5;  // 업무종료 (수동) — 적게
+            } else if (s.startsWith("(2)-")) {
+                baseMax = 20; // 추가검토대상
+            } else {
+                baseMin = 10;
+                baseMax = 1000; // 사용
             }
             int range = Math.max(1, baseMax - baseMin);
             String className = "com.test.Mod" + row.module + "Controller";

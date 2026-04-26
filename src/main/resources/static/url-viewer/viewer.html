@@ -405,12 +405,12 @@
     <!-- 상태 그룹 -->
     <div class="stat-pill" id="pill-all" onclick="setFilter('')"><span>전체</span><strong id="statTotal">0</strong></div>
     <div class="stat-pill s-use sg-status" id="pill-사용"    onclick="setFilter('사용')"   ><span>사용</span><strong id="stat-사용">0</strong></div>
-    <div class="stat-pill s-done sg-status" id="pill-차단완료" onclick="setFilter('차단완료')"><span>차단완료</span><strong id="stat-차단완료">0</strong></div>
+    <div class="stat-pill s-done sg-status" id="pill-차단완료" onclick="setFilter('차단완료')"><span>(1)-(1) 차단완료</span><strong id="stat-차단완료">0</strong></div>
     <span style="border-left:2px solid var(--border);height:28px;margin:0 2px;"></span>
     <!-- 차단대상 그룹 — 행별 개별 색상 -->
-    <div class="stat-pill sg-pri1" id="pill-최우선"      onclick="setFilter('최우선 차단대상')"      ><span>① 최우선 차단대상</span><strong id="stat-최우선"      style="color:#dc2626;">0</strong></div>
-    <div class="stat-pill sg-pri2" id="pill-후순위"      onclick="setFilter('후순위 차단대상')"      ><span>② 후순위 차단대상</span><strong id="stat-후순위"      style="color:#ea580c;">0</strong></div>
-    <div class="stat-pill sg-pri3" id="pill-검토필요대상" onclick="setFilter('검토필요대상')"><span>③ 검토필요대상</span><strong id="stat-검토필요대상" style="color:#d97706;">0</strong></div>
+    <div class="stat-pill sg-pri1" id="pill-최우선"      onclick="setFilter('최우선 차단대상')"      ><span>(1)-(2)/(1)-(3) 최우선 차단대상</span><strong id="stat-최우선"      style="color:#dc2626;">0</strong></div>
+    <div class="stat-pill sg-pri2" id="pill-후순위"      onclick="setFilter('후순위 차단대상')"      ><span>(1)-(4) 업무종료</span><strong id="stat-후순위"      style="color:#ea580c;">0</strong></div>
+    <div class="stat-pill sg-pri3" id="pill-검토필요대상" onclick="setFilter('검토필요대상')"><span>(2)-(1)~(2)-(4) 검토필요대상</span><strong id="stat-검토필요대상" style="color:#d97706;">0</strong></div>
     <span style="border-left:2px solid var(--border);height:28px;margin:0 2px;"></span>
     <!-- 수동 판단 그룹 (담당자 수동 결정) -->
     <div class="stat-pill" id="pill-bt-use" style="background:#ecfccb;border-color:#bef264;" onclick="setFilter('차단대상 → 사용')" title="차단대상 → 사용 (수동, 최우선/후순위/담당자 판단 통합)"><span>차단대상 → 사용</span><strong id="stat-bt-use" style="color:#3f6212;">0</strong></div>
@@ -480,10 +480,10 @@
     <summary style="cursor:pointer;font-weight:700;line-height:1.8;user-select:none;">상태 구분 안내</summary>
     <div style="line-height:1.8;padding-top:4px;">
       <span style="background:#dcfce7;padding:1px 6px;border-radius:3px;">사용</span> 실제 또는 현업검토 결과 사용중인 URL &nbsp;|&nbsp;
-      <span style="background:#f1f5f9;padding:1px 6px;border-radius:3px;color:#64748b;">차단완료</span> @Deprecated + javadoc표기 + UnsupportedOperationException<br>
-      <span style="background:#fee2e2;padding:1px 6px;border-radius:3px;color:#991b1b;">① 최우선 차단대상</span> 호출 0건 + 소스변경 1년 경과 (침해사고 로그작업은 이력에서 제외) &nbsp;|&nbsp;
-      <span style="background:#fef3c7;padding:1px 6px;border-radius:3px;color:#ea580c;">② 후순위 차단대상</span> IT담당자 검토결과 미사용 또는 업무종료로 인지된 건 &nbsp;|&nbsp;
-      <span style="background:#fef3c7;padding:1px 6px;border-radius:3px;color:#92400e;">③ 검토필요대상</span> 호출 0건 + 소스변경 1년 미만, 호출 1~<span id="guideReviewThreshold">3</span>건 + 소스변경 1년 경과
+      <span style="background:#f1f5f9;padding:1px 6px;border-radius:3px;color:#64748b;">(1)-(1) 차단완료</span> @Deprecated + javadoc표기 + UnsupportedOperationException<br>
+      <span style="background:#fee2e2;padding:1px 6px;border-radius:3px;color:#991b1b;">(1)-(2) 호출0건+변경없음 / (1)-(3) 호출0건+변경있음(로그)</span> 호출 0건 + 소스변경 1년 경과 (침해사고 로그작업은 이력에서 제외) &nbsp;|&nbsp;
+      <span style="background:#fef3c7;padding:1px 6px;border-radius:3px;color:#ea580c;">(1)-(4) 업무종료</span> IT담당자 검토결과 미사용 또는 업무종료로 인지된 건 &nbsp;|&nbsp;
+      <span style="background:#fef3c7;padding:1px 6px;border-radius:3px;color:#92400e;">(2)-(1)~(2)-(4) 검토필요대상</span> 호출 0건 + 소스변경 1년 미만, 호출 1~<span id="guideReviewThreshold">3</span>건 + 소스변경 1년 경과
     </div>
   </details>
 
@@ -526,10 +526,10 @@
       <select id="bulkStatus" onchange="onBulkStatusChange()">
         <option value="__SKIP__">-- 상태 --</option>
         <option value="사용">사용</option>
-        <option value="차단완료">차단완료</option>
-        <option value="최우선 차단대상">① 최우선 차단대상</option>
-        <option value="후순위 차단대상">② 후순위 차단대상</option>
-        <option value="검토필요대상">③ 검토필요대상</option>
+        <option value="차단완료">(1)-(1) 차단완료</option>
+        <option value="최우선 차단대상">(1)-(2)/(1)-(3) 최우선 차단대상</option>
+        <option value="후순위 차단대상">(1)-(4) 업무종료</option>
+        <option value="검토필요대상">(2)-(1)~(2)-(4) 검토필요대상</option>
         <option disabled>──── 수동 판단 ────</option>
         <option value="차단대상 → 사용">차단대상 → 사용</option>
         <option value="검토필요 → 사용">검토필요 → 사용</option>
@@ -739,10 +739,10 @@
   // 상태 표시 레이블 단일 소스 — DB 키 → 화면 표시 레이블
   const STATUS_LABEL = {
     '사용': '사용',
-    '차단완료': '차단완료',
-    '최우선 차단대상': '① 최우선 차단대상',
-    '후순위 차단대상': '② 후순위 차단대상',
-    '검토필요대상': '③ 검토필요대상',
+    '차단완료': '(1)-(1) 차단완료',
+    '최우선 차단대상': '(1)-(2)/(1)-(3) 최우선 차단대상',
+    '후순위 차단대상': '(1)-(4) 업무종료',
+    '검토필요대상': '(2)-(1)~(2)-(4) 검토필요대상',
     '삭제': '삭제'
   };
   let teamsList = [];      // 팀 자동완성 목록
@@ -1552,10 +1552,10 @@
 
   const STATUS_TIPS = {
     '사용': '실제 또는 현업검토 결과 사용중인 URL',
-    '차단완료': '@Deprecated + javadoc표기 + UnsupportedOperationException',
-    '최우선 차단대상': '① 호출 0건 + 소스변경 1년 경과 (침해사고 로그작업은 이력에서 제외)',
-    '후순위 차단대상': '② IT담당자 검토결과 미사용 또는 업무종료로 인지된 건',
-    '검토필요대상': '③ 호출 0건 + 소스변경 1년 미만, 호출 1~N건 + 소스변경 1년 경과',
+    '차단완료': '(1)-(1) @Deprecated + javadoc표기 + UnsupportedOperationException',
+    '최우선 차단대상': '(1)-(2)/(1)-(3) 호출 0건 + 소스변경 1년 경과 (침해사고 로그작업은 이력에서 제외)',
+    '후순위 차단대상': '(1)-(4) IT담당자 검토결과 미사용 또는 업무종료로 인지된 건',
+    '검토필요대상': '(2)-(1)~(2)-(4) 호출 0건 + 소스변경 1년 미만, 호출 1~N건 + 소스변경 1년 경과',
     '삭제': '분석에서 제외된 API (소스 삭제 등)'
   };
   // 대괄호 안에 'URL' 과 '차단' 둘 다 포함된 토큰 탐지 — 공백·오타·순서 허용.
@@ -1861,9 +1861,9 @@
   // ── 차단대상기준 옵션 동적 생성 ──────────────────────────
   function getCriteriaOptions() {
     return {
-      '최우선 차단대상': ['호출 0건 + 소스변경 1년경과', '호출 0건 + 침해사고 로그작업 제외 1년경과', '기타'],
-      '후순위 차단대상': ['IT담당자 미사용 인지', '기타'],
-      '검토필요대상': ['호출 0건 + 소스변경1년미만', `호출 1~${reviewThreshold}건 + 소스변경1년경과`, '기타']
+      '최우선 차단대상': ['(1)-(2) 호출 0건 + 소스변경 1년경과', '(1)-(3) 호출 0건 + 침해사고 로그작업 제외 1년경과', '기타'],
+      '후순위 차단대상': ['(1)-(4) IT담당자 미사용 인지', '기타'],
+      '검토필요대상': ['(2)-(1) 호출 0건 + 로그건', '(2)-(2) 호출 0건 + 변경있음', `(2)-(3) 호출 1~${reviewThreshold}건`, `(2)-(4) 호출 ${reviewThreshold+1}건↑`, '기타']
     };
   }
 
@@ -2560,7 +2560,7 @@
         <div class="detail-section-title">상태 / 차단</div>
         <div class="detail-grid">
           <div class="detail-label">상태 <span style="color:var(--primary);font-size:10px;">✎</span></div>
-          <div class="detail-value" style="white-space:normal;"><select id="df-status" class="df-select" style="width:100%;" onchange="onDetailStatusChange()" ${dis}><option value="사용" ${r.status==='사용'?'selected':''}>사용</option><option value="차단완료" ${r.status==='차단완료'?'selected':''}>차단완료</option><option value="최우선 차단대상" ${r.status==='최우선 차단대상'?'selected':''}>① 최우선 차단대상</option><option value="후순위 차단대상" ${r.status==='후순위 차단대상'?'selected':''}>② 후순위 차단대상</option><option value="검토필요대상" ${r.status==='검토필요대상'?'selected':''}>③ 검토필요대상</option><option disabled>──── 수동 판단 ────</option><option value="차단대상 → 사용" ${r.status==='차단대상 → 사용'?'selected':''}>차단대상 → 사용</option><option value="검토필요 → 사용" ${r.status==='검토필요 → 사용'?'selected':''}>검토필요 → 사용</option></select>${(r.status==='최우선 차단대상' && r.logWorkExcluded) ? '<span style="font-size:11px;color:#9a3412;font-weight:600;margin-top:4px;display:block;">(침해사고 로그 제외)</span>' : ''}</div>
+          <div class="detail-value" style="white-space:normal;"><select id="df-status" class="df-select" style="width:100%;" onchange="onDetailStatusChange()" ${dis}><option value="사용" ${r.status==='사용'?'selected':''}>사용</option><option value="차단완료" ${r.status==='차단완료'?'selected':''}>(1)-(1) 차단완료</option><option value="최우선 차단대상" ${r.status==='최우선 차단대상'?'selected':''}>(1)-(2)/(1)-(3) 최우선 차단대상</option><option value="후순위 차단대상" ${r.status==='후순위 차단대상'?'selected':''}>(1)-(4) 업무종료</option><option value="검토필요대상" ${r.status==='검토필요대상'?'selected':''}>(2)-(1)~(2)-(4) 검토필요대상</option><option disabled>──── 수동 판단 ────</option><option value="차단대상 → 사용" ${r.status==='차단대상 → 사용'?'selected':''}>차단대상 → 사용</option><option value="검토필요 → 사용" ${r.status==='검토필요 → 사용'?'selected':''}>검토필요 → 사용</option></select>${(r.status==='최우선 차단대상' && r.logWorkExcluded) ? '<span style="font-size:11px;color:#9a3412;font-weight:600;margin-top:4px;display:block;">(침해사고 로그 제외)</span>' : ''}</div>
           <div class="detail-label">차단대상기준 <span style="color:var(--primary);font-size:10px;">✎</span></div>
           <div class="detail-value" style="white-space:normal;"><select id="df-blockCriteria" class="df-select" style="width:100%;" ${dis}>${buildCriteriaOptions(r.status, r.blockCriteria || '')}</select></div>
           <div class="detail-label">상태확정</div>

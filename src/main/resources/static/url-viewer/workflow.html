@@ -622,8 +622,8 @@
     <div class="status-grid">
       <div class="status-card sc-done">
         <div class="status-card-head">
-          <span class="status-card-title">차단완료</span>
-          <span class="status-badge st-done">차단완료</span>
+          <span class="status-card-title">(1)-(1) 차단완료</span>
+          <span class="status-badge st-done">(1)-(1) 차단완료</span>
         </div>
         <div class="status-card-rule">
           메서드 본문 어디든
@@ -641,8 +641,8 @@
       </div>
       <div class="status-card sc-top">
         <div class="status-card-head">
-          <span class="status-card-title">최우선 차단대상</span>
-          <span class="status-badge bt-top">최우선</span>
+          <span class="status-card-title">(1)-(2)/(1)-(3) 최우선 차단대상</span>
+          <span class="status-badge bt-top">(1)-(2)/(1)-(3) 최우선</span>
         </div>
         <div class="status-card-rule">
           <b>실제 사용 이력 없음</b> + <b>1년 이상 미수정</b>. 가장 시급히 차단을 검토해야 할 대상.
@@ -651,8 +651,8 @@
       </div>
       <div class="status-card sc-low">
         <div class="status-card-head">
-          <span class="status-card-title">후순위 차단대상</span>
-          <span class="status-badge bt-low">후순위</span>
+          <span class="status-card-title">(1)-(4) 업무종료</span>
+          <span class="status-badge bt-low">(1)-(4) 업무종료</span>
         </div>
         <div class="status-card-rule">
           침해사고 이력·IT개발실 검토건 등 <b>수동 지정</b> 대상. 현업 협의 후 처리.
@@ -661,8 +661,8 @@
       </div>
       <div class="status-card sc-rev">
         <div class="status-card-head">
-          <span class="status-card-title">검토필요대상</span>
-          <span class="status-badge bt-rev">검토필요대상</span>
+          <span class="status-card-title">(2)-(1)~(2)-(4) 검토필요대상</span>
+          <span class="status-badge bt-rev">(2)-(1)~(2)-(4) 검토필요대상</span>
         </div>
         <div class="status-card-rule">
           사용 이력 없음 + 1년 미만 미수정 <b>또는</b> 사용 이력 있음 + 1년 이상 미수정. 추가 검토 필요.
@@ -718,22 +718,22 @@
           </thead>
           <tbody>
             <tr><td style="background:#dcfce7;color:#166534;font-weight:700;padding:6px 10px;border:1px solid #e2e8f0;" rowspan="1">🟢 사용</td><td style="padding:6px 10px;border:1px solid #e2e8f0;">사용</td><td style="padding:6px 10px;border:1px solid #e2e8f0;font-family:monospace;font-size:11px;">status='사용' AND reviewResult ≠ '차단대상 제외'</td></tr>
-            <tr><td style="background:#fde68a;color:#92400e;font-weight:700;padding:6px 10px;border:1px solid #e2e8f0;" rowspan="6">🟠 차단</td><td style="padding:6px 10px;border:1px solid #e2e8f0;">A. 차단완료</td><td style="padding:6px 10px;border:1px solid #e2e8f0;font-family:monospace;font-size:11px;">status='차단완료'</td></tr>
-            <tr><td style="padding:6px 10px;border:1px solid #e2e8f0;">B-① 호출0+변경없음</td><td style="padding:6px 10px;border:1px solid #e2e8f0;font-family:monospace;font-size:11px;">status='최우선 차단대상' AND logWorkExcluded=false</td></tr>
-            <tr><td style="padding:6px 10px;border:1px solid #e2e8f0;">B-② 호출0+변경있음(로그)</td><td style="padding:6px 10px;border:1px solid #e2e8f0;font-family:monospace;font-size:11px;">status='최우선 차단대상' AND logWorkExcluded=true</td></tr>
-            <tr><td style="padding:6px 10px;border:1px solid #e2e8f0;">B-③ 업무종료</td><td style="padding:6px 10px;border:1px solid #e2e8f0;font-family:monospace;font-size:11px;">status='후순위 차단대상'</td></tr>
+            <tr><td style="background:#fde68a;color:#92400e;font-weight:700;padding:6px 10px;border:1px solid #e2e8f0;" rowspan="6">🟠 차단</td><td style="padding:6px 10px;border:1px solid #e2e8f0;">(1)-(1) 차단완료</td><td style="padding:6px 10px;border:1px solid #e2e8f0;font-family:monospace;font-size:11px;">status='차단완료'</td></tr>
+            <tr><td style="padding:6px 10px;border:1px solid #e2e8f0;">(1)-(2) 호출0건+변경없음</td><td style="padding:6px 10px;border:1px solid #e2e8f0;font-family:monospace;font-size:11px;">status='최우선 차단대상' AND logWorkExcluded=false</td></tr>
+            <tr><td style="padding:6px 10px;border:1px solid #e2e8f0;">(1)-(3) 호출0건+변경있음(로그)</td><td style="padding:6px 10px;border:1px solid #e2e8f0;font-family:monospace;font-size:11px;">status='최우선 차단대상' AND logWorkExcluded=true</td></tr>
+            <tr><td style="padding:6px 10px;border:1px solid #e2e8f0;">(1)-(4) 업무종료</td><td style="padding:6px 10px;border:1px solid #e2e8f0;font-family:monospace;font-size:11px;">status='후순위 차단대상'</td></tr>
             <tr><td style="padding:6px 10px;border:1px solid #e2e8f0;">C-1 현업요청 차단제외</td><td style="padding:6px 10px;border:1px solid #e2e8f0;font-family:monospace;font-size:11px;">reviewResult='차단대상 제외' (status는 자동 '사용'으로 변환)</td></tr>
             <tr><td style="padding:6px 10px;border:1px solid #e2e8f0;">C-2 사용으로 변경</td><td style="padding:6px 10px;border:1px solid #e2e8f0;font-family:monospace;font-size:11px;">status='차단대상 → 사용' (수동)</td></tr>
-            <tr><td style="background:#dbeafe;color:#1e40af;font-weight:700;padding:6px 10px;border:1px solid #e2e8f0;" rowspan="5">🔵 보류</td><td style="padding:6px 10px;border:1px solid #e2e8f0;">④ 호출0+로그건</td><td style="padding:6px 10px;border:1px solid #e2e8f0;font-family:monospace;font-size:11px;">status='검토필요대상' AND callCount=0 AND recentLogOnly=true</td></tr>
-            <tr><td style="padding:6px 10px;border:1px solid #e2e8f0;">⑤ 호출0+변경있음</td><td style="padding:6px 10px;border:1px solid #e2e8f0;font-family:monospace;font-size:11px;">status='검토필요대상' AND callCount=0 AND recentLogOnly=false</td></tr>
-            <tr><td style="padding:6px 10px;border:1px solid #e2e8f0;">⑥ 호출 1~reviewThreshold건</td><td style="padding:6px 10px;border:1px solid #e2e8f0;font-family:monospace;font-size:11px;">status='검토필요대상' AND callCount BETWEEN 1 AND reviewThreshold</td></tr>
-            <tr><td style="padding:6px 10px;border:1px solid #e2e8f0;">⑦ 호출 reviewThreshold+1건↑</td><td style="padding:6px 10px;border:1px solid #e2e8f0;font-family:monospace;font-size:11px;">status='검토필요대상' AND callCount &gt; reviewThreshold (~ reviewUpperThreshold)</td></tr>
+            <tr><td style="background:#dbeafe;color:#1e40af;font-weight:700;padding:6px 10px;border:1px solid #e2e8f0;" rowspan="5">🔵 보류</td><td style="padding:6px 10px;border:1px solid #e2e8f0;">(2)-(1) 호출0건+로그건</td><td style="padding:6px 10px;border:1px solid #e2e8f0;font-family:monospace;font-size:11px;">status='검토필요대상' AND callCount=0 AND recentLogOnly=true</td></tr>
+            <tr><td style="padding:6px 10px;border:1px solid #e2e8f0;">(2)-(2) 호출0건+변경있음</td><td style="padding:6px 10px;border:1px solid #e2e8f0;font-family:monospace;font-size:11px;">status='검토필요대상' AND callCount=0 AND recentLogOnly=false</td></tr>
+            <tr><td style="padding:6px 10px;border:1px solid #e2e8f0;">(2)-(3) 호출 1~reviewThreshold건</td><td style="padding:6px 10px;border:1px solid #e2e8f0;font-family:monospace;font-size:11px;">status='검토필요대상' AND callCount BETWEEN 1 AND reviewThreshold</td></tr>
+            <tr><td style="padding:6px 10px;border:1px solid #e2e8f0;">(2)-(4) 호출 reviewThreshold+1건↑</td><td style="padding:6px 10px;border:1px solid #e2e8f0;font-family:monospace;font-size:11px;">status='검토필요대상' AND callCount &gt; reviewThreshold (~ reviewUpperThreshold)</td></tr>
             <tr><td style="padding:6px 10px;border:1px solid #e2e8f0;">사용으로 변경</td><td style="padding:6px 10px;border:1px solid #e2e8f0;font-family:monospace;font-size:11px;">status='검토필요 → 사용' (수동)</td></tr>
           </tbody>
         </table>
       </div>
       <div style="margin-top:8px;font-size:11px;color:#64748b;line-height:1.7;">
-        <b>설정값</b>: <code style="background:#e2e8f0;padding:1px 5px;border-radius:3px;">reviewThreshold</code>(기본 3) — ⑥/⑦ 분기 기준, <code style="background:#e2e8f0;padding:1px 5px;border-radius:3px;">reviewUpperThreshold</code>(기본 10) — ⑦의 호출 상한.
+        <b>설정값</b>: <code style="background:#e2e8f0;padding:1px 5px;border-radius:3px;">reviewThreshold</code>(기본 3) — (2)-(3)/(2)-(4) 분기 기준, <code style="background:#e2e8f0;padding:1px 5px;border-radius:3px;">reviewUpperThreshold</code>(기본 10) — (2)-(4)의 호출 상한.
         <code style="background:#e2e8f0;padding:1px 5px;border-radius:3px;">recentLogOnly</code> — 1년 미만 커밋이 모두 "로그/불필요" 키워드 포함 시 true (자동 갱신).
       </div>
     </div>
@@ -1181,7 +1181,7 @@
       <div style="display:flex;align-items:stretch;gap:8px;">
         <div style="width:36px;min-width:36px;background:#e2e8f0;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#475569;">1</div>
         <div style="flex:1;background:#fee2e2;border:1px solid #fca5a5;border-radius:8px;padding:10px 14px;">
-          <div style="font-size:12px;font-weight:700;color:#991b1b;margin-bottom:3px;">이미 차단완료된 URL</div>
+          <div style="font-size:12px;font-weight:700;color:#991b1b;margin-bottom:3px;">이미 (1)-(1) 차단완료된 URL</div>
           <div style="font-size:12px;color:#334155;line-height:1.6;">소스에 차단 처리가 완료된 URL — 상태 변경 없이 건너뜁니다.</div>
         </div>
       </div>
@@ -1210,7 +1210,7 @@
 
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px;">
         <div style="background:#fee2e2;border:1px solid #fca5a5;border-radius:8px;padding:10px 12px;">
-          <div style="font-size:11px;font-weight:700;color:#991b1b;margin-bottom:4px;">🔴 차단완료</div>
+          <div style="font-size:11px;font-weight:700;color:#991b1b;margin-bottom:4px;">🔴 (1)-(1) 차단완료</div>
           <div style="font-size:11px;color:#334155;line-height:1.6;">
             메서드 본문에 <code style="background:#fecaca;padding:0 3px;border-radius:2px;">UnsupportedOperationException</code> throw + 메시지 "차단" 포함 (위치 무관).<br>
             <span style="display:inline-block;margin-top:3px;padding:1px 6px;background:#fed7aa;color:#9a3412;border-radius:999px;font-weight:700;">📝 차단처리미흡</span>
@@ -1218,11 +1218,11 @@
           </div>
         </div>
         <div style="background:#ffedd5;border:1px solid #fdba74;border-radius:8px;padding:10px 12px;">
-          <div style="font-size:11px;font-weight:700;color:#9a3412;margin-bottom:4px;">🟠 최우선 차단대상</div>
+          <div style="font-size:11px;font-weight:700;color:#9a3412;margin-bottom:4px;">🟠 (1)-(2)/(1)-(3) 최우선 차단대상</div>
           <div style="font-size:11px;color:#334155;line-height:1.6;">실제 사용 이력 없음 + 1년 이상 미수정</div>
         </div>
         <div style="background:#fef9c3;border:1px solid #fde047;border-radius:8px;padding:10px 12px;">
-          <div style="font-size:11px;font-weight:700;color:#713f12;margin-bottom:4px;">🟡 검토필요대상</div>
+          <div style="font-size:11px;font-weight:700;color:#713f12;margin-bottom:4px;">🟡 (2)-(1)~(2)-(4) 검토필요대상</div>
           <div style="font-size:11px;color:#334155;line-height:1.6;">사용 이력 있음 + 1년↑ 미수정<br>또는 사용 없음 + 1년 미만</div>
         </div>
         <div style="background:#ecfccb;border:1px solid #d9f99d;border-radius:8px;padding:10px 12px;">
@@ -1273,11 +1273,11 @@ flowchart TD
     CREATE --> CALC
 
     CALC --> R1{"메서드 본문에\nthrow new UnsupportedOperationException(\"…차단…\")?\n(hasUrlBlock = Y)"}
-    R1 -->|"Yes"| ST_DONE["🔴 차단완료\n(@Deprecated·[URL차단작업] 주석 중\n일부 누락 시 blockMarkingIncomplete=true\n→ 📝 차단처리미흡 부가 표기)"]
+    R1 -->|"Yes"| ST_DONE["🔴 (1)-(1) 차단완료\n(@Deprecated·[URL차단작업] 주석 중\n일부 누락 시 blockMarkingIncomplete=true\n→ 📝 차단처리미흡 부가 표기)"]
     R1 -->|"No"| R2{"callCount = 0\n+ 최근커밋 1년 경과?"}
-    R2 -->|"Yes"| ST_TOP["🟠 최우선 차단대상"]
+    R2 -->|"Yes"| ST_TOP["🟠 (1)-(2)/(1)-(3) 최우선 차단대상"]
     R2 -->|"No"| R3{"callCount ≥ 1 + 최근커밋 1년↑\nOR callCount = 0 + 최근커밋 1년 미만?"}
-    R3 -->|"Yes"| ST_REV["🟡 검토필요대상"]
+    R3 -->|"Yes"| ST_REV["🟡 (2)-(1)~(2)-(4) 검토필요대상"]
     R3 -->|"No"| ST_USE["🟢 사용"]
 
     SAVE["api_record\nINSERT / UPDATE"]

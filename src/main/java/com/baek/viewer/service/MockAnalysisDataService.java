@@ -227,20 +227,24 @@ public class MockAnalysisDataService {
         boolean markingIncomplete = false;
         if (pick < 60) {
             status = "사용";
+        } else if (pick < 70) {
+            status = "(2)-(2) 호출0건+변경있음";  // 추가검토대상 자동
         } else if (pick < 75) {
-            status = "검토필요 차단대상";
+            status = "(2)-(3) 호출 1~reviewThreshold건";
+        } else if (pick < 82) {
+            status = "(1)-(2) 호출0건+변경없음";  // 차단대상 자동
         } else if (pick < 85) {
-            status = "최우선 차단대상";
+            status = "(1)-(3) 호출0건+변경있음(로그)";
         } else if (pick < 93) {
-            status = "후순위 차단대상";
-            blockTarget = "후순위 차단대상";
+            status = "(1)-(4) 업무종료";          // 차단대상 수동
+            blockTarget = "(1)-(4) 업무종료";
             blockCriteria = "(Mock) 수동 지정";
             overridden = true;
         } else {
-            // 차단완료 — 메서드 첫 줄에 throw new UnsupportedOperationException 존재.
+            // (1)-(1) 차단완료 — 메서드 첫 줄에 throw new UnsupportedOperationException 존재.
             // 하위 분포: 40% 는 차단처리미흡 (@Deprecated/[URL차단작업] 주석 일부 누락),
             //           60% 는 완전 표기 (둘 다 존재).
-            status = "차단완료";
+            status = "(1)-(1) 차단완료";
             hasBlock = "Y";
             int prop = rnd.nextInt(100);
             if (prop < 40) {
@@ -290,7 +294,7 @@ public class MockAnalysisDataService {
         for (int c = 0; c < commits; c++) {
             if (c > 0) sb.append(",");
             int daysAgo;
-            if ("최우선 차단대상".equals(status) && c == 0) {
+            if (status != null && status.startsWith("(1)-(2)") && c == 0) {
                 daysAgo = 366 + rnd.nextInt(365); // 1~2년 경과
             } else {
                 daysAgo = rnd.nextInt(600);
