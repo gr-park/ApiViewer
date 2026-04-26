@@ -19,7 +19,8 @@ import java.time.LocalDateTime;
         @Index(name = "idx_status_changed",     columnList = "status_changed"),
         @Index(name = "idx_review_stage",      columnList = "review_stage"),
         @Index(name = "idx_jira_issue_key",    columnList = "jira_issue_key"),
-        @Index(name = "idx_jira_epic_key",     columnList = "jira_epic_key")
+        @Index(name = "idx_jira_epic_key",     columnList = "jira_epic_key"),
+        @Index(name = "idx_test_suspect",       columnList = "test_suspect_reason")
     })
 public class ApiRecord {
 
@@ -84,6 +85,14 @@ public class ApiRecord {
      */
     @Column(name = "recent_log_only")
     private Boolean recentLogOnly = false;
+
+    /**
+     * 테스트용 의심 사유 — "URL-test, 메소드-sample" 같은 콤마 구분 텍스트.
+     * null/빈문자열 = 비의심. 분석 추출 시 자동 매칭, 키워드 변경 시 재평가 endpoint 로 갱신.
+     * status 와 독립 — 사용 중인 URL 도 의심 표시 가능.
+     */
+    @Column(name = "test_suspect_reason", columnDefinition = "TEXT")
+    private String testSuspectReason;
 
     /** 차단대상: 최우선 차단대상 / 후순위 차단대상 / null(미지정) — 수동 설정 전용 */
     @Column(name = "block_target", length = 30)
@@ -310,6 +319,9 @@ public class ApiRecord {
     public boolean isRecentLogOnly() { return Boolean.TRUE.equals(recentLogOnly); }
     public Boolean getRecentLogOnly() { return recentLogOnly; }
     public void setRecentLogOnly(boolean v) { this.recentLogOnly = v; }
+    public String getTestSuspectReason() { return testSuspectReason; }
+    public void setTestSuspectReason(String v) { this.testSuspectReason = v; }
+    public boolean isTestSuspect() { return testSuspectReason != null && !testSuspectReason.isBlank(); }
     public Long getCallCount() { return callCount; }
     public void setCallCount(Long callCount) { this.callCount = callCount; }
     public Long getCallCountMonth() { return callCountMonth; }

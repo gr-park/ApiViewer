@@ -301,6 +301,29 @@
     </div>
   </div>
 
+  <!-- ─── 테스트용 의심 키워드 ─── -->
+  <div class="card" data-admin-only>
+    <div class="card-title">
+      <span class="dot dot-purple"></span>🧪 테스트용 의심 키워드 (분석 시 매칭)
+    </div>
+    <p style="font-size:12px;color:var(--text-muted);margin-bottom:8px;line-height:1.6;">
+      URL 경로 / 메소드명 / 컨트롤러명 / 파일경로 / 메소드주석 / 컨트롤러주석 / @ApiOperation / @Description 에서
+      부분일치 (대소문자 무시). fullUrl 은 도메인 false positive 방지로 제외.
+      매칭 결과는 분석현황의 "테스트용 의심" 컬럼에 자동 표시됩니다.
+    </p>
+    <label class="field" style="display:block;">
+      <div id="testSuspectKwList" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px;min-height:28px;"></div>
+      <div style="display:flex;gap:6px;align-items:center;">
+        <input type="text" id="newTestKwInput" placeholder="키워드 입력 후 Enter"
+               style="flex:1;max-width:320px;padding:5px 8px;border:1px solid var(--border);border-radius:4px;font-size:12px;"
+               onkeydown="if(event.key==='Enter'){event.preventDefault();addTestKeyword();}">
+        <button type="button" class="btn btn-ghost" onclick="addTestKeyword()">+ 추가</button>
+        <button type="button" class="btn btn-primary" onclick="saveTestKeywordsAndRecalc()"
+                style="margin-left:auto;">💾 저장 + 전체 재평가</button>
+      </div>
+    </label>
+  </div>
+
   <!-- ─── APM 호출건수 수집 ─── -->
   <div class="card">
     <div class="card-title">
@@ -1447,6 +1470,71 @@
       doExtract();
     }
   });
+
+  // ── 테스트용 의심 키워드 관리 ─────────────────────────────
+  const _testKwDefault = 'test,sample,mock,테스트,샘플,demo,dummy,fixture,스텁';
+
+  function renderTestKwTag(name) {
+    const tag = document.createElement('span');
+    tag.className = 'test-kw-tag';
+    tag.style.cssText = 'display:inline-flex;align-items:center;gap:4px;padding:3px 8px;background:#fdf4ff;border:1px solid #e9d5ff;border-radius:12px;font-size:11px;color:#7c3aed;';
+    tag.innerHTML = `<span>${esc(name)}</span><button type="button" style="background:none;border:none;color:#9333ea;cursor:pointer;padding:0;font-size:14px;line-height:1;" onclick="this.parentElement.remove()">×</button>`;
+    tag.dataset.name = name;
+    document.getElementById('testSuspectKwList').appendChild(tag);
+  }
+  function addTestKeyword() {
+    const input = document.getElementById('newTestKwInput');
+    const v = (input.value || '').trim();
+    if (!v) return;
+    const existing = [...document.querySelectorAll('#testSuspectKwList .test-kw-tag')].map(t => t.dataset.name);
+    if (existing.includes(v)) { input.value = ''; return; }
+    if (v.length === 1) {
+      if (!confirm(`'${v}' 1자 키워드는 매칭 범위가 매우 넓어집니다. 계속하시겠어요?`)) return;
+    }
+    renderTestKwTag(v);
+    input.value = '';
+  }
+  function collectTestKeywords() {
+    return [...document.querySelectorAll('#testSuspectKwList .test-kw-tag')].map(t => t.dataset.name);
+  }
+  async function loadTestKeywords() {
+    try {
+      const res = await fetch('/api/config/global');
+      const g = await res.json();
+      const csv = (g.testSuspectKeywords || _testKwDefault);
+      const list = document.getElementById('testSuspectKwList');
+      if (!list) return;
+      list.innerHTML = '';
+      csv.split(',').map(s => s.trim()).filter(Boolean).forEach(renderTestKwTag);
+    } catch (e) { console.error('[테스트키워드 로드 실패]', e); }
+  }
+  async function saveTestKeywordsAndRecalc() {
+    const list = collectTestKeywords();
+    if (!list.length) {
+      if (!confirm('키워드가 비어 있습니다. 모든 레코드의 의심 사유가 비워집니다. 계속?')) return;
+    }
+    const token = (window.AuthState && AuthState.token) || '';
+    try {
+      const cur = await fetch('/api/config/global').then(r => r.json());
+      cur.testSuspectKeywords = list.length ? list.join(',') : null;
+      const saveRes = await fetch('/api/config/global', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'X-Admin-Token': token },
+        body: JSON.stringify(cur)
+      });
+      if (!saveRes.ok) throw new Error('키워드 저장 실패');
+      const recalcRes = await fetch('/api/recalculate-test-suspect', {
+        method: 'POST', headers: { 'X-Admin-Token': token }
+      });
+      if (!recalcRes.ok) throw new Error('재평가 실패');
+      const r = await recalcRes.json();
+      showToast(`✅ 키워드 저장 + 재평가 완료 — 전체 ${r.total}건 중 ${r.updated}건 갱신 (${r.elapsedMs}ms)`, 'success');
+    } catch (e) {
+      showToast('❌ ' + (e.message || e), 'error');
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', loadTestKeywords);
 </script>
 
 <script src="/common/auth.js"></script>

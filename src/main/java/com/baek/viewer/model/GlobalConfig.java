@@ -139,6 +139,14 @@ public class GlobalConfig {
     @Column(name = "bot_keywords", columnDefinition = "TEXT")
     private String botKeywords;
 
+    /**
+     * 테스트/샘플 의심 URL 판정 키워드 (콤마 구분, 대소문자 무시 부분일치).
+     * URL 경로 / 메소드명 / 컨트롤러명 / 파일경로 / 주석 / @ApiOperation / @Description 매칭.
+     * fullUrl 은 의도적으로 제외 (도메인 자체에 test/stg 가 포함된 환경 false positive 방지).
+     */
+    @Column(name = "test_suspect_keywords", columnDefinition = "TEXT")
+    private String testSuspectKeywords;
+
 
     public Long getId() { return id; }
     public String getStartDate() { return startDate; }
@@ -216,4 +224,11 @@ public class GlobalConfig {
                : "Googlebot,AdsBot,bingbot,YandexBot,DuckDuckBot,facebookexternalhit,Slackbot,Twitterbot,LinkedInBot,crawler,spider";
     }
     public void setBotKeywords(String v) { this.botKeywords = v; }
+
+    public String getTestSuspectKeywords() {
+        return (testSuspectKeywords != null && !testSuspectKeywords.isBlank())
+                ? testSuspectKeywords
+                : "test,sample,mock,테스트,샘플,demo,dummy,fixture,스텁";
+    }
+    public void setTestSuspectKeywords(String v) { this.testSuspectKeywords = v; }
 }

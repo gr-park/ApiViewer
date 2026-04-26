@@ -51,6 +51,7 @@ public class ApiViewController {
     private final GlobalConfigRepository globalConfigRepository;
     private final ApiStorageService storageService;
     private final com.baek.viewer.service.AuthService authService;
+    private final com.baek.viewer.service.TestSuspectMatcher testSuspectMatcher;
 
     public ApiViewController(ApiExtractorService extractorService,
                              WhatapService whatapService,
@@ -58,7 +59,8 @@ public class ApiViewController {
                              RepoConfigRepository repoConfigRepository,
                              GlobalConfigRepository globalConfigRepository,
                              ApiStorageService storageService,
-                             com.baek.viewer.service.AuthService authService) {
+                             com.baek.viewer.service.AuthService authService,
+                             com.baek.viewer.service.TestSuspectMatcher testSuspectMatcher) {
         this.extractorService = extractorService;
         this.whatapService = whatapService;
         this.recordRepository = recordRepository;
@@ -66,6 +68,7 @@ public class ApiViewController {
         this.globalConfigRepository = globalConfigRepository;
         this.storageService = storageService;
         this.authService = authService;
+        this.testSuspectMatcher = testSuspectMatcher;
     }
 
     /** 토큰 유효성 확인 (페이지 로드 시 자동 검증용) + 남은 수명 반환 */
@@ -206,6 +209,7 @@ public class ApiViewController {
                                      @RequestParam(required = false, defaultValue = "false") boolean blockTargetOnly,
                                      @RequestParam(required = false) String status,
                                      @RequestParam(required = false) String statusGroup,
+                                     @RequestParam(required = false) Boolean testSuspect,
                                      @RequestParam(required = false) Boolean logWorkExcluded,
                                      @RequestParam(required = false) Boolean recentLogOnly,
                                      @RequestParam(required = false) String httpMethod,
@@ -238,6 +242,7 @@ public class ApiViewController {
         // 동적 필터가 하나라도 있으면 Specification 경로 사용
         boolean hasDynamicFilter = (status != null && !status.isBlank())
                 || (statusGroup != null && !statusGroup.isBlank())
+                || (testSuspect != null)
                 || (logWorkExcluded != null)
                 || (recentLogOnly != null)
                 || (httpMethod != null && !httpMethod.isBlank())
@@ -261,7 +266,7 @@ public class ApiViewController {
             Pageable pageable = PageRequest.of(pageIdx, pageSize, sortSpec);
 
             Specification<ApiRecord> spec = buildSpec(repository, repoList, blockTargetOnly,
-                    status, statusGroup, logWorkExcluded, recentLogOnly, httpMethod, isDeprecated, q, alert, ids,
+                    status, statusGroup, testSuspect, logWorkExcluded, recentLogOnly, httpMethod, isDeprecated, q, alert, ids,
                     modifiedFrom, modifiedTo, cboFrom, cboTo, deployFrom, deployTo, deployManager);
 
             Page<ApiRecord> entityPage = recordRepository.findAll(spec, pageable);
@@ -357,7 +362,7 @@ public class ApiViewController {
 
     /** 동적 필터 Specification 빌더 */
     private Specification<ApiRecord> buildSpec(String repository, List<String> repoList, boolean blockTargetOnly,
-                                                String status, String statusGroup,
+                                                String status, String statusGroup, Boolean testSuspect,
                                                 Boolean logWorkExcluded, Boolean recentLogOnly,
                                                 String httpMethod, String isDeprecated, String q, String alert,
                                                 String ids, String modifiedFrom, String modifiedTo,
@@ -387,6 +392,18 @@ public class ApiViewController {
                 };
                 if (prefix != null) {
                     ps.add(cb.like(root.get("status"), prefix + "%"));
+                }
+            }
+            // testSuspect: true = 의심 사유 NOT NULL & 빈문자열 아님, false = NULL 또는 빈문자열
+            if (testSuspect != null) {
+                if (testSuspect) {
+                    ps.add(cb.and(
+                            cb.isNotNull(root.get("testSuspectReason")),
+                            cb.notEqual(root.get("testSuspectReason"), "")));
+                } else {
+                    ps.add(cb.or(
+                            cb.isNull(root.get("testSuspectReason")),
+                            cb.equal(root.get("testSuspectReason"), "")));
                 }
             }
             if (logWorkExcluded != null) {
@@ -500,6 +517,7 @@ public class ApiViewController {
         m.put("statusOverridden",   r.isStatusOverridden());
         m.put("logWorkExcluded",    r.isLogWorkExcluded());
         m.put("recentLogOnly",      r.isRecentLogOnly());
+        m.put("testSuspectReason",  r.getTestSuspectReason());
         m.put("blockTarget",        r.getBlockTarget());
         m.put("blockCriteria",      r.getBlockCriteria());
         m.put("callCount",          r.getCallCount());
@@ -1461,6 +1479,48 @@ public class ApiViewController {
             return ResponseEntity.ok(Map.of("date", date, "content", "로그 읽기 실패: " + e.getMessage(),
                     "totalLines", 0, "shownLines", 0, "fileSizeBytes", 0, "truncated", false));
         }
+    }
+
+    /**
+     * 테스트용 의심 키워드 변경 후 전체 ApiRecord 재평가.
+     * 변경된 레코드만 testSuspectReason 갱신 + 응답에 변경 건수 반환.
+     */
+    @PostMapping("/recalculate-test-suspect")
+    public ResponseEntity<?> recalculateTestSuspect() {
+        long start = System.currentTimeMillis();
+        log.info("[테스트의심 재평가] 시작");
+        java.util.List<String> keywords = testSuspectMatcher.currentKeywords();
+        int batchSize = 1000;
+        int updated = 0;
+        int total = 0;
+        org.springframework.data.domain.Pageable pageable =
+                org.springframework.data.domain.PageRequest.of(0, batchSize,
+                        org.springframework.data.domain.Sort.by("id"));
+        org.springframework.data.domain.Page<ApiRecord> page;
+        do {
+            page = recordRepository.findAll(pageable);
+            java.util.List<ApiRecord> changed = new java.util.ArrayList<>();
+            for (ApiRecord r : page.getContent()) {
+                String newReason = testSuspectMatcher.matchFromRecord(r, keywords);
+                if (!java.util.Objects.equals(r.getTestSuspectReason(), newReason)) {
+                    r.setTestSuspectReason(newReason);
+                    changed.add(r);
+                }
+            }
+            if (!changed.isEmpty()) recordRepository.saveAll(changed);
+            updated += changed.size();
+            total += page.getNumberOfElements();
+            pageable = pageable.next();
+        } while (page.hasNext());
+        long elapsed = System.currentTimeMillis() - start;
+        log.info("[테스트의심 재평가] 완료: 전체={}건, 변경={}건, 키워드={}, 소요={}ms",
+                total, updated, keywords.size(), elapsed);
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("total", total);
+        result.put("updated", updated);
+        result.put("keywords", keywords);
+        result.put("elapsedMs", elapsed);
+        return ResponseEntity.ok(result);
     }
 
     /**
