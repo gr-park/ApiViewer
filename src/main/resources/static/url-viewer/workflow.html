@@ -614,7 +614,7 @@
   </div>
 
   <!-- 스윔레인 4: 상태 판정 로직 (구 섹션 3) -->
-  <div class="section-title">4. 상태 판정 기준 (5가지 상태)</div>
+  <div class="section-title">4. 상태 판정 기준 (자동 5가지 + 수동 3가지)</div>
   <div class="swimlane lane-status">
     <div class="lane-label">
       상태 판정
@@ -661,8 +661,8 @@
       </div>
       <div class="status-card sc-rev">
         <div class="status-card-head">
-          <span class="status-card-title">검토필요 차단대상</span>
-          <span class="status-badge bt-rev">검토필요</span>
+          <span class="status-card-title">추가검토필요 차단대상</span>
+          <span class="status-badge bt-rev">추가검토필요</span>
         </div>
         <div class="status-card-rule">
           사용 이력 없음 + 1년 미만 미수정 <b>또는</b> 사용 이력 있음 + 1년 이상 미수정. 추가 검토 필요.
@@ -678,6 +678,39 @@
           위 조건에 해당하지 않는 <b>기본값</b>. 정상 운영 중으로 판정.
         </div>
         <div class="status-card-meta">기본값</div>
+      </div>
+      <!-- 수동 판단 상태 3종 — 담당자가 검토 후 직접 결정. 자동 재계산 없음. -->
+      <div class="status-card" style="border-color:#bef264;background:#f7fee7;">
+        <div class="status-card-head">
+          <span class="status-card-title" style="color:#365314;">최우선 차단대상 → 사용</span>
+          <span class="status-badge" style="background:#bef264;color:#365314;">수동</span>
+        </div>
+        <div class="status-card-rule">
+          자동 판정으로는 <b>최우선 차단대상</b>이지만, 담당자 검토 결과 <b>사용 중</b>으로 확정된 건.
+          상태 잠금되어 자동 재계산되지 않음.
+        </div>
+        <div class="status-card-meta">담당자 수동 판단</div>
+      </div>
+      <div class="status-card" style="border-color:#bef264;background:#f7fee7;">
+        <div class="status-card-head">
+          <span class="status-card-title" style="color:#365314;">후순위 차단대상 → 사용</span>
+          <span class="status-badge" style="background:#bef264;color:#365314;">수동</span>
+        </div>
+        <div class="status-card-rule">
+          자동 판정으로는 <b>후순위 차단대상</b>이지만, 담당자 검토 결과 <b>사용 중</b>으로 확정된 건.
+          상태 잠금되어 자동 재계산되지 않음.
+        </div>
+        <div class="status-card-meta">담당자 수동 판단</div>
+      </div>
+      <div class="status-card" style="border-color:#bef264;background:#f7fee7;">
+        <div class="status-card-head">
+          <span class="status-card-title" style="color:#365314;">현업요청 사용</span>
+          <span class="status-badge" style="background:#bef264;color:#365314;">수동</span>
+        </div>
+        <div class="status-card-rule">
+          현업의 명시적 사용 요청이 있어 차단 대상에서 제외된 건. 협조전·메일 근거 보존이 권장됨.
+        </div>
+        <div class="status-card-meta">담당자 수동 판단</div>
       </div>
     </div>
   </div>
@@ -1165,7 +1198,7 @@
           <div style="font-size:11px;color:#334155;line-height:1.6;">실제 사용 이력 없음 + 1년 이상 미수정</div>
         </div>
         <div style="background:#fef9c3;border:1px solid #fde047;border-radius:8px;padding:10px 12px;">
-          <div style="font-size:11px;font-weight:700;color:#713f12;margin-bottom:4px;">🟡 검토필요 차단대상</div>
+          <div style="font-size:11px;font-weight:700;color:#713f12;margin-bottom:4px;">🟡 추가검토필요 차단대상</div>
           <div style="font-size:11px;color:#334155;line-height:1.6;">사용 이력 있음 + 1년↑ 미수정<br>또는 사용 없음 + 1년 미만</div>
         </div>
         <div style="background:#ecfccb;border:1px solid #d9f99d;border-radius:8px;padding:10px 12px;">
@@ -1220,7 +1253,7 @@ flowchart TD
     R1 -->|"No"| R2{"callCount = 0\n+ 최근커밋 1년 경과?"}
     R2 -->|"Yes"| ST_TOP["🟠 최우선 차단대상"]
     R2 -->|"No"| R3{"callCount ≥ 1 + 최근커밋 1년↑\nOR callCount = 0 + 최근커밋 1년 미만?"}
-    R3 -->|"Yes"| ST_REV["🟡 검토필요 차단대상"]
+    R3 -->|"Yes"| ST_REV["🟡 추가검토필요 차단대상"]
     R3 -->|"No"| ST_USE["🟢 사용"]
 
     SAVE["api_record\nINSERT / UPDATE"]
