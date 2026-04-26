@@ -622,18 +622,18 @@
     <div class="status-grid">
       <div class="status-card sc-done">
         <div class="status-card-head">
-          <span class="status-card-title">(1)-(1) 차단완료</span>
-          <span class="status-badge st-done">(1)-(1) 차단완료</span>
+          <span class="status-card-title">①-① 차단완료</span>
+          <span class="status-badge st-done">①-① 차단완료</span>
         </div>
         <div class="status-card-rule">
           메서드 본문 어디든
           <code style="background:#e2e8f0;padding:1px 5px;border-radius:3px;font-size:11px;">throw new UnsupportedOperationException("…차단…")</code>
-          — 메시지에 "차단" 포함 — 이면 <b>(1)-(1) 차단완료</b>로 자동 판정 (위치 무관).
+          — 메시지에 "차단" 포함 — 이면 <b>①-① 차단완료</b>로 자동 판정 (위치 무관).
           <div style="margin-top:6px;padding:6px 8px;background:#fff7ed;border:1px solid #fdba74;border-radius:6px;font-size:11px;line-height:1.55;color:#7c2d12;">
             <span style="display:inline-block;background:#fed7aa;color:#9a3412;padding:1px 6px;border-radius:999px;font-weight:700;font-size:10px;margin-right:4px;">📝 차단처리미흡</span>
             <code style="font-size:10.5px;">@Deprecated</code> /
             <code style="font-size:10.5px;">[URL차단작업]</code> 주석 중 하나라도 누락 시 부가 표기.
-            상태는 동일하게 (1)-(1) 차단완료.
+            상태는 동일하게 ①-① 차단완료.
           </div>
           <div style="margin-top:5px;font-size:11px;color:#475569;">모든 수정 불가.</div>
         </div>
@@ -641,8 +641,8 @@
       </div>
       <div class="status-card sc-top">
         <div class="status-card-head">
-          <span class="status-card-title">(1)-(2)/(1)-(3) 최우선 차단대상</span>
-          <span class="status-badge bt-top">(1)-(2)/(1)-(3) 최우선</span>
+          <span class="status-card-title">①-②/①-③ 최우선 차단대상</span>
+          <span class="status-badge bt-top">①-②/①-③ 최우선</span>
         </div>
         <div class="status-card-rule">
           <b>실제 사용 이력 없음</b> + <b>1년 이상 미수정</b>. 가장 시급히 차단을 검토해야 할 대상.
@@ -651,8 +651,8 @@
       </div>
       <div class="status-card sc-low">
         <div class="status-card-head">
-          <span class="status-card-title">(1)-(4) 업무종료</span>
-          <span class="status-badge bt-low">(1)-(4) 업무종료</span>
+          <span class="status-card-title">①-④ 업무종료</span>
+          <span class="status-badge bt-low">①-④ 업무종료</span>
         </div>
         <div class="status-card-rule">
           침해사고 이력·IT개발실 검토건 등 <b>수동 지정</b> 대상. 현업 협의 후 처리.
@@ -661,8 +661,8 @@
       </div>
       <div class="status-card sc-rev">
         <div class="status-card-head">
-          <span class="status-card-title">(2)-(1)~(2)-(4) 검토필요대상</span>
-          <span class="status-badge bt-rev">(2)-(1)~(2)-(4) 검토필요대상</span>
+          <span class="status-card-title">②-①~②-④ 검토필요대상</span>
+          <span class="status-badge bt-rev">②-①~②-④ 검토필요대상</span>
         </div>
         <div class="status-card-rule">
           사용 이력 없음 + 1년 미만 미수정 <b>또는</b> 사용 이력 있음 + 1년 이상 미수정. 추가 검토 필요.
@@ -686,7 +686,7 @@
           <span class="status-badge" style="background:#bef264;color:#365314;">수동</span>
         </div>
         <div class="status-card-rule">
-          자동 판정으로는 <b>(1)-(2)/(1)-(3)/(1)-(4) 차단대상 leaf</b> 이지만, 담당자 검토(현업 협조전·메일·내부 판단 포함) 결과
+          자동 판정으로는 <b>①-②/①-③/①-④ 차단대상 leaf</b> 이지만, 담당자 검토(현업 협조전·메일·내부 판단 포함) 결과
           <b>사용 중</b>으로 확정된 건. 상태 잠금되어 자동 재계산되지 않음.
         </div>
         <div class="status-card-meta">담당자 수동 판단</div>
@@ -697,7 +697,7 @@
           <span class="status-badge" style="background:#bef264;color:#365314;">수동</span>
         </div>
         <div class="status-card-rule">
-          자동 판정으로는 <b>(2)-(1)~(2)-(4) 추가검토대상 leaf</b> 이지만, 담당자 검토 결과 <b>사용 중</b>으로 확정된 건.
+          자동 판정으로는 <b>②-①~②-④ 추가검토대상 leaf</b> 이지만, 담당자 검토 결과 <b>사용 중</b>으로 확정된 건.
           상태 잠금되어 자동 재계산되지 않음.
         </div>
         <div class="status-card-meta">담당자 수동 판단</div>
@@ -718,22 +718,22 @@
           </thead>
           <tbody>
             <tr><td style="background:#dcfce7;color:#166534;font-weight:700;padding:6px 10px;border:1px solid #e2e8f0;" rowspan="1">🟢 사용</td><td style="padding:6px 10px;border:1px solid #e2e8f0;">사용</td><td style="padding:6px 10px;border:1px solid #e2e8f0;font-family:monospace;font-size:11px;">status='사용' AND reviewResult ≠ '차단대상 제외'</td></tr>
-            <tr><td style="background:#fde68a;color:#92400e;font-weight:700;padding:6px 10px;border:1px solid #e2e8f0;" rowspan="6">🟠 차단</td><td style="padding:6px 10px;border:1px solid #e2e8f0;">(1)-(1) 차단완료</td><td style="padding:6px 10px;border:1px solid #e2e8f0;font-family:monospace;font-size:11px;">status='(1)-(1) 차단완료'</td></tr>
-            <tr><td style="padding:6px 10px;border:1px solid #e2e8f0;">(1)-(2) 호출0건+변경없음</td><td style="padding:6px 10px;border:1px solid #e2e8f0;font-family:monospace;font-size:11px;">status='(1)-(2) 호출0건+변경없음'</td></tr>
-            <tr><td style="padding:6px 10px;border:1px solid #e2e8f0;">(1)-(3) 호출0건+변경있음(로그)</td><td style="padding:6px 10px;border:1px solid #e2e8f0;font-family:monospace;font-size:11px;">status='(1)-(3) 호출0건+변경있음(로그)'</td></tr>
-            <tr><td style="padding:6px 10px;border:1px solid #e2e8f0;">(1)-(4) 업무종료</td><td style="padding:6px 10px;border:1px solid #e2e8f0;font-family:monospace;font-size:11px;">status='(1)-(4) 업무종료'</td></tr>
+            <tr><td style="background:#fde68a;color:#92400e;font-weight:700;padding:6px 10px;border:1px solid #e2e8f0;" rowspan="6">🟠 차단</td><td style="padding:6px 10px;border:1px solid #e2e8f0;">①-① 차단완료</td><td style="padding:6px 10px;border:1px solid #e2e8f0;font-family:monospace;font-size:11px;">status='①-① 차단완료'</td></tr>
+            <tr><td style="padding:6px 10px;border:1px solid #e2e8f0;">①-② 호출0건+변경없음</td><td style="padding:6px 10px;border:1px solid #e2e8f0;font-family:monospace;font-size:11px;">status='①-② 호출0건+변경없음'</td></tr>
+            <tr><td style="padding:6px 10px;border:1px solid #e2e8f0;">①-③ 호출0건+변경있음(로그)</td><td style="padding:6px 10px;border:1px solid #e2e8f0;font-family:monospace;font-size:11px;">status='①-③ 호출0건+변경있음(로그)'</td></tr>
+            <tr><td style="padding:6px 10px;border:1px solid #e2e8f0;">①-④ 업무종료</td><td style="padding:6px 10px;border:1px solid #e2e8f0;font-family:monospace;font-size:11px;">status='①-④ 업무종료'</td></tr>
             <tr><td style="padding:6px 10px;border:1px solid #e2e8f0;">C-1 현업요청 차단제외</td><td style="padding:6px 10px;border:1px solid #e2e8f0;font-family:monospace;font-size:11px;">reviewResult='차단대상 제외' (status는 자동 '사용'으로 변환)</td></tr>
             <tr><td style="padding:6px 10px;border:1px solid #e2e8f0;">C-2 사용으로 변경</td><td style="padding:6px 10px;border:1px solid #e2e8f0;font-family:monospace;font-size:11px;">status='차단대상 → 사용' (수동)</td></tr>
-            <tr><td style="background:#dbeafe;color:#1e40af;font-weight:700;padding:6px 10px;border:1px solid #e2e8f0;" rowspan="5">🔵 보류</td><td style="padding:6px 10px;border:1px solid #e2e8f0;">(2)-(1) 호출0건+로그건</td><td style="padding:6px 10px;border:1px solid #e2e8f0;font-family:monospace;font-size:11px;">status='(2)-(1) 호출0건+로그건'</td></tr>
-            <tr><td style="padding:6px 10px;border:1px solid #e2e8f0;">(2)-(2) 호출0건+변경있음</td><td style="padding:6px 10px;border:1px solid #e2e8f0;font-family:monospace;font-size:11px;">status='(2)-(2) 호출0건+변경있음'</td></tr>
-            <tr><td style="padding:6px 10px;border:1px solid #e2e8f0;">(2)-(3) 호출 1~reviewThreshold건</td><td style="padding:6px 10px;border:1px solid #e2e8f0;font-family:monospace;font-size:11px;">status='(2)-(3) 호출 1~reviewThreshold건'</td></tr>
-            <tr><td style="padding:6px 10px;border:1px solid #e2e8f0;">(2)-(4) 호출 reviewThreshold+1건↑</td><td style="padding:6px 10px;border:1px solid #e2e8f0;font-family:monospace;font-size:11px;">status='(2)-(4) 호출 reviewThreshold+1건↑'</td></tr>
+            <tr><td style="background:#dbeafe;color:#1e40af;font-weight:700;padding:6px 10px;border:1px solid #e2e8f0;" rowspan="5">🔵 보류</td><td style="padding:6px 10px;border:1px solid #e2e8f0;">②-① 호출0건+로그건</td><td style="padding:6px 10px;border:1px solid #e2e8f0;font-family:monospace;font-size:11px;">status='②-① 호출0건+로그건'</td></tr>
+            <tr><td style="padding:6px 10px;border:1px solid #e2e8f0;">②-② 호출0건+변경있음</td><td style="padding:6px 10px;border:1px solid #e2e8f0;font-family:monospace;font-size:11px;">status='②-② 호출0건+변경있음'</td></tr>
+            <tr><td style="padding:6px 10px;border:1px solid #e2e8f0;">②-③ 호출 1~reviewThreshold건</td><td style="padding:6px 10px;border:1px solid #e2e8f0;font-family:monospace;font-size:11px;">status='②-③ 호출 1~reviewThreshold건'</td></tr>
+            <tr><td style="padding:6px 10px;border:1px solid #e2e8f0;">②-④ 호출 reviewThreshold+1건↑</td><td style="padding:6px 10px;border:1px solid #e2e8f0;font-family:monospace;font-size:11px;">status='②-④ 호출 reviewThreshold+1건↑'</td></tr>
             <tr><td style="padding:6px 10px;border:1px solid #e2e8f0;">사용으로 변경</td><td style="padding:6px 10px;border:1px solid #e2e8f0;font-family:monospace;font-size:11px;">status='검토필요 → 사용' (수동)</td></tr>
           </tbody>
         </table>
       </div>
       <div style="margin-top:8px;font-size:11px;color:#64748b;line-height:1.7;">
-        <b>설정값</b>: <code style="background:#e2e8f0;padding:1px 5px;border-radius:3px;">reviewThreshold</code>(기본 3) — (2)-(3)/(2)-(4) 분기 기준, <code style="background:#e2e8f0;padding:1px 5px;border-radius:3px;">reviewUpperThreshold</code>(기본 10) — (2)-(4)의 호출 상한.
+        <b>설정값</b>: <code style="background:#e2e8f0;padding:1px 5px;border-radius:3px;">reviewThreshold</code>(기본 3) — ②-③/②-④ 분기 기준, <code style="background:#e2e8f0;padding:1px 5px;border-radius:3px;">reviewUpperThreshold</code>(기본 10) — ②-④의 호출 상한.
         <code style="background:#e2e8f0;padding:1px 5px;border-radius:3px;">recentLogOnly</code> — 1년 미만 커밋이 모두 "로그/불필요" 키워드 포함 시 true (자동 갱신).
       </div>
       <div style="margin-top:14px;padding:14px;background:#fef3c7;border-left:4px solid #d97706;border-radius:6px;">
@@ -742,11 +742,11 @@
           <code style="background:#fde68a;padding:1px 5px;border-radius:3px;">calculateStatus</code> 는 <code style="background:#fde68a;padding:1px 5px;border-radius:3px;">statusOverridden=false</code> 인 레코드에만 동작합니다.<br>
           <b>강한 신호 (무조건 우선):</b><br>
           &nbsp;&nbsp;1. <code>MANUAL_STATUSES</code> (<code>차단대상 → 사용</code> / <code>검토필요 → 사용</code>) → 보존<br>
-          &nbsp;&nbsp;2. <code>hasUrlBlock=Y</code> → <b>(1)-(1) 차단완료</b><br>
-          &nbsp;&nbsp;3. <code>reviewResult='차단대상 제외'</code> → <b>(1)-(5) 현업요청 차단제외</b><br>
+          &nbsp;&nbsp;2. <code>hasUrlBlock=Y</code> → <b>①-① 차단완료</b><br>
+          &nbsp;&nbsp;3. <code>reviewResult='차단대상 제외'</code> → <b>①-⑤ 현업요청 차단제외</b><br>
           <b>Umbrella sticky:</b> 위 강한 신호가 없을 때만 적용<br>
-          &nbsp;&nbsp;• 현재 <code>사용</code> 또는 <code>(1)-(1) 차단완료</code>: 조건에 따라 leaf 자유 할당<br>
-          &nbsp;&nbsp;• 현재 <code>(1)-*</code> / <code>(2)-*</code> leaf 내부: <b>target=USE 일 때만 '사용' 으로 전이</b>, 그 외엔 leaf 보존 (차단↔추가검토 전이 / leaf 변경 금지)<br>
+          &nbsp;&nbsp;• 현재 <code>사용</code> 또는 <code>①-① 차단완료</code>: 조건에 따라 leaf 자유 할당<br>
+          &nbsp;&nbsp;• 현재 <code>①-*</code> / <code>②-*</code> leaf 내부: <b>target=USE 일 때만 '사용' 으로 전이</b>, 그 외엔 leaf 보존 (차단↔추가검토 전이 / leaf 변경 금지)<br>
           <b>효과:</b> 한 번 분류된 레코드의 leaf 는 호출수·커밋·플래그 변동에도 안정적으로 유지. 새 변경 반영하려면 사용자가 수동으로 <code>사용</code> 으로 되돌린 뒤 다음 분석에서 재분류 유도.
         </div>
       </div>
@@ -1045,13 +1045,13 @@
             차단 확정된 URL은 <b>메서드 본문에 차단 throw 를 배치</b>하고 (위치 무관, 메시지에 "차단" 포함), 폐기 표시·근거 주석을 함께 반영합니다.<br>
             <div style="margin:6px 0 8px 0;display:flex;flex-direction:column;gap:3px;">
               <span style="padding:3px 10px;background:#dbeafe;border-radius:5px;font-size:11px;color:#1d4ed8;font-weight:700;">
-                ① UnsupportedOperationException throw <span style="background:#fee2e2;color:#991b1b;padding:0 5px;border-radius:3px;font-size:10px;margin-left:4px;">필수 · (1)-(1) 차단완료 판정 기준</span>
+                ① UnsupportedOperationException throw <span style="background:#fee2e2;color:#991b1b;padding:0 5px;border-radius:3px;font-size:10px;margin-left:4px;">필수 · ①-① 차단완료 판정 기준</span>
               </span>
               <span style="padding:3px 10px;background:#eff6ff;border-radius:5px;font-size:11px;color:#1d4ed8;font-weight:600;">② @Deprecated 어노테이션 (폐기 표시)</span>
               <span style="padding:3px 10px;background:#eff6ff;border-radius:5px;font-size:11px;color:#1d4ed8;font-weight:600;">③ [URL차단작업] javadoc 주석 (차단 근거·일자·CSR)</span>
             </div>
             <span style="display:inline-block;padding:2px 8px;background:#fff7ed;border:1px solid #fdba74;color:#9a3412;border-radius:6px;font-size:11px;font-weight:600;">
-              📝 ②·③ 중 누락 시 <b>차단처리미흡</b> 부가 표기 (상태는 (1)-(1) 차단완료 유지)
+              📝 ②·③ 중 누락 시 <b>차단처리미흡</b> 부가 표기 (상태는 ①-① 차단완료 유지)
             </span><br>
             소스 수정 완료 후 <b>단위 테스트 및 통합 검증</b>을 수행합니다. 차단 URL 호출 시 정상 차단되는지, 기존 기능에 영향은 없는지 확인합니다.
           </div>
@@ -1081,7 +1081,7 @@
           <div style="font-size:11px;font-weight:700;color:#c2410c;margin-bottom:4px;">STEP 8 · 운영 배포</div>
           <div style="font-size:12px;color:#334155;line-height:1.6;">
             CBO 검증이 완료된 소스를 <b>운영 환경에 배포</b>합니다.<br>
-            배포 완료 후 URLViewer 다음 소스 수집 시 해당 URL이 <b>(1)-(1) 차단완료</b> 상태로 자동 전환됩니다.
+            배포 완료 후 URLViewer 다음 소스 수집 시 해당 URL이 <b>①-① 차단완료</b> 상태로 자동 전환됩니다.
           </div>
         </div>
       </div>
@@ -1195,7 +1195,7 @@
       <div style="display:flex;align-items:stretch;gap:8px;">
         <div style="width:36px;min-width:36px;background:#e2e8f0;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#475569;">1</div>
         <div style="flex:1;background:#fee2e2;border:1px solid #fca5a5;border-radius:8px;padding:10px 14px;">
-          <div style="font-size:12px;font-weight:700;color:#991b1b;margin-bottom:3px;">이미 (1)-(1) 차단완료된 URL</div>
+          <div style="font-size:12px;font-weight:700;color:#991b1b;margin-bottom:3px;">이미 ①-① 차단완료된 URL</div>
           <div style="font-size:12px;color:#334155;line-height:1.6;">소스에 차단 처리가 완료된 URL — 상태 변경 없이 건너뜁니다.</div>
         </div>
       </div>
@@ -1224,7 +1224,7 @@
 
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px;">
         <div style="background:#fee2e2;border:1px solid #fca5a5;border-radius:8px;padding:10px 12px;">
-          <div style="font-size:11px;font-weight:700;color:#991b1b;margin-bottom:4px;">🔴 (1)-(1) 차단완료</div>
+          <div style="font-size:11px;font-weight:700;color:#991b1b;margin-bottom:4px;">🔴 ①-① 차단완료</div>
           <div style="font-size:11px;color:#334155;line-height:1.6;">
             메서드 본문에 <code style="background:#fecaca;padding:0 3px;border-radius:2px;">UnsupportedOperationException</code> throw + 메시지 "차단" 포함 (위치 무관).<br>
             <span style="display:inline-block;margin-top:3px;padding:1px 6px;background:#fed7aa;color:#9a3412;border-radius:999px;font-weight:700;">📝 차단처리미흡</span>
@@ -1232,11 +1232,11 @@
           </div>
         </div>
         <div style="background:#ffedd5;border:1px solid #fdba74;border-radius:8px;padding:10px 12px;">
-          <div style="font-size:11px;font-weight:700;color:#9a3412;margin-bottom:4px;">🟠 (1)-(2)/(1)-(3) 최우선 차단대상</div>
+          <div style="font-size:11px;font-weight:700;color:#9a3412;margin-bottom:4px;">🟠 ①-②/①-③ 최우선 차단대상</div>
           <div style="font-size:11px;color:#334155;line-height:1.6;">실제 사용 이력 없음 + 1년 이상 미수정</div>
         </div>
         <div style="background:#fef9c3;border:1px solid #fde047;border-radius:8px;padding:10px 12px;">
-          <div style="font-size:11px;font-weight:700;color:#713f12;margin-bottom:4px;">🟡 (2)-(1)~(2)-(4) 검토필요대상</div>
+          <div style="font-size:11px;font-weight:700;color:#713f12;margin-bottom:4px;">🟡 ②-①~②-④ 검토필요대상</div>
           <div style="font-size:11px;color:#334155;line-height:1.6;">사용 이력 있음 + 1년↑ 미수정<br>또는 사용 없음 + 1년 미만</div>
         </div>
         <div style="background:#ecfccb;border:1px solid #d9f99d;border-radius:8px;padding:10px 12px;">
@@ -1265,7 +1265,7 @@
   <div class="card diagram-card">
     <div class="diagram-note">
       소스 수집 시 <b>각 URL 1건</b>이 거치는 상태 판정 전체 흐름입니다.
-      <b>(1)-(1) 차단완료</b> 여부 → <b>상태확정(statusOverridden)</b> 여부 → <b>현업검토결과(reviewResult)</b> 순으로 우선 확인한 뒤,
+      <b>①-① 차단완료</b> 여부 → <b>상태확정(statusOverridden)</b> 여부 → <b>현업검토결과(reviewResult)</b> 순으로 우선 확인한 뒤,
       해당하지 않는 경우에만 자동 조건 계산이 실행됩니다.
     </div>
     <div class="mermaid">
@@ -1274,7 +1274,7 @@ flowchart TD
 
     EACH --> IS_NEW{"신규 URL?\napi_record 존재 확인"}
     IS_NEW -->|"Yes — 처음 발견"| CREATE["신규 레코드 생성\napi_record INSERT"]
-    IS_NEW -->|"No — 기존 URL"| CHK_BLK{"status(상태)\n= '(1)-(1) 차단완료'?"}
+    IS_NEW -->|"No — 기존 URL"| CHK_BLK{"status(상태)\n= '①-① 차단완료'?"}
 
     CHK_BLK -->|"Yes"| SKIP(["⛔ SKIP\n모든 수정 불가"])
     CHK_BLK -->|"No"| CHK_OVR{"statusOverridden\n(상태확정 여부)\n= true?"}
@@ -1287,11 +1287,11 @@ flowchart TD
     CREATE --> CALC
 
     CALC --> R1{"메서드 본문에\nthrow new UnsupportedOperationException(\"…차단…\")?\n(hasUrlBlock = Y)"}
-    R1 -->|"Yes"| ST_DONE["🔴 (1)-(1) 차단완료\n(@Deprecated·[URL차단작업] 주석 중\n일부 누락 시 blockMarkingIncomplete=true\n→ 📝 차단처리미흡 부가 표기)"]
+    R1 -->|"Yes"| ST_DONE["🔴 ①-① 차단완료\n(@Deprecated·[URL차단작업] 주석 중\n일부 누락 시 blockMarkingIncomplete=true\n→ 📝 차단처리미흡 부가 표기)"]
     R1 -->|"No"| R2{"callCount = 0\n+ 최근커밋 1년 경과?"}
-    R2 -->|"Yes"| ST_TOP["🟠 (1)-(2)/(1)-(3) 최우선 차단대상"]
+    R2 -->|"Yes"| ST_TOP["🟠 ①-②/①-③ 최우선 차단대상"]
     R2 -->|"No"| R3{"callCount ≥ 1 + 최근커밋 1년↑\nOR callCount = 0 + 최근커밋 1년 미만?"}
-    R3 -->|"Yes"| ST_REV["🟡 (2)-(1)~(2)-(4) 검토필요대상"]
+    R3 -->|"Yes"| ST_REV["🟡 ②-①~②-④ 검토필요대상"]
     R3 -->|"No"| ST_USE["🟢 사용"]
 
     SAVE["api_record\nINSERT / UPDATE"]
@@ -1350,7 +1350,7 @@ flowchart TD
     V4 --> RESULT
     V5 --> RESULT
 
-    NOTE["💡 descriptionOverride를 비우면\n다시 자동 파싱 우선순위(P2~P4)로 내려감\n※ (1)-(1) 차단완료 상태는 수정 불가"]
+    NOTE["💡 descriptionOverride를 비우면\n다시 자동 파싱 우선순위(P2~P4)로 내려감\n※ ①-① 차단완료 상태는 수정 불가"]
     RESULT -.-> NOTE
 
     style START  fill:#dbeafe,stroke:#93c5fd,color:#1d4ed8
@@ -1384,14 +1384,14 @@ flowchart TD
         <tr style="background:#f8fafc;"><td style="padding:5px 10px;border:1px solid #e2e8f0;font-family:monospace;">repository_name</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">레포지토리명</td><td style="padding:5px 10px;border:1px solid #e2e8f0;white-space:nowrap;">VARCHAR</td><td style="padding:5px 10px;border:1px solid #e2e8f0;"><span style="background:#dbeafe;color:#1d4ed8;padding:1px 5px;border-radius:3px;font-size:11px;">UNIQUE+</span> <span style="background:#f7fee7;color:#4d7c0f;padding:1px 5px;border-radius:3px;font-size:11px;">IDX</span> NOT NULL</td></tr>
         <tr><td style="padding:5px 10px;border:1px solid #e2e8f0;font-family:monospace;">api_path</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">API 경로</td><td style="padding:5px 10px;border:1px solid #e2e8f0;white-space:nowrap;">VARCHAR(2000)</td><td style="padding:5px 10px;border:1px solid #e2e8f0;"><span style="background:#dbeafe;color:#1d4ed8;padding:1px 5px;border-radius:3px;font-size:11px;">UNIQUE+</span> NOT NULL</td></tr>
         <tr style="background:#f8fafc;"><td style="padding:5px 10px;border:1px solid #e2e8f0;font-family:monospace;">http_method</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">HTTP 메소드</td><td style="padding:5px 10px;border:1px solid #e2e8f0;white-space:nowrap;">VARCHAR(20)</td><td style="padding:5px 10px;border:1px solid #e2e8f0;"><span style="background:#dbeafe;color:#1d4ed8;padding:1px 5px;border-radius:3px;font-size:11px;">UNIQUE+</span> GET/POST/PUT/DELETE</td></tr>
-        <tr><td style="padding:5px 10px;border:1px solid #e2e8f0;font-family:monospace;">status</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">상태</td><td style="padding:5px 10px;border:1px solid #e2e8f0;white-space:nowrap;">VARCHAR(50)</td><td style="padding:5px 10px;border:1px solid #e2e8f0;"><span style="background:#f7fee7;color:#4d7c0f;padding:1px 5px;border-radius:3px;font-size:11px;">IDX</span> 사용/(1)-(1) 차단완료/(1)-(2)~(1)-(5) 차단대상 leaf/(2)-(1)~(2)-(4) 추가검토대상 leaf/수동 (차단대상→사용 등)</td></tr>
+        <tr><td style="padding:5px 10px;border:1px solid #e2e8f0;font-family:monospace;">status</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">상태</td><td style="padding:5px 10px;border:1px solid #e2e8f0;white-space:nowrap;">VARCHAR(50)</td><td style="padding:5px 10px;border:1px solid #e2e8f0;"><span style="background:#f7fee7;color:#4d7c0f;padding:1px 5px;border-radius:3px;font-size:11px;">IDX</span> 사용/①-① 차단완료/①-②~①-⑤ 차단대상 leaf/②-①~②-④ 추가검토대상 leaf/수동 (차단대상→사용 등)</td></tr>
         <tr style="background:#f8fafc;"><td style="padding:5px 10px;border:1px solid #e2e8f0;font-family:monospace;">status_overridden</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">상태확정 여부</td><td style="padding:5px 10px;border:1px solid #e2e8f0;white-space:nowrap;">BOOLEAN</td><td style="padding:5px 10px;border:1px solid #e2e8f0;"><span style="background:#f7fee7;color:#4d7c0f;padding:1px 5px;border-radius:3px;font-size:11px;">IDX</span> true=확정(자동재계산 제외)</td></tr>
         <tr><td style="padding:5px 10px;border:1px solid #e2e8f0;font-family:monospace;">call_count</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">총 호출건수</td><td style="padding:5px 10px;border:1px solid #e2e8f0;white-space:nowrap;">BIGINT</td><td style="padding:5px 10px;border:1px solid #e2e8f0;"><span style="background:#f7fee7;color:#4d7c0f;padding:1px 5px;border-radius:3px;font-size:11px;">IDX</span> APM 수집값 누적</td></tr>
         <tr style="background:#f8fafc;"><td style="padding:5px 10px;border:1px solid #e2e8f0;font-family:monospace;">call_count_month</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">1개월 호출건수</td><td style="padding:5px 10px;border:1px solid #e2e8f0;white-space:nowrap;">BIGINT</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">최근 30일</td></tr>
         <tr><td style="padding:5px 10px;border:1px solid #e2e8f0;font-family:monospace;">call_count_week</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">1주 호출건수</td><td style="padding:5px 10px;border:1px solid #e2e8f0;white-space:nowrap;">BIGINT</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">최근 7일</td></tr>
         <tr style="background:#f8fafc;"><td style="padding:5px 10px;border:1px solid #e2e8f0;font-family:monospace;">is_deprecated</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">@Deprecated 여부</td><td style="padding:5px 10px;border:1px solid #e2e8f0;white-space:nowrap;">CHAR(1)</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">Y/N — 차단처리미흡 판정용 (폐기 표시 누락 감지)</td></tr>
-        <tr><td style="padding:5px 10px;border:1px solid #e2e8f0;font-family:monospace;">has_url_block</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">URL차단 throw 여부</td><td style="padding:5px 10px;border:1px solid #e2e8f0;white-space:nowrap;">CHAR(1)</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">Y/N — 메서드 <b>첫 실행 문장</b>이 <code>UnsupportedOperationException</code> throw. <span style="background:#fee2e2;color:#991b1b;padding:1px 5px;border-radius:3px;font-size:11px;">(1)-(1) 차단완료 판정 단일 기준</span></td></tr>
-        <tr style="background:#f8fafc;"><td style="padding:5px 10px;border:1px solid #e2e8f0;font-family:monospace;">block_marking_incomplete</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">차단처리 미흡 플래그</td><td style="padding:5px 10px;border:1px solid #e2e8f0;white-space:nowrap;">BOOLEAN</td><td style="padding:5px 10px;border:1px solid #e2e8f0;"><code>has_url_block=Y</code>이지만 <code>@Deprecated</code> / <code>[URL차단작업]</code> 주석 중 일부 누락 시 true. 상태는 (1)-(1) 차단완료 유지 + <span style="background:#fed7aa;color:#9a3412;padding:1px 5px;border-radius:3px;font-size:11px;">📝 차단처리미흡</span> 부가 표기</td></tr>
+        <tr><td style="padding:5px 10px;border:1px solid #e2e8f0;font-family:monospace;">has_url_block</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">URL차단 throw 여부</td><td style="padding:5px 10px;border:1px solid #e2e8f0;white-space:nowrap;">CHAR(1)</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">Y/N — 메서드 <b>첫 실행 문장</b>이 <code>UnsupportedOperationException</code> throw. <span style="background:#fee2e2;color:#991b1b;padding:1px 5px;border-radius:3px;font-size:11px;">①-① 차단완료 판정 단일 기준</span></td></tr>
+        <tr style="background:#f8fafc;"><td style="padding:5px 10px;border:1px solid #e2e8f0;font-family:monospace;">block_marking_incomplete</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">차단처리 미흡 플래그</td><td style="padding:5px 10px;border:1px solid #e2e8f0;white-space:nowrap;">BOOLEAN</td><td style="padding:5px 10px;border:1px solid #e2e8f0;"><code>has_url_block=Y</code>이지만 <code>@Deprecated</code> / <code>[URL차단작업]</code> 주석 중 일부 누락 시 true. 상태는 ①-① 차단완료 유지 + <span style="background:#fed7aa;color:#9a3412;padding:1px 5px;border-radius:3px;font-size:11px;">📝 차단처리미흡</span> 부가 표기</td></tr>
         <tr style="background:#f8fafc;"><td style="padding:5px 10px;border:1px solid #e2e8f0;font-family:monospace;">block_target</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">차단대상 구분</td><td style="padding:5px 10px;border:1px solid #e2e8f0;white-space:nowrap;">VARCHAR(30)</td><td style="padding:5px 10px;border:1px solid #e2e8f0;"><span style="background:#f7fee7;color:#4d7c0f;padding:1px 5px;border-radius:3px;font-size:11px;">IDX</span> 수동 설정 전용</td></tr>
         <tr><td style="padding:5px 10px;border:1px solid #e2e8f0;font-family:monospace;">block_criteria</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">차단기준 사유</td><td style="padding:5px 10px;border:1px solid #e2e8f0;white-space:nowrap;">VARCHAR(100)</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">수동 설정 전용</td></tr>
         <tr style="background:#f8fafc;"><td style="padding:5px 10px;border:1px solid #e2e8f0;font-family:monospace;">blocked_date</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">차단일자</td><td style="padding:5px 10px;border:1px solid #e2e8f0;white-space:nowrap;">DATE</td><td style="padding:5px 10px;border:1px solid #e2e8f0;"><span style="background:#f7fee7;color:#4d7c0f;padding:1px 5px;border-radius:3px;font-size:11px;">IDX</span> fullComment에서 파싱</td></tr>
@@ -1414,8 +1414,8 @@ flowchart TD
         <tr style="background:#f8fafc;"><td style="padding:5px 10px;border:1px solid #e2e8f0;font-family:monospace;">cbo_scheduled_date</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">CBO 예정일자</td><td style="padding:5px 10px;border:1px solid #e2e8f0;white-space:nowrap;">DATE</td><td style="padding:5px 10px;border:1px solid #e2e8f0;"></td></tr>
         <tr><td style="padding:5px 10px;border:1px solid #e2e8f0;font-family:monospace;">deploy_scheduled_date</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">배포 예정일자</td><td style="padding:5px 10px;border:1px solid #e2e8f0;white-space:nowrap;">DATE</td><td style="padding:5px 10px;border:1px solid #e2e8f0;"></td></tr>
         <tr style="background:#f8fafc;"><td style="padding:5px 10px;border:1px solid #e2e8f0;font-family:monospace;">deploy_csr</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">배포 CSR</td><td style="padding:5px 10px;border:1px solid #e2e8f0;white-space:nowrap;">VARCHAR(50)</td><td style="padding:5px 10px;border:1px solid #e2e8f0;"></td></tr>
-        <tr><td style="padding:5px 10px;border:1px solid #e2e8f0;font-family:monospace;">log_work_excluded</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">로그작업이력 제외 여부</td><td style="padding:5px 10px;border:1px solid #e2e8f0;white-space:nowrap;">BOOLEAN</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">(1)-(2) vs (1)-(3) 분기 보조값 — first-time umbrella 진입 시에만 갱신</td></tr>
-        <tr style="background:#f8fafc;"><td style="padding:5px 10px;border:1px solid #e2e8f0;font-family:monospace;">recent_log_only</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">1년미만 커밋 전부 로그성 여부</td><td style="padding:5px 10px;border:1px solid #e2e8f0;white-space:nowrap;">BOOLEAN</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">(2)-(1) vs (2)-(2) 분기 보조값 — first-time umbrella 진입 시에만 갱신</td></tr>
+        <tr><td style="padding:5px 10px;border:1px solid #e2e8f0;font-family:monospace;">log_work_excluded</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">로그작업이력 제외 여부</td><td style="padding:5px 10px;border:1px solid #e2e8f0;white-space:nowrap;">BOOLEAN</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">①-② vs ①-③ 분기 보조값 — first-time umbrella 진입 시에만 갱신</td></tr>
+        <tr style="background:#f8fafc;"><td style="padding:5px 10px;border:1px solid #e2e8f0;font-family:monospace;">recent_log_only</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">1년미만 커밋 전부 로그성 여부</td><td style="padding:5px 10px;border:1px solid #e2e8f0;white-space:nowrap;">BOOLEAN</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">②-① vs ②-② 분기 보조값 — first-time umbrella 진입 시에만 갱신</td></tr>
         <tr style="background:#f8fafc;"><td style="padding:5px 10px;border:1px solid #e2e8f0;font-family:monospace;">created_ip</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">최초 생성 IP</td><td style="padding:5px 10px;border:1px solid #e2e8f0;white-space:nowrap;">VARCHAR(50)</td><td style="padding:5px 10px;border:1px solid #e2e8f0;"></td></tr>
         <tr><td style="padding:5px 10px;border:1px solid #e2e8f0;font-family:monospace;">modified_at</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">수정일시</td><td style="padding:5px 10px;border:1px solid #e2e8f0;white-space:nowrap;">DATETIME</td><td style="padding:5px 10px;border:1px solid #e2e8f0;"></td></tr>
       </tbody>

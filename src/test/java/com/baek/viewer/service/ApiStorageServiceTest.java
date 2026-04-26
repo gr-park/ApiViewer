@@ -53,7 +53,7 @@ class ApiStorageServiceTest {
     // ═══════════════════ calculateStatus ═══════════════════
 
     @Test
-    @DisplayName("calculateStatus — hasUrlBlock=Y → '(1)-(1) 차단완료'")
+    @DisplayName("calculateStatus — hasUrlBlock=Y → '①-① 차단완료'")
     void calculateStatus_allBlocked_returnsBlocked() {
         ApiRecord r = new ApiRecord();
         r.setIsDeprecated("Y");
@@ -61,11 +61,11 @@ class ApiStorageServiceTest {
         r.setFullComment("[URL차단작업][2024-01-01] 침해사고");
 
         String status = service.calculateStatus(r, 3);
-        assertThat(status).isEqualTo("(1)-(1) 차단완료");
+        assertThat(status).isEqualTo("①-① 차단완료");
     }
 
     @Test
-    @DisplayName("calculateStatus — 호출 0건 + 커밋 1년 경과 → '(1)-(2) 호출0건+변경없음'")
+    @DisplayName("calculateStatus — 호출 0건 + 커밋 1년 경과 → '①-② 호출0건+변경없음'")
     void calculateStatus_zeroCallOldCommit() {
         ApiRecord r = new ApiRecord();
         r.setCallCount(0L);
@@ -73,11 +73,11 @@ class ApiStorageServiceTest {
         r.setGitHistory("[{\"date\":\"" + oldDate + "\",\"author\":\"a\",\"message\":\"m\"}]");
 
         String status = service.calculateStatus(r, 3);
-        assertThat(status).isEqualTo("(1)-(2) 호출0건+변경없음");
+        assertThat(status).isEqualTo("①-② 호출0건+변경없음");
     }
 
     @Test
-    @DisplayName("calculateStatus — 호출 0건 + 커밋 1년 미만 + 비-로그성 → '(2)-(2) 호출0건+변경있음'")
+    @DisplayName("calculateStatus — 호출 0건 + 커밋 1년 미만 + 비-로그성 → '②-② 호출0건+변경있음'")
     void calculateStatus_zeroCallRecentCommit() {
         ApiRecord r = new ApiRecord();
         r.setCallCount(0L);
@@ -85,11 +85,11 @@ class ApiStorageServiceTest {
         r.setGitHistory("[{\"date\":\"" + recent + "\",\"author\":\"a\",\"message\":\"기능 변경\"}]");
 
         String status = service.calculateStatus(r, 3);
-        assertThat(status).isEqualTo("(2)-(2) 호출0건+변경있음");
+        assertThat(status).isEqualTo("②-② 호출0건+변경있음");
     }
 
     @Test
-    @DisplayName("calculateStatus — 호출 1~threshold + 커밋 1년 경과 → '(2)-(3) 호출 1~reviewThreshold건'")
+    @DisplayName("calculateStatus — 호출 1~threshold + 커밋 1년 경과 → '②-③ 호출 1~reviewThreshold건'")
     void calculateStatus_lowCallOldCommit() {
         ApiRecord r = new ApiRecord();
         r.setCallCount(2L);
@@ -97,7 +97,7 @@ class ApiStorageServiceTest {
         r.setGitHistory("[{\"date\":\"" + oldDate + "\",\"author\":\"a\",\"message\":\"m\"}]");
 
         String status = service.calculateStatus(r, 3);
-        assertThat(status).isEqualTo("(2)-(3) 호출 1~reviewThreshold건");
+        assertThat(status).isEqualTo("②-③ 호출 1~reviewThreshold건");
     }
 
     @Test
@@ -121,22 +121,22 @@ class ApiStorageServiceTest {
         r.setGitHistory("[{\"date\":\"" + oldDate + "\",\"author\":\"a\",\"message\":\"m\"}]");
 
         String status = service.calculateStatus(r, 3);
-        assertThat(status).isEqualTo("(1)-(2) 호출0건+변경없음");
+        assertThat(status).isEqualTo("①-② 호출0건+변경없음");
     }
 
     @Test
-    @DisplayName("calculateStatus — git history 없으면 1년 미만 처리 → '(2)-(2)'")
+    @DisplayName("calculateStatus — git history 없으면 1년 미만 처리 → '②-②'")
     void calculateStatus_noGitHistory() {
         ApiRecord r = new ApiRecord();
         r.setCallCount(0L);
         r.setGitHistory("[]");
 
         String status = service.calculateStatus(r, 3);
-        assertThat(status).isEqualTo("(2)-(2) 호출0건+변경있음");
+        assertThat(status).isEqualTo("②-② 호출0건+변경있음");
     }
 
     @Test
-    @DisplayName("calculateStatus(threshold=3, upper=10) — 호출 5건 + 1년 경과 → '(2)-(4) 호출 reviewThreshold+1건↑'")
+    @DisplayName("calculateStatus(threshold=3, upper=10) — 호출 5건 + 1년 경과 → '②-④ 호출 reviewThreshold+1건↑'")
     void calculateStatus_callBetweenThresholdAndUpper() {
         ApiRecord r = new ApiRecord();
         r.setCallCount(5L);
@@ -144,11 +144,11 @@ class ApiStorageServiceTest {
         r.setGitHistory("[{\"date\":\"" + oldDate + "\",\"author\":\"a\",\"message\":\"m\"}]");
 
         String status = service.calculateStatus(r, 3, 10);
-        assertThat(status).isEqualTo("(2)-(4) 호출 reviewThreshold+1건↑");
+        assertThat(status).isEqualTo("②-④ 호출 reviewThreshold+1건↑");
     }
 
     @Test
-    @DisplayName("calculateStatus — 호출 0건 + 1년 미만 + 모든 커밋 로그성 → '(2)-(1) 호출0건+로그건'")
+    @DisplayName("calculateStatus — 호출 0건 + 1년 미만 + 모든 커밋 로그성 → '②-① 호출0건+로그건'")
     void calculateStatus_recentLogOnlyTrue() {
         ApiRecord r = new ApiRecord();
         r.setCallCount(0L);
@@ -157,12 +157,12 @@ class ApiStorageServiceTest {
                 + "{\"date\":\"" + recent + "\",\"author\":\"b\",\"message\":\"불필요 코드 정리\"}]");
 
         String status = service.calculateStatus(r, 3);
-        assertThat(status).isEqualTo("(2)-(1) 호출0건+로그건");
+        assertThat(status).isEqualTo("②-① 호출0건+로그건");
         assertThat(r.isRecentLogOnly()).isTrue();
     }
 
     @Test
-    @DisplayName("calculateStatus — 호출 0건 + 1년 미만 + 비-로그성 커밋 1건 → '(2)-(2) 호출0건+변경있음'")
+    @DisplayName("calculateStatus — 호출 0건 + 1년 미만 + 비-로그성 커밋 1건 → '②-② 호출0건+변경있음'")
     void calculateStatus_recentLogOnlyFalseWhenAnyBizCommit() {
         ApiRecord r = new ApiRecord();
         r.setCallCount(0L);
@@ -171,28 +171,28 @@ class ApiStorageServiceTest {
                 + "{\"date\":\"" + recent + "\",\"author\":\"b\",\"message\":\"로그 추가\"}]");
 
         String status = service.calculateStatus(r, 3);
-        assertThat(status).isEqualTo("(2)-(2) 호출0건+변경있음");
+        assertThat(status).isEqualTo("②-② 호출0건+변경있음");
         assertThat(r.isRecentLogOnly()).isFalse();
     }
 
     @Test
-    @DisplayName("calculateStatus sticky — 현재 (1)-(2) 인 상태에서 호출 1건 발생 → 보존 ((1)-(2) 유지)")
+    @DisplayName("calculateStatus sticky — 현재 ①-② 인 상태에서 호출 1건 발생 → 보존 (①-② 유지)")
     void calculateStatus_stickyBlockUmbrella() {
         ApiRecord r = new ApiRecord();
-        r.setStatus("(1)-(2) 호출0건+변경없음");
-        r.setCallCount(1L);  // 1년경과 → 원래라면 (2)-(3)
+        r.setStatus("①-② 호출0건+변경없음");
+        r.setCallCount(1L);  // 1년경과 → 원래라면 ②-③
         LocalDate oldDate = LocalDate.now().minusYears(2);
         r.setGitHistory("[{\"date\":\"" + oldDate + "\",\"author\":\"a\",\"message\":\"m\"}]");
 
         String status = service.calculateStatus(r, 3, 10);
-        assertThat(status).isEqualTo("(1)-(2) 호출0건+변경없음");  // umbrella 내 보존
+        assertThat(status).isEqualTo("①-② 호출0건+변경없음");  // umbrella 내 보존
     }
 
     @Test
-    @DisplayName("calculateStatus sticky — 현재 (1)-(2) 인데 호출 100건 발생 → '사용' 으로 전이")
+    @DisplayName("calculateStatus sticky — 현재 ①-② 인데 호출 100건 발생 → '사용' 으로 전이")
     void calculateStatus_stickyBlockToUse() {
         ApiRecord r = new ApiRecord();
-        r.setStatus("(1)-(2) 호출0건+변경없음");
+        r.setStatus("①-② 호출0건+변경없음");
         r.setCallCount(100L);  // 충분 → target=USE
         LocalDate recent = LocalDate.now().minusDays(10);
         r.setGitHistory("[{\"date\":\"" + recent + "\",\"author\":\"a\",\"message\":\"m\"}]");
@@ -202,14 +202,14 @@ class ApiStorageServiceTest {
     }
 
     @Test
-    @DisplayName("calculateStatus — reviewResult='차단대상 제외' → '(1)-(5) 현업요청 차단제외'")
+    @DisplayName("calculateStatus — reviewResult='차단대상 제외' → '①-⑤ 현업요청 차단제외'")
     void calculateStatus_reviewExcluded() {
         ApiRecord r = new ApiRecord();
         r.setStatus("사용");
         r.setReviewResult("차단대상 제외");
 
         String status = service.calculateStatus(r, 3);
-        assertThat(status).isEqualTo("(1)-(5) 현업요청 차단제외");
+        assertThat(status).isEqualTo("①-⑤ 현업요청 차단제외");
     }
 
     // ═══════════════════ save ═══════════════════
@@ -243,7 +243,7 @@ class ApiStorageServiceTest {
         blocked.setRepositoryName("repo");
         blocked.setApiPath("/api/x");
         blocked.setHttpMethod("GET");
-        blocked.setStatus("(1)-(1) 차단완료");
+        blocked.setStatus("①-① 차단완료");
         when(globalConfigRepository.findById(1L)).thenReturn(Optional.of(defaultConfig()));
         when(repoConfigRepository.findByRepoName(anyString())).thenReturn(Optional.empty());
         // allInRepo: 같은 건을 차단완료 상태로 반환
@@ -306,16 +306,16 @@ class ApiStorageServiceTest {
     @DisplayName("updateBulk — 차단완료 건도 statusOverridden=false이면 수정 가능")
     void updateBulk_blockedStatusEditable() {
         ApiRecord r = new ApiRecord();
-        r.setStatus("(1)-(1) 차단완료");
+        r.setStatus("①-① 차단완료");
         r.setStatusOverridden(false);
         when(globalConfigRepository.findById(1L)).thenReturn(Optional.of(defaultConfig()));
         when(repository.findAllById(anyList())).thenReturn(List.of(r));
         when(repository.saveAll(anyList())).thenAnswer(inv -> inv.getArgument(0));
 
-        int updated = service.updateBulk(List.of(1L), Map.of("blockTarget", "(1)-(2) 호출0건+변경없음"), "1.1.1.1");
+        int updated = service.updateBulk(List.of(1L), Map.of("blockTarget", "①-② 호출0건+변경없음"), "1.1.1.1");
 
         assertThat(updated).isEqualTo(1);
-        assertThat(r.getBlockTarget()).isEqualTo("(1)-(2) 호출0건+변경없음");
+        assertThat(r.getBlockTarget()).isEqualTo("①-② 호출0건+변경없음");
     }
 
     @Test
@@ -327,10 +327,10 @@ class ApiStorageServiceTest {
         when(repository.findAllById(anyList())).thenReturn(List.of(r));
         when(repository.saveAll(anyList())).thenAnswer(inv -> inv.getArgument(0));
 
-        int updated = service.updateBulk(List.of(1L), Map.of("blockTarget", "(1)-(2) 호출0건+변경없음"), "1.1.1.1");
+        int updated = service.updateBulk(List.of(1L), Map.of("blockTarget", "①-② 호출0건+변경없음"), "1.1.1.1");
 
         assertThat(updated).isEqualTo(1);
-        assertThat(r.getBlockTarget()).isEqualTo("(1)-(2) 호출0건+변경없음");
+        assertThat(r.getBlockTarget()).isEqualTo("①-② 호출0건+변경없음");
     }
 
     @Test
@@ -342,7 +342,7 @@ class ApiStorageServiceTest {
         when(globalConfigRepository.findById(1L)).thenReturn(Optional.of(defaultConfig()));
         when(repository.findAllById(anyList())).thenReturn(List.of(r));
 
-        service.updateBulk(List.of(1L), Map.of("status", "(2)-(3) 호출 1~reviewThreshold건"), "ip");
+        service.updateBulk(List.of(1L), Map.of("status", "②-③ 호출 1~reviewThreshold건"), "ip");
 
         // statusOverridden=true 이고 statusOverridden 필드도 함께 오지 않았으므로 변경 skip
         assertThat(r.getStatus()).isEqualTo("사용");
@@ -376,7 +376,7 @@ class ApiStorageServiceTest {
     void updateCallCounts_blockedSkipped() {
         ApiRecord blocked = new ApiRecord();
         blocked.setApiPath("/api/b");
-        blocked.setStatus("(1)-(1) 차단완료");
+        blocked.setStatus("①-① 차단완료");
         blocked.setCallCount(0L);
         when(globalConfigRepository.findById(1L)).thenReturn(Optional.of(defaultConfig()));
         when(repository.findByRepositoryName("repo")).thenReturn(List.of(blocked));

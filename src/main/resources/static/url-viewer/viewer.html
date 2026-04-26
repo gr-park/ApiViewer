@@ -405,11 +405,11 @@
     <!-- 상태 그룹 -->
     <div class="stat-pill" id="pill-all" onclick="setFilter('')"><span>전체</span><strong id="statTotal">0</strong></div>
     <div class="stat-pill s-use sg-status" id="pill-사용"    onclick="setFilter('사용')"   ><span>사용</span><strong id="stat-사용">0</strong></div>
-    <div class="stat-pill s-done sg-status" id="pill-차단완료" onclick="setFilter('(1)-(1) 차단완료')"><span>(1)-(1) 차단완료</span><strong id="stat-차단완료">0</strong></div>
+    <div class="stat-pill s-done sg-status" id="pill-차단완료" onclick="setFilter('①-① 차단완료')"><span>①-① 차단완료</span><strong id="stat-차단완료">0</strong></div>
     <span style="border-left:2px solid var(--border);height:28px;margin:0 2px;"></span>
-    <!-- 상위 카테고리 그룹 — (1) 차단대상 / (2) 추가검토대상 -->
-    <div class="stat-pill sg-pri1" id="pill-block"  onclick="setFilter('group:block')"  title="(1)-(2)~(1)-(5) 합계 — 클릭 시 (1) 차단대상 전체"><span>(1) 차단대상</span><strong id="stat-block"  style="color:#dc2626;">0</strong></div>
-    <div class="stat-pill sg-pri3" id="pill-review" onclick="setFilter('group:review')" title="(2)-(1)~(2)-(4) 합계 — 클릭 시 (2) 추가검토대상 전체"><span>(2) 추가검토대상</span><strong id="stat-review" style="color:#d97706;">0</strong></div>
+    <!-- 상위 카테고리 그룹 — ① 차단대상 / ② 추가검토대상 -->
+    <div class="stat-pill sg-pri1" id="pill-block"  onclick="setFilter('group:block')"  title="①-②~①-⑤ 합계 — 클릭 시 ① 차단대상 전체"><span>① 차단대상</span><strong id="stat-block"  style="color:#dc2626;">0</strong></div>
+    <div class="stat-pill sg-pri3" id="pill-review" onclick="setFilter('group:review')" title="②-①~②-④ 합계 — 클릭 시 ② 추가검토대상 전체"><span>② 추가검토대상</span><strong id="stat-review" style="color:#d97706;">0</strong></div>
     <span style="border-left:2px solid var(--border);height:28px;margin:0 2px;"></span>
     <!-- 수동 판단 그룹 (담당자 수동 결정) -->
     <div class="stat-pill" id="pill-bt-use" style="background:#ecfccb;border-color:#bef264;" onclick="setFilter('차단대상 → 사용')" title="차단대상 → 사용 (수동, 최우선/후순위/담당자 판단 통합)"><span>차단대상 → 사용</span><strong id="stat-bt-use" style="color:#3f6212;">0</strong></div>
@@ -479,10 +479,10 @@
     <summary style="cursor:pointer;font-weight:700;line-height:1.8;user-select:none;">상태 구분 안내</summary>
     <div style="line-height:1.8;padding-top:4px;">
       <span style="background:#dcfce7;padding:1px 6px;border-radius:3px;">사용</span> 실제 또는 현업검토 결과 사용중인 URL &nbsp;|&nbsp;
-      <span style="background:#f1f5f9;padding:1px 6px;border-radius:3px;color:#64748b;">(1)-(1) 차단완료</span> @Deprecated + javadoc표기 + UnsupportedOperationException<br>
-      <span style="background:#fee2e2;padding:1px 6px;border-radius:3px;color:#991b1b;">(1)-(2) 호출0건+변경없음 / (1)-(3) 호출0건+변경있음(로그)</span> 호출 0건 + 소스변경 1년 경과 (침해사고 로그작업은 이력에서 제외) &nbsp;|&nbsp;
-      <span style="background:#fef3c7;padding:1px 6px;border-radius:3px;color:#ea580c;">(1)-(4) 업무종료</span> IT담당자 검토결과 미사용 또는 업무종료로 인지된 건 &nbsp;|&nbsp;
-      <span style="background:#fef3c7;padding:1px 6px;border-radius:3px;color:#92400e;">(2)-(1)~(2)-(4) 검토필요대상</span> 호출 0건 + 소스변경 1년 미만, 호출 1~<span id="guideReviewThreshold">3</span>건 + 소스변경 1년 경과
+      <span style="background:#f1f5f9;padding:1px 6px;border-radius:3px;color:#64748b;">①-① 차단완료</span> @Deprecated + javadoc표기 + UnsupportedOperationException<br>
+      <span style="background:#fee2e2;padding:1px 6px;border-radius:3px;color:#991b1b;">①-② 호출0건+변경없음 / ①-③ 호출0건+변경있음(로그)</span> 호출 0건 + 소스변경 1년 경과 (침해사고 로그작업은 이력에서 제외) &nbsp;|&nbsp;
+      <span style="background:#fef3c7;padding:1px 6px;border-radius:3px;color:#ea580c;">①-④ 업무종료</span> IT담당자 검토결과 미사용 또는 업무종료로 인지된 건 &nbsp;|&nbsp;
+      <span style="background:#fef3c7;padding:1px 6px;border-radius:3px;color:#92400e;">②-①~②-④ 검토필요대상</span> 호출 0건 + 소스변경 1년 미만, 호출 1~<span id="guideReviewThreshold">3</span>건 + 소스변경 1년 경과
     </div>
   </details>
 
@@ -525,17 +525,17 @@
       <select id="bulkStatus" onchange="onBulkStatusChange()">
         <option value="__SKIP__">-- 상태 --</option>
         <option value="사용">사용</option>
-        <option disabled>──── (1) 차단대상 ────</option>
-        <option value="(1)-(1) 차단완료">(1)-(1) 차단완료</option>
-        <option value="(1)-(2) 호출0건+변경없음">(1)-(2) 호출0건+변경없음</option>
-        <option value="(1)-(3) 호출0건+변경있음(로그)">(1)-(3) 호출0건+변경있음(로그)</option>
-        <option value="(1)-(4) 업무종료">(1)-(4) 업무종료</option>
-        <option value="(1)-(5) 현업요청 차단제외">(1)-(5) 현업요청 차단제외</option>
-        <option disabled>──── (2) 추가검토대상 ────</option>
-        <option value="(2)-(1) 호출0건+로그건">(2)-(1) 호출0건+로그건</option>
-        <option value="(2)-(2) 호출0건+변경있음">(2)-(2) 호출0건+변경있음</option>
-        <option value="(2)-(3) 호출 1~reviewThreshold건">(2)-(3) 호출 1~reviewThreshold건</option>
-        <option value="(2)-(4) 호출 reviewThreshold+1건↑">(2)-(4) 호출 reviewThreshold+1건↑</option>
+        <option disabled>──── ① 차단대상 ────</option>
+        <option value="①-① 차단완료">①-① 차단완료</option>
+        <option value="①-② 호출0건+변경없음">①-② 호출0건+변경없음</option>
+        <option value="①-③ 호출0건+변경있음(로그)">①-③ 호출0건+변경있음(로그)</option>
+        <option value="①-④ 업무종료">①-④ 업무종료</option>
+        <option value="①-⑤ 현업요청 차단제외">①-⑤ 현업요청 차단제외</option>
+        <option disabled>──── ② 추가검토대상 ────</option>
+        <option value="②-① 호출0건+로그건">②-① 호출0건+로그건</option>
+        <option value="②-② 호출0건+변경있음">②-② 호출0건+변경있음</option>
+        <option value="②-③ 호출 1~reviewThreshold건">②-③ 호출 1~reviewThreshold건</option>
+        <option value="②-④ 호출 reviewThreshold+1건↑">②-④ 호출 reviewThreshold+1건↑</option>
         <option disabled>──── 수동 판단 ────</option>
         <option value="차단대상 → 사용">차단대상 → 사용</option>
         <option value="검토필요 → 사용">검토필요 → 사용</option>
@@ -743,33 +743,33 @@
   let reviewThreshold = 3; // default, 서버에서 갱신
 
   // 상태 표시 레이블 — DB 값 = 화면 라벨 (13 leaf 통일). 별도 매핑 없이 status 그대로 노출.
-  // 13 leaf: 사용 / (1)-(1) 차단완료 / (1)-(2) 호출0건+변경없음 / (1)-(3) 호출0건+변경있음(로그) /
-  //          (1)-(4) 업무종료 / (1)-(5) 현업요청 차단제외 / 차단대상 → 사용 /
-  //          (2)-(1) 호출0건+로그건 / (2)-(2) 호출0건+변경있음 /
-  //          (2)-(3) 호출 1~reviewThreshold건 / (2)-(4) 호출 reviewThreshold+1건↑ /
+  // 13 leaf: 사용 / ①-① 차단완료 / ①-② 호출0건+변경없음 / ①-③ 호출0건+변경있음(로그) /
+  //          ①-④ 업무종료 / ①-⑤ 현업요청 차단제외 / 차단대상 → 사용 /
+  //          ②-① 호출0건+로그건 / ②-② 호출0건+변경있음 /
+  //          ②-③ 호출 1~reviewThreshold건 / ②-④ 호출 reviewThreshold+1건↑ /
   //          검토필요 → 사용 / 삭제
   const STATUS_LEAF_BLOCK = [
-    '(1)-(2) 호출0건+변경없음',
-    '(1)-(3) 호출0건+변경있음(로그)',
-    '(1)-(4) 업무종료',
-    '(1)-(5) 현업요청 차단제외'
+    '①-② 호출0건+변경없음',
+    '①-③ 호출0건+변경있음(로그)',
+    '①-④ 업무종료',
+    '①-⑤ 현업요청 차단제외'
   ];
   const STATUS_LEAF_REVIEW = [
-    '(2)-(1) 호출0건+로그건',
-    '(2)-(2) 호출0건+변경있음',
-    '(2)-(3) 호출 1~reviewThreshold건',
-    '(2)-(4) 호출 reviewThreshold+1건↑'
+    '②-① 호출0건+로그건',
+    '②-② 호출0건+변경있음',
+    '②-③ 호출 1~reviewThreshold건',
+    '②-④ 호출 reviewThreshold+1건↑'
   ];
   // 상위 카테고리 라벨 (테이블 status 셀 윗줄용)
   function upperOf(status) {
     if (!status) return '사용';
     if (status === '사용') return '사용';
     if (status === '삭제') return '삭제';
-    if (status === '차단대상 → 사용') return '(1) 차단대상';
-    if (status === '검토필요 → 사용') return '(2) 추가검토대상';
-    if (status === '(1)-(1) 차단완료') return '(1) 차단대상';
-    if (status.startsWith('(1)-')) return '(1) 차단대상';
-    if (status.startsWith('(2)-')) return '(2) 추가검토대상';
+    if (status === '차단대상 → 사용') return '① 차단대상';
+    if (status === '검토필요 → 사용') return '② 추가검토대상';
+    if (status === '①-① 차단완료') return '① 차단대상';
+    if (status.startsWith('①-')) return '① 차단대상';
+    if (status.startsWith('②-')) return '② 추가검토대상';
     return status;
   }
   let teamsList = [];      // 팀 자동완성 목록
@@ -1172,12 +1172,12 @@
     else if (activeFilter === 'group:review') params.set('statusGroup', 'review');
     else if (
       activeFilter === '사용' ||
-      activeFilter === '(1)-(1) 차단완료' ||
+      activeFilter === '①-① 차단완료' ||
       activeFilter === '차단대상 → 사용' ||
       activeFilter === '검토필요 → 사용' ||
       activeFilter === '삭제' ||
-      activeFilter.startsWith('(1)-') ||
-      activeFilter.startsWith('(2)-')
+      activeFilter.startsWith('①-') ||
+      activeFilter.startsWith('②-')
     ) {
       params.set('status', activeFilter);
     }
@@ -1375,13 +1375,13 @@
     const byMethod = c.byMethod || {};
     const get = (k) => byStatus[k] || 0;
 
-    // (1) 차단대상 / (2) 추가검토대상 합계 — DB에는 leaf 라벨로 들어옴.
-    // (2)-(3)/(2)-(4)는 reviewThreshold 토큰을 포함한 정확한 라벨로 저장됨.
+    // ① 차단대상 / ② 추가검토대상 합계 — DB에는 leaf 라벨로 들어옴.
+    // ②-③/②-④는 reviewThreshold 토큰을 포함한 정확한 라벨로 저장됨.
     const blockSum  = STATUS_LEAF_BLOCK.reduce((s, k) => s + (byStatus[k] || 0), 0);
     const reviewSum = STATUS_LEAF_REVIEW.reduce((s, k) => s + (byStatus[k] || 0), 0);
     document.getElementById('statTotal').textContent     = c.total || 0;
     document.getElementById('stat-사용').textContent      = get('사용');
-    document.getElementById('stat-차단완료').textContent   = get('(1)-(1) 차단완료');
+    document.getElementById('stat-차단완료').textContent   = get('①-① 차단완료');
     { const e = document.getElementById('stat-block');    if (e) e.textContent = blockSum; }
     { const e = document.getElementById('stat-review');   if (e) e.textContent = reviewSum; }
     { const e1 = document.getElementById('stat-bt-use');  if (e1) e1.textContent = get('차단대상 → 사용'); }
@@ -1450,7 +1450,7 @@
     document.querySelectorAll('.stat-pill, .stat-chip').forEach(p => p.classList.remove('active-filter'));
     if (val === '') { document.getElementById('pill-all').classList.add('active-filter'); }
     else if (val === '사용') { document.getElementById('pill-사용').classList.add('active-filter'); }
-    else if (val === '(1)-(1) 차단완료') { document.getElementById('pill-차단완료').classList.add('active-filter'); }
+    else if (val === '①-① 차단완료') { document.getElementById('pill-차단완료').classList.add('active-filter'); }
     else if (val === 'group:block')  { const e = document.getElementById('pill-block');  if (e) e.classList.add('active-filter'); }
     else if (val === 'group:review') { const e = document.getElementById('pill-review'); if (e) e.classList.add('active-filter'); }
     else if (val === '차단대상 → 사용') { const e = document.getElementById('pill-bt-use');  if (e) e.classList.add('active-filter'); }
@@ -1545,7 +1545,7 @@
     tbody.innerHTML = list.map((a, idx) => {
       const checked = selectedIds.has(a.id) ? 'checked' : '';
       const locked = a.statusOverridden;
-      const isBlocked = a.status === '(1)-(1) 차단완료';
+      const isBlocked = a.status === '①-① 차단완료';
       const rowCls  = (selectedIds.has(a.id) ? ' row-selected' : '') + (a.statusChanged ? ' row-changed' : '') + (locked ? ' row-locked' : '');
       const cfg = repoConfigMap[a.repositoryName] || {};
       const git1 = parseGitHistory(a.gitHistory)[0];
@@ -1593,16 +1593,16 @@
 
   const STATUS_TIPS = {
     '사용': '실제 또는 현업검토 결과 사용중인 URL',
-    '(1)-(1) 차단완료': '@Deprecated + javadoc표기 + UnsupportedOperationException',
-    '(1)-(2) 호출0건+변경없음': '호출 0건 + 소스변경 1년 경과',
-    '(1)-(3) 호출0건+변경있음(로그)': '호출 0건 + 침해사고 로그작업 제외 1년경과',
-    '(1)-(4) 업무종료': 'IT담당자 검토결과 미사용 또는 업무종료로 인지된 건',
-    '(1)-(5) 현업요청 차단제외': '현업요청에 의한 차단 제외 건',
+    '①-① 차단완료': '@Deprecated + javadoc표기 + UnsupportedOperationException',
+    '①-② 호출0건+변경없음': '호출 0건 + 소스변경 1년 경과',
+    '①-③ 호출0건+변경있음(로그)': '호출 0건 + 침해사고 로그작업 제외 1년경과',
+    '①-④ 업무종료': 'IT담당자 검토결과 미사용 또는 업무종료로 인지된 건',
+    '①-⑤ 현업요청 차단제외': '현업요청에 의한 차단 제외 건',
     '차단대상 → 사용': '담당자 검토결과 사용중으로 확정 (수동)',
-    '(2)-(1) 호출0건+로그건': '호출 0건 + 1년 미만 커밋이 모두 로그/불필요 키워드',
-    '(2)-(2) 호출0건+변경있음': '호출 0건 + 1년 미만 일반 커밋',
-    '(2)-(3) 호출 1~reviewThreshold건': `호출 1~${typeof reviewThreshold!=='undefined'?reviewThreshold:3}건 + 소스변경 1년 경과`,
-    '(2)-(4) 호출 reviewThreshold+1건↑': `호출 ${(typeof reviewThreshold!=='undefined'?reviewThreshold:3)+1}건↑ + 소스변경 1년 경과`,
+    '②-① 호출0건+로그건': '호출 0건 + 1년 미만 커밋이 모두 로그/불필요 키워드',
+    '②-② 호출0건+변경있음': '호출 0건 + 1년 미만 일반 커밋',
+    '②-③ 호출 1~reviewThreshold건': `호출 1~${typeof reviewThreshold!=='undefined'?reviewThreshold:3}건 + 소스변경 1년 경과`,
+    '②-④ 호출 reviewThreshold+1건↑': `호출 ${(typeof reviewThreshold!=='undefined'?reviewThreshold:3)+1}건↑ + 소스변경 1년 경과`,
     '검토필요 → 사용': '담당자 검토결과 사용중으로 확정 (수동)',
     '삭제': '분석에서 제외된 API (소스 삭제 등)'
   };
@@ -1617,13 +1617,13 @@
   // 13 leaf status → 배지 inline style 매핑. 상위 카테고리는 위에 작은 라벨로 별도 표기.
   function statusInlineStyle(status) {
     if (!status || status === '사용') return 'background:#dcfce7;color:#166534;';
-    if (status === '(1)-(1) 차단완료') return 'background:#f1f5f9;color:#6b7280;';
-    if (status === '(1)-(2) 호출0건+변경없음' || status === '(1)-(3) 호출0건+변경있음(로그)') return 'background:#fee2e2;color:#dc2626;';
-    if (status === '(1)-(4) 업무종료') return 'background:#ffedd5;color:#ea580c;';
-    if (status === '(1)-(5) 현업요청 차단제외') return 'background:#ede9fe;color:#7c3aed;';
+    if (status === '①-① 차단완료') return 'background:#f1f5f9;color:#6b7280;';
+    if (status === '①-② 호출0건+변경없음' || status === '①-③ 호출0건+변경있음(로그)') return 'background:#fee2e2;color:#dc2626;';
+    if (status === '①-④ 업무종료') return 'background:#ffedd5;color:#ea580c;';
+    if (status === '①-⑤ 현업요청 차단제외') return 'background:#ede9fe;color:#7c3aed;';
     if (status === '차단대상 → 사용' || status === '검토필요 → 사용') return 'background:#ecfccb;color:#3f6212;';
-    if (status === '(2)-(1) 호출0건+로그건' || status === '(2)-(2) 호출0건+변경있음') return 'background:#fef3c7;color:#92400e;';
-    if (status === '(2)-(3) 호출 1~reviewThreshold건' || status === '(2)-(4) 호출 reviewThreshold+1건↑') return 'background:#fef3c7;color:#d97706;';
+    if (status === '②-① 호출0건+로그건' || status === '②-② 호출0건+변경있음') return 'background:#fef3c7;color:#92400e;';
+    if (status === '②-③ 호출 1~reviewThreshold건' || status === '②-④ 호출 reviewThreshold+1건↑') return 'background:#fef3c7;color:#d97706;';
     if (status === '삭제') return 'background:#fee2e2;color:#991b1b;text-decoration:line-through;';
     return 'background:#f1f5f9;color:#475569;';
   }
@@ -1639,9 +1639,9 @@
 
   function blockTargetBadge(bt) {
     if (!bt) return '<span style="color:#cbd5e1;font-size:11px;">-</span>';
-    // 13 leaf 체계: (1)-* = 차단대상 빨강, (2)-* = 검토 노랑
-    if (typeof bt === 'string' && bt.startsWith('(1)-')) return `<span class="status-badge bt-top">${esc(bt)}</span>`;
-    if (typeof bt === 'string' && bt.startsWith('(2)-')) return `<span class="status-badge bt-rev">${esc(bt)}</span>`;
+    // 13 leaf 체계: ①-* = 차단대상 빨강, ②-* = 검토 노랑
+    if (typeof bt === 'string' && bt.startsWith('①-')) return `<span class="status-badge bt-top">${esc(bt)}</span>`;
+    if (typeof bt === 'string' && bt.startsWith('②-')) return `<span class="status-badge bt-rev">${esc(bt)}</span>`;
     if (bt.includes('차단')) return `<span class="status-badge bt-top">${esc(bt)}</span>`;
     if (bt.includes('검토')) return `<span class="status-badge bt-rev">${esc(bt)}</span>`;
     return `<span class="status-badge" style="background:#f1f5f9;color:#475569;">${esc(bt)}</span>`;
@@ -1927,14 +1927,14 @@
   // ── 차단대상기준 옵션 동적 생성 (13 leaf 기준) ──────────────────
   function getCriteriaOptions() {
     return {
-      '(1)-(2) 호출0건+변경없음': ['호출 0건 + 소스변경 1년경과', '기타'],
-      '(1)-(3) 호출0건+변경있음(로그)': ['호출 0건 + 침해사고 로그작업 제외 1년경과', '기타'],
-      '(1)-(4) 업무종료': ['IT담당자 미사용 인지', '업무종료', '기타'],
-      '(1)-(5) 현업요청 차단제외': ['현업요청 차단제외', '기타'],
-      '(2)-(1) 호출0건+로그건': ['호출 0건 + 1년 미만 로그/불필요 커밋', '기타'],
-      '(2)-(2) 호출0건+변경있음': ['호출 0건 + 1년 미만 일반 커밋', '기타'],
-      '(2)-(3) 호출 1~reviewThreshold건': [`호출 1~${reviewThreshold}건 + 소스변경 1년 경과`, '기타'],
-      '(2)-(4) 호출 reviewThreshold+1건↑': [`호출 ${reviewThreshold+1}건↑ + 소스변경 1년 경과`, '기타']
+      '①-② 호출0건+변경없음': ['호출 0건 + 소스변경 1년경과', '기타'],
+      '①-③ 호출0건+변경있음(로그)': ['호출 0건 + 침해사고 로그작업 제외 1년경과', '기타'],
+      '①-④ 업무종료': ['IT담당자 미사용 인지', '업무종료', '기타'],
+      '①-⑤ 현업요청 차단제외': ['현업요청 차단제외', '기타'],
+      '②-① 호출0건+로그건': ['호출 0건 + 1년 미만 로그/불필요 커밋', '기타'],
+      '②-② 호출0건+변경있음': ['호출 0건 + 1년 미만 일반 커밋', '기타'],
+      '②-③ 호출 1~reviewThreshold건': [`호출 1~${reviewThreshold}건 + 소스변경 1년 경과`, '기타'],
+      '②-④ 호출 reviewThreshold+1건↑': [`호출 ${reviewThreshold+1}건↑ + 소스변경 1년 경과`, '기타']
     };
   }
 
@@ -2083,7 +2083,7 @@
     // 데이터 유효성 검증: 0-based 컬럼 인덱스 → 허용 값 목록
     const validations = [
       { colIdx:18, values:['Y','N'] },                                                                       // Deprecated
-      { colIdx:22, values:['사용','(1)-(1) 차단완료','(1)-(2) 호출0건+변경없음','(1)-(3) 호출0건+변경있음(로그)','(1)-(4) 업무종료','(1)-(5) 현업요청 차단제외','차단대상 → 사용','(2)-(1) 호출0건+로그건','(2)-(2) 호출0건+변경있음','(2)-(3) 호출 1~reviewThreshold건','(2)-(4) 호출 reviewThreshold+1건↑','검토필요 → 사용'] }, // 상태 — 13 leaf
+      { colIdx:22, values:['사용','①-① 차단완료','①-② 호출0건+변경없음','①-③ 호출0건+변경있음(로그)','①-④ 업무종료','①-⑤ 현업요청 차단제외','차단대상 → 사용','②-① 호출0건+로그건','②-② 호출0건+변경있음','②-③ 호출 1~reviewThreshold건','②-④ 호출 reviewThreshold+1건↑','검토필요 → 사용'] }, // 상태 — 13 leaf
       { colIdx:23, values:['확정','미확정'] },                                                               // 상태확정
       { colIdx:29, values:['차단대상 제외','차단확정','판단불가'] },                                         // 현업검토결과
     ];
@@ -2117,7 +2117,7 @@
         a.callCountWeek != null ? a.callCountWeek : '',
         a.status || '',
         a.statusOverridden ? '확정' : '미확정',
-        (a.status === '(1)-(3) 호출0건+변경있음(로그)' || (a.status === '(1)-(2) 호출0건+변경없음' && a.logWorkExcluded)) ? '대상' : '',
+        (a.status === '①-③ 호출0건+변경있음(로그)' || (a.status === '①-② 호출0건+변경없음' && a.logWorkExcluded)) ? '대상' : '',
         a.blockCriteria || '',
         a.blockedDate || '',
         a.blockedReason || '',
@@ -2174,7 +2174,7 @@
     const groupBorders = new Set([6, 16, 21, 30, 32, 35, 38, 41, 44, 47, 50]);
     const validations = [
       { colIdx:18, values:['Y','N'] },
-      { colIdx:22, values:['사용','(1)-(1) 차단완료','(1)-(2) 호출0건+변경없음','(1)-(3) 호출0건+변경있음(로그)','(1)-(4) 업무종료','(1)-(5) 현업요청 차단제외','차단대상 → 사용','(2)-(1) 호출0건+로그건','(2)-(2) 호출0건+변경있음','(2)-(3) 호출 1~reviewThreshold건','(2)-(4) 호출 reviewThreshold+1건↑','검토필요 → 사용'] }, // 13 leaf
+      { colIdx:22, values:['사용','①-① 차단완료','①-② 호출0건+변경없음','①-③ 호출0건+변경있음(로그)','①-④ 업무종료','①-⑤ 현업요청 차단제외','차단대상 → 사용','②-① 호출0건+로그건','②-② 호출0건+변경있음','②-③ 호출 1~reviewThreshold건','②-④ 호출 reviewThreshold+1건↑','검토필요 → 사용'] }, // 13 leaf
       { colIdx:23, values:['확정','미확정'] },
       { colIdx:29, values:['차단대상 제외','차단확정','판단불가'] },
     ];
@@ -2195,7 +2195,7 @@
        'POST','/my-repo/src/main/java/com/example/OldController.java','OldController','oldAction','old01',
        '','','','','','',
        '','N',0,0,0,
-       '(1)-(2) 호출0건+변경없음','미확정','','호출 0건 + 커밋 1년 경과','','',
+       '①-② 호출0건+변경없음','미확정','','호출 0건 + 커밋 1년 경과','','',
        '','','',
        '','',
        '','','',
@@ -2205,7 +2205,7 @@
        'DELETE','/my-repo/src/main/java/com/example/ReviewController.java','ReviewController','deleteItem','review01',
        '','','','','','',
        '','N',5,2,1,
-       '(2)-(3) 호출 1~reviewThreshold건','미확정','','','','',
+       '②-③ 호출 1~reviewThreshold건','미확정','','','','',
        '','차단확정','불필요한 API로 확인',
        '','',
        '','','',
@@ -2633,17 +2633,17 @@
           <div class="detail-label">상태 <span style="color:var(--primary);font-size:10px;">✎</span></div>
           <div class="detail-value" style="white-space:normal;"><select id="df-status" class="df-select" style="width:100%;" onchange="onDetailStatusChange()" ${dis}>
             <option value="사용" ${r.status==='사용'?'selected':''}>사용</option>
-            <option disabled>──── (1) 차단대상 ────</option>
-            <option value="(1)-(1) 차단완료" ${r.status==='(1)-(1) 차단완료'?'selected':''}>(1)-(1) 차단완료</option>
-            <option value="(1)-(2) 호출0건+변경없음" ${r.status==='(1)-(2) 호출0건+변경없음'?'selected':''}>(1)-(2) 호출0건+변경없음</option>
-            <option value="(1)-(3) 호출0건+변경있음(로그)" ${r.status==='(1)-(3) 호출0건+변경있음(로그)'?'selected':''}>(1)-(3) 호출0건+변경있음(로그)</option>
-            <option value="(1)-(4) 업무종료" ${r.status==='(1)-(4) 업무종료'?'selected':''}>(1)-(4) 업무종료</option>
-            <option value="(1)-(5) 현업요청 차단제외" ${r.status==='(1)-(5) 현업요청 차단제외'?'selected':''}>(1)-(5) 현업요청 차단제외</option>
-            <option disabled>──── (2) 추가검토대상 ────</option>
-            <option value="(2)-(1) 호출0건+로그건" ${r.status==='(2)-(1) 호출0건+로그건'?'selected':''}>(2)-(1) 호출0건+로그건</option>
-            <option value="(2)-(2) 호출0건+변경있음" ${r.status==='(2)-(2) 호출0건+변경있음'?'selected':''}>(2)-(2) 호출0건+변경있음</option>
-            <option value="(2)-(3) 호출 1~reviewThreshold건" ${r.status==='(2)-(3) 호출 1~reviewThreshold건'?'selected':''}>(2)-(3) 호출 1~reviewThreshold건</option>
-            <option value="(2)-(4) 호출 reviewThreshold+1건↑" ${r.status==='(2)-(4) 호출 reviewThreshold+1건↑'?'selected':''}>(2)-(4) 호출 reviewThreshold+1건↑</option>
+            <option disabled>──── ① 차단대상 ────</option>
+            <option value="①-① 차단완료" ${r.status==='①-① 차단완료'?'selected':''}>①-① 차단완료</option>
+            <option value="①-② 호출0건+변경없음" ${r.status==='①-② 호출0건+변경없음'?'selected':''}>①-② 호출0건+변경없음</option>
+            <option value="①-③ 호출0건+변경있음(로그)" ${r.status==='①-③ 호출0건+변경있음(로그)'?'selected':''}>①-③ 호출0건+변경있음(로그)</option>
+            <option value="①-④ 업무종료" ${r.status==='①-④ 업무종료'?'selected':''}>①-④ 업무종료</option>
+            <option value="①-⑤ 현업요청 차단제외" ${r.status==='①-⑤ 현업요청 차단제외'?'selected':''}>①-⑤ 현업요청 차단제외</option>
+            <option disabled>──── ② 추가검토대상 ────</option>
+            <option value="②-① 호출0건+로그건" ${r.status==='②-① 호출0건+로그건'?'selected':''}>②-① 호출0건+로그건</option>
+            <option value="②-② 호출0건+변경있음" ${r.status==='②-② 호출0건+변경있음'?'selected':''}>②-② 호출0건+변경있음</option>
+            <option value="②-③ 호출 1~reviewThreshold건" ${r.status==='②-③ 호출 1~reviewThreshold건'?'selected':''}>②-③ 호출 1~reviewThreshold건</option>
+            <option value="②-④ 호출 reviewThreshold+1건↑" ${r.status==='②-④ 호출 reviewThreshold+1건↑'?'selected':''}>②-④ 호출 reviewThreshold+1건↑</option>
             <option disabled>──── 수동 판단 ────</option>
             <option value="차단대상 → 사용" ${r.status==='차단대상 → 사용'?'selected':''}>차단대상 → 사용</option>
             <option value="검토필요 → 사용" ${r.status==='검토필요 → 사용'?'selected':''}>검토필요 → 사용</option>

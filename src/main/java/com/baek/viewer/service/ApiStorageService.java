@@ -27,24 +27,24 @@ public class ApiStorageService {
     // ── 상태값 상수 (DB 값 = 화면 라벨, 13 leaf) ────────────────────────────
     public static final String STATUS_USE        = "사용";
     public static final String STATUS_DELETED    = "삭제";
-    /** (1)-(1) 차단완료 — hasUrlBlock=Y 자동 */
-    public static final String S_1_1 = "(1)-(1) 차단완료";
-    /** (1)-(2) 호출0건+변경없음 — 옛 '최우선 차단대상' + logWorkExcluded=false */
-    public static final String S_1_2 = "(1)-(2) 호출0건+변경없음";
-    /** (1)-(3) 호출0건+변경있음(로그) — 옛 '최우선 차단대상' + logWorkExcluded=true */
-    public static final String S_1_3 = "(1)-(3) 호출0건+변경있음(로그)";
-    /** (1)-(4) 업무종료 — 옛 '후순위 차단대상' (수동) */
-    public static final String S_1_4 = "(1)-(4) 업무종료";
-    /** (1)-(5) 현업요청 차단제외 — reviewResult='차단대상 제외' 자동 */
-    public static final String S_1_5 = "(1)-(5) 현업요청 차단제외";
-    /** (2)-(1) 호출0건+로그건 — 옛 '검토필요대상' + callZero + recentLogOnly=true */
-    public static final String S_2_1 = "(2)-(1) 호출0건+로그건";
-    /** (2)-(2) 호출0건+변경있음 — 옛 '검토필요대상' + callZero + recentLogOnly=false */
-    public static final String S_2_2 = "(2)-(2) 호출0건+변경있음";
-    /** (2)-(3) 호출 1~reviewThreshold건 — 옛 '검토필요대상' + 1~threshold */
-    public static final String S_2_3 = "(2)-(3) 호출 1~reviewThreshold건";
-    /** (2)-(4) 호출 reviewThreshold+1건↑ — 옛 '검토필요대상' + threshold+1~upper */
-    public static final String S_2_4 = "(2)-(4) 호출 reviewThreshold+1건↑";
+    /** ①-① 차단완료 — hasUrlBlock=Y 자동 */
+    public static final String S_1_1 = "①-① 차단완료";
+    /** ①-② 호출0건+변경없음 — 옛 '최우선 차단대상' + logWorkExcluded=false */
+    public static final String S_1_2 = "①-② 호출0건+변경없음";
+    /** ①-③ 호출0건+변경있음(로그) — 옛 '최우선 차단대상' + logWorkExcluded=true */
+    public static final String S_1_3 = "①-③ 호출0건+변경있음(로그)";
+    /** ①-④ 업무종료 — 옛 '후순위 차단대상' (수동) */
+    public static final String S_1_4 = "①-④ 업무종료";
+    /** ①-⑤ 현업요청 차단제외 — reviewResult='차단대상 제외' 자동 */
+    public static final String S_1_5 = "①-⑤ 현업요청 차단제외";
+    /** ②-① 호출0건+로그건 — 옛 '검토필요대상' + callZero + recentLogOnly=true */
+    public static final String S_2_1 = "②-① 호출0건+로그건";
+    /** ②-② 호출0건+변경있음 — 옛 '검토필요대상' + callZero + recentLogOnly=false */
+    public static final String S_2_2 = "②-② 호출0건+변경있음";
+    /** ②-③ 호출 1~reviewThreshold건 — 옛 '검토필요대상' + 1~threshold */
+    public static final String S_2_3 = "②-③ 호출 1~reviewThreshold건";
+    /** ②-④ 호출 reviewThreshold+1건↑ — 옛 '검토필요대상' + threshold+1~upper */
+    public static final String S_2_4 = "②-④ 호출 reviewThreshold+1건↑";
 
     /** 차단대상 umbrella 의 leaf 5종 (자동/수동 모두 포함) */
     public static final List<String> BLOCK_LEAVES = List.of(S_1_1, S_1_2, S_1_3, S_1_4, S_1_5);
@@ -55,7 +55,7 @@ public class ApiStorageService {
      * 수동 판단 전용 상태값 — 자동 재계산(calculateStatus)에서 보존되며,
      * 일괄 수정 시 selecting 만으로 statusOverridden=true 가 자동 적용된다.
      * 모두 의미상 "사용" 계열이며, 차단대상에서 사용으로 전환된 건과 검토필요에서
-     * 사용으로 전환된 건을 구분한다. (옵션A: 라벨 그대로 유지, 대시보드에서 (1)-(6)/(2)-(5) 컬럼으로 자동 분류)
+     * 사용으로 전환된 건을 구분한다. (옵션A: 라벨 그대로 유지, 대시보드에서 ①-⑥/②-⑤ 컬럼으로 자동 분류)
      */
     public static final List<String> MANUAL_STATUSES = List.of(
             "차단대상 → 사용",
@@ -144,7 +144,7 @@ public class ApiStorageService {
                             if (S_1_5.equals(newStatus) && "차단대상 제외".equals(existing.getReviewResult())) {
                                 logMsg += " (현업검토결과=차단대상 제외)";
                                 revertedToUsed++;
-                                log.info("[차단대상→(1)-(5) 전환] id={} repo={} path={}",
+                                log.info("[차단대상→①-⑤ 전환] id={} repo={} path={}",
                                         existing.getId(), repositoryName, existing.getApiPath());
                             }
                             appendChangeLog(existing, logMsg);
@@ -471,8 +471,8 @@ public class ApiStorageService {
      *
      * 규칙:
      *   1. MANUAL_STATUSES 보존 (수동 → 사용)
-     *   2. hasUrlBlock=Y → (1)-(1) 차단완료 (강한 신호, umbrella 무시)
-     *   3. reviewResult='차단대상 제외' → (1)-(5) 현업요청 차단제외 (강한 신호)
+     *   2. hasUrlBlock=Y → ①-① 차단완료 (강한 신호, umbrella 무시)
+     *   3. reviewResult='차단대상 제외' → ①-⑤ 현업요청 차단제외 (강한 신호)
      *   4. 현재 status가 BLOCK_LEAVES 또는 REVIEW_LEAVES umbrella 내:
      *        - 조건이 '사용'을 가리키면 → '사용'
      *        - 그 외에는 현재 leaf 보존 (차단↔검토 전이 / leaf 변경 없음)

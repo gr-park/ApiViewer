@@ -14,15 +14,15 @@ import org.springframework.stereotype.Component;
  *  1. 기존 "검토필요 차단대상" / "추가검토필요 차단대상" → 중간 단계 "검토필요대상"
  *  2. 수동 판단 상태 3종 통합 → "차단대상 → 사용" / "검토필요 → 사용"
  *  3. (1)-(N) / (2)-(N) 번호 체계 도입:
- *     - "차단완료" → "(1)-(1) 차단완료"
- *     - "최우선 차단대상" + log_work_excluded=false → "(1)-(2) 호출0건+변경없음"
- *     - "최우선 차단대상" + log_work_excluded=true  → "(1)-(3) 호출0건+변경있음(로그)"
- *     - "후순위 차단대상" → "(1)-(4) 업무종료"
- *     - "검토필요대상" + callCount=0 + recent_log_only=true  → "(2)-(1) 호출0건+로그건"
- *     - "검토필요대상" + callCount=0 + recent_log_only=false → "(2)-(2) 호출0건+변경있음"
- *     - "검토필요대상" + 1<=callCount<=reviewThreshold → "(2)-(3) 호출 1~reviewThreshold건"
- *     - "검토필요대상" + callCount>reviewThreshold → "(2)-(4) 호출 reviewThreshold+1건↑"
- *     - reviewResult='차단대상 제외' AND status='사용' → status='(1)-(5) 현업요청 차단제외'
+ *     - "차단완료" → "①-① 차단완료"
+ *     - "최우선 차단대상" + log_work_excluded=false → "①-② 호출0건+변경없음"
+ *     - "최우선 차단대상" + log_work_excluded=true  → "①-③ 호출0건+변경있음(로그)"
+ *     - "후순위 차단대상" → "①-④ 업무종료"
+ *     - "검토필요대상" + callCount=0 + recent_log_only=true  → "②-① 호출0건+로그건"
+ *     - "검토필요대상" + callCount=0 + recent_log_only=false → "②-② 호출0건+변경있음"
+ *     - "검토필요대상" + 1<=callCount<=reviewThreshold → "②-③ 호출 1~reviewThreshold건"
+ *     - "검토필요대상" + callCount>reviewThreshold → "②-④ 호출 reviewThreshold+1건↑"
+ *     - reviewResult='차단대상 제외' AND status='사용' → status='①-⑤ 현업요청 차단제외'
  *  4. 수동 상태(차단대상 → 사용 / 검토필요 → 사용) — 옵션A: 그대로 유지
  *
  * 특성:
@@ -64,35 +64,53 @@ public class StatusRenameMigrator implements CommandLineRunner {
         }
 
         // 2단계: (1)-(N) / (2)-(N) 번호 체계 변환
-        // 차단완료 → (1)-(1)
+        // 차단완료 → ①-①
         tryUpdate("UPDATE api_record SET status = ? WHERE status = ?",
-                new Object[]{"(1)-(1) 차단완료", "차단완료"}, "(1)-(1) 차단완료");
-        // 최우선 차단대상 → (1)-(2) 또는 (1)-(3)
+                new Object[]{"①-① 차단완료", "차단완료"}, "①-① 차단완료");
+        // 최우선 차단대상 → ①-② 또는 ①-③
         tryUpdate("UPDATE api_record SET status = ? WHERE status = ? AND (log_work_excluded IS NULL OR log_work_excluded = ?)",
-                new Object[]{"(1)-(2) 호출0건+변경없음", "최우선 차단대상", false}, "(1)-(2) logWork=false");
+                new Object[]{"①-② 호출0건+변경없음", "최우선 차단대상", false}, "①-② logWork=false");
         tryUpdate("UPDATE api_record SET status = ? WHERE status = ? AND log_work_excluded = ?",
-                new Object[]{"(1)-(3) 호출0건+변경있음(로그)", "최우선 차단대상", true}, "(1)-(3) logWork=true");
-        // 후순위 차단대상 → (1)-(4)
+                new Object[]{"①-③ 호출0건+변경있음(로그)", "최우선 차단대상", true}, "①-③ logWork=true");
+        // 후순위 차단대상 → ①-④
         tryUpdate("UPDATE api_record SET status = ? WHERE status = ?",
-                new Object[]{"(1)-(4) 업무종료", "후순위 차단대상"}, "(1)-(4) 업무종료");
-        // 현업요청 차단제외: status='사용' AND reviewResult='차단대상 제외' → '(1)-(5)'
+                new Object[]{"①-④ 업무종료", "후순위 차단대상"}, "①-④ 업무종료");
+        // 현업요청 차단제외: status='사용' AND reviewResult='차단대상 제외' → '①-⑤'
         tryUpdate("UPDATE api_record SET status = ? WHERE status = ? AND review_result = ?",
-                new Object[]{"(1)-(5) 현업요청 차단제외", "사용", "차단대상 제외"}, "(1)-(5) 현업요청 차단제외");
+                new Object[]{"①-⑤ 현업요청 차단제외", "사용", "차단대상 제외"}, "①-⑤ 현업요청 차단제외");
 
         // 검토필요대상 분기 — reviewThreshold 조회 (없으면 3)
         int reviewThreshold = readReviewThreshold();
-        // (2)-(1) 호출0+로그건
+        // ②-① 호출0+로그건
         tryUpdate("UPDATE api_record SET status = ? WHERE status = ? AND (call_count IS NULL OR call_count = 0) AND recent_log_only = ?",
-                new Object[]{"(2)-(1) 호출0건+로그건", "검토필요대상", true}, "(2)-(1) 호출0+로그건");
-        // (2)-(2) 호출0+변경있음
+                new Object[]{"②-① 호출0건+로그건", "검토필요대상", true}, "②-① 호출0+로그건");
+        // ②-② 호출0+변경있음
         tryUpdate("UPDATE api_record SET status = ? WHERE status = ? AND (call_count IS NULL OR call_count = 0) AND (recent_log_only IS NULL OR recent_log_only = ?)",
-                new Object[]{"(2)-(2) 호출0건+변경있음", "검토필요대상", false}, "(2)-(2) 호출0+변경있음");
-        // (2)-(3) 호출 1~reviewThreshold
+                new Object[]{"②-② 호출0건+변경있음", "검토필요대상", false}, "②-② 호출0+변경있음");
+        // ②-③ 호출 1~reviewThreshold
         tryUpdate("UPDATE api_record SET status = ? WHERE status = ? AND call_count BETWEEN 1 AND ?",
-                new Object[]{"(2)-(3) 호출 1~reviewThreshold건", "검토필요대상", reviewThreshold}, "(2)-(3) 호출 1~" + reviewThreshold);
-        // (2)-(4) 호출 reviewThreshold+1건↑ (남은 검토필요대상)
+                new Object[]{"②-③ 호출 1~reviewThreshold건", "검토필요대상", reviewThreshold}, "②-③ 호출 1~" + reviewThreshold);
+        // ②-④ 호출 reviewThreshold+1건↑ (남은 검토필요대상)
         tryUpdate("UPDATE api_record SET status = ? WHERE status = ?",
-                new Object[]{"(2)-(4) 호출 reviewThreshold+1건↑", "검토필요대상"}, "(2)-(4) 호출 " + (reviewThreshold + 1) + "건↑");
+                new Object[]{"②-④ 호출 reviewThreshold+1건↑", "검토필요대상"}, "②-④ 호출 " + (reviewThreshold + 1) + "건↑");
+
+        // 3단계: (1)-(N) / (2)-(N) 중간 표기 → 원문자 표기 (직전 단계에서 변환된 데이터가 잔존하는 경우)
+        String[][] CIRCLED = {
+                {"①-① 차단완료",                       "(1)-(1) 차단완료"},
+                {"①-② 호출0건+변경없음",                 "(1)-(2) 호출0건+변경없음"},
+                {"①-③ 호출0건+변경있음(로그)",            "(1)-(3) 호출0건+변경있음(로그)"},
+                {"①-④ 업무종료",                       "(1)-(4) 업무종료"},
+                {"①-⑤ 현업요청 차단제외",                "(1)-(5) 현업요청 차단제외"},
+                {"②-① 호출0건+로그건",                   "(2)-(1) 호출0건+로그건"},
+                {"②-② 호출0건+변경있음",                 "(2)-(2) 호출0건+변경있음"},
+                {"②-③ 호출 1~reviewThreshold건",         "(2)-(3) 호출 1~reviewThreshold건"},
+                {"②-④ 호출 reviewThreshold+1건↑",        "(2)-(4) 호출 reviewThreshold+1건↑"},
+        };
+        for (String[] r : CIRCLED) {
+            tryUpdate("UPDATE api_record SET status = ? WHERE status = ?",
+                    new Object[]{r[0], r[1]},
+                    "원문자 '" + r[1] + "' → '" + r[0] + "'");
+        }
     }
 
     private int readReviewThreshold() {

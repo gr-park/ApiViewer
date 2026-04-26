@@ -200,7 +200,7 @@ public class ApmCollectionService {
         Set<String> noCallApis = new HashSet<>();
         Set<String> lowCallApis = new HashSet<>();
         List<ApiRecord> candidates = records.stream()
-                .filter(r -> !"(1)-(1) 차단완료".equals(r.getStatus()))
+                .filter(r -> !"①-① 차단완료".equals(r.getStatus()))
                 .collect(Collectors.toList());
         Collections.shuffle(candidates);
         for (int i = 0; i < Math.min(3, candidates.size()); i++) {
@@ -234,7 +234,7 @@ public class ApmCollectionService {
         int generated = 0;
         long dayTotal = 0, dayErrors = 0;
         for (ApiRecord rec : ctx.records) {
-            boolean isBlocked = "(1)-(1) 차단완료".equals(rec.getStatus());
+            boolean isBlocked = "①-① 차단완료".equals(rec.getStatus());
             boolean noCall = ctx.noCallApis.contains(rec.getApiPath());
             boolean isLowCall = ctx.lowCallApis.contains(rec.getApiPath());
             long callCount;
@@ -321,7 +321,7 @@ public class ApmCollectionService {
         Set<String> noCallApis = new HashSet<>();
         Set<String> lowCallApis = new HashSet<>();
         List<ApiRecord> candidates = records.stream()
-                .filter(r -> !"(1)-(1) 차단완료".equals(r.getStatus()))
+                .filter(r -> !"①-① 차단완료".equals(r.getStatus()))
                 .collect(java.util.stream.Collectors.toList());
         Collections.shuffle(candidates);
         for (int i = 0; i < Math.min(3, candidates.size()); i++) {
@@ -354,7 +354,7 @@ public class ApmCollectionService {
                 }
 
                 // 차단완료/이력없음/저사용 대상별 호출건수 계산
-                boolean isBlocked = "(1)-(1) 차단완료".equals(rec.getStatus());
+                boolean isBlocked = "①-① 차단완료".equals(rec.getStatus());
                 boolean noCall = noCallApis.contains(rec.getApiPath());
                 boolean isLowCall = lowCallApis.contains(rec.getApiPath());
                 long callCount;
