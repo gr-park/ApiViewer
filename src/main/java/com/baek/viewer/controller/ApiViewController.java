@@ -1338,21 +1338,29 @@ public class ApiViewController {
 
         java.util.function.Function<Map.Entry<String, long[]>, Map<String, Object>> rowOf = e -> {
             long[] c = e.getValue();
-            // 9 leaf v2: 차단대상 = ①-① + ①-② + ①-③ + ①-④, 검토대상 = ②-① + ②-② + ②-③
-            long blockTotal = c[2] + c[3] + c[4] + c[5];
-            long reviewTotal = c[6] + c[7] + c[8];
+            // 9 leaf v2 — 표 "차단대상 진행사항" 의미:
+            //   차단대상 = 차단완료 + 잔여 + 제외
+            //   잔여     = ①-① 차단대상 + ①-② 담당자 판단
+            //   제외     = ①-③ 현업요청 제외 + ①-④ 사용으로 변경
+            //   검토대상 = ②-① + ②-② + ②-③
+            long blockTotal       = c[1] + c[2] + c[3] + c[4] + c[5];   // 차단완료 포함
+            long blockResidualSum = c[2] + c[3];                          // 잔여 subtotal
+            long blockExcludedSum = c[4] + c[5];                          // 제외 subtotal
+            long reviewTotal      = c[6] + c[7] + c[8];
             Map<String, Object> m = new LinkedHashMap<>();
             m.put("use",         c[0]);
-            m.put("blockDone",   c[1]);                          // 차단완료 (단일)
-            m.put("blockTotal",  blockTotal);                    // 차단대상 합계
-            m.put("blockResidual", c[2]);                        // ①-① 차단대상 잔여
-            m.put("blockExceptionTotal", c[3] + c[4] + c[5]);     // 예외건 소계
+            m.put("blockDone",   c[1]);                          // 차단완료
+            m.put("blockTotal",  blockTotal);                    // 차단대상 소계 (차단완료 포함)
+            m.put("blockResidualSum", blockResidualSum);          // 잔여 subtotal (①-① + ①-②)
+            m.put("blockExcludedSum", blockExcludedSum);          // 제외 subtotal (①-③ + ①-④)
+            m.put("blockResidual", c[2]);                        // ①-① 차단대상
             m.put("blockExManager", c[3]);                       // ①-② 담당자 판단
             m.put("blockExReview",  c[4]);                       // ①-③ 현업요청 제외대상
             m.put("blockExManUse",  c[5]);                       // ①-④ 사용으로 변경
+            m.put("blockExceptionTotal", c[3] + c[4] + c[5]);     // (호환) 옛 7카드 "제외건" — ①-② + ①-③ + ①-④
             m.put("reviewTotal",  reviewTotal);                  // 검토대상 합계
             m.put("review0Chg",   c[6]);                         // ②-① 호출0+변경있음
-            m.put("reviewLow",    c[7]);                         // ②-② 호출 3건 이하
+            m.put("reviewLow",    c[7]);                         // ②-② 호출 1~N건 +변경없음
             m.put("reviewManUse", c[8]);                         // ②-③ 사용으로 변경
             m.put("grandTotal",   c[9]);
             return m;

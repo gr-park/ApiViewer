@@ -70,6 +70,12 @@ public class MockAnalysisDataService {
             "test: 테스트 코드 추가"
     };
 
+    /** 담당자 풀 — 50% 확률로 managerOverride 에 랜덤 배정. 나머지는 RepoConfig managerName 폴백. */
+    private static final String[] MANAGER_NAMES = {
+            "백명선", "김민수", "이정우", "박수진", "최영호", "정하늘",
+            "한소라", "오준혁", "장미경", "윤지훈", "조은영", "임도윤"
+    };
+
     private final ApiRecordRepository repo;
     private final JdbcTemplate jdbc;
     private final TestSuspectMatcher testSuspectMatcher;
@@ -287,6 +293,39 @@ public class MockAnalysisDataService {
         r.setBlockedDate(blockedDate);
         r.setBlockedReason(blockedReason);
         r.setFullComment(fullComment);
+
+        // 담당자 — 50% 확률로 managerOverride 배정 (managerOverridden=true), 나머지는 RepoConfig managerName 폴백
+        if (rnd.nextInt(100) < 50) {
+            String manager = MANAGER_NAMES[rnd.nextInt(MANAGER_NAMES.length)];
+            r.setManagerOverride(manager);
+            r.setManagerOverridden(true);
+        }
+
+        // CBO/배포 일정 — 차단대상/검토대상 leaf (①-*/②-*) 중 일부에만 설정
+        //   확률: 차단대상 50%, 검토대상 30%, 사용/차단완료 0%
+        //   CBO 범위: 오늘 -14일 ~ +49일 (지난 CBO 30% / 미래 CBO 70%)
+        //   배포일자 = CBO + 7일 (한 주 뒤) — 사용자 룰
+        //   최대 배포일자 = 오늘 + 56일 (~2개월). 초과분은 쳐냄 (CBO 미설정 처리)
+        //   CBO 있으면 배포근거 deployCsr = "OP-xxxxx" 랜덤 부여
+        boolean isBlockTarget  = status != null && status.startsWith("①-");
+        boolean isReviewTarget = status != null && status.startsWith("②-");
+        int scheduleProb = isBlockTarget ? 50 : (isReviewTarget ? 30 : 0);
+        if (scheduleProb > 0 && rnd.nextInt(100) < scheduleProb) {
+            // 70% 미래(0~49일), 30% 과거(1~14일 전 — 이미 CBO 끝남)
+            LocalDate cbo;
+            if (rnd.nextInt(100) < 70) {
+                cbo = LocalDate.now().plusDays(rnd.nextInt(50));     // 오늘 ~ +49일
+            } else {
+                cbo = LocalDate.now().minusDays(1 + rnd.nextInt(14)); // -1 ~ -14일
+            }
+            LocalDate deploy = cbo.plusDays(7); // CBO + 1주
+            // 최대 배포일자 = 오늘 + 56일 (~2개월) — 초과 시 일정 미설정
+            if (!deploy.isAfter(LocalDate.now().plusDays(56))) {
+                r.setCboScheduledDate(cbo);
+                r.setDeployScheduledDate(deploy);
+                r.setDeployCsr(String.format("OP-%05d", 10000 + rnd.nextInt(89999)));
+            }
+        }
 
         // git_history: 1~3개 커밋 (최근 2년 내 랜덤, 최우선 차단대상 후보는 1년 경과 커밋 보장)
         r.setGitHistory(buildGitHistoryJson(status, rnd));

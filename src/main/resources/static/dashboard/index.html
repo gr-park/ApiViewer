@@ -11,6 +11,7 @@
       --text:#1e293b; --text-muted:#64748b; --border:#e2e8f0;
       --shadow:0 1px 4px rgba(0,0,0,.08);
       --use:#22c55e; --review:#f59e0b; --target:#f97316; --done:#94a3b8;
+      --exclude:#eab308;  /* 차단대상 제외건 — 노랑 (사실상 차단 안 함, 부드러운 톤) */
     }
     *{box-sizing:border-box;margin:0;padding:0;}
     body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);font-size:13px;}
@@ -41,9 +42,9 @@
     @media(max-width:1400px){.summary-grid{grid-template-columns:repeat(4,1fr);}}
     @media(max-width:900px){.summary-grid{grid-template-columns:repeat(2,1fr);}}
     .sum-card.c-bt-top::before{background:#dc2626;}
-    .sum-card.c-bt-low::before{background:var(--target);}
+    .sum-card.c-bt-low::before{background:var(--exclude);}
     .sum-card.c-bt-top .sum-value{color:#dc2626;}
-    .sum-card.c-bt-low .sum-value{color:var(--target);}
+    .sum-card.c-bt-low .sum-value{color:var(--exclude);}
     .sum-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:11px 12px;box-shadow:var(--shadow);position:relative;overflow:hidden;min-width:0;}
     .sum-card::before{content:'';position:absolute;top:0;left:0;width:4px;height:100%;border-radius:12px 0 0 12px;}
     .sum-card.c-total::before{background:var(--primary);}
@@ -179,7 +180,7 @@
     .dark-toggle{background:none;border:1px solid var(--border);border-radius:6px;color:var(--text-muted);cursor:pointer;font-size:12px;font-weight:600;font-family:inherit;padding:5px 12px;white-space:nowrap;transition:background .12s,color .12s;}
     .dark-toggle:hover{background:#f1f5f9;color:#1e293b;}
     [data-theme="dark"] .dark-toggle:hover{background:#293548!important;color:#f1f5f9!important;}
-    :root[data-theme="dark"]{--use:#4ade80;--review:#fbbf24;--target:#fb923c;--done:#94a3b8;--warn:#fbbf24;}
+    :root[data-theme="dark"]{--use:#4ade80;--review:#fbbf24;--target:#fb923c;--done:#94a3b8;--warn:#fbbf24;--exclude:#facc15;}
     [data-theme="dark"] .sum-card{background:var(--card)!important;border-color:var(--border)!important;}
     [data-theme="dark"] .sum-label{color:var(--text-muted)!important;}
     [data-theme="dark"] .sum-sub{color:var(--text-muted)!important;}
@@ -343,7 +344,7 @@
           <div class="legend-item"><div class="legend-dot seg-use"></div>사용</div>
           <div class="legend-item"><div class="legend-dot seg-done"></div>차단완료</div>
           <div class="legend-item"><div class="legend-dot" style="background:#dc2626;"></div>차단대상 잔여 (①-①)</div>
-          <div class="legend-item"><div class="legend-dot" style="background:#ea580c;"></div>차단대상 제외건 (①-②/③/④)</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#eab308;"></div>차단대상 제외건 (①-②/③/④)</div>
           <div class="legend-item"><div class="legend-dot" style="background:#d97706;"></div>검토대상 (②-①/②/③)</div>
         </div>
         <div style="margin-top:16px;" id="distDetail"></div>
@@ -716,7 +717,7 @@
       ['사용', use, '#22c55e'],
       ['차단완료', done, '#6b7280'],
       ['차단대상 잔여', btTop, '#dc2626'],
-      ['차단대상 제외건', btLow, '#ea580c'],
+      ['차단대상 제외건', btLow, '#eab308'],
       ['검토대상', btRev, '#d97706']
     ];
     const bar = document.getElementById('distBar');
@@ -775,7 +776,7 @@
         ['사용', use, barColor('사용')],
         ['차단완료', done, '#6b7280'],
         ['차단대상 잔여', btTop, '#dc2626'],
-        ['차단대상 제외건', btLow, '#ea580c'],
+        ['차단대상 제외건', btLow, '#eab308'],
         ['검토대상', btRev, '#d97706']
       ];
       const bars = items.map(([label, v, color]) =>
@@ -815,7 +816,7 @@
         use  ? `<span class="st st-use" style="font-size:10px;">사용 ${use}</span>` : '',
         done ? `<span class="st st-done" style="font-size:10px;">차단완료 ${done}</span>` : '',
         btTop? `<span style="font-size:10px;color:#dc2626;font-weight:600;">차단대상 잔여 ${btTop}</span>` : '',
-        btLow? `<span style="font-size:10px;color:#ea580c;font-weight:600;">차단대상 예외 ${btLow}</span>` : '',
+        btLow? `<span style="font-size:10px;color:#eab308;font-weight:600;">차단대상 예외 ${btLow}</span>` : '',
         btRev? `<span style="font-size:10px;color:#d97706;font-weight:600;">검토대상 ${btRev}</span>` : ''
       ].filter(Boolean).join(' ');
       return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
@@ -849,7 +850,7 @@
         <td style="text-align:right;">${vp(use,cnt)}</td>
         <td style="text-align:right;">${vp(done,cnt)}</td>
         <td style="text-align:right;color:#dc2626;">${vp(btTop,cnt)}</td>
-        <td style="text-align:right;color:#ea580c;">${vp(btLow,cnt)}</td>
+        <td style="text-align:right;color:#eab308;">${vp(btLow,cnt)}</td>
         <td style="text-align:right;color:#d97706;">${vp(btRev,cnt)}</td>
         <td><a class="link-btn" href="/viewer.html?${qp}">조회 →</a></td>
       </tr>`;
@@ -877,7 +878,7 @@
         <td style="text-align:right;">${vp(use,cnt)}</td>
         <td style="text-align:right;">${vp(done,cnt)}</td>
         <td style="text-align:right;color:#dc2626;">${vp(btTop,cnt)}</td>
-        <td style="text-align:right;color:#ea580c;">${vp(btLow,cnt)}</td>
+        <td style="text-align:right;color:#eab308;">${vp(btLow,cnt)}</td>
         <td style="text-align:right;color:#d97706;">${vp(btRev,cnt)}</td>
         <td><a class="link-btn" href="/viewer.html?manager=${encodeURIComponent(row.manager||'')}">조회 →</a></td>
       </tr>`;
@@ -906,7 +907,7 @@
         <td style="text-align:right;">${vp(use,cnt)}</td>
         <td style="text-align:right;">${vp(done,cnt)}</td>
         <td style="text-align:right;color:#dc2626;">${vp(btTop,cnt)}</td>
-        <td style="text-align:right;color:#ea580c;">${vp(btLow,cnt)}</td>
+        <td style="text-align:right;color:#eab308;">${vp(btLow,cnt)}</td>
         <td style="text-align:right;color:#d97706;">${vp(btRev,cnt)}</td>
         <td style="font-size:11px;color:var(--text-muted);white-space:nowrap;">${fmtDt(row.lastAnalyzedDate)}</td>
         <td><a class="link-btn" href="/viewer.html?repo=${encodeURIComponent(row.repo)}">조회 →</a></td>
@@ -944,8 +945,8 @@
     document.getElementById('panel-overview-' + name).classList.add('active');
   }
 
-  // ── 차단대상 진행사항 렌더 (9 leaf v2 — 15컬럼) ──────────────
-  // 검토부서 / 총합계 / 사용 / 차단완료 / 차단대상(소계·비율·①-①·②·③·④) / 검토대상(소계·비율·②-①·②·③)
+  // ── 차단대상 진행사항 렌더 (9 leaf v2 — 17컬럼, 차단대상 = 차단완료+잔여+제외) ──
+  // 검토부서 / 총합계 / 사용 / 차단대상[9: 소계·비율·차단완료·잔여·①-①·①-②·제외·①-③·①-④] / 검토대상[5: 소계·비율·②-①·②-②·②-③]
   function renderBlockOverview(d) {
     const empty = '<tr><td colspan="100" class="empty" style="padding:18px;text-align:center;color:var(--text-muted);">데이터 없음</td></tr>';
     if (!d) {
@@ -956,39 +957,46 @@
     const threshold = d.reviewThreshold || 3;
 
     // 2단 헤더
-    //   1단: 검토부서(rowspan=2) / 총합계(r=2) / 사용(r=2) / 차단완료(r=2) / 차단대상(colspan=6) / 검토대상(colspan=5)
-    //   2단: 차단대상 → 소계/비율/①-① 차단대상/①-② 담당자판단/①-③ 현업요청제외/①-④ 사용변경
-    //         검토대상 → 소계/비율/②-①/②-②/②-③
+    //   1단: 검토부서(r=2) / 총합계(r=2) / 사용(r=2) / 차단대상(colspan=9) / 검토대상(colspan=5)
+    //   2단 차단대상: 소계 | 비율 || 차단완료 || 잔여 | ①-① | ①-② || 제외 | ①-③ | ①-④
+    //   2단 검토대상: 소계 | 비율 || ②-① | ②-② | ②-③
     const headerHtml = (firstSpan) => {
-      const yL = 'background:#fde68a;color:#92400e;';   // 차단대상 1단
-      const yM = 'background:#fef3c7;color:#92400e;';   // 차단대상 2단
-      const oM = 'background:#ffedd5;color:#9a3412;';   // 차단대상 제외건 2단
-      const pM = 'background:#f3e8ff;color:#7c3aed;';   // 현업요청 제외 2단
-      const limeM = 'background:#ecfccb;color:#3f6212;'; // 사용변경 2단
-      const bL = 'background:#dbeafe;color:#1e40af;';   // 검토대상 1단
-      const bM = 'background:#eff6ff;color:#1e40af;';   // 검토대상 2단
+      const yL    = 'background:#fde68a;color:#92400e;';   // 차단대상 1단 (그룹)
+      const ySum  = 'background:#fef3c7;color:#92400e;';   // 차단대상 소계/비율
       const greyDone = 'background:#f1f5f9;color:#64748b;'; // 차단완료
+      const rSub  = 'background:#fee2e2;color:#991b1b;';   // 잔여 서브헤더
+      const rLeaf = 'background:#fef2f2;color:#dc2626;';   // 잔여 leaf
+      const eSub  = 'background:#fef3c7;color:#92400e;';   // 제외 서브헤더 (노랑 톤)
+      const eLeaf = 'background:#fffbeb;color:#b45309;';   // 제외 leaf
+      const bL    = 'background:#dbeafe;color:#1e40af;';   // 검토대상 1단
+      const bSum  = 'background:#dbeafe;color:#1e40af;';   // 검토대상 소계/비율
+      const bM    = 'background:#eff6ff;color:#1e40af;';   // 검토대상 leaf
+      const limeM = 'background:#ecfccb;color:#3f6212;';   // 사용으로 변경 leaf
       const greenLight = 'background:#dcfce7;color:#166534;';
+      const bdGroup = 'border-left:2px solid #999;';        // 그룹 경계 (||)
+      const bdSub   = 'border-left:2px solid #cbd5e1;';     // 서브그룹 경계 (||)
 
       const tier1 = `<tr>
         ${firstSpan.tier1}
         <th rowspan="2" style="text-align:right;font-weight:800;border-right:2px solid #999;">총합계</th>
-        <th rowspan="2" style="${greenLight}text-align:right;">사용</th>
-        <th rowspan="2" style="${greyDone}text-align:right;border-right:2px solid #999;">차단완료</th>
-        <th colspan="6" style="${yL}text-align:center;border-right:2px solid #999;">차단대상</th>
-        <th colspan="5" style="${bL}text-align:center;">검토대상</th>
+        <th rowspan="2" style="${greenLight}text-align:right;border-right:2px solid #999;">사용</th>
+        <th colspan="9" style="${yL}text-align:center;border-right:2px solid #999;">① 차단대상</th>
+        <th colspan="5" style="${bL}text-align:center;">② 검토대상</th>
       </tr>`;
       const tier2 = `<tr>
         ${firstSpan.tier2}
-        <th style="${yL}text-align:right;">소계</th>
-        <th style="${yL}text-align:right;">비율</th>
-        <th style="${yM}text-align:right;">①-①<br>차단대상</th>
-        <th style="${oM}text-align:right;">①-②<br>담당자<br>판단</th>
-        <th style="${pM}text-align:right;">①-③<br>현업요청<br>제외</th>
+        <th style="${ySum}text-align:right;">소계</th>
+        <th style="${ySum}text-align:right;${bdSub}">비율</th>
+        <th style="${greyDone}text-align:right;${bdSub}">차단완료</th>
+        <th style="${rSub}text-align:right;${bdSub}">잔여</th>
+        <th style="${rLeaf}text-align:right;">①-①<br>차단대상</th>
+        <th style="${rLeaf}text-align:right;">①-②<br>담당자<br>판단</th>
+        <th style="${eSub}text-align:right;${bdSub}">제외</th>
+        <th style="${eLeaf}text-align:right;">①-③<br>현업요청<br>제외</th>
         <th style="${limeM}text-align:right;border-right:2px solid #999;">①-④<br>사용으로<br>변경</th>
-        <th style="${bL}text-align:right;">소계</th>
-        <th style="${bL}text-align:right;">비율</th>
-        <th style="${bM}text-align:right;">②-①<br>호출0건<br>+변경있음</th>
+        <th style="${bSum}text-align:right;">소계</th>
+        <th style="${bSum}text-align:right;${bdSub}">비율</th>
+        <th style="${bM}text-align:right;${bdSub}">②-①<br>호출0건<br>+변경있음</th>
         <th style="${bM}text-align:right;">②-②<br>호출 1~${threshold}건<br>+변경없음</th>
         <th style="${limeM}text-align:right;">②-③<br>사용으로<br>변경</th>
       </tr>`;
@@ -999,47 +1007,55 @@
       const o = opts || {};
       const v = n || 0;
       const styleColor = o.color ? `color:${o.color};` : '';
-      const fontWeight = v > 0 ? 'font-weight:600;' : 'color:#cbd5e1;';
-      const border = o.borderRight ? 'border-right:2px solid #e5e7eb;' : '';
-      return `<td style="text-align:right;${styleColor}${fontWeight}${border}">${v ? v.toLocaleString() : '·'}</td>`;
+      const bg = o.bg ? `background:${o.bg};` : '';
+      const fontWeight = v > 0 ? (o.bold ? 'font-weight:700;' : 'font-weight:600;') : 'color:#cbd5e1;';
+      const borderL = o.borderLeft ? 'border-left:2px solid #cbd5e1;' : '';
+      const borderR = o.borderRight ? 'border-right:2px solid #999;' : '';
+      return `<td style="text-align:right;${styleColor}${bg}${fontWeight}${borderL}${borderR}">${v ? v.toLocaleString() : '·'}</td>`;
     };
     const pctF = (a, b) => {
       if (!b) return '-';
       return ((a / b) * 100).toFixed(1) + '%';
     };
 
-    // 15컬럼 행: firstCells + 총합계 + 사용 + 차단완료 + 차단대상[6] + 검토대상[5]
+    // 17컬럼 행: firstCells + 총합계 + 사용 + 차단대상[9] + 검토대상[5]
     const rowOf = (firstCells, row, opts) => {
       const o = opts || {};
       const total = row.grandTotal || 0;
       const trStyle = o.isTotal ? 'background:#f1f5f9;font-weight:700;' : '';
       const totalCell = `<td style="text-align:right;font-weight:800;border-right:2px solid #999;">${total.toLocaleString()}</td>`;
-      const useCell   = `<td style="text-align:right;color:#166534;font-weight:600;">${(row.use||0).toLocaleString()}</td>`;
-      const doneCell  = `<td style="text-align:right;color:#64748b;font-weight:600;border-right:2px solid #999;">${(row.blockDone||0).toLocaleString()}</td>`;
-      const blockTotal  = row.blockTotal != null ? row.blockTotal
-                         : ((row.blockResidual||0) + (row.blockExManager||0) + (row.blockExReview||0) + (row.blockExManUse||0));
-      const reviewTotal = row.reviewTotal != null ? row.reviewTotal
-                         : ((row.review0Chg||0) + (row.reviewLow||0) + (row.reviewManUse||0));
+      const useCell   = `<td style="text-align:right;color:#166534;font-weight:600;border-right:2px solid #999;">${(row.use||0).toLocaleString()}</td>`;
+      const blockTotal      = row.blockTotal != null ? row.blockTotal
+                             : ((row.blockDone||0) + (row.blockResidual||0) + (row.blockExManager||0) + (row.blockExReview||0) + (row.blockExManUse||0));
+      const blockResidualSum= row.blockResidualSum != null ? row.blockResidualSum
+                             : ((row.blockResidual||0) + (row.blockExManager||0));
+      const blockExcludedSum= row.blockExcludedSum != null ? row.blockExcludedSum
+                             : ((row.blockExReview||0) + (row.blockExManUse||0));
+      const reviewTotal     = row.reviewTotal != null ? row.reviewTotal
+                             : ((row.review0Chg||0) + (row.reviewLow||0) + (row.reviewManUse||0));
       return `<tr style="${trStyle}">${firstCells}
         ${totalCell}
         ${useCell}
-        ${doneCell}
         <td style="text-align:right;font-weight:700;color:#92400e;">${blockTotal.toLocaleString()}</td>
-        <td style="text-align:right;color:#92400e;">${pctF(blockTotal, total)}</td>
-        ${cellNum(row.blockResidual, {color:'#dc2626'})}
-        ${cellNum(row.blockExManager, {color:'#ea580c'})}
-        ${cellNum(row.blockExReview,  {color:'#7c3aed'})}
-        ${cellNum(row.blockExManUse,  {color:'#3f6212', borderRight:true})}
+        <td style="text-align:right;color:#92400e;border-left:2px solid #cbd5e1;">${pctF(blockTotal, total)}</td>
+        ${cellNum(row.blockDone,         {color:'#64748b', borderLeft:true})}
+        ${cellNum(blockResidualSum,      {color:'#991b1b', bold:true, borderLeft:true})}
+        ${cellNum(row.blockResidual,     {color:'#dc2626'})}
+        ${cellNum(row.blockExManager,    {color:'#dc2626'})}
+        ${cellNum(blockExcludedSum,      {color:'#92400e', bold:true, borderLeft:true})}
+        ${cellNum(row.blockExReview,     {color:'#b45309'})}
+        ${cellNum(row.blockExManUse,     {color:'#3f6212', borderRight:true})}
         <td style="text-align:right;font-weight:700;color:#1e40af;">${reviewTotal.toLocaleString()}</td>
-        <td style="text-align:right;color:#1e40af;">${pctF(reviewTotal, total)}</td>
-        ${cellNum(row.review0Chg,  {color:'#d97706'})}
+        <td style="text-align:right;color:#1e40af;border-left:2px solid #cbd5e1;">${pctF(reviewTotal, total)}</td>
+        ${cellNum(row.review0Chg,  {color:'#d97706', borderLeft:true})}
         ${cellNum(row.reviewLow,   {color:'#d97706'})}
         ${cellNum(row.reviewManUse,{color:'#3f6212'})}
       </tr>`;
     };
 
     // 합계 행 — byTeam/byRepo/byManager 배열을 reduce 해 마지막 행에 추가
-    const SUM_KEYS = ['use','blockDone','blockTotal','blockResidual','blockExManager','blockExReview','blockExManUse',
+    const SUM_KEYS = ['use','blockDone','blockTotal','blockResidualSum','blockExcludedSum',
+                      'blockResidual','blockExManager','blockExReview','blockExManUse',
                       'reviewTotal','review0Chg','reviewLow','reviewManUse','grandTotal'];
     const sumRows = (arr) => {
       const acc = {};

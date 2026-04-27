@@ -21,15 +21,18 @@
   let _reposCache = null;
   let _reposPromise = null;
 
+  // 레포 영문명(repoName) 표시 시 소문자 통일 — 데이터/식별자는 원본 유지, UI 표기만 소문자
+  function lowerName(name) { return (name || '').toLowerCase(); }
+
   function formatLabel(repo) {
     if (!repo) return '';
     // itemMode: repoName=value, businessName=label, _sublabel=sublabel
     if (repo._sublabel !== undefined) {
-      const base = repo.businessName || repo.repoName || '';
+      const base = repo.businessName || lowerName(repo.repoName) || '';
       return repo._sublabel ? `${base} · ${repo._sublabel}` : base;
     }
     const biz  = (repo.businessName || '').trim();
-    const name = repo.repoName || '';
+    const name = lowerName(repo.repoName);
     return biz ? `${biz} | ${name}` : name;
   }
 

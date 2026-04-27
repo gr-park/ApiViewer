@@ -535,12 +535,16 @@
 
       // ── ① URL 분석 추출 (단일 선택, "전체 레포 추출" 옵션 포함) ──
       // RepoSelect 는 repoName 만 다루므로 ALL 토큰을 별도 items 모드 항목으로 합성
+      // 표기: 영문 repoName 소문자 통일 (식별자는 원본 유지)
       const extractItems = [
         { value: '__ALL__', label: '🔄 전체 레포 추출' },
-        ...allRepos.map(r => ({
-          value: String(r.id),
-          label: r.businessName ? `${r.businessName} | ${r.repoName}` : r.repoName
-        }))
+        ...allRepos.map(r => {
+          const lower = (r.repoName || '').toLowerCase();
+          return {
+            value: String(r.id),
+            label: r.businessName ? `${r.businessName} | ${lower}` : lower
+          };
+        })
       ];
       window._repoConfigSel = MultiSelect.mountCompact('#repoConfigSelect', {
         singleMode: true,
@@ -556,7 +560,8 @@
         allRepos.forEach(r => {
           const opt = document.createElement('option');
           opt.value = r.repoName;
-          opt.textContent = r.businessName ? `${r.businessName} | ${r.repoName}` : r.repoName;
+          const lower = (r.repoName || '').toLowerCase();
+          opt.textContent = r.businessName ? `${r.businessName} | ${lower}` : lower;
           apmSel.appendChild(opt);
         });
       }

@@ -61,6 +61,9 @@
     .stat-pill.s-target  strong { color: #ea580c; }
     .stat-pill.s-done    strong { color: #6b7280; }
     .stat-pill.s-use     strong { color: var(--success); }
+    /* stats-bar 행 구분/구분자 */
+    .stat-row-break { flex-basis:100%; height:0; }
+    .stat-sep { border-left:2px solid var(--border); height:28px; margin:0 2px; align-self:center; }
     /* 그룹 색상 */
     .sg-status { background:#f0fdf4; border-color:#86efac; }           /* 사용 */
     .sg-done   { background:#f1f5f9; border-color:#cbd5e1; }           /* 차단완료/차단처리미흡/테스트용 의심 */
@@ -413,45 +416,44 @@
     </div>
   </div>
 
-  <!-- 통계 (상태 필터 겸용) — 그룹별 색상 통일 -->
+  <!-- 통계 (상태 필터 겸용) — 행 단위 그룹화 -->
   <div class="stats-bar" id="statsBar" style="display:none">
-    <!-- 전체 -->
+    <!-- ── 1행: 일반 상태 / 차단완료 그룹 / 현업검토 / 변경이력 ────────── -->
     <div class="stat-pill" id="pill-all" onclick="setFilter('')"><span>전체</span><strong id="statTotal">0</strong></div>
-    <!-- 사용 -->
     <div class="stat-pill s-use sg-status" id="pill-사용" onclick="setFilter('사용')"><span>사용</span><strong id="stat-사용">0</strong></div>
-    <span style="border-left:2px solid var(--border);height:28px;margin:0 2px;"></span>
-    <!-- 차단완료 그룹 (회색 통일): 차단완료 / 차단처리미흡 / 테스트용 의심 -->
+    <span class="stat-sep"></span>
     <div class="stat-pill sg-done" id="pill-차단완료" onclick="setFilter('차단완료')"><span>차단완료</span><strong id="stat-차단완료">0</strong></div>
     <div class="stat-pill sg-done" id="pill-marking-incomplete" onclick="setFilter('marking-incomplete')" title="차단완료이지만 @Deprecated 또는 [URL차단작업] 주석 누락"><span>📝 차단처리미흡</span><strong id="stat-marking-incomplete">0</strong></div>
     <div class="stat-pill sg-done" id="pill-test-suspect" onclick="setFilter('testSuspect')" title="URL/메소드/주석 등에 test, sample, mock 등 키워드가 포함된 의심 URL"><span>🧪 테스트용 의심</span><strong id="stat-test-suspect">0</strong></div>
-    <span style="border-left:2px solid var(--border);height:28px;margin:0 2px;"></span>
-    <!-- ① 차단대상 그룹 (빨강 통일): 합계 + ①-① ~ ①-④ -->
+    <span class="stat-sep"></span>
+    <div class="stat-pill sg-review" id="pill-reviewed" onclick="setFilter('reviewed')"><span>현업검토완료</span><strong id="stat-reviewed" style="color:#1e40af;">0</strong></div>
+    <span class="stat-sep"></span>
+    <div class="stat-pill sg-hist" id="pill-new"     onclick="setFilter('new')"    ><span>신규</span><strong id="stat-new"     style="color:#6d28d9;">0</strong></div>
+    <div class="stat-pill sg-hist" id="pill-changed" onclick="setFilter('changed')"><span>상태변경</span><strong id="stat-changed" style="color:#6d28d9;">0</strong></div>
+    <div class="stat-pill sg-hist" id="pill-deleted" onclick="setFilter('deleted')"><span>삭제</span><strong id="stat-deleted" style="color:#6d28d9;">0</strong></div>
+
+    <!-- ── 2행: ① 차단대상 그룹 (빨강 통일) ──────────────────────────── -->
+    <div class="stat-row-break"></div>
     <div class="stat-pill sg-pri1 sg-pri1-sum" id="pill-block" onclick="setFilter('group:block')" title="①-①~①-④ 합계"><span>① 차단대상</span><strong id="stat-block">0</strong></div>
     <div class="stat-pill sg-pri1" id="pill-leaf-1-1" onclick="setFilter('①-① 차단대상')" title="호출 0건 + 소스변경 1년 경과"><span>①-① 차단대상</span><strong id="stat-leaf-1-1">0</strong></div>
     <div class="stat-pill sg-pri1" id="pill-leaf-1-2" onclick="setFilter('①-② 담당자 판단')" title="담당자 수동 판단"><span>①-② 담당자 판단</span><strong id="stat-leaf-1-2">0</strong></div>
     <div class="stat-pill sg-pri1" id="pill-leaf-1-3" onclick="setFilter('①-③ 현업요청 제외대상')" title="현업요청에 의한 차단 제외"><span>①-③ 현업요청 제외대상</span><strong id="stat-leaf-1-3">0</strong></div>
     <div class="stat-pill sg-pri1" id="pill-leaf-1-4" onclick="setFilter('①-④ 사용으로 변경')" title="담당자 검토결과 사용중으로 확정"><span>①-④ 사용으로 변경</span><strong id="stat-leaf-1-4">0</strong></div>
-    <span style="border-left:2px solid var(--border);height:28px;margin:0 2px;"></span>
-    <!-- ② 추가검토대상 그룹 (노랑 통일): 합계 + ②-① ~ ②-③ -->
+
+    <!-- ── 3행: ② 추가검토대상 그룹 (노랑 통일) ─────────────────────── -->
+    <div class="stat-row-break"></div>
     <div class="stat-pill sg-pri3 sg-pri3-sum" id="pill-review" onclick="setFilter('group:review')" title="②-①~②-③ 합계"><span>② 추가검토대상</span><strong id="stat-review">0</strong></div>
     <div class="stat-pill sg-pri3" id="pill-leaf-2-1" onclick="setFilter('②-① 호출0건+변경있음')" title="호출 0건 + 1년 미만 변경"><span>②-① 호출0건+변경있음</span><strong id="stat-leaf-2-1">0</strong></div>
     <div class="stat-pill sg-pri3" id="pill-leaf-2-2" onclick="setFilter('②-② 호출 3건 이하+변경없음')" title="호출 1~N건 + 1년 경과"><span>②-② 호출 3건 이하</span><strong id="stat-leaf-2-2">0</strong></div>
     <div class="stat-pill sg-pri3" id="pill-leaf-2-3" onclick="setFilter('②-③ 사용으로 변경')" title="담당자 검토결과 사용중으로 확정"><span>②-③ 사용으로 변경</span><strong id="stat-leaf-2-3">0</strong></div>
-    <span style="border-left:2px solid var(--border);height:28px;margin:0 2px;"></span>
-    <!-- 현업검토 -->
-    <div class="stat-pill sg-review" id="pill-reviewed" onclick="setFilter('reviewed')"><span>현업검토완료</span><strong id="stat-reviewed" style="color:#1e40af;">0</strong></div>
-    <span style="border-left:2px solid var(--border);height:28px;margin:0 2px;"></span>
-    <!-- 변경이력 그룹 (보라 통일): 신규 / 상태변경 / 삭제 -->
-    <div class="stat-pill sg-hist" id="pill-new"     onclick="setFilter('new')"    ><span>신규</span><strong id="stat-new"     style="color:#6d28d9;">0</strong></div>
-    <div class="stat-pill sg-hist" id="pill-changed" onclick="setFilter('changed')"><span>상태변경</span><strong id="stat-changed" style="color:#6d28d9;">0</strong></div>
-    <div class="stat-pill sg-hist" id="pill-deleted" onclick="setFilter('deleted')"><span>삭제</span><strong id="stat-deleted" style="color:#6d28d9;">0</strong></div>
-    <!-- 메소드/Deprecated — 소형 chip, 별도 줄 -->
-    <div style="width:100%;height:0;"></div>
-    <div class="stat-chip" id="pill-GET"        onclick="setFilter('method:GET')"   ><span>GET</span><strong id="statGet">0</strong></div>
-    <div class="stat-chip" id="pill-POST"       onclick="setFilter('method:POST')"  ><span>POST</span><strong id="statPost">0</strong></div>
-    <div class="stat-chip" id="pill-PUT"        onclick="setFilter('method:PUT')"   ><span>PUT</span><strong id="statPut">0</strong></div>
-    <div class="stat-chip" id="pill-DELETE"     onclick="setFilter('method:DELETE')"><span>DELETE</span><strong id="statDelete">0</strong></div>
-    <div class="stat-chip" id="pill-deprecated" onclick="setFilter('deprecated')"   ><span>@Deprecated</span><strong id="stat-deprecated" style="color:#9333ea;">0</strong></div>
+
+    <!-- ── 4행: 메소드 / @Deprecated — 관리자 전용 ───────────────────── -->
+    <div class="stat-row-break" data-admin-only></div>
+    <div class="stat-chip" id="pill-GET"        data-admin-only onclick="setFilter('method:GET')"   ><span>GET</span><strong id="statGet">0</strong></div>
+    <div class="stat-chip" id="pill-POST"       data-admin-only onclick="setFilter('method:POST')"  ><span>POST</span><strong id="statPost">0</strong></div>
+    <div class="stat-chip" id="pill-PUT"        data-admin-only onclick="setFilter('method:PUT')"   ><span>PUT</span><strong id="statPut">0</strong></div>
+    <div class="stat-chip" id="pill-DELETE"     data-admin-only onclick="setFilter('method:DELETE')"><span>DELETE</span><strong id="statDelete">0</strong></div>
+    <div class="stat-chip" id="pill-deprecated" data-admin-only onclick="setFilter('deprecated')"   ><span>@Deprecated</span><strong id="stat-deprecated" style="color:#9333ea;">0</strong></div>
   </div>
 
   <!-- 검색/필터 -->
@@ -461,18 +463,7 @@
     <input type="text" id="searchManager" placeholder="담당자 검색" oninput="filterTable()" style="width:100px;">
     <input type="text" id="searchDeployManager" placeholder="배포담당자 검색" oninput="filterTable()" style="width:120px;">
     <span class="filter-count" id="filterCount"></span>
-    <!-- 변경일시 범위 필터 -->
-    <div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;">
-      <span style="font-size:12px;color:var(--text-muted);white-space:nowrap;">변경일시</span>
-      <input type="datetime-local" id="modifiedFrom" onchange="filterTable({immediate:true,page:0})" style="font-size:12px;padding:2px 6px;border:1px solid var(--border);border-radius:4px;height:28px;">
-      <span style="font-size:12px;color:var(--text-muted);">~</span>
-      <input type="datetime-local" id="modifiedTo" onchange="filterTable({immediate:true,page:0})" style="font-size:12px;padding:2px 6px;border:1px solid var(--border);border-radius:4px;height:28px;">
-      <button type="button" onclick="setDatePreset(5,'minutes')" style="font-size:11px;padding:2px 7px;border:1px solid var(--border);border-radius:4px;background:#f8fafc;cursor:pointer;height:28px;">최근 5분</button>
-      <button type="button" onclick="setDatePreset(1,'hours')"   style="font-size:11px;padding:2px 7px;border:1px solid var(--border);border-radius:4px;background:#f8fafc;cursor:pointer;height:28px;">최근 1시간</button>
-      <button type="button" onclick="setDatePreset(0,'today')"   style="font-size:11px;padding:2px 7px;border:1px solid var(--border);border-radius:4px;background:#f8fafc;cursor:pointer;height:28px;">오늘</button>
-      <button type="button" onclick="clearDateFilter()"          style="font-size:11px;padding:2px 7px;border:1px solid var(--border);border-radius:4px;background:#f8fafc;cursor:pointer;height:28px;color:#6b7280;">초기화</button>
-    </div>
-    <!-- CBO/배포 예정일자 범위 필터 -->
+    <!-- 일자 필터 — CBO일자 / 배포일자 / 변경일시 한 줄 정렬 -->
     <div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;">
       <span style="font-size:12px;color:var(--text-muted);white-space:nowrap;">CBO일자</span>
       <input type="date" id="cboFrom" onchange="filterTable({immediate:true,page:0})" style="font-size:12px;padding:2px 6px;border:1px solid var(--border);border-radius:4px;height:28px;">
@@ -482,7 +473,15 @@
       <input type="date" id="deployFrom" onchange="filterTable({immediate:true,page:0})" style="font-size:12px;padding:2px 6px;border:1px solid var(--border);border-radius:4px;height:28px;">
       <span style="font-size:12px;color:var(--text-muted);">~</span>
       <input type="date" id="deployTo"   onchange="filterTable({immediate:true,page:0})" style="font-size:12px;padding:2px 6px;border:1px solid var(--border);border-radius:4px;height:28px;">
-      <button type="button" onclick="clearScheduleFilter()" style="font-size:11px;padding:2px 7px;border:1px solid var(--border);border-radius:4px;background:#f8fafc;cursor:pointer;height:28px;color:#6b7280;">초기화</button>
+      <span style="font-size:12px;color:var(--text-muted);white-space:nowrap;margin-left:6px;">변경일시</span>
+      <input type="datetime-local" id="modifiedFrom" onchange="filterTable({immediate:true,page:0})" style="font-size:12px;padding:2px 6px;border:1px solid var(--border);border-radius:4px;height:28px;">
+      <span style="font-size:12px;color:var(--text-muted);">~</span>
+      <input type="datetime-local" id="modifiedTo" onchange="filterTable({immediate:true,page:0})" style="font-size:12px;padding:2px 6px;border:1px solid var(--border);border-radius:4px;height:28px;">
+      <button type="button" onclick="setDatePreset(5,'minutes')" style="font-size:11px;padding:2px 7px;border:1px solid var(--border);border-radius:4px;background:#f8fafc;cursor:pointer;height:28px;">최근 5분</button>
+      <button type="button" onclick="setDatePreset(1,'hours')"   style="font-size:11px;padding:2px 7px;border:1px solid var(--border);border-radius:4px;background:#f8fafc;cursor:pointer;height:28px;">최근 1시간</button>
+      <button type="button" onclick="setDatePreset(0,'today')"   style="font-size:11px;padding:2px 7px;border:1px solid var(--border);border-radius:4px;background:#f8fafc;cursor:pointer;height:28px;">오늘</button>
+      <button type="button" onclick="clearDateFilter()"          style="font-size:11px;padding:2px 7px;border:1px solid var(--border);border-radius:4px;background:#f8fafc;cursor:pointer;height:28px;color:#6b7280;" title="변경일시 초기화">변경일시 초기화</button>
+      <button type="button" onclick="clearScheduleFilter()"      style="font-size:11px;padding:2px 7px;border:1px solid var(--border);border-radius:4px;background:#f8fafc;cursor:pointer;height:28px;color:#6b7280;" title="CBO/배포일자 초기화">일자 초기화</button>
     </div>
   </div>
 
