@@ -2966,8 +2966,8 @@ function updateAdminBadge(valid) {
       const scripts = doc.querySelectorAll('script');
       scripts.forEach(s => {
         const txt = s.textContent || '';
-        // 가드/embedded 감지 스크립트는 스킵
-        if (txt.includes('guard()') || txt.includes('embedded')) return;
+        // 가드/embedded 감지 스크립트만 스킵 — 정확 패턴 매칭 (단순 "embedded" 텍스트로 판정 시 본문 주석에 단어 포함된 경우 메인 스크립트 누락 발생)
+        if (txt.includes('async function guard()') || txt.includes("embedded') === '1'")) return;
         // ExcelJS src 스크립트는 별도 처리
         if (s.src && s.src.includes('exceljs')) {
           if (!document.querySelector('script[src*="exceljs"]')) {

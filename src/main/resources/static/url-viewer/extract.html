@@ -1622,7 +1622,7 @@
     }
   }
 
-  // DOMContentLoaded 가 이미 발생한 경우(settings 의 embedded 로드)에도 즉시 실행
+  // DOMContentLoaded 가 이미 발생한 경우 (다른 페이지에서 동적 삽입 시) 에도 즉시 실행
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', loadTestKeywords);
   } else {
