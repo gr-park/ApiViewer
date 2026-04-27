@@ -1307,7 +1307,7 @@ public class ApiViewController {
             return resolveManager(r.getManagerOverride(), r.getApiPath(), c, mappings);
         };
 
-        // 그룹 키별 13컬럼 카운터 누적 헬퍼 (Map<key, int[13]>)
+        // 그룹 키별 10컬럼 카운터 누적 헬퍼 (9 leaf + grandTotal)
         java.util.function.BiFunction<java.util.function.Function<BlockOverviewDto, String>,
                 List<BlockOverviewDto>, Map<String, long[]>> aggregate = (keyFn, recs) -> {
             Map<String, long[]> acc = new LinkedHashMap<>();
@@ -1387,7 +1387,7 @@ public class ApiViewController {
                     String[] ka = a.getKey().split("\\|", 2);
                     String[] kb = b.getKey().split("\\|", 2);
                     int tc = ka[0].compareTo(kb[0]);
-                    return tc != 0 ? tc : Long.compare(b.getValue()[12], a.getValue()[12]);
+                    return tc != 0 ? tc : Long.compare(b.getValue()[9], a.getValue()[9]);
                 })
                 .map(e -> {
                     String[] parts = e.getKey().split("\\|", 2);

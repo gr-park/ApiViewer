@@ -146,6 +146,16 @@
 
     /* 상태 배지 */
     .status-badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 700; white-space: nowrap; }
+
+    /* 상태 셀 — 상위 카테고리(① 차단대상 / ② 추가검토대상)를 카드 헤더처럼 묶어 가시성 강화 */
+    .status-card { display:inline-flex; flex-direction:column; align-items:stretch; border:1px solid; border-radius:8px; overflow:hidden; min-width:130px; box-shadow:0 1px 2px rgba(15,23,42,.04); }
+    .status-card .sc-head { font-size:10px; font-weight:700; padding:2px 8px; letter-spacing:.02em; line-height:1.4; border-bottom:1px solid; text-align:center; }
+    .status-card .sc-body { padding:3px 6px; background:var(--card); display:flex; justify-content:center; }
+    .status-card .sc-body .status-badge { box-shadow:none; }
+    .status-card.sc-block  { border-color:#fca5a5; }
+    .status-card.sc-block  .sc-head { background:#fef2f2; color:#b91c1c; border-bottom-color:#fecaca; }
+    .status-card.sc-review { border-color:#fcd34d; }
+    .status-card.sc-review .sc-head { background:#fffbeb; color:#b45309; border-bottom-color:#fde68a; }
     .st-use      { background:#dcfce7; color:#166534; }
     .st-done     { background:#f1f5f9; color:#6b7280; }
     .st-del      { background:#fee2e2; color:#991b1b; text-decoration:line-through; }
@@ -1625,10 +1635,20 @@
     const tip = STATUS_TIPS[status] || '';
     const upper = upperOf(status);
     const sty = statusInlineStyle(status);
-    const upperLine = (upper && upper !== status)
-      ? `<div style="font-size:10px;color:var(--text-muted);line-height:1.2;">${esc(upper)}</div>`
-      : '';
-    return `${upperLine}<span class="status-badge" style="${sty}" title="${esc(tip)}">${esc(status || '사용')}</span>`;
+    const leafBadge = `<span class="status-badge" style="${sty}" title="${esc(tip)}">${esc(status || '사용')}</span>`;
+    // 상위 카테고리가 leaf 와 다를 때만 카드 스타일 (① 차단대상 / ② 추가검토대상)
+    if (upper && upper !== status) {
+      const cardCls = upper.startsWith('①') ? 'sc-block'
+                    : upper.startsWith('②') ? 'sc-review'
+                    : '';
+      if (cardCls) {
+        return `<div class="status-card ${cardCls}" title="${esc(tip)}">`
+             +   `<div class="sc-head">${esc(upper)}</div>`
+             +   `<div class="sc-body">${leafBadge}</div>`
+             + `</div>`;
+      }
+    }
+    return leafBadge;
   }
 
   function testSuspectBadge(reason) {

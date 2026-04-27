@@ -60,6 +60,19 @@ global:
     - crawler
     - spider
 
+  # 테스트/샘플 의심 URL 판정 키워드 (URL 경로/메소드명/컨트롤러명/파일경로/주석/@ApiOperation/@Description 부분일치, 대소문자 무시)
+  # fullUrl 은 의도적 제외 (도메인 false positive 방지)
+  testSuspectKeywords:
+    - test
+    - sample
+    - mock
+    - 테스트
+    - 샘플
+    - demo
+    - dummy
+    - fixture
+    - 스텁
+
   # 와탭 조회 파라미터 (ptotal: 전체 건수 상한, psize: 한 페이지 건수)
   whatapPtotal: 100
   whatapPsize: 10000

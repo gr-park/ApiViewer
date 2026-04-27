@@ -154,6 +154,11 @@ public class YamlConfigService {
                         .map(String::trim).filter(s -> !s.isEmpty()).toList());
                 if (!joined.isEmpty()) gc.setBotKeywords(joined);
             }
+            if (g.getTestSuspectKeywords() != null && !g.getTestSuspectKeywords().isEmpty()) {
+                String joined = String.join(",", g.getTestSuspectKeywords().stream()
+                        .map(String::trim).filter(s -> !s.isEmpty()).toList());
+                if (!joined.isEmpty()) gc.setTestSuspectKeywords(joined);
+            }
 
             // teams, 와탭/제니퍼 공통 프로필 JSON 저장
             try {

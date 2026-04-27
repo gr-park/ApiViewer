@@ -44,6 +44,7 @@ public class ReposYamlConfig {
         private String gitBashPath;
         private String blockMonitorWhatapReferer;
         private List<String> excludeKeywords;
+        private List<String> testSuspectKeywords;
 
         public PeriodGlobal getPeriod() { return period; }
         public void setPeriod(PeriodGlobal period) { this.period = period; }
@@ -97,6 +98,8 @@ public class ReposYamlConfig {
         public void setBlockMonitorWhatapReferer(String v) { this.blockMonitorWhatapReferer = v; }
         public List<String> getExcludeKeywords() { return excludeKeywords; }
         public void setExcludeKeywords(List<String> v) { this.excludeKeywords = v; }
+        public List<String> getTestSuspectKeywords() { return testSuspectKeywords; }
+        public void setTestSuspectKeywords(List<String> v) { this.testSuspectKeywords = v; }
     }
 
     public static class PeriodGlobal {
