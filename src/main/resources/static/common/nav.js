@@ -38,6 +38,7 @@
       label: '암복호화 모듈 현황관리',
       icon: '🔐',
       home: '/encrypt-viewer/',
+      adminOnly: true,
       pages: [
         { id: 'placeholder',   label: '(준비 중)',           href: '/encrypt-viewer/' }
       ]

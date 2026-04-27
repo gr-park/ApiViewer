@@ -85,7 +85,8 @@ public class WebConfig implements WebMvcConfigurer {
                 .addPathPatterns(
                         "/url-viewer/extract.html",
                         "/settings/",
-                        "/settings/index.html"
+                        "/settings/index.html",
+                        "/encrypt-viewer/**"   // 암복호화 모듈 — 일반 사용자에게 노출 금지
                 );
     }
 }
