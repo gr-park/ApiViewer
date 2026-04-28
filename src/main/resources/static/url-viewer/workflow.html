@@ -500,6 +500,11 @@
         판정 결과를 <strong>현업 검토자</strong>가 최종 확인하는 전체 업무 흐름을 보여줍니다.
       </div>
     </div>
+    <div style="margin-top:12px;padding:10px 14px;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:8px;font-size:11.5px;color:#475569;line-height:1.65;">
+      <strong style="color:#334155;">읽기 가이드</strong> · <b>1~8절</b>은 역할·업무 흐름 요약(권장).
+      <b>9절 이후</b>는 판정 순서·상태 매핑 등 운영 세부입니다.
+      <b>10절~</b>(아래 「개발자 참고용」구분선 이후)는 시스템 내부 동작·Mermaid·표 형식의 기술 참고입니다.
+    </div>
   </div>
 
   <!-- 스윔레인 1: 관리자(IT카드개발팀) -->
@@ -562,8 +567,8 @@
       <div class="arrow">›</div>
       <div class="step">
         <div class="step-head"><span class="step-num">4</span>SmartWay 자동 동기화</div>
-        <div class="step-desc">차단 대상 URL을 SmartWay에 자동으로 발행하고, 결재 결과를 역방향으로 가져와 반영합니다.</div>
-        <span class="step-tag locked">🔗 SmartWay 양방향 연동</span>
+        <div class="step-desc">차단 대상 URL을 SmartWay에 <b>자동 발행</b>합니다. SmartWay 쪽 결과를 URLViewer로 자동 역반영하는 연동은 정책·시점이 확정되지 않았으며, 현재는 <b>발행·진행 가시성</b>이 중심입니다.</div>
+        <span class="step-tag locked">🔗 SmartWay 연동</span>
       </div>
       <div class="arrow">›</div>
       <div class="step">
@@ -613,12 +618,27 @@
     </div>
   </div>
 
-  <!-- 스윔레인 4: 상태 판정 로직 (9 leaf v2) -->
-  <div class="section-title">4. 상태 판정 기준 (9 leaf v2 — 자동 6가지 + 수동 2가지 + 사용 1)</div>
+  <!-- 스윔레인 4: 상태 판정 로직 -->
+  <div class="section-title">4. 상태 판정 기준</div>
   <div class="swimlane lane-status">
     <div class="lane-label">
       상태 판정
     </div>
+    <div style="padding:16px;display:flex;flex-direction:column;gap:14px;min-width:0;">
+      <div style="padding:12px 14px;background:#f7fee7;border:1px solid #d9f99d;border-radius:10px;border-left:4px solid #4d7c0f;">
+        <div style="font-size:12px;font-weight:800;color:#365314;margin-bottom:6px;">요약 — URL이 어떻게 분류되나요?</div>
+        <ul style="margin:0;padding-left:18px;font-size:12px;color:#334155;line-height:1.75;">
+          <li><b>사용</b> · 정상 서비스 중으로 보는 URL입니다.</li>
+          <li><b>차단완료</b> · 소스에 차단 처리가 끝난 URL입니다(이후 자동 판정에서 제외).</li>
+          <li><b>차단대상(①)</b> · 더 쓰이지 않을 가능성이 있어 <b>차단 검토·현업 의견</b>이 필요한 묶음입니다. 현업에서 「차단 대상에서 제외」로 회신하면 시스템이 <b>①-③ 현업요청 제외대상</b>으로 표시합니다(일상 말의 "사용 유지"와는 별개로, 화면에는 전용 상태값이 찍힙니다).</li>
+          <li><b>추가검토대상(②)</b> · 호출이 적거나 최근 변경이 있어 <b>한 번 더 볼 URL</b>입니다.</li>
+          <li><b>담당자 확정</b> · IT담당자가 상태를 확정하면 자동 판정이 덮어쓰지 않습니다.</li>
+        </ul>
+      </div>
+      <div>
+        <div style="font-size:12px;font-weight:800;color:#1e293b;margin-bottom:4px;">추가 설명</div>
+        <div style="font-size:11px;color:#64748b;line-height:1.55;margin-bottom:8px;">아래 카드에는 DB <code style="background:#e2e8f0;padding:1px 5px;border-radius:3px;font-size:10px;">status</code>·코드 조건·임계값 표기가 포함됩니다. 현업·임원 설명에는 위 요약과 <b>6·7절</b>을 우선 안내하세요.</div>
+      </div>
     <div class="status-grid">
       <div class="status-card sc-use">
         <div class="status-card-head">
@@ -723,6 +743,7 @@
         </div>
         <div class="status-card-meta">담당자 수동 판단</div>
       </div>
+    </div>
     </div>
 
   </div>
@@ -1086,12 +1107,15 @@
           </div>
           <div style="font-size:12px;color:#334155;line-height:1.7;">
             <b>URL차단 모니터링</b> 화면에서 차단된 URL로의 <b>실제 트랜잭션 인입 여부</b>를 주기적으로 확인합니다.
-            <div style="margin:6px 0;display:flex;flex-direction:column;gap:3px;">
-              <span style="padding:3px 10px;background:#eff6ff;border-radius:5px;font-size:11px;color:#1d4ed8;font-weight:600;">입력 · 기간 / 레포 / 봇 제외 옵션 선택</span>
-              <span style="padding:3px 10px;background:#eff6ff;border-radius:5px;font-size:11px;color:#1d4ed8;font-weight:600;">데이터 · 와탭 <code style="font-size:10.5px;">/v2/txsearch</code> 실시간 조회 (DB 저장 없음, Jennifer APM 병행)</span>
-              <span style="padding:3px 10px;background:#eff6ff;border-radius:5px;font-size:11px;color:#1d4ed8;font-weight:600;">태깅 · (pcode, okindName) 매핑으로 레포 컬럼 자동 표기</span>
-              <span style="padding:3px 10px;background:#eff6ff;border-radius:5px;font-size:11px;color:#1d4ed8;font-weight:600;">판정 · <code style="font-size:10.5px;">errMessage</code>가 "차단"으로 시작하는 트랜잭션 집계</span>
-            </div>
+            <details style="margin:8px 0 0;padding:8px 10px;background:#eff6ff;border:1px solid #bae6fd;border-radius:8px;">
+              <summary style="font-size:11px;font-weight:700;color:#1d4ed8;cursor:pointer;">개발·모니터링 상세 (접기)</summary>
+              <div style="margin:8px 0 0;display:flex;flex-direction:column;gap:3px;">
+              <span style="padding:3px 10px;background:#fff;border-radius:5px;font-size:11px;color:#1d4ed8;font-weight:600;">입력 · 기간 / 레포 / 봇 제외 옵션 선택</span>
+              <span style="padding:3px 10px;background:#fff;border-radius:5px;font-size:11px;color:#1d4ed8;font-weight:600;">데이터 · 와탭 <code style="font-size:10.5px;">/v2/txsearch</code> 실시간 조회 (DB 저장 없음, Jennifer APM 병행)</span>
+              <span style="padding:3px 10px;background:#fff;border-radius:5px;font-size:11px;color:#1d4ed8;font-weight:600;">태깅 · (pcode, okindName) 매핑으로 레포 컬럼 자동 표기</span>
+              <span style="padding:3px 10px;background:#fff;border-radius:5px;font-size:11px;color:#1d4ed8;font-weight:600;">판정 · <code style="font-size:10.5px;">errMessage</code>가 "차단"으로 시작하는 트랜잭션 집계</span>
+              </div>
+            </details>
             <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px;">
               <span style="padding:3px 10px;background:#fee2e2;border:1px solid #fca5a5;color:#991b1b;border-radius:6px;font-size:11px;font-weight:600;">인입 감지 → 원인 분석 → 롤백 또는 예외 처리 (현업 재검토 · 테스트 보강)</span>
               <span style="padding:3px 10px;background:#ecfccb;border:1px solid #d9f99d;color:#4d7c0f;border-radius:6px;font-size:11px;font-weight:600;">인입 없음 → 안정 상태 확정 · 차단 작업 최종 완료</span>
@@ -1124,12 +1148,12 @@
           <span class="auth-label auth-pub">전체 사용</span>
         </div>
         <ul class="auth-list">
-          <li><b>/</b> 대시보드 — 상태별 통계</li>
-          <li><b>/viewer.html</b> URL분석현황 — 전체 조회·엑셀 다운로드</li>
-          <li><b>/call-stats.html</b> URL호출현황 — 차트·추이 분석</li>
-          <li><b>/url-block-monitor.html</b> URL차단 모니터링 — 차단 후 인입 트랜잭션 실시간 조회 (와탭 /v2/txsearch)</li>
-          <li><b>/review.html</b> 현업 검토 — 차단대상 검토 입력</li>
-          <li><b>/workflow.html</b> 업무 흐름 — (이 페이지)</li>
+          <li><b>대시보드</b> — IT소스 관리포털 통합 현황 <span style="color:#94a3b8;font-weight:500;">경로 <code>/dashboard/</code></span></li>
+          <li><b>URL 분석현황</b> — 전체 조회·엑셀 <span style="color:#94a3b8;font-weight:500;">경로 <code>/url-viewer/viewer.html</code> (구 <code>/viewer.html</code> 리다이렉트)</span></li>
+          <li><b>URL 호출현황</b> — 차트·추이 <span style="color:#94a3b8;font-weight:500;">경로 <code>/url-viewer/call-stats.html</code></span></li>
+          <li><b>URL 차단 모니터링</b> — 차단 후 인입 여부 확인 <span style="color:#94a3b8;font-weight:500;">경로 <code>/url-viewer/url-block-monitor.html</code></span></li>
+          <li><b>현업 검토</b> — 차단대상 검토 입력 <span style="color:#94a3b8;font-weight:500;">경로 <code>/url-viewer/review.html</code></span></li>
+          <li><b>업무 흐름</b> — 이 페이지 <span style="color:#94a3b8;font-weight:500;">경로 <code>/url-viewer/workflow.html</code></span></li>
         </ul>
       </div>
       <div class="auth-card">
@@ -1190,7 +1214,7 @@
         <div style="width:36px;min-width:36px;background:#e2e8f0;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#475569;">3</div>
         <div style="flex:1;background:#ecfccb;border:1px solid #d9f99d;border-radius:8px;padding:10px 14px;">
           <div style="font-size:12px;font-weight:700;color:#4d7c0f;margin-bottom:3px;">현업 검토 결과 '차단 제외'로 확정된 URL</div>
-          <div style="font-size:12px;color:#334155;line-height:1.6;">'차단대상 제외'로 검토 완료된 URL — <b>사용</b> 상태로 유지됩니다.</div>
+          <div style="font-size:12px;color:#334155;line-height:1.6;">현업검토결과가 <b>차단대상 제외</b>이면 URLViewer 상태는 <b>①-③ 현업요청 제외대상</b>으로 자동 반영됩니다(대시보드 상위 구분 「① 차단대상」에 포함). 일상 표현의 「사용 유지」와 동일하지 않으며, 화면·엑셀에는 앞의 전용 상태명이 표시됩니다.</div>
         </div>
       </div>
 
@@ -1222,9 +1246,9 @@
     </div>
   </div>
 
-  <!-- 섹션 9-2: 상위상태 ↔ 세부 9 leaf v2 매핑 (구 4-2 블록 — 섹션 9 하단으로 이동) -->
+  <!-- 섹션 9-2: 상위상태 ↔ 세부 상태 매핑 (대시보드 "차단대상 진행사항") -->
   <div class="card" style="padding:18px 20px;">
-    <div style="font-weight:700;font-size:13px;color:#1e293b;margin-bottom:10px;">📊 상위상태 ↔ 세부 9 leaf v2 매핑 (대시보드 "차단대상 진행사항")</div>
+    <div style="font-weight:700;font-size:13px;color:#1e293b;margin-bottom:10px;">📊 상위상태 ↔ 세부 상태 매핑 (대시보드 "차단대상 진행사항")</div>
     <div style="overflow-x:auto;">
       <table style="width:100%;min-width:760px;border-collapse:collapse;font-size:11.5px;table-layout:fixed;">
         <colgroup>
@@ -1258,11 +1282,11 @@
       <code style="background:#e2e8f0;padding:1px 5px;border-radius:3px;">reviewUpperThreshold</code>는 v2 에서 사실상 무시.
     </div>
     <div style="margin-top:14px;padding:14px;background:#fef3c7;border-left:4px solid #d97706;border-radius:6px;">
-      <div style="font-weight:700;font-size:12.5px;color:#92400e;margin-bottom:8px;">⚙️ 자동 재계산 sticky 규칙 (umbrella 보존 — 9 leaf v2 통합)</div>
+      <div style="font-weight:700;font-size:12.5px;color:#92400e;margin-bottom:8px;">⚙️ 자동 재계산 규칙 (확정된 건은 유지)</div>
       <div style="font-size:11.5px;color:#78350f;line-height:1.7;">
         <code style="background:#fde68a;padding:1px 5px;border-radius:3px;">calculateStatus</code> 는 <code style="background:#fde68a;padding:1px 5px;border-radius:3px;">statusOverridden=false</code> 인 레코드에만 동작합니다.<br>
         <b>강한 신호 (무조건 우선):</b><br>
-        &nbsp;&nbsp;1. <code>MANUAL_STATUSES</code> (<code>①-④ 사용으로 변경</code> / <code>②-③ 사용으로 변경</code>) → 보존<br>
+        &nbsp;&nbsp;1. <code>MANUAL_STATUSES</code> (<code>①-② 담당자 판단</code> / <code>①-④ 사용으로 변경</code> / <code>②-③ 사용으로 변경</code>) → 보존<br>
         &nbsp;&nbsp;2. <code>hasUrlBlock=Y</code> → <b>차단완료</b><br>
         &nbsp;&nbsp;3. <code>reviewResult='차단대상 제외'</code> → <b>①-③ 현업요청 제외대상</b><br>
         <b>Umbrella sticky:</b> 위 강한 신호가 없을 때만 적용<br>
@@ -1307,21 +1331,21 @@ flowchart TD
     CHK_OVR -->|"확정"| HOLD["기존 status 유지\n자동 재계산 제외\napi_record 메타만 갱신"]
     CHK_OVR -->|"미확정"| CHK_RVW{"reviewResult\n(현업검토결과)\n= '차단대상 제외'?"}
 
-    CHK_RVW -->|"Yes"| ST_USE0["🟢 사용 확정"]
+    CHK_RVW -->|"Yes"| STRVEX["①-③ 현업요청 제외대상\nreviewResult 차단대상 제외"]
     CHK_RVW -->|"No"| CALC["자동 상태 계산\napi_record 조건 평가"]
     CREATE --> CALC
 
-    CALC --> R1{"메서드 본문에\nthrow new UnsupportedOperationException(\"…차단…\")?\n(hasUrlBlock = Y)"}
-    R1 -->|"Yes"| ST_DONE["⚫ 차단완료\n(@Deprecated·[URL차단작업] 주석 중\n일부 누락 시 blockMarkingIncomplete=true\n→ 📝 차단처리미흡 부가 표기)"]
+    CALC --> R1{"메서드 본문에\nthrow new UnsupportedOperationException\n'…차단…' 문구 포함?\n(hasUrlBlock = Y)"}
+    R1 -->|"Yes"| ST_DONE["⚫ 차단완료\n(@Deprecated·URL차단작업 주석 중\n일부 누락 시 blockMarkingIncomplete=true\n→ 📝 차단처리미흡 부가 표기)"]
     R1 -->|"No"| R2{"callCount = 0\n+ 최근커밋 1년 경과?"}
     R2 -->|"Yes"| ST_TOP["🟠 ①-① 차단대상\n(호출 0 + 1년 경과)"]
-    R2 -->|"No"| R3{"callCount ≥ 1 + 최근커밋 1년↑\nOR callCount = 0 + 최근커밋 1년 미만?"}
+    R2 -->|"No"| R3{"callCount >= 1 + 최근커밋 1년 이상\nOR callCount = 0 + 최근커밋 1년 미만?"}
     R3 -->|"Yes"| ST_REV["🟡 ②-① / ②-② 추가검토대상"]
     R3 -->|"No"| ST_USE["🟢 사용"]
 
     SAVE["api_record\nINSERT / UPDATE"]
     HOLD --> SAVE
-    ST_USE0 --> SAVE
+    STRVEX --> SAVE
     ST_DONE --> SAVE
     ST_TOP --> SAVE
     ST_REV --> SAVE
@@ -1336,7 +1360,7 @@ flowchart TD
     style ST_DONE fill:#fee2e2,stroke:#fca5a5,color:#991b1b
     style ST_TOP  fill:#ffedd5,stroke:#fdba74,color:#9a3412
     style ST_REV  fill:#fef9c3,stroke:#fde047,color:#713f12
-    style ST_USE0 fill:#ecfccb,stroke:#d9f99d,color:#4d7c0f
+    style STRVEX fill:#ddd6fe,stroke:#a78bfa,color:#5b21b6
     style ST_USE  fill:#ecfccb,stroke:#d9f99d,color:#4d7c0f
     style HOLD    fill:#e0e7ff,stroke:#a5b4fc,color:#3730a3
     </div>
@@ -1409,7 +1433,7 @@ flowchart TD
         <tr style="background:#f8fafc;"><td style="padding:5px 10px;border:1px solid #e2e8f0;font-family:monospace;">repository_name</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">레포지토리명</td><td style="padding:5px 10px;border:1px solid #e2e8f0;white-space:nowrap;">VARCHAR</td><td style="padding:5px 10px;border:1px solid #e2e8f0;"><span style="background:#dbeafe;color:#1d4ed8;padding:1px 5px;border-radius:3px;font-size:11px;">UNIQUE+</span> <span style="background:#f7fee7;color:#4d7c0f;padding:1px 5px;border-radius:3px;font-size:11px;">IDX</span> NOT NULL</td></tr>
         <tr><td style="padding:5px 10px;border:1px solid #e2e8f0;font-family:monospace;">api_path</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">API 경로</td><td style="padding:5px 10px;border:1px solid #e2e8f0;white-space:nowrap;">VARCHAR(2000)</td><td style="padding:5px 10px;border:1px solid #e2e8f0;"><span style="background:#dbeafe;color:#1d4ed8;padding:1px 5px;border-radius:3px;font-size:11px;">UNIQUE+</span> NOT NULL</td></tr>
         <tr style="background:#f8fafc;"><td style="padding:5px 10px;border:1px solid #e2e8f0;font-family:monospace;">http_method</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">HTTP 메소드</td><td style="padding:5px 10px;border:1px solid #e2e8f0;white-space:nowrap;">VARCHAR(20)</td><td style="padding:5px 10px;border:1px solid #e2e8f0;"><span style="background:#dbeafe;color:#1d4ed8;padding:1px 5px;border-radius:3px;font-size:11px;">UNIQUE+</span> GET/POST/PUT/DELETE</td></tr>
-        <tr><td style="padding:5px 10px;border:1px solid #e2e8f0;font-family:monospace;">status</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">상태</td><td style="padding:5px 10px;border:1px solid #e2e8f0;white-space:nowrap;">VARCHAR(50)</td><td style="padding:5px 10px;border:1px solid #e2e8f0;"><span style="background:#f7fee7;color:#4d7c0f;padding:1px 5px;border-radius:3px;font-size:11px;">IDX</span> 9 leaf v2: 사용 / 차단완료 / ①-①~①-④ 차단대상 leaf / ②-①~②-③ 추가검토대상 leaf / 삭제</td></tr>
+        <tr><td style="padding:5px 10px;border:1px solid #e2e8f0;font-family:monospace;">status</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">상태</td><td style="padding:5px 10px;border:1px solid #e2e8f0;white-space:nowrap;">VARCHAR(50)</td><td style="padding:5px 10px;border:1px solid #e2e8f0;"><span style="background:#f7fee7;color:#4d7c0f;padding:1px 5px;border-radius:3px;font-size:11px;">IDX</span> 사용 / 차단완료 / ①-①~①-④ 차단대상 / ②-①~②-③ 추가검토대상 / 삭제</td></tr>
         <tr style="background:#f8fafc;"><td style="padding:5px 10px;border:1px solid #e2e8f0;font-family:monospace;">status_overridden</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">상태확정 여부</td><td style="padding:5px 10px;border:1px solid #e2e8f0;white-space:nowrap;">BOOLEAN</td><td style="padding:5px 10px;border:1px solid #e2e8f0;"><span style="background:#f7fee7;color:#4d7c0f;padding:1px 5px;border-radius:3px;font-size:11px;">IDX</span> true=확정(자동재계산 제외)</td></tr>
         <tr><td style="padding:5px 10px;border:1px solid #e2e8f0;font-family:monospace;">call_count</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">총 호출건수</td><td style="padding:5px 10px;border:1px solid #e2e8f0;white-space:nowrap;">BIGINT</td><td style="padding:5px 10px;border:1px solid #e2e8f0;"><span style="background:#f7fee7;color:#4d7c0f;padding:1px 5px;border-radius:3px;font-size:11px;">IDX</span> APM 수집값 누적</td></tr>
         <tr style="background:#f8fafc;"><td style="padding:5px 10px;border:1px solid #e2e8f0;font-family:monospace;">call_count_month</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">1개월 호출건수</td><td style="padding:5px 10px;border:1px solid #e2e8f0;white-space:nowrap;">BIGINT</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">최근 30일</td></tr>
@@ -1439,8 +1463,8 @@ flowchart TD
         <tr style="background:#f8fafc;"><td style="padding:5px 10px;border:1px solid #e2e8f0;font-family:monospace;">cbo_scheduled_date</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">CBO 예정일자</td><td style="padding:5px 10px;border:1px solid #e2e8f0;white-space:nowrap;">DATE</td><td style="padding:5px 10px;border:1px solid #e2e8f0;"></td></tr>
         <tr><td style="padding:5px 10px;border:1px solid #e2e8f0;font-family:monospace;">deploy_scheduled_date</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">배포 예정일자</td><td style="padding:5px 10px;border:1px solid #e2e8f0;white-space:nowrap;">DATE</td><td style="padding:5px 10px;border:1px solid #e2e8f0;"></td></tr>
         <tr style="background:#f8fafc;"><td style="padding:5px 10px;border:1px solid #e2e8f0;font-family:monospace;">deploy_csr</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">배포 CSR</td><td style="padding:5px 10px;border:1px solid #e2e8f0;white-space:nowrap;">VARCHAR(50)</td><td style="padding:5px 10px;border:1px solid #e2e8f0;"></td></tr>
-        <tr><td style="padding:5px 10px;border:1px solid #e2e8f0;font-family:monospace;">log_work_excluded</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">로그작업이력 제외 여부</td><td style="padding:5px 10px;border:1px solid #e2e8f0;white-space:nowrap;">BOOLEAN</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">v2: ①-① 차단대상 진입 시 보조 정보 — 침해사고 로그/불필요 커밋 제외 여부 표시</td></tr>
-        <tr style="background:#f8fafc;"><td style="padding:5px 10px;border:1px solid #e2e8f0;font-family:monospace;">recent_log_only</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">1년미만 커밋 전부 로그성 여부</td><td style="padding:5px 10px;border:1px solid #e2e8f0;white-space:nowrap;">BOOLEAN</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">v2: ②-① 호출0건+변경있음 진입 시 보조 정보 — 1년 미만 커밋이 모두 로그/불필요 키워드일 때 true</td></tr>
+        <tr><td style="padding:5px 10px;border:1px solid #e2e8f0;font-family:monospace;">log_work_excluded</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">로그작업이력 제외 여부</td><td style="padding:5px 10px;border:1px solid #e2e8f0;white-space:nowrap;">BOOLEAN</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">(보조) ①-① 차단대상 진입 시 보조 정보 — 침해사고 로그/불필요 커밋 제외 여부 표시</td></tr>
+        <tr style="background:#f8fafc;"><td style="padding:5px 10px;border:1px solid #e2e8f0;font-family:monospace;">recent_log_only</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">1년미만 커밋 전부 로그성 여부</td><td style="padding:5px 10px;border:1px solid #e2e8f0;white-space:nowrap;">BOOLEAN</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">(보조) ②-① 호출0건+변경있음 진입 시 보조 정보 — 1년 미만 커밋이 모두 로그/불필요 키워드일 때 true</td></tr>
         <tr><td style="padding:5px 10px;border:1px solid #e2e8f0;font-family:monospace;">test_suspect_reason</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">테스트용 의심 사유</td><td style="padding:5px 10px;border:1px solid #e2e8f0;white-space:nowrap;">TEXT</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">키워드 매칭 결과 (예: "URL-test, 메소드-sample"). null=비의심. 분석 추출 시 자동 매칭, 키워드 변경 후 재평가 endpoint 로 갱신</td></tr>
         <tr style="background:#f8fafc;"><td style="padding:5px 10px;border:1px solid #e2e8f0;font-family:monospace;">created_ip</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">최초 생성 IP</td><td style="padding:5px 10px;border:1px solid #e2e8f0;white-space:nowrap;">VARCHAR(50)</td><td style="padding:5px 10px;border:1px solid #e2e8f0;"></td></tr>
         <tr><td style="padding:5px 10px;border:1px solid #e2e8f0;font-family:monospace;">modified_at</td><td style="padding:5px 10px;border:1px solid #e2e8f0;">수정일시</td><td style="padding:5px 10px;border:1px solid #e2e8f0;white-space:nowrap;">DATETIME</td><td style="padding:5px 10px;border:1px solid #e2e8f0;"></td></tr>

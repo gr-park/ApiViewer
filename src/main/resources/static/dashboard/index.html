@@ -190,6 +190,9 @@
     [data-theme="dark"] .bar-bg { background:#334155 !important; }
     [data-theme="dark"] .link-btn:hover { background:#1e3a5f !important; }
     [data-theme="dark"] div[style*="background:#f0f9ff"] { background:#1e3a5f !important; color:#93c5fd !important; border-color:#1d4ed8 !important; }
+    [data-theme="dark"] #overviewTeamTable [style*="background:#f0f9ff"],
+    [data-theme="dark"] #overviewRepoTable [style*="background:#f0f9ff"],
+    [data-theme="dark"] #overviewManagerTable [style*="background:#f0f9ff"] { background:#1e3a5f !important; color:#93c5fd !important; }
     [data-theme="dark"] span[style*="background:#dcfce7"] { background:#052e16 !important; color:#4ade80 !important; }
     [data-theme="dark"] span[style*="background:#f1f5f9"][style*="color:#64748b"] { background:#293548 !important; color:#94a3b8 !important; }
     [data-theme="dark"] span[style*="background:#fee2e2"][style*="color:#991b1b"] { background:#450a0a !important; color:#f87171 !important; }
@@ -214,6 +217,14 @@
     [data-theme="dark"] [style*="background:#fff7ed"] { background:#2d1b0a !important; }
     [data-theme="dark"] [style*="background:#f8fafc"] { background:#1e293b !important; }
     [data-theme="dark"] [style*="color:#991b1b"] { color:#f87171 !important; }
+    [data-theme="dark"] [style*="color:#9f1239"] { color:#fda4af !important; }
+    [data-theme="dark"] [style*="background:#fff1f2"] { background:#3d2528 !important; }
+    [data-theme="dark"] [style*="background:#ffe4e6"] { background:#422428 !important; }
+    [data-theme="dark"] [style*="background:#fafbfc"] { background:#1e293b !important; }
+    [data-theme="dark"] [style*="background:#f0fdf4"] { background:#052e16 !important; color:#4ade80 !important; }
+    [data-theme="dark"] [style*="color:#1d4ed8"] { color:#93c5fd !important; }
+    [data-theme="dark"] [style*="background:#ecfccb"] { background:#14532d !important; color:#86efac !important; }
+    [data-theme="dark"] [style*="color:#3f6212"] { color:#86efac !important; }
     [data-theme="dark"] [style*="color:#7c2d12"] { color:#fb923c !important; }
 
     /* 대시보드 섹션 구분 */
@@ -961,19 +972,20 @@
     //   2단 차단대상: 소계 | 비율 || 차단완료 || 잔여 | ①-① | ①-② || 제외 | ①-③ | ①-④
     //   2단 검토대상: 소계 | 비율 || ②-① | ②-② | ②-③
     const headerHtml = (firstSpan) => {
-      // ① 차단대상 그룹/소계/비율 — 붉은 계열 (제외 노랑과 시각 구분)
-      const rGrp  = 'background:#fecaca;color:#991b1b;';   // ① 차단대상 그룹 헤더 (rose-200)
-      const rSum  = 'background:#fee2e2;color:#991b1b;';   // 소계/비율 (rose-100)
-      const greyDone = 'background:#f1f5f9;color:#64748b;'; // 차단완료
-      const rSub  = 'background:#fecaca;color:#991b1b;';   // 잔여 서브헤더 (rose-200, 진한 톤)
-      const rLeaf = 'background:#fef2f2;color:#dc2626;';   // 잔여 leaf (rose-50)
-      const eSub  = 'background:#fde68a;color:#92400e;';   // 제외 서브헤더 (yellow/amber-200, 노랑)
-      const eLeaf = 'background:#fef3c7;color:#92400e;';   // 제외 leaf (yellow-100)
-      const bL    = 'background:#dbeafe;color:#1e40af;';   // 검토대상 1단
-      const bSum  = 'background:#dbeafe;color:#1e40af;';   // 검토대상 소계/비율
-      const bM    = 'background:#eff6ff;color:#1e40af;';   // 검토대상 leaf
-      const limeM = 'background:#ecfccb;color:#3f6212;';   // 사용으로 변경 leaf
-      const greenLight = 'background:#dcfce7;color:#166534;';
+      // ① 차단대상 — 옅은 로즈 틴트 + 로즈-800 텍스트 통일 (기업용 톤), 제외는 앰버만
+      const rTxt  = '#9f1239';
+      const rGrp  = 'background:#fff1f2;color:' + rTxt + ';border-bottom:2px solid #fecdd3;';
+      const rSum  = 'background:#fff1f2;color:' + rTxt + ';';
+      const greyDone = 'background:#f8fafc;color:#64748b;';
+      const rSub  = 'background:#ffe4e6;color:' + rTxt + ';';
+      const rLeaf = 'background:#fafbfc;color:' + rTxt + ';border-left:3px solid #fb7185;';
+      const eSub  = 'background:#fffbeb;color:#92400e;border-left:2px solid #fcd34d;';
+      const eLeaf = 'background:#fffbeb;color:#92400e;';
+      const bL    = 'background:#f0f9ff;color:#1d4ed8;';
+      const bSum  = 'background:#f0f9ff;color:#1d4ed8;';
+      const bM    = 'background:#fafbfc;color:#1d4ed8;border-left:2px solid #93c5fd;';
+      const limeM = 'background:#ecfccb;color:#3f6212;';
+      const greenLight = 'background:#f0fdf4;color:#166534;';
       const bdGroup = 'border-left:2px solid #999;';        // 그룹 경계 (||)
       const bdSub   = 'border-left:2px solid #cbd5e1;';     // 서브그룹 경계 (||)
 
@@ -1037,17 +1049,17 @@
       return `<tr style="${trStyle}">${firstCells}
         ${totalCell}
         ${useCell}
-        <td style="text-align:right;font-weight:700;color:#991b1b;">${blockTotal.toLocaleString()}</td>
-        <td style="text-align:right;color:#991b1b;border-left:2px solid #cbd5e1;">${pctF(blockTotal, total)}</td>
+        <td style="text-align:right;font-weight:700;color:#9f1239;">${blockTotal.toLocaleString()}</td>
+        <td style="text-align:right;color:#9f1239;border-left:2px solid #cbd5e1;">${pctF(blockTotal, total)}</td>
         ${cellNum(row.blockDone,         {color:'#64748b', borderLeft:true})}
-        ${cellNum(blockResidualSum,      {color:'#991b1b', bold:true, borderLeft:true})}
-        ${cellNum(row.blockResidual,     {color:'#dc2626'})}
-        ${cellNum(row.blockExManager,    {color:'#dc2626'})}
+        ${cellNum(blockResidualSum,      {color:'#9f1239', bold:true, borderLeft:true})}
+        ${cellNum(row.blockResidual,     {color:'#9f1239'})}
+        ${cellNum(row.blockExManager,    {color:'#9f1239'})}
         ${cellNum(blockExcludedSum,      {color:'#92400e', bold:true, borderLeft:true})}
-        ${cellNum(row.blockExReview,     {color:'#b45309'})}
-        ${cellNum(row.blockExManUse,     {color:'#b45309', borderRight:true})}
-        <td style="text-align:right;font-weight:700;color:#1e40af;">${reviewTotal.toLocaleString()}</td>
-        <td style="text-align:right;color:#1e40af;border-left:2px solid #cbd5e1;">${pctF(reviewTotal, total)}</td>
+        ${cellNum(row.blockExReview,     {color:'#92400e'})}
+        ${cellNum(row.blockExManUse,     {color:'#92400e', borderRight:true})}
+        <td style="text-align:right;font-weight:700;color:#1d4ed8;">${reviewTotal.toLocaleString()}</td>
+        <td style="text-align:right;color:#1d4ed8;border-left:2px solid #cbd5e1;">${pctF(reviewTotal, total)}</td>
         ${cellNum(row.review0Chg,  {color:'#d97706', borderLeft:true})}
         ${cellNum(row.reviewLow,   {color:'#d97706'})}
         ${cellNum(row.reviewManUse,{color:'#3f6212'})}
