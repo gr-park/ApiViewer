@@ -290,25 +290,48 @@
       설정된 모든 레포지토리를 순서대로 추출합니다. pull · 분석 · 저장이 한 묶음으로 진행됩니다.
     </div>
 
+    <!-- 선택 안내/요약 -->
+    <div id="extractSelectHint" style="display:block;margin-top:10px;padding:10px 12px;border:1px dashed #cbd5e1;border-radius:8px;background:#fafbfc;color:#64748b;font-size:12px;line-height:1.6;">
+      상단에서 레포지토리를 선택하세요. 여러 개를 선택하면 <b>선택된 레포만</b> 순차 추출됩니다. (설정값 기반)\n
+      <span style="display:inline-block;margin-top:6px;color:#94a3b8;font-size:11px;">고급(선택)에서 URL 프리픽스/상수치환만 이번 실행에 한해 오버라이드할 수 있습니다.</span>
+    </div>
+    <div id="extractSelectedSummary" style="display:none;margin-top:10px;padding:10px 12px;border:1px solid var(--border);border-radius:8px;background:#f8fafc;font-size:12px;color:#334155;">
+      <b id="extractSelectedCount">0</b>개 레포 선택됨 — 기본값은 레포 설정을 사용합니다.
+    </div>
+    <div id="extractSelectedList" style="display:none;margin-top:10px;border:1px solid var(--border);border-radius:10px;overflow:hidden;background:var(--card);">
+      <div style="padding:10px 12px;background:#f1f5f9;border-bottom:1px solid var(--border);font-size:11px;font-weight:800;color:var(--text-muted);display:flex;align-items:center;justify-content:space-between;gap:10px;">
+        <span>선택 레포 목록</span>
+        <button type="button" class="btn btn-ghost" style="height:28px;padding:4px 10px;font-size:11px;" onclick="toggleAdvancedOverrides()">고급(선택)</button>
+      </div>
+      <div id="extractSelectedRows" style="padding:10px 12px;display:flex;flex-direction:column;gap:8px;"></div>
+      <div id="advancedOverridesWrap" style="display:none;padding:10px 12px;border-top:1px solid var(--border);background:#fafbfc;">
+        <div style="font-size:11px;color:#64748b;line-height:1.6;margin-bottom:8px;">
+          고급 오버라이드(이번 실행만): <b>URL 경로 프리픽스</b> / <b>상수 치환</b>만 레포별로 변경할 수 있습니다.\n
+          빈 값이면 레포 설정값이 그대로 적용됩니다.
+        </div>
+        <div id="advancedOverridesRows" style="display:flex;flex-direction:column;gap:10px;"></div>
+      </div>
+    </div>
+
     <!-- 개별 레포 입력 폼 -->
     <div id="singleRepoForm">
       <div class="config-grid">
         <label class="field">소스 경로 (ROOT_PATH) *
-          <input id="rootPath" type="text" oninput="autoFillRepoName()">
+          <input id="rootPath" type="text" oninput="autoFillRepoName()" readonly>
         </label>
         <label class="field">레포지토리명 (DB 저장 키)
-          <input id="repositoryName" type="text">
+          <input id="repositoryName" type="text" readonly>
         </label>
         <label class="field">도메인 (DOMAIN)
-          <input id="domain" type="text">
+          <input id="domain" type="text" readonly>
         </label>
         <label class="field">URL 경로 프리픽스
-          <input id="apiPathPrefix" type="text">
+          <input id="apiPathPrefix" type="text" readonly>
         </label>
       </div>
       <div class="config-row2">
         <label class="field">상수 치환 (PATH_CONSTANTS)
-          <input id="pathConstants" type="text">
+          <input id="pathConstants" type="text" readonly>
         </label>
         <button class="btn btn-blue" id="extractBtn" onclick="doExtract()">추출 시작</button>
       </div>
@@ -526,6 +549,9 @@
   window._repoConfigSel = null;   // URL 분석 추출 (singleMode + ALL)
   window._mockAnRepoSel = null;   // Mock 분석데이터 (다중)
   window._mockRepoSel   = null;   // MOCK 호출데이터 (다중)
+  // 레포별 고급 오버라이드 (세션 전용)
+  const extractOverrides = {}; // { [repoName]: { apiPathPrefix:'', pathConstants:'' } }
+  let advancedOpen = false;
 
   // ── 레포 설정 목록 로드 ───────────────────────────────────
   async function initRepoConfigs() {
@@ -547,7 +573,7 @@
         })
       ];
       window._repoConfigSel = MultiSelect.mountCompact('#repoConfigSelect', {
-        singleMode: true,
+        singleMode: false,
         items: extractItems,
         placeholder: '-- 레포 선택 --',
         onChange: () => onRepoSelect()
@@ -601,10 +627,115 @@
     if (!sel.length) return allRepos.map(r => r.repoName);
     return sel;
   }
-  // URL 분석 추출 단일 셀렉터 — value 추출 ('__ALL__' | repoConfigId | '')
-  function getRepoConfigValue() {
+  // URL 분석 추출 셀렉터 — value 배열 추출 ('__ALL__' | repoConfigId ...)
+  function getRepoConfigValues() {
     const sel = window._repoConfigSel ? window._repoConfigSel.getSelected() : [];
-    return sel[0] || '';
+    return Array.isArray(sel) ? sel : [];
+  }
+
+  function setRepoConfigValues(arr) {
+    try {
+      if (window._repoConfigSel && typeof window._repoConfigSel.setSelected === 'function') {
+        window._repoConfigSel.setSelected(arr || []);
+      }
+    } catch(e) {}
+  }
+
+  // __ALL__ 충돌 규칙 정리
+  function normalizeExtractSelection(values) {
+    const v = (values || []).filter(Boolean);
+    const hasAll = v.includes('__ALL__');
+    if (!hasAll) return v;
+    // __ALL__이 있으면 그것만 남김
+    return ['__ALL__'];
+  }
+
+  function toggleAdvancedOverrides() {
+    advancedOpen = !advancedOpen;
+    const wrap = document.getElementById('advancedOverridesWrap');
+    if (wrap) wrap.style.display = advancedOpen ? 'block' : 'none';
+  }
+
+  function renderSelectedReposUI(selectedIds) {
+    const hint = document.getElementById('extractSelectHint');
+    const sum = document.getElementById('extractSelectedSummary');
+    const list = document.getElementById('extractSelectedList');
+    const rows = document.getElementById('extractSelectedRows');
+    const advRows = document.getElementById('advancedOverridesRows');
+    const countEl = document.getElementById('extractSelectedCount');
+
+    const sel = normalizeExtractSelection(selectedIds);
+    const isAll = sel.includes('__ALL__');
+
+    // all mode
+    document.getElementById('allRepoInfo').style.display   = isAll ? 'block' : 'none';
+    document.getElementById('allRepoBtn').style.display    = isAll ? 'block' : 'none';
+    document.getElementById('singleRepoForm').style.display = 'none';
+
+    if (!sel.length) {
+      if (hint) hint.style.display = 'block';
+      if (sum) sum.style.display = 'none';
+      if (list) list.style.display = 'none';
+      return;
+    }
+
+    if (hint) hint.style.display = 'none';
+    if (sum) sum.style.display = 'block';
+    if (list) list.style.display = isAll ? 'none' : 'block';
+    if (countEl) countEl.textContent = isAll ? '전체' : String(sel.length);
+
+    if (isAll) return;
+
+    // 선택된 repoConfig 찾기
+    const picked = sel
+      .map(id => allRepos.find(r => String(r.id) === String(id)))
+      .filter(Boolean);
+
+    if (rows) {
+      rows.innerHTML = picked.map(r => {
+        const lower = (r.repoName || '').toLowerCase();
+        const title = r.businessName ? `${r.businessName} | ${lower}` : lower;
+        return `
+          <div style="display:flex;gap:10px;align-items:center;justify-content:space-between;border:1px solid var(--border);border-radius:10px;padding:8px 10px;background:var(--card);">
+            <div style="display:flex;flex-direction:column;gap:3px;min-width:0;">
+              <div style="font-weight:800;color:var(--text);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${esc(title)}">${esc(title)}</div>
+              <div style="font-size:11px;color:var(--text-muted);font-family:Consolas,monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${esc(r.rootPath||'')}">ROOT_PATH: ${esc(r.rootPath||'-')}</div>
+            </div>
+            <div style="font-size:11px;color:#64748b;white-space:nowrap;">설정값 적용</div>
+          </div>`;
+      }).join('');
+    }
+
+    if (advRows) {
+      advRows.innerHTML = picked.map(r => {
+        const ov = extractOverrides[r.repoName] || {};
+        const v1 = ov.apiPathPrefix ?? '';
+        const v2 = ov.pathConstants ?? '';
+        return `
+          <div style="border:1px solid var(--border);border-radius:12px;padding:10px 12px;background:var(--card);">
+            <div style="font-size:12px;font-weight:800;color:var(--text);margin-bottom:8px;">${esc(r.repoName)}</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+              <label class="field" style="text-transform:none;letter-spacing:0;">
+                URL 경로 프리픽스 (임시)
+                <input type="text" value="${esc(v1)}" placeholder="${esc(r.apiPathPrefix||'')}" oninput="setExtractOverride('${esc(r.repoName)}','apiPathPrefix',this.value)">
+              </label>
+              <label class="field" style="text-transform:none;letter-spacing:0;">
+                상수 치환 (임시)
+                <input type="text" value="${esc(v2)}" placeholder="${esc(r.pathConstants||'')}" oninput="setExtractOverride('${esc(r.repoName)}','pathConstants',this.value)">
+              </label>
+            </div>
+          </div>`;
+      }).join('');
+    }
+  }
+
+  function setExtractOverride(repoName, key, value) {
+    if (!repoName) return;
+    if (!extractOverrides[repoName]) extractOverrides[repoName] = { apiPathPrefix:'', pathConstants:'' };
+    const v = (value == null) ? '' : String(value);
+    if (key === 'apiPathPrefix') extractOverrides[repoName].apiPathPrefix = v;
+    if (key === 'pathConstants') extractOverrides[repoName].pathConstants = v;
+  }
   }
 
   // APM 기간 바로가기 버튼
@@ -1033,12 +1164,20 @@
   }
 
   function onRepoSelect() {
-    const val = getRepoConfigValue();
-    const isAll = val === '__ALL__';
-    document.getElementById('allRepoInfo').style.display   = isAll ? 'block' : 'none';
-    document.getElementById('singleRepoForm').style.display = isAll ? 'none' : 'block';
-    document.getElementById('allRepoBtn').style.display    = isAll ? 'block' : 'none';
-    if (!isAll && val) loadRepoConfig(val);
+    const raw = getRepoConfigValues();
+    const normalized = normalizeExtractSelection(raw);
+    // __ALL__ 규칙 반영 (필요 시 선택값 강제 정리)
+    if (normalized.length !== raw.length || (normalized[0] !== raw[0])) {
+      setRepoConfigValues(normalized);
+    }
+    // UI 렌더
+    renderSelectedReposUI(normalized);
+    // 단일 선택이면 설정값을 읽기전용 폼에도 반영(참고용)
+    const isAll = normalized.includes('__ALL__');
+    if (!isAll && normalized.length === 1) {
+      loadRepoConfig(normalized[0]);
+      document.getElementById('singleRepoForm').style.display = 'block';
+    }
   }
 
   function loadRepoConfig(id) {
@@ -1060,7 +1199,7 @@
   let progressTimer = null;
 
   async function doExtract() {
-    const selVal = getRepoConfigValue();
+    const selected = normalizeExtractSelection(getRepoConfigValues());
 
     // 초기화
     lastLogCount = 0;
@@ -1069,7 +1208,12 @@
     clearLogs();
     hideResult();
 
-    if (selVal === '__ALL__') {
+    if (!selected.length) {
+      showToast('레포지토리를 선택하세요.', 'error');
+      return;
+    }
+
+    if (selected.includes('__ALL__')) {
       const repos = allRepos.filter(r => r.rootPath);
       if (repos.length === 0) { showToast('추출할 레포지토리가 없습니다.', 'error'); return; }
 
@@ -1108,34 +1252,61 @@
       addLocalLog('INFO', `전체 추출 종료`);
 
     } else {
-      const rootPath = document.getElementById('rootPath').value.trim();
-      if (!rootPath) { showToast('소스 경로를 입력하세요.', 'error'); return; }
+      // 선택 레포만 순차 추출
+      const picked = selected
+        .map(id => allRepos.find(r => String(r.id) === String(id)))
+        .filter(Boolean);
+      if (picked.length === 0) { showToast('선택된 레포 설정을 찾지 못했습니다.', 'error'); return; }
+      const missing = picked.filter(r => !r.rootPath).map(r => r.repoName);
+      if (missing.length) { showToast(`ROOT_PATH 미설정 레포: ${missing.join(', ')}`, 'error'); return; }
 
       setExtracting(true);
-      const repoName = document.getElementById('repositoryName').value.trim();
-
+      addLocalLog('INFO', `선택 추출 시작 — ${picked.length}개 레포지토리`);
+      let totalSaved = 0;
+      let errorCount = 0;
+      overallProgress = { completed: 0, total: picked.length };
       try {
-        const result = await extractOneRepo(
-          rootPath, repoName,
-          document.getElementById('domain').value.trim(),
-          document.getElementById('apiPathPrefix').value.trim(),
-          document.getElementById('gitBinPath').value.trim(),
-          document.getElementById('pathConstants').value.trim()
-        );
-        if (result.error) {
-          showResult('fail', `추출 오류: ${result.error}`);
-        } else {
-          let msg = result.savedCount >= 0
-            ? `추출 완료 — ${result.savedCount}개 URL 저장`
-            : `추출 완료`;
-          if ((result.statusRevertedCount || 0) > 0) {
-            msg += `, 차단대상→사용 전환 ${result.statusRevertedCount}건 (현업검토결과=차단대상 제외)`;
+        for (let i = 0; i < picked.length; i++) {
+          const r = picked[i];
+          overallProgress.completed = i;
+          setRepoLabel(`레포 ${i+1}/${picked.length}: ${r.repoName}`);
+          addLocalLog('INFO', `── ${r.repoName} 추출 시작 (${i+1}/${picked.length}) ──`);
+          const ov = extractOverrides[r.repoName] || {};
+          const apiPathPrefix = (ov.apiPathPrefix != null && String(ov.apiPathPrefix).trim() !== '')
+            ? String(ov.apiPathPrefix).trim()
+            : (r.apiPathPrefix || '');
+          const pathConstants = (ov.pathConstants != null && String(ov.pathConstants).trim() !== '')
+            ? String(ov.pathConstants).trim()
+            : (r.pathConstants || '');
+          try {
+            const result = await extractOneRepo(
+              r.rootPath, r.repoName,
+              r.domain || '',
+              apiPathPrefix,
+              r.gitBinPath || 'git',
+              pathConstants
+            );
+            if (result.savedCount >= 0) totalSaved += result.savedCount;
+            if (result.error) errorCount++;
+          } catch(e) {
+            addLocalLog('ERROR', `${r.repoName} 추출 실패: ${e.message}`);
+            errorCount++;
           }
-          showResult('ok', msg);
         }
+        overallProgress.completed = picked.length;
+        document.getElementById('progFill').style.width = '100%';
+        document.getElementById('progPct').textContent = '100%';
+        overallProgress = null;
+        setRepoLabel('');
+        if (errorCount > 0) {
+          showResult('fail', `선택 추출 완료 — 성공 ${picked.length - errorCount}개, 실패 ${errorCount}개, 총 ${totalSaved}개 저장`);
+        } else {
+          showResult('ok', `선택 추출 완료 — ${picked.length}개 레포, 총 ${totalSaved}개 URL 저장`);
+        }
+        addLocalLog('INFO', `선택 추출 종료`);
       } catch(e) {
-        showResult('fail', `추출 오류: ${e.message}`);
-        addLocalLog('ERROR', e.message);
+        showResult('fail', `선택 추출 오류: ${e.message}`);
+        addLocalLog('ERROR', e.message || String(e));
       }
 
       setExtracting(false);
@@ -1338,9 +1509,9 @@
 
     // 조회 링크
     const actions = document.getElementById('resultActions');
+    const selected = normalizeExtractSelection(getRepoConfigValues());
     const repoName = document.getElementById('repositoryName').value.trim();
-    const selVal = getRepoConfigValue();
-    const viewerUrl = (selVal === '__ALL__' || !repoName)
+    const viewerUrl = (selected.includes('__ALL__') || selected.length !== 1 || !repoName)
       ? '/url-viewer/viewer.html'
       : `/url-viewer/viewer.html?repo=${encodeURIComponent(repoName)}`;
     actions.innerHTML = `<a class="link-viewer" href="${viewerUrl}">URL분석현황 →</a>`;
