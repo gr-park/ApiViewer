@@ -297,9 +297,9 @@ public class ApiStorageService {
     /** 이력 항목 구분자 */
     private static final String CHANGE_LOG_DELIM = " | ";
 
-    private void appendChangeLog(ApiRecord r, String msg) {
-        r.setStatusChanged(true);
-        String existing = r.getStatusChangeLog();
+    /** 상태변경 이력 텍스트 append + FIFO 트리밍 (컨트롤러 단건 수정 등에서 재사용). */
+    public static String appendChangeLogText(String existing, String msg) {
+        if (msg == null || msg.isBlank()) return existing;
         String combined = (existing != null && !existing.isEmpty()) ? existing + CHANGE_LOG_DELIM + msg : msg;
         // 최근 MAX_CHANGE_LOG_ENTRIES 개만 보존 (FIFO 트리밍)
         if (combined.contains(CHANGE_LOG_DELIM)) {
@@ -314,7 +314,13 @@ public class ApiStorageService {
                 combined = sb.toString();
             }
         }
-        r.setStatusChangeLog(combined);
+        return combined;
+    }
+
+    private void appendChangeLog(ApiRecord r, String msg) {
+        r.setStatusChanged(true);
+        String existing = r.getStatusChangeLog();
+        r.setStatusChangeLog(appendChangeLogText(existing, msg));
     }
 
     /**
@@ -400,6 +406,7 @@ public class ApiStorageService {
                 }
 
                 if (fields.containsKey("status")) {
+                    String oldStatus = r.getStatus();
                     String status = fields.get("status") != null ? fields.get("status").toString() : null;
                     if (status == null || status.isBlank()) {
                         r.setStatusOverridden(false);
@@ -410,6 +417,10 @@ public class ApiStorageService {
                         if (MANUAL_STATUSES.contains(status)) {
                             r.setStatusOverridden(true);
                         }
+                    }
+                    String newStatus = r.getStatus();
+                    if (!Objects.equals(oldStatus, newStatus)) {
+                        appendChangeLog(r, "수동상태 " + oldStatus + "→" + newStatus);
                     }
                 }
 

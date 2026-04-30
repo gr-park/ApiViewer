@@ -845,6 +845,7 @@ public class ApiViewController {
 
             boolean anyChanged = false;
             boolean reviewChanged = false;
+            String oldStatusForLog = r.getStatus();
             if (body.containsKey("isNew"))           { r.setNew(!Boolean.FALSE.equals(body.get("isNew")) && Boolean.parseBoolean(String.valueOf(body.get("isNew")))); }
             if (body.containsKey("statusOverridden")) {
                 Object val = body.get("statusOverridden");
@@ -906,6 +907,18 @@ public class ApiViewController {
                 // 현업 검토 필드는 reviewedAt/reviewedIp도 추가로 기록
                 r.setReviewedAt(now);
                 r.setReviewedIp(ip);
+            }
+
+            // 수동 상태 변경 이력 기록 (URL현황 단건 수정)
+            if (body.containsKey("status")) {
+                String newStatusForLog = r.getStatus();
+                if (!java.util.Objects.equals(oldStatusForLog, newStatusForLog)) {
+                    r.setStatusChanged(true);
+                    r.setStatusChangeLog(com.baek.viewer.service.ApiStorageService.appendChangeLogText(
+                            r.getStatusChangeLog(),
+                            "수동상태 " + oldStatusForLog + "→" + newStatusForLog
+                    ));
+                }
             }
 
             recordRepository.save(r);
