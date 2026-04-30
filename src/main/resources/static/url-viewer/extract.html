@@ -258,7 +258,8 @@
     </div>
     <p style="font-size:12px;color:var(--text-muted);margin-bottom:8px;line-height:1.6;">
       URL 경로 / 메소드명 / 컨트롤러명 / 파일경로 / 메소드주석 / 컨트롤러주석 / @ApiOperation / @Description 에서
-      부분일치 (대소문자 무시). fullUrl 은 도메인 false positive 방지로 제외.
+      대소문자 무시 매칭. 영문·숫자만 2~3글자 키워드는 단어 경계(+ 메소드/컨트롤러 camelCase 토큰 일치), 그 외는 부분일치.
+      fullUrl 은 도메인 false positive 방지로 제외.
       매칭 결과는 분석현황의 "테스트용 의심" 컬럼에 자동 표시됩니다.
     </p>
     <label class="field" style="display:block;">

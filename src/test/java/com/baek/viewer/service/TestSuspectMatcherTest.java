@@ -30,6 +30,7 @@ import static org.mockito.Mockito.when;
  *   - null/빈 값 필드는 매칭 대상 제외
  *   - fullUrl 은 매칭 대상에서 제외 (false positive 방지)
  *   - ApiRecord 매칭도 동일 동작
+ *   - 짧은 ASCII 키워드(2~3자): 경계 + 메소드/컨트롤러 camelCase 토큰 일치
  */
 @ExtendWith(MockitoExtension.class)
 class TestSuspectMatcherTest {
@@ -187,5 +188,51 @@ class TestSuspectMatcherTest {
         a.setControllerName("UserController");  // 매칭 안됨
 
         assertThat(matcher.matchFromApiInfo(a)).isNull();
+    }
+
+    @Test
+    @DisplayName("짧은 키워드 dev — cardEvent 는 부분문자열 오탐 없음")
+    void shortKeyword_dev_notInsideCardEvent() {
+        ApiRecord r = new ApiRecord();
+        r.setApiPath("/api/payment");
+        r.setMethodName("cardEvent");
+
+        assertThat(matcher.matchFromRecord(r, List.of("dev"))).isNull();
+    }
+
+    @Test
+    @DisplayName("짧은 키워드 dev — getDevInfo 는 camel 토큰으로 매칭")
+    void shortKeyword_dev_matchesCamelToken_getDevInfo() {
+        ApiRecord r = new ApiRecord();
+        r.setApiPath("/api/payment");
+        r.setMethodName("getDevInfo");
+
+        assertThat(matcher.matchFromRecord(r, List.of("dev"))).isEqualTo("메소드-dev");
+    }
+
+    @Test
+    @DisplayName("짧은 키워드 dev — URL 세그먼트 경계")
+    void shortKeyword_dev_urlSegment() {
+        ApiRecord r = new ApiRecord();
+        r.setApiPath("/api/dev/config");
+        r.setMethodName("getConfig");
+
+        assertThat(matcher.matchFromRecord(r, List.of("dev"))).isEqualTo("URL-dev");
+    }
+
+    @Test
+    @DisplayName("짧은 키워드 dev — cardevent 경로 세그먼트는 비매칭")
+    void shortKeyword_dev_notInCardeventPath() {
+        ApiRecord r = new ApiRecord();
+        r.setApiPath("/api/cardevent/list");
+        r.setMethodName("getList");
+
+        assertThat(matcher.matchFromRecord(r, List.of("dev"))).isNull();
+    }
+
+    @Test
+    @DisplayName("camelCase 토큰 분할 — cardEvent → card, Event")
+    void camelCaseTokens_cardEvent() {
+        assertThat(TestSuspectMatcher.camelCaseTokens("cardEvent")).containsExactly("card", "Event");
     }
 }
