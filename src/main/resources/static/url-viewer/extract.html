@@ -204,6 +204,8 @@
   <script src="/exceljs.min.js"></script>
   <script src="/js/dialog.js"></script>
   <script src="/js/darkmode.js"></script>
+  <!-- MultiSelect/RepoSelect: 본문 인라인에서 initRepoConfigs()가 즉시 실행되므로 head에서 선로드(쿠키삭제·하드리로드 시 레이스 방지) -->
+  <script src="/common/repo-select.js"></script>
 </head>
 <body>
 
@@ -547,7 +549,7 @@
   let allRepos = [];
   let lastLogCount = 0;
   // RepoSelect 인스턴스 (전역 핸들 — value 조회용)
-  window._repoConfigSel = null;   // URL 분석 추출 (singleMode + ALL)
+  window._repoConfigSel = null;   // URL 분석 추출 (MultiSelect 다중 + __ALL__)
   window._mockAnRepoSel = null;   // Mock 분석데이터 (다중)
   window._mockRepoSel   = null;   // MOCK 호출데이터 (다중)
   // 레포별 고급 오버라이드 (세션 전용)
@@ -560,7 +562,7 @@
       const res = await fetch('/api/config/repos');
       allRepos = await res.json();
 
-      // ── ① URL 분석 추출 (단일 선택, "전체 레포 추출" 옵션 포함) ──
+      // ── ① URL 분석 추출 (다중 선택 + "전체 레포 추출" 옵션) ──
       // RepoSelect 는 repoName 만 다루므로 ALL 토큰을 별도 items 모드 항목으로 합성
       // 표기: 영문 repoName 소문자 통일 (식별자는 원본 유지)
       const extractItems = [
@@ -1809,6 +1811,5 @@
 
 <script src="/common/auth.js"></script>
 <script src="/common/nav.js"></script>
-<script src="/common/repo-select.js"></script>
 </body>
 </html>
