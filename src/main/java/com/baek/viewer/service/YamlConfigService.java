@@ -126,6 +126,7 @@ public class YamlConfigService {
                 if (g.getPeriod().getEndDate()   != null) gc.setEndDate(g.getPeriod().getEndDate());
             }
             if (g.getReviewThreshold() != null) gc.setReviewThreshold(g.getReviewThreshold());
+            if (g.getSnapshotRetentionDays() != null) gc.setSnapshotRetentionDays(g.getSnapshotRetentionDays());
             if (g.getPassword() != null) gc.setPassword(g.getPassword());
             if (g.getPageSize() != null) gc.setPageSize(g.getPageSize());
             if (g.getPageNavSize() != null) gc.setPageNavSize(g.getPageNavSize());

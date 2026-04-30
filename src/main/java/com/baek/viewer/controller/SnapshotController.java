@@ -98,9 +98,19 @@ public class SnapshotController {
                                      @RequestParam(required = false, defaultValue = "200") int size,
                                      @RequestParam(required = false) String repo,
                                      @RequestParam(required = false) String status,
+                                     @RequestParam(required = false) String statusGroup,
+                                     @RequestParam(required = false) String httpMethod,
+                                     @RequestParam(required = false) String isDeprecated,
+                                     @RequestParam(required = false) Boolean testSuspect,
+                                     @RequestParam(required = false) Boolean markingIncomplete,
                                      @RequestParam(required = false) String q) {
         Pageable pageable = PageRequest.of(Math.max(0, page), Math.max(1, size));
-        Page<?> p = snapshotRowRepository.pageByFilters(id, blankToNull(repo), blankToNull(status), blankToNull(q), pageable);
+        List<String> repos = null;
+        String r = blankToNull(repo);
+        if (r != null) repos = List.of(r);
+        Page<?> p = snapshotRowRepository.pageByFilters(id, repos,
+                blankToNull(status), blankToNull(statusGroup), blankToNull(httpMethod), blankToNull(isDeprecated),
+                testSuspect, markingIncomplete, blankToNull(q), pageable);
 
         Map<String, Object> resp = new LinkedHashMap<>();
         resp.put("total", p.getTotalElements());

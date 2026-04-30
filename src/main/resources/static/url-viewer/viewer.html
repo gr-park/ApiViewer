@@ -472,7 +472,13 @@
         <label class="field">업무명 | 레포지토리
           <div id="repoSelect"></div>
         </label>
+        <label class="field">기준일자 (스냅샷)
+          <input id="basisDate" type="date" class="date" style="min-width:170px;height:34px;"
+                 title="선택한 날짜 이전(<=) 중 가장 최신 스냅샷을 조회합니다.">
+          <span class="field-hint">비우면 현재 DB 조회</span>
+        </label>
         <button class="btn btn-blue" id="loadBtn" onclick="loadApis()">조회</button>
+        <button class="btn btn-ghost" id="clearBasisBtn" onclick="clearBasisDate()" style="display:none;">현재로</button>
         <button class="btn btn-green" id="excelBtn" onclick="downloadExcel()" style="display:none;">⬇ 엑셀 다운로드</button>
         <span id="uploadGroup" style="display:none;gap:0;">
           <button class="btn" id="excelUploadBtn" onclick="triggerExcelUpload()" style="background:#7c3aed;color:#fff;border-color:#7c3aed;border-radius:6px 0 0 6px;margin:0;">⬆ 엑셀 업로드</button>
@@ -480,6 +486,26 @@
         </span>
         <input type="file" id="excelUploadInput" accept=".xlsx" style="display:none;" onchange="handleExcelUpload(event)">
       </div>
+
+      <!-- 관리자 전용: 스냅샷 비교(diff) -->
+      <div id="compareBar" style="display:none;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-top:10px;padding:10px 12px;border:1px solid #c4b5fd;background:#faf5ff;border-radius:10px;">
+        <div style="font-size:11px;color:#6d28d9;font-weight:800;white-space:nowrap;">스냅샷 비교(관리자)</div>
+        <label class="field">A(From) 기준일자
+          <input id="cmpFromDate" type="date" class="date" style="min-width:160px;height:34px;">
+        </label>
+        <label class="field">B(To) 기준일자
+          <input id="cmpToDate" type="date" class="date" style="min-width:160px;height:34px;">
+        </label>
+        <button class="btn btn-ghost" style="height:34px;" onclick="runSnapshotCompare()">🔎 비교</button>
+        <div style="display:flex;gap:6px;align-items:flex-end;flex-wrap:wrap;">
+          <button class="btn btn-ghost btn-sm" onclick="renderSnapshotCompare('all')">전체</button>
+          <button class="btn btn-ghost btn-sm" onclick="renderSnapshotCompare('new')">➕ 신규</button>
+          <button class="btn btn-ghost btn-sm" onclick="renderSnapshotCompare('deleted')">➖ 삭제</button>
+          <button class="btn btn-ghost btn-sm" onclick="renderSnapshotCompare('changed')">📝 변경</button>
+        </div>
+        <div id="compareMeta" style="font-size:11px;color:var(--text-muted);margin-left:auto;"></div>
+      </div>
+      <div id="compareResult" style="display:none;margin-top:10px;"></div>
 
       <div class="db-meta" id="dbMeta" style="display:none">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
@@ -878,6 +904,21 @@
   let repoConfigMap = {}; // repoName → {team, manager}
   let vPageSize = 200, vPageNavSize = 10, vCurrentPage = 0;
   let reviewThreshold = 3; // default, 서버에서 갱신
+  // 스냅샷 조회 모드
+  let snapshotMode = false;
+  let snapshotId = null;
+  let snapshotMeta = null; // {id, snapshotAt, ...}
+  // 관리자 전용 비교(diff)
+  let cmpCache = null; // {from:{id,snapshotAt,...}, to:{...}, diff:{...}}
+
+  function isSnapshotReadOnly() {
+    return !!(snapshotMode && snapshotId);
+  }
+  function guardWritable(actionLabel) {
+    if (!isSnapshotReadOnly()) return true;
+    showToast(`스냅샷 조회 모드에서는 ${actionLabel || '수정'}할 수 없습니다.`, 'error');
+    return false;
+  }
 
   // 상태 표시 레이블 — DB 값 = 화면 라벨 (9 leaf v2). 별도 매핑 없이 status 그대로 노출.
   // 9 leaf v2: 사용 / 차단완료 /
@@ -1036,6 +1077,25 @@
     const selectedCsv = getSelectedReposCsv();
     const selectedArr = getSelectedRepos();
     try {
+      // 기준일자(스냅샷) 모드 결정 및 resolve
+      const basis = (document.getElementById('basisDate')?.value || '').trim();
+      snapshotMode = !!basis;
+      snapshotId = null;
+      snapshotMeta = null;
+      document.getElementById('clearBasisBtn').style.display = snapshotMode ? 'inline-block' : 'none';
+      if (snapshotMode) {
+        const p = new URLSearchParams();
+        p.set('date', basis);
+        if (selectedArr.length === 1) p.set('repository', selectedArr[0]);
+        else if (selectedArr.length > 1) p.set('repositories', selectedArr.join(','));
+        const rr = await fetch('/api/snapshot-view/resolve?' + p.toString());
+        const rd = await rr.json();
+        if (!rr.ok) throw new Error(rd.error || '스냅샷 resolve 실패');
+        snapshotId = rd.id;
+        snapshotMeta = rd;
+        // 알림/메타 표시용: maxAnalyzedAt를 스냅샷 시각으로 사용
+        if (rd.snapshotAt) maxAnalyzedAt = rd.snapshotAt;
+      }
       // 카운트 + 첫 페이지 병렬
       const [countsOk, pageOk] = await Promise.all([
         loadCounts(selectedCsv),
@@ -1056,7 +1116,10 @@
       document.getElementById('dbMeta').style.display = 'flex';
       document.getElementById('metaRepo').textContent =
         selectedArr.length === 0 ? '전체' : (selectedArr.length === 1 ? selectedArr[0] : `${selectedArr.length}개 레포`);
-      document.getElementById('metaDate').textContent = fmtDt(maxAnalyzedAt);
+      document.getElementById('metaDate').textContent =
+        snapshotMode && snapshotMeta && snapshotMeta.snapshotAt
+          ? `스냅샷 ${fmtDt(snapshotMeta.snapshotAt)}`
+          : fmtDt(maxAnalyzedAt);
       document.getElementById('metaTotal').textContent = serverCounts ? (serverCounts.total || 0) : serverTotal;
       document.getElementById('excelBtn').style.display = 'inline-block';
       showToast(`${serverTotal.toLocaleString()}개 URL 조회 완료`, 'success');
@@ -1092,6 +1155,7 @@
   // ── 엑셀 업로드 ──────────────────────────────────────────────
   function triggerExcelUpload() {
     if (!isAdmin()) { showToast('관리자 권한이 필요합니다.', 'error'); return; }
+    if (!guardWritable('엑셀 업로드')) return;
     document.getElementById('excelUploadInput').click();
   }
 
@@ -1100,6 +1164,7 @@
     evt.target.value = '';
     if (!file) return;
     if (!isAdmin()) { showToast('관리자 권한이 필요합니다.', 'error'); return; }
+    if (!guardWritable('엑셀 업로드')) return;
     showToast('엑셀 파싱 중...', 'info');
     try {
       const ab = await file.arrayBuffer();
@@ -1255,6 +1320,17 @@
     filterTable({immediate: true, page: 0});
   }
 
+  function clearBasisDate() {
+    const el = document.getElementById('basisDate');
+    if (el) el.value = '';
+    snapshotMode = false;
+    snapshotId = null;
+    snapshotMeta = null;
+    document.getElementById('clearBasisBtn').style.display = 'none';
+    showToast('현재 DB 조회로 전환합니다.', 'info');
+    loadApis();
+  }
+
   function resetAllFilters(evt) {
     // summary 클릭(토글)과 분리: 버튼 클릭 시 접기/펼치기 토글 방지
     if (evt) { evt.preventDefault(); evt.stopPropagation(); }
@@ -1294,11 +1370,15 @@
     if (uploadedIdsFilter) return true;
     try {
       const list = (reposCsv || '').split(',').filter(Boolean);
-      let url = '/api/db/apis/counts';
-      if (list.length === 1) {
-        url += '?repository=' + encodeURIComponent(list[0]);
-      } else if (list.length > 1) {
-        url += '?repositories=' + encodeURIComponent(list.join(','));
+      let url;
+      if (snapshotMode && snapshotId) {
+        url = `/api/snapshot-view/${snapshotId}/counts`;
+        if (list.length === 1) url += '?repository=' + encodeURIComponent(list[0]);
+        else if (list.length > 1) url += '?repositories=' + encodeURIComponent(list.join(','));
+      } else {
+        url = '/api/db/apis/counts';
+        if (list.length === 1) url += '?repository=' + encodeURIComponent(list[0]);
+        else if (list.length > 1) url += '?repositories=' + encodeURIComponent(list.join(','));
       }
       const res = await fetch(url);
       if (!res.ok) return false;
@@ -1364,11 +1444,15 @@
     if (window._deployUnscheduledFilter) params.set('deployUnscheduled', 'true');
 
     // activeFilter → status 또는 alert 또는 method/deprecated
-    if (activeFilter === 'new')           params.set('alert', 'new');
-    else if (activeFilter === 'changed')  params.set('alert', 'changed');
-    else if (activeFilter === 'reviewed') params.set('alert', 'reviewed');
-    else if (activeFilter === 'deleted')  params.set('alert', 'deleted');
-    else if (activeFilter === 'marking-incomplete') params.set('alert', 'marking-incomplete');
+    if (!snapshotMode) {
+      if (activeFilter === 'new')           params.set('alert', 'new');
+      else if (activeFilter === 'changed')  params.set('alert', 'changed');
+      else if (activeFilter === 'reviewed') params.set('alert', 'reviewed');
+      else if (activeFilter === 'deleted')  params.set('alert', 'deleted');
+      else if (activeFilter === 'marking-incomplete') params.set('alert', 'marking-incomplete');
+    } else {
+      if (activeFilter === 'marking-incomplete') params.set('markingIncomplete', 'true');
+    }
     else if (activeFilter === 'testSuspect') params.set('testSuspect', 'true');
     else if (activeFilter === 'deprecated') params.set('isDeprecated', 'Y');
     else if (activeFilter.startsWith('method:')) params.set('httpMethod', activeFilter.slice(7));
@@ -1429,7 +1513,11 @@
         });
       } else {
         const params = buildListParams(pageIdx);
-        res = await fetch('/api/db/apis?' + params.toString(), { signal: pageLoadCtrl.signal });
+        if (snapshotMode && snapshotId) {
+          res = await fetch(`/api/snapshot-view/${snapshotId}/records?` + params.toString(), { signal: pageLoadCtrl.signal });
+        } else {
+          res = await fetch('/api/db/apis?' + params.toString(), { signal: pageLoadCtrl.signal });
+        }
       }
       clearTimeout(timeoutId);
       const data = await res.json();
@@ -1441,7 +1529,7 @@
         return false;
       }
       if (!res.ok) throw new Error(data.error || '서버 오류');
-      allApis      = data.apis || [];
+      allApis      = (snapshotMode && snapshotId) ? (data.records || []) : (data.apis || []);
       filteredApis = allApis;
       serverTotal  = data.total || 0;
       vCurrentPage = data.page || 0;
@@ -1896,6 +1984,7 @@
   }
 
   async function bulkClearStatusChange() {
+    if (!guardWritable('알림 플래그 해제')) return;
     // 선택된 항목 중 알림 플래그가 있는 레코드 (신규/상태변경/삭제)
     // 서버 페이지 모드에서는 allApis 가 현재 페이지만 포함하므로, 선택된 전체 ID 를 그대로 전송.
     const targetIds = Array.from(selectedIds);
@@ -1920,6 +2009,7 @@
 
   async function clearNewFlag(event, id) {
     event.stopPropagation();
+    if (!guardWritable('신규 확인')) return;
     try {
       const res = await fetch(`/api/db/record/${id}`, { method:'PATCH', headers:{'Content-Type':'application/json'}, body:JSON.stringify({isNew:false}) });
       const data = await res.json().catch(() => ({}));
@@ -1931,6 +2021,7 @@
 
   async function clearStatusFlag(event, id) {
     event.stopPropagation();
+    if (!guardWritable('상태변경 확인')) return;
     if (!await customConfirm('상태변경 플래그를 해제하시겠습니까?')) return;
     try {
       const res = await fetch('/api/db/clear-status-change', { method:'PATCH', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ids:[id]}) });
@@ -1951,6 +2042,7 @@
   // ── 인라인 편집 (비고, 팀, 담당자) ────────────────────────
   // ── 상태확정 토글 ────────────────────────────────────────
   async function bulkLock(lock) {
+    if (!guardWritable('상태확정 변경')) return;
     if (selectedIds.size === 0) { showToast('선택된 항목이 없습니다.','error'); return; }
     // 서버에서 차단완료 건은 자동으로 건너뜀 — 전체 선택 ID 그대로 전송
     const ids = Array.from(selectedIds);
@@ -1966,6 +2058,7 @@
   }
 
   async function toggleLock(id, lock) {
+    if (!guardWritable('상태확정 변경')) return;
     try {
       await fetch('/api/db/status', { method:'PATCH', headers:{'Content-Type':'application/json'},
         body:JSON.stringify({ ids:[id], statusOverridden: lock }) });
@@ -1976,6 +2069,7 @@
 
   async function unblockRecord(id) {
     if (!isAdmin()) { showToast('관리자 권한이 필요합니다.', 'error'); return; }
+    if (!guardWritable('상태 변경')) return;
     if (!await customConfirm('차단완료 상태를 해제하고 "사용"으로 변경하시겠습니까?\n(다음 분석 시 조건에 따라 자동 재지정될 수 있습니다.)')) return;
     try {
       const res = await fetch(`/api/db/record/${id}`, { method:'PATCH',
@@ -1989,6 +2083,7 @@
 
   async function bulkDeleteRecords() {
     if (!isAdmin()) { showToast('관리자 권한이 필요합니다.', 'error'); return; }
+    if (!guardWritable('레코드 삭제')) return;
     const ids = Array.from(selectedIds);
     if (!ids.length) { showToast('선택된 항목이 없습니다.', 'error'); return; }
 
@@ -2025,6 +2120,7 @@
   }
 
   function editField(td, id, field) {
+    if (!guardWritable('인라인 편집')) return;
     if (td.querySelector('input, textarea')) return;
     // descriptionOverride 는 실제 오버라이드 값(없으면 빈 문자열)을 초기값으로 사용
     let old;
@@ -2054,6 +2150,17 @@
     if (el.select) el.select();
   }
   async function saveFieldInline(input, id, field) {
+    if (!guardWritable('인라인 저장')) {
+      // 취소/복원
+      const td0 = input.parentElement;
+      const origHtml0 = td0?.dataset?.origHtml;
+      const old0 = td0?.dataset?.oldVal || '';
+      if (td0) {
+        if (origHtml0 !== undefined) td0.innerHTML = origHtml0;
+        else td0.textContent = old0;
+      }
+      return;
+    }
     const td = input.parentElement;
     const old = td.dataset.oldVal || '';
     const origHtml = td.dataset.origHtml;
@@ -2995,6 +3102,10 @@
 
   // ── adminFetch 헬퍼 (X-Admin-Token 자동 포함) ─────────────
   async function adminFetch(url, options = {}) {
+    const m = (options.method || 'GET').toUpperCase();
+    if (m !== 'GET' && !guardWritable('변경 작업')) {
+      throw new Error('readonly');
+    }
     options.headers = Object.assign({
       'Content-Type': 'application/json',
       'X-Admin-Token': sessionStorage.getItem('adminToken') || ''
@@ -3277,6 +3388,8 @@
     const _dg = document.getElementById('bulkDeleteGroup'); if(_dg) _dg.style.display = admin ? 'inline-flex' : 'none';
     const _ug = document.getElementById('uploadGroup'); if(_ug) _ug.style.display = admin ? 'inline-flex' : 'none';
     const _jg = document.getElementById('jiraBulkGroup'); if(_jg) _jg.style.display = admin ? '' : 'none';
+    const _cb = document.getElementById('compareBar'); if (_cb) _cb.style.display = admin ? 'flex' : 'none';
+    const _cr = document.getElementById('compareResult'); if (_cr && !admin) _cr.style.display = 'none';
     if (typeof renderRows === 'function' && filteredApis.length) renderRows(filteredApis);
   }
   async function toggleAdmin() {
@@ -3293,6 +3406,122 @@
   applyAdminUI();
 
   initRepos();
+
+  async function runSnapshotCompare() {
+    if (!isAdmin()) { showToast('관리자 권한이 필요합니다.', 'error'); return; }
+    const a = (document.getElementById('cmpFromDate')?.value || '').trim();
+    const b = (document.getElementById('cmpToDate')?.value || '').trim();
+    if (!a || !b) { showToast('A/B 기준일자를 모두 선택하세요.', 'error'); return; }
+
+    const selectedArr = getSelectedRepos();
+    const pA = new URLSearchParams(); pA.set('date', a);
+    const pB = new URLSearchParams(); pB.set('date', b);
+    if (selectedArr.length === 1) { pA.set('repository', selectedArr[0]); pB.set('repository', selectedArr[0]); }
+    else if (selectedArr.length > 1) { pA.set('repositories', selectedArr.join(',')); pB.set('repositories', selectedArr.join(',')); }
+
+    try {
+      showToast('스냅샷 resolve 중...', 'info');
+      const [ra, rb] = await Promise.all([
+        fetch('/api/snapshot-view/resolve?' + pA.toString()),
+        fetch('/api/snapshot-view/resolve?' + pB.toString())
+      ]);
+      const da = await ra.json();
+      const db = await rb.json();
+      if (!ra.ok) throw new Error(da.error || 'A resolve 실패');
+      if (!rb.ok) throw new Error(db.error || 'B resolve 실패');
+
+      const diffUrl = `/api/snapshots/diff?fromId=${encodeURIComponent(da.id)}&toId=${encodeURIComponent(db.id)}&mode=all&limit=50000`;
+      showToast('diff 계산 중...', 'info');
+      const diffRes = await fetch(diffUrl, {
+        headers: { 'X-Admin-Token': sessionStorage.getItem('adminToken') || '' }
+      });
+      const diffData = await diffRes.json();
+      if (!diffRes.ok) throw new Error(diffData.error || 'diff 실패');
+
+      cmpCache = { from: da, to: db, diff: diffData };
+      renderSnapshotCompare('all');
+      showToast('diff 완료', 'success');
+    } catch (e) {
+      showToast('비교 실패: ' + (e.message || ''), 'error');
+    }
+  }
+
+  function renderSnapshotCompare(mode) {
+    if (!isAdmin()) return;
+    const wrap = document.getElementById('compareResult');
+    const meta = document.getElementById('compareMeta');
+    if (!cmpCache || !cmpCache.diff) {
+      if (wrap) wrap.style.display = 'none';
+      if (meta) meta.textContent = '';
+      return;
+    }
+    const d = cmpCache.diff;
+    const counts = d.counts || {};
+    if (meta) {
+      meta.textContent =
+        `A=${cmpCache.from.id}(${fmtDt(cmpCache.from.snapshotAt)}) → B=${cmpCache.to.id}(${fmtDt(cmpCache.to.snapshotAt)})  |  신규 ${counts.new||0} / 삭제 ${counts.deleted||0} / 변경 ${counts.changed||0}` +
+        (d.truncated ? '  |  일부만 표시됨(limit)' : '');
+    }
+    if (!wrap) return;
+    wrap.style.display = 'block';
+
+    const taggedAll = []
+      .concat((d.new || []).map(x => Object.assign({ _cmpKind: 'NEW' }, x)))
+      .concat((d.deleted || []).map(x => Object.assign({ _cmpKind: 'DELETED' }, x)))
+      .concat((d.changed || []).map(x => Object.assign({ _cmpKind: 'CHANGED' }, x)));
+    const rows = (mode === 'new') ? (d.new || []).map(x => Object.assign({ _cmpKind: 'NEW' }, x))
+              : (mode === 'deleted') ? (d.deleted || []).map(x => Object.assign({ _cmpKind: 'DELETED' }, x))
+              : (mode === 'changed') ? (d.changed || []).map(x => Object.assign({ _cmpKind: 'CHANGED' }, x))
+              : taggedAll;
+
+    const title = mode === 'new' ? '신규(NEW)'
+                : mode === 'deleted' ? '삭제(DELETED)'
+                : mode === 'changed' ? '변경(CHANGED)'
+                : '전체(ALL)';
+
+    const head = `
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+        <div style="font-weight:800;color:#6d28d9;">diff 결과 — ${title}</div>
+        <div style="font-size:11px;color:var(--text-muted);">표시는 key 중심(레포/메소드/apiPath)입니다.</div>
+      </div>`;
+
+    const tableHead = `
+      <table style="width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--border);border-radius:10px;overflow:hidden;">
+        <thead>
+          <tr style="background:#f8fafc;">
+            <th style="text-align:left;padding:8px 10px;font-size:11px;color:var(--text-muted);border-bottom:1px solid var(--border);white-space:nowrap;">구분</th>
+            <th style="text-align:left;padding:8px 10px;font-size:11px;color:var(--text-muted);border-bottom:1px solid var(--border);white-space:nowrap;">repo</th>
+            <th style="text-align:left;padding:8px 10px;font-size:11px;color:var(--text-muted);border-bottom:1px solid var(--border);white-space:nowrap;">method</th>
+            <th style="text-align:left;padding:8px 10px;font-size:11px;color:var(--text-muted);border-bottom:1px solid var(--border);white-space:nowrap;">apiPath</th>
+            <th style="text-align:left;padding:8px 10px;font-size:11px;color:var(--text-muted);border-bottom:1px solid var(--border);white-space:nowrap;">변경요약</th>
+          </tr>
+        </thead>
+        <tbody>`;
+    const tableBody = rows.slice(0, 5000).map(r => {
+      const kind = r._cmpKind || (r.changes ? 'CHANGED' : 'CHANGED');
+      const repo = r.repositoryName || r.repo || '';
+      const httpMethod = r.httpMethod || r.method || '';
+      const apiPath = r.apiPath || '';
+      let summary = '';
+      if (r.changes) {
+        const keys = Object.keys(r.changes);
+        summary = keys.slice(0, 6).join(', ') + (keys.length > 6 ? ` (+${keys.length-6})` : '');
+      } else if (r.old && r.new) {
+        summary = 'changed';
+      }
+      return `<tr style="border-bottom:1px solid var(--border);">
+        <td style="padding:8px 10px;font-size:11px;white-space:nowrap;">
+          <span style="display:inline-block;padding:1px 7px;border-radius:999px;border:1px solid var(--border);background:${kind==='NEW'?'#ecfccb':kind==='DELETED'?'#fee2e2':'#e0f2fe'};color:${kind==='NEW'?'#365314':kind==='DELETED'?'#991b1b':'#1e40af'};font-weight:800;">${kind}</span>
+        </td>
+        <td style="padding:8px 10px;font-size:12px;">${esc(repo)}</td>
+        <td style="padding:8px 10px;font-size:12px;font-family:monospace;">${esc(httpMethod)}</td>
+        <td style="padding:8px 10px;font-size:12px;font-family:monospace;">${esc(apiPath)}</td>
+        <td style="padding:8px 10px;font-size:11px;color:var(--text-muted);">${esc(summary || '-')}</td>
+      </tr>`;
+    }).join('');
+    const tableTail = `</tbody></table>`;
+    wrap.innerHTML = head + tableHead + tableBody + tableTail;
+  }
 </script>
 
 <script src="/common/auth.js"></script>

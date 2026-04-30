@@ -20,6 +20,7 @@ public class ReposYamlConfig {
     public static class GlobalSection {
         private PeriodGlobal period;
         private Integer reviewThreshold;
+        private Integer snapshotRetentionDays;
         private String password;
         private String gitBinPath;
         private Integer pageSize;
@@ -50,6 +51,8 @@ public class ReposYamlConfig {
         public void setPeriod(PeriodGlobal period) { this.period = period; }
         public Integer getReviewThreshold() { return reviewThreshold; }
         public void setReviewThreshold(Integer reviewThreshold) { this.reviewThreshold = reviewThreshold; }
+        public Integer getSnapshotRetentionDays() { return snapshotRetentionDays; }
+        public void setSnapshotRetentionDays(Integer snapshotRetentionDays) { this.snapshotRetentionDays = snapshotRetentionDays; }
         public String getPassword() { return password; }
         public void setPassword(String password) { this.password = password; }
         public String getGitBinPath() { return gitBinPath; }
