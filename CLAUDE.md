@@ -16,7 +16,7 @@ Spring Boot 기반 웹 애플리케이션. Controller 소스를 파싱하여 URL
 
 # 앱 버전 표기(`APP_UI_VERSION`, 캐시·배포 식별용)
 
-표시 위치는 상단 네비 브랜드 뒤(`nav.js`의 `APP_UI_VERSION`, 현재 예: `ver1.4.23`). **화면(`static/**`)만이 아니라 서버 로직·API·배치·DB 처리 등 배포 단위로 동작이 바뀌는 변경이 있으면 반드시 버전을 올린다** — 운영/반입 후 “같은 숫자인데 동작이 다름”을 줄이기 위함. `static/**` 캐시 이슈로 브라우저에서 숫자 확인이 특히 유효하다. 배포·반입 시마다 증가시키는 것을 원칙으로 한다. 로컬 재기동: `sh stop.sh` 후 `sh run.sh`(에이전트는 `run.sh`만 백그라운드 가능, CI·읽기 전용은 생략 가능). 형식 `ver<major>.<minor>.<patch>` — patch 기본 2자리 zero-pad, 100+는 자연 확장(강제 동일 자릿수 패딩 없음). patch=소규모 수정·버그픽스·내부 로직 조정·표시·문구 개선, minor=체감 기능 추가(오르면 patch `01`부터), major=큰 개편·호환(오르면 minor/patch 초기화), 애매하면 patch→minor 보수적. 기동 완료 로그: 동일 버전 문자열+주요 링크(`UiVersionStartupLogger`가 `nav.js`에서 파싱).
+표시 위치는 상단 네비 브랜드 뒤(`nav.js`의 `APP_UI_VERSION`, 현재 예: `ver1.4.35`). **화면(`static/**`)만이 아니라 서버 로직·API·배치·DB 처리 등 배포 단위로 동작이 바뀌는 변경이 있으면 반드시 버전을 올린다** — 운영/반입 후 “같은 숫자인데 동작이 다름”을 줄이기 위함. `static/**` 캐시 이슈로 브라우저에서 숫자 확인이 특히 유효하다. 배포·반입 시마다 증가시키는 것을 원칙으로 한다. 로컬 재기동: `sh stop.sh` 후 `sh run.sh`(에이전트는 `run.sh`만 백그라운드 가능, CI·읽기 전용은 생략 가능). 형식 `ver<major>.<minor>.<patch>` — patch 기본 2자리 zero-pad, 100+는 자연 확장(강제 동일 자릿수 패딩 없음). patch=소규모 수정·버그픽스·내부 로직 조정·표시·문구 개선, minor=체감 기능 추가(오르면 patch `01`부터), major=큰 개편·호환(오르면 minor/patch 초기화), 애매하면 patch→minor 보수적. 기동 완료 로그: 동일 버전 문자열+주요 링크(`UiVersionStartupLogger`가 `nav.js`에서 파싱).
 
 - **에이전트 응답 규칙(운영 편의)**: 이번 작업에서 **`APP_UI_VERSION`을 올렸거나**, 정적 UI(`src/main/resources/static/**`)를 변경한 경우, 에이전트는 **응답 마지막 줄에 반드시 현재 `APP_UI_VERSION`을 표기**한다. 예) `현재 앱 버전: ver1.4.23`
 
@@ -61,7 +61,8 @@ Spring Boot 기반 웹 애플리케이션. Controller 소스를 파싱하여 URL
 
 # 접속 URL
 
-2단 네비(대시보드·URLViewer·EncryptViewer·설정). `nav.js`+`nav.css`, 각 페이지는 `nav-segment`/`nav-page` 메타 + `#nav-container`. 브랜드 클릭→대시보드, `pages: []`면 2단-B 미렌더.
+2단 네비(대시보드·URLViewer·EncryptViewer·설정). `nav.js`+`nav.css`, 각 페이지는 `nav-segment`/`nav-page` 메타 + `#nav-container`. 브랜드 클릭→대시보드, `pages: []`면 2단-B 미렌더. 레포 다건 선택은 공통 `common/repo-select.js`·`repo-select.css` (`RepoSelect.mountCompact` / `mountLarge`) — 패널에서 **키워드 검색**으로 목록만 필터, **적용**으로 현재 키워드에 맞는 항목만 선택(전체/해제는 전체 목록 기준). `url-viewer/viewer.html`(URL현황)도 공통 `RepoSelect.mountCompact`를 사용한다.
+ - **중요(영향범위)**: 레포 선택 UX/로직 변경 시 `common/repo-select.*` 변경이 URL현황(`viewer.html`)에도 직접 영향을 준다.
 
 | URL | 접근 |
 |-----|------|

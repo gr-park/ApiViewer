@@ -12,6 +12,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -85,7 +86,34 @@ public class ConfigController {
     @GetMapping("/repos")
     public ResponseEntity<?> listRepos() {
         log.info("[레포설정 목록 조회] GET /api/config/repos");
-        return ResponseEntity.ok(repoRepo.findAllByOrderByRepoNameAsc());
+        return ResponseEntity.ok(repoRepo.findAllForDisplay());
+    }
+
+    /**
+     * 레포 표시 순서를 일괄 저장.
+     * - payload: 레포 id 배열 (원하는 순서대로)
+     * - 서버가 0..n-1로 연속 displayOrder 를 부여한다 (null은 남기지 않음)
+     */
+    @org.springframework.transaction.annotation.Transactional
+    @PutMapping("/repos/display-order")
+    public ResponseEntity<?> saveRepoDisplayOrder(@RequestBody List<Long> ids) {
+        if (ids == null) ids = List.of();
+        log.info("[레포 표시순서 저장] PUT /api/config/repos/display-order size={}", ids.size());
+        Map<Long, Integer> orderMap = new HashMap<>();
+        for (int i = 0; i < ids.size(); i++) {
+            Long id = ids.get(i);
+            if (id != null && !orderMap.containsKey(id)) {
+                orderMap.put(id, i);
+            }
+        }
+        List<RepoConfig> all = repoRepo.findAll();
+        for (RepoConfig rc : all) {
+            Integer v = orderMap.get(rc.getId());
+            // 목록에 없는 레포는 null 유지 → 정렬 시 맨 아래로 가도록
+            rc.setDisplayOrder(v);
+        }
+        repoRepo.saveAll(all);
+        return ResponseEntity.ok(Map.of("ok", true, "count", ids.size()));
     }
 
     // ── 배치 Git 동기화 경고 (조회 화면 배너용, 공개) ─────────

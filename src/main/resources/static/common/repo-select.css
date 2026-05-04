@@ -72,15 +72,55 @@
   border: 1px solid var(--border);
   border-radius: 6px;
   box-shadow: 0 4px 12px rgba(0,0,0,0.12);
-  min-width: 240px; max-width: 380px;
+  min-width: 260px; max-width: 420px;
   max-height: 340px;
   overflow: hidden;
 }
 .rs-panel.is-open { display: flex; }
 .rs-panel-actions {
-  display: flex; gap: 6px;
+  display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
   padding: 6px 8px;
   border-bottom: 1px solid var(--border);
+}
+.rs-panel-actions .rs-filter {
+  flex: 1;
+  min-width: 100px;
+  padding: 4px 8px;
+  font-size: 11px;
+  font-family: inherit;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--card, var(--card-bg, #fff));
+  color: var(--text);
+  outline: none;
+  box-sizing: border-box;
+}
+.rs-panel-actions .rs-filter:focus {
+  border-color: var(--primary, #3b82f6);
+  box-shadow: 0 0 0 2px rgba(59,130,246,.12);
+}
+.rs-panel-actions .rs-apply,
+.rs-large-header .rs-apply {
+  flex: none;
+  font-size: 11px;
+  padding: 4px 10px;
+  border: 1px solid var(--primary, #3b82f6);
+  border-radius: 8px;
+  background: var(--primary, #3b82f6);
+  color: #fff;
+  cursor: pointer;
+  font-family: inherit;
+  font-weight: 600;
+  white-space: nowrap;
+  box-sizing: border-box;
+}
+.rs-panel-actions .rs-apply:hover,
+.rs-large-header .rs-apply:hover {
+  filter: brightness(1.05);
+}
+.rs-large-header .rs-apply--large {
+  padding: 5px 12px;
+  font-size: 12px;
 }
 .rs-panel-actions .rs-all,
 .rs-panel-actions .rs-none,
@@ -125,12 +165,30 @@
 
 /* Large variant */
 .rs-large-header {
-  display: flex; align-items: center; gap: 8px;
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
   margin-bottom: 8px;
   font-size: 12px;
   color: var(--text-muted);
 }
 .rs-large-header .rs-summary { margin-right: auto; }
+.rs-large-header .rs-filter--large {
+  flex: 1;
+  min-width: 140px;
+  max-width: 280px;
+  padding: 5px 10px;
+  font-size: 12px;
+  font-family: inherit;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--card, var(--card-bg, #fff));
+  color: var(--text);
+  outline: none;
+  box-sizing: border-box;
+}
+.rs-large-header .rs-filter--large:focus {
+  border-color: var(--primary, #3b82f6);
+  box-shadow: 0 0 0 2px rgba(59,130,246,.12);
+}
 .rs-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));

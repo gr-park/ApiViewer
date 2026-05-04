@@ -57,6 +57,33 @@
       .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
   }
 
+  /** 업무명·레포명·표시 라벨·부라벨 부분일치 (대소문자 무시) */
+  function _repoMatchesKeyword(r, rawQuery) {
+    if (rawQuery == null || !String(rawQuery).trim()) return true;
+    const q = String(rawQuery).trim().toLowerCase();
+    const label = formatLabel(r).toLowerCase();
+    const name = lowerName(r.repoName || '');
+    const biz = (r.businessName || '').trim().toLowerCase();
+    const sub = String(r._sublabel || '').toLowerCase();
+    return label.includes(q) || name.includes(q) || biz.includes(q) || sub.includes(q);
+  }
+
+  function _visibleRepos(repos, state) {
+    return (repos || []).filter(r => _repoMatchesKeyword(r, state.filterQuery));
+  }
+
+  /** 현재 키워드에 맞는 항목만 선택(단일 모드는 첫 항목만). 목록 갱신·트리거/요약은 호출 측에서 */
+  function _selectVisibleOnly(state, repos) {
+    const visible = _visibleRepos(repos, state);
+    state.selected.clear();
+    if (state.singleMode) {
+      if (visible[0]) state.selected.add(visible[0].repoName);
+    } else {
+      visible.forEach(r => state.selected.add(r.repoName));
+    }
+    _fire(state);
+  }
+
   async function loadRepos(force) {
     if (_reposCache && !force) return _reposCache;
     if (_reposPromise && !force) return _reposPromise;
@@ -102,6 +129,8 @@
       itemMode: useItems,
       open: false,
       _outsideHandler: null,
+      /** compact/large 패널 키워드 필터 (표시 목록만 좁힘, 전체/해제는 전체 목록 기준) */
+      filterQuery: typeof opts.filterQuery === 'string' ? opts.filterQuery : '',
     };
 
     container.classList.add('repo-select', 'repo-select--' + variant);
@@ -139,6 +168,44 @@
     return instance;
   }
 
+  function _bindCompactItemHandlers(container, state) {
+    container.querySelectorAll('.rs-item').forEach(cb => {
+      cb.addEventListener('change', () => {
+        if (state.singleMode) {
+          state.selected.clear();
+          if (cb.checked) state.selected.add(cb.dataset.repo);
+          container.querySelectorAll('.rs-item').forEach(other => { if (other !== cb) other.checked = false; });
+        } else {
+          if (cb.checked) state.selected.add(cb.dataset.repo);
+          else state.selected.delete(cb.dataset.repo);
+        }
+        _fire(state);
+        _updateCompactTrigger(container, state);
+      });
+    });
+  }
+
+  /** 목록 영역만 갱신 — 키워드 입력 시 포커스 유지 */
+  function _renderCompactListBody(listEl, container, state, repos) {
+    if (!repos.length) {
+      listEl.innerHTML = '<div class="rs-empty">등록된 레포가 없습니다.</div>';
+      return;
+    }
+    const visible = repos.filter(r => _repoMatchesKeyword(r, state.filterQuery));
+    if (!visible.length) {
+      listEl.innerHTML = '<div class="rs-empty">키워드에 맞는 항목이 없습니다.</div>';
+      return;
+    }
+    listEl.innerHTML = visible.map(r => {
+      const checked = state.selected.has(r.repoName) ? 'checked' : '';
+      return `<label class="rs-list-item">
+        <input type="checkbox" class="rs-item" data-repo="${esc(r.repoName)}" ${checked}>
+        <span class="rs-label" title="${esc(formatLabel(r))}">${esc(formatLabel(r))}</span>
+      </label>`;
+    }).join('');
+    _bindCompactItemHandlers(container, state);
+  }
+
   // ── Compact ────────────────────────────────────────────────────
   function _renderCompact(container, state) {
     const repos = state.repos || [];
@@ -156,23 +223,15 @@
         <div class="rs-panel-actions">
           <button type="button" class="rs-all">전체</button>
           <button type="button" class="rs-none">해제</button>
+          <input type="search" class="rs-filter" placeholder="키워드 검색" value="${esc(state.filterQuery)}" autocomplete="off" aria-label="레포 검색">
+          <button type="button" class="rs-apply" title="현재 키워드에 맞는 항목만 선택">적용</button>
         </div>
         <div class="rs-list"></div>
       </div>
     `;
 
     const listEl = container.querySelector('.rs-list');
-    if (!repos.length) {
-      listEl.innerHTML = '<div class="rs-empty">등록된 레포가 없습니다.</div>';
-    } else {
-      listEl.innerHTML = repos.map(r => {
-        const checked = state.selected.has(r.repoName) ? 'checked' : '';
-        return `<label class="rs-list-item">
-          <input type="checkbox" class="rs-item" data-repo="${esc(r.repoName)}" ${checked}>
-          <span class="rs-label" title="${esc(formatLabel(r))}">${esc(formatLabel(r))}</span>
-        </label>`;
-      }).join('');
-    }
+    _renderCompactListBody(listEl, container, state, repos);
 
     const trigger = container.querySelector('.rs-trigger');
     const panel   = container.querySelector('.rs-panel');
@@ -192,6 +251,26 @@
     };
     document.addEventListener('click', state._outsideHandler);
 
+    const filterInput = container.querySelector('.rs-filter');
+    if (filterInput) {
+      filterInput.addEventListener('click', (e) => e.stopPropagation());
+      filterInput.addEventListener('keydown', (e) => e.stopPropagation());
+      filterInput.addEventListener('input', (e) => {
+        e.stopPropagation();
+        state.filterQuery = e.target.value;
+        _renderCompactListBody(listEl, container, state, repos);
+      });
+    }
+    const applyBtn = container.querySelector('.rs-apply');
+    if (applyBtn) {
+      applyBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        _selectVisibleOnly(state, repos);
+        _renderCompactListBody(listEl, container, state, repos);
+        _updateCompactTrigger(container, state);
+      });
+    }
+
     container.querySelector('.rs-all').addEventListener('click', () => {
       state.selected.clear();
       repos.forEach(r => state.selected.add(r.repoName));
@@ -206,22 +285,6 @@
       _renderCompact(container, state);
       container.querySelector('.rs-panel').classList.add('is-open');
       state.open = true;
-    });
-
-    container.querySelectorAll('.rs-item').forEach(cb => {
-      cb.addEventListener('change', () => {
-        if (state.singleMode) {
-          state.selected.clear();
-          if (cb.checked) state.selected.add(cb.dataset.repo);
-          // 다른 체크박스 해제
-          container.querySelectorAll('.rs-item').forEach(other => { if (other !== cb) other.checked = false; });
-        } else {
-          if (cb.checked) state.selected.add(cb.dataset.repo);
-          else state.selected.delete(cb.dataset.repo);
-        }
-        _fire(state);
-        _updateCompactTrigger(container, state);
-      });
     });
   }
 
@@ -233,43 +296,7 @@
     if (el) el.textContent = txt;
   }
 
-  // ── Large ──────────────────────────────────────────────────────
-  function _renderLarge(container, state) {
-    const repos = state.repos || [];
-    container.innerHTML = `
-      <div class="rs-large-header">
-        <span class="rs-summary"></span>
-        <button type="button" class="rs-all">전체선택</button>
-        <button type="button" class="rs-none">전체해제</button>
-      </div>
-      <div class="rs-grid"></div>
-    `;
-
-    const grid = container.querySelector('.rs-grid');
-    if (!repos.length) {
-      grid.innerHTML = '<div class="rs-empty">등록된 레포가 없습니다.</div>';
-    } else {
-      grid.innerHTML = repos.map(r => {
-        const checked = state.selected.has(r.repoName) ? 'checked' : '';
-        return `<label class="rs-grid-item">
-          <input type="checkbox" class="rs-item" data-repo="${esc(r.repoName)}" ${checked}>
-          <span class="rs-label" title="${esc(formatLabel(r))}">${esc(formatLabel(r))}</span>
-        </label>`;
-      }).join('');
-    }
-    _updateLargeSummary(container, state);
-
-    container.querySelector('.rs-all').addEventListener('click', () => {
-      state.selected.clear();
-      repos.forEach(r => state.selected.add(r.repoName));
-      _fire(state);
-      _renderLarge(container, state);
-    });
-    container.querySelector('.rs-none').addEventListener('click', () => {
-      state.selected.clear();
-      _fire(state);
-      _renderLarge(container, state);
-    });
+  function _bindLargeItemHandlers(container, state) {
     container.querySelectorAll('.rs-item').forEach(cb => {
       cb.addEventListener('change', () => {
         if (state.singleMode) {
@@ -283,6 +310,75 @@
         _fire(state);
         _updateLargeSummary(container, state);
       });
+    });
+  }
+
+  function _renderLargeGridBody(grid, container, state, repos) {
+    if (!repos.length) {
+      grid.innerHTML = '<div class="rs-empty">등록된 레포가 없습니다.</div>';
+      return;
+    }
+    const visible = repos.filter(r => _repoMatchesKeyword(r, state.filterQuery));
+    if (!visible.length) {
+      grid.innerHTML = '<div class="rs-empty">키워드에 맞는 항목이 없습니다.</div>';
+      return;
+    }
+    grid.innerHTML = visible.map(r => {
+      const checked = state.selected.has(r.repoName) ? 'checked' : '';
+      return `<label class="rs-grid-item">
+        <input type="checkbox" class="rs-item" data-repo="${esc(r.repoName)}" ${checked}>
+        <span class="rs-label" title="${esc(formatLabel(r))}">${esc(formatLabel(r))}</span>
+      </label>`;
+    }).join('');
+    _bindLargeItemHandlers(container, state);
+  }
+
+  // ── Large ──────────────────────────────────────────────────────
+  function _renderLarge(container, state) {
+    const repos = state.repos || [];
+    container.innerHTML = `
+      <div class="rs-large-header">
+        <span class="rs-summary"></span>
+        <button type="button" class="rs-all">전체선택</button>
+        <button type="button" class="rs-none">전체해제</button>
+        <input type="search" class="rs-filter rs-filter--large" placeholder="키워드 검색" value="${esc(state.filterQuery)}" autocomplete="off" aria-label="레포 검색">
+        <button type="button" class="rs-apply rs-apply--large" title="현재 키워드에 맞는 항목만 선택">적용</button>
+      </div>
+      <div class="rs-grid"></div>
+    `;
+
+    const grid = container.querySelector('.rs-grid');
+    _renderLargeGridBody(grid, container, state, repos);
+    _updateLargeSummary(container, state);
+
+    const filterInput = container.querySelector('.rs-filter');
+    if (filterInput) {
+      filterInput.addEventListener('input', (e) => {
+        state.filterQuery = e.target.value;
+        _renderLargeGridBody(grid, container, state, repos);
+        _updateLargeSummary(container, state);
+      });
+    }
+    const applyBtn = container.querySelector('.rs-apply');
+    if (applyBtn) {
+      applyBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        _selectVisibleOnly(state, repos);
+        _renderLargeGridBody(grid, container, state, repos);
+        _updateLargeSummary(container, state);
+      });
+    }
+
+    container.querySelector('.rs-all').addEventListener('click', () => {
+      state.selected.clear();
+      repos.forEach(r => state.selected.add(r.repoName));
+      _fire(state);
+      _renderLarge(container, state);
+    });
+    container.querySelector('.rs-none').addEventListener('click', () => {
+      state.selected.clear();
+      _fire(state);
+      _renderLarge(container, state);
     });
   }
 

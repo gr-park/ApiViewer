@@ -15,6 +15,13 @@ public class RepoConfig {
     @Column(name = "repo_name", nullable = false, unique = true)
     private String repoName;
 
+    /**
+     * 화면 표시 순서 (null이면 맨 아래로 보내고 repoName 오름차순)
+     * - 설정 화면에서 정렬 변경 시 저장되며, 레포 선택 UI 전체에 적용된다.
+     */
+    @Column(name = "display_order")
+    private Integer displayOrder;
+
     @Column(name = "domain")
     private String domain;
 
@@ -130,6 +137,8 @@ public class RepoConfig {
     public void setId(Long id) { this.id = id; }
     public String getRepoName() { return repoName; }
     public void setRepoName(String repoName) { this.repoName = repoName; }
+    public Integer getDisplayOrder() { return displayOrder; }
+    public void setDisplayOrder(Integer displayOrder) { this.displayOrder = displayOrder; }
     public String getDomain() { return domain; }
     public void setDomain(String domain) { this.domain = domain; }
     public String getRootPath() { return rootPath; }

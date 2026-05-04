@@ -120,33 +120,6 @@
     label.field input[type=date]:focus, .field input[type=date]:focus,
     label.field input[type=number]:focus, .field input[type=number]:focus { border-color: var(--primary); box-shadow: 0 0 0 2px #3b82f620; }
     label.field input[type=date], .field input[type=date] { font-variant-numeric: tabular-nums; }
-    /* URL현황 전용 레포 선택(신규): 다른 페이지와 독립적으로 고정 스타일 */
-    #repoSelect.viewer-repo { position: relative; width: 100%; min-width: 180px; }
-    #repoSelect .vrp-trigger {
-      width: 100%; height: 34px; padding: 7px 10px; border: 1px solid var(--border); border-radius: 6px;
-      background: var(--card); color: var(--text); font-size: 12px; text-align: left; cursor: pointer;
-      display: inline-flex; align-items: center; justify-content: space-between; gap: 8px;
-    }
-    #repoSelect .vrp-trigger:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 2px #3b82f620; }
-    #repoSelect .vrp-trigger-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    #repoSelect .vrp-panel {
-      position: absolute; top: calc(100% + 4px); left: 0; z-index: 2000; display: none;
-      width: 320px; min-width: 240px; max-width: 90vw; max-height: 340px;
-      border: 1px solid var(--border); border-radius: 6px;
-      background: var(--card); box-shadow: 0 4px 12px rgba(0,0,0,.12); overflow: hidden;
-      box-sizing: border-box;
-    }
-    #repoSelect .vrp-panel.open { display: block; }
-    #repoSelect .vrp-actions { display: flex; gap: 6px; padding: 6px 8px; border-bottom: 1px solid var(--border); }
-    #repoSelect .vrp-actions button {
-      font-size: 11px; padding: 3px 10px; border: 1px solid var(--border); border-radius: 10px;
-      background: transparent; color: var(--text); cursor: pointer;
-    }
-    #repoSelect .vrp-list { max-height: 280px; overflow-y: auto; padding: 4px; }
-    #repoSelect .vrp-item { display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-radius: 4px; font-size: 12px; cursor: pointer; min-width: 0; }
-    #repoSelect .vrp-item:hover { background: #f8fafc; }
-    #repoSelect .vrp-cb { flex: none; width: 14px; height: 14px; min-width: 0 !important; padding: 0 !important; margin: 0 !important; border-radius: 3px !important; box-sizing: border-box; }
-    #repoSelect .vrp-label { flex: 1 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-transform: none; letter-spacing: normal; }
     #basisDate { height: 32px; padding: 6px 10px; }
     .btn-green { background: #16a34a; color: #fff; }
     .btn-green:not(:disabled):hover { background: #15803d; }
@@ -1056,115 +1029,7 @@
   let jiraBaseUrl = '';    // Jira base URL (차단근거 티켓 링크용)
   let pageLoadCtrl = null; // 페이지 요청 취소 컨트롤러
 
-  /**
-   * URL현황 전용 레포 선택 컴포넌트.
-   * - selected=[] 이면 "전체 조회"
-   * - 공용 RepoSelect와 API 호환(getSelected/setSelected)으로 기존 로직 영향 최소화
-   */
-  function createViewerRepoPicker(target, opts) {
-    const el = (typeof target === 'string') ? document.querySelector(target) : target;
-    if (!el) return null;
-    const repos = Array.isArray(opts?.repos) ? opts.repos : [];
-    const placeholder = (opts && opts.placeholder) || '(전체 조회)';
-    let selected = new Set(Array.isArray(opts?.selected) ? opts.selected : []);
-    let open = false;
-
-    const esc2 = (s) => String(s == null ? '' : s)
-      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-    const lower = (s) => String(s || '').toLowerCase();
-    const labelOf = (r) => {
-      const biz = String((r && r.businessName) || '').trim();
-      const name = lower((r && r.repoName) || '');
-      return biz ? `${biz} | ${name}` : name;
-    };
-    const triggerText = () => selected.size === 0 ? placeholder : `${selected.size}개 선택`;
-
-    function render() {
-      el.classList.add('viewer-repo');
-      el.innerHTML = `
-        <button type="button" class="vrp-trigger">
-          <span class="vrp-trigger-text">${esc2(triggerText())}</span>
-          <span>▾</span>
-        </button>
-        <div class="vrp-panel${open ? ' open' : ''}">
-          <div class="vrp-actions">
-            <button type="button" class="vrp-all">전체</button>
-            <button type="button" class="vrp-none">해제</button>
-          </div>
-          <div class="vrp-list">
-            ${repos.length === 0
-              ? '<div style="padding:10px;color:var(--text-muted);font-size:11px;text-align:center;">등록된 레포가 없습니다.</div>'
-              : repos.map(r => {
-                  const key = String(r.repoName || '');
-                  const checked = selected.has(key) ? 'checked' : '';
-                  return `<div class="vrp-item" data-repo="${esc2(key)}">
-                    <input type="checkbox" class="vrp-cb" data-repo="${esc2(key)}" ${checked}>
-                    <span class="vrp-label" title="${esc2(labelOf(r))}">${esc2(labelOf(r))}</span>
-                  </div>`;
-                }).join('')
-            }
-          </div>
-        </div>
-      `;
-
-      const trigger = el.querySelector('.vrp-trigger');
-      const panel = el.querySelector('.vrp-panel');
-      if (trigger) {
-        trigger.addEventListener('click', (e) => {
-          e.stopPropagation();
-          open = !open;
-          if (panel) panel.classList.toggle('open', open);
-        });
-      }
-      const allBtn = el.querySelector('.vrp-all');
-      if (allBtn) allBtn.addEventListener('click', () => {
-        selected = new Set(repos.map(r => String(r.repoName || '')));
-        render(); open = true;
-      });
-      const noneBtn = el.querySelector('.vrp-none');
-      if (noneBtn) noneBtn.addEventListener('click', () => {
-        selected.clear();
-        render(); open = true;
-      });
-      el.querySelectorAll('.vrp-cb').forEach(cb => {
-        cb.addEventListener('click', (e) => e.stopPropagation());
-        cb.addEventListener('change', () => {
-          const key = cb.dataset.repo || '';
-          if (cb.checked) selected.add(key); else selected.delete(key);
-          const t = el.querySelector('.vrp-trigger-text');
-          if (t) t.textContent = triggerText();
-        });
-      });
-      el.querySelectorAll('.vrp-item').forEach(row => {
-        row.addEventListener('click', (e) => {
-          if (e.target && (e.target.tagName === 'INPUT')) return;
-          const cb = row.querySelector('.vrp-cb');
-          if (!cb) return;
-          cb.checked = !cb.checked;
-          const key = cb.dataset.repo || '';
-          if (cb.checked) selected.add(key); else selected.delete(key);
-          const t = el.querySelector('.vrp-trigger-text');
-          if (t) t.textContent = triggerText();
-        });
-      });
-    }
-
-    const outside = (e) => {
-      if (!el.contains(e.target)) {
-        open = false;
-        const panel = el.querySelector('.vrp-panel');
-        if (panel) panel.classList.remove('open');
-      }
-    };
-    document.addEventListener('click', outside);
-    render();
-    return {
-      getSelected: () => Array.from(selected),
-      setSelected: (arr) => { selected = new Set(Array.isArray(arr) ? arr : []); render(); },
-      destroy: () => { document.removeEventListener('click', outside); el.innerHTML = ''; }
-    };
-  }
+  // URL현황 레포 선택은 공용 RepoSelect(`common/repo-select.js`)를 사용한다.
 
   // ── 초기화 ────────────────────────────────────────────────
   async function initRepos() {
@@ -1208,10 +1073,10 @@
         repoConfigMap[c.repoName] = { team: c.teamName || '', manager: c.managerName || '', businessName: c.businessName || '', mappings };
       });
 
-      // 업무명|레포명 다중선택 (URL현황 전용 컴포넌트)
+      // 업무명|레포명 다중선택 (공용 RepoSelect)
       const repoListForMount = repos
         .map(r => ({ repoName: r, businessName: (repoConfigMap[r] || {}).businessName || '' }));
-      window._repoSel = createViewerRepoPicker('#repoSelect', {
+      window._repoSel = RepoSelect.mountCompact('#repoSelect', {
         repos: repoListForMount,
         selected: [],
         placeholder: '(전체 조회)'

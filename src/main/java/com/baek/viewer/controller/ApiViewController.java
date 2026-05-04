@@ -186,7 +186,25 @@ public class ApiViewController {
     /** DB 저장된 레포지토리 목록 */
     @GetMapping("/db/repositories")
     public ResponseEntity<?> dbRepositories() {
-        return ResponseEntity.ok(recordRepository.findAllRepositoryNames());
+        List<String> names = recordRepository.findAllRepositoryNames();
+        if (names == null || names.isEmpty()) return ResponseEntity.ok(List.of());
+
+        Map<String, Integer> orderMap = new HashMap<>();
+        for (RepoConfig rc : repoConfigRepository.findAll()) {
+            if (rc == null) continue;
+            String repo = rc.getRepoName();
+            if (repo == null || repo.isBlank()) continue;
+            orderMap.put(repo, rc.getDisplayOrder());
+        }
+
+        Comparator<String> cmp = Comparator
+                .comparing((String r) -> {
+                    Integer v = orderMap.get(r);
+                    return v == null ? Integer.MAX_VALUE : v;
+                })
+                .thenComparing(Comparator.naturalOrder());
+        names = names.stream().sorted(cmp).toList();
+        return ResponseEntity.ok(names);
     }
 
     /** 페이징 미지정 전체 로드 시 최대 행수 — 초과하면 safety cap 적용 */
