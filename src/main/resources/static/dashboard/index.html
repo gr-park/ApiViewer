@@ -341,6 +341,46 @@
     }
     [data-theme="dark"] .batch-git-extract-warn-banner a { color: #fcd34d; }
 
+    /* display:flex 가 native [hidden] 을 덮어써 빈 배너가 보이는 문제 방지 */
+    .batch-block-alert-banner[hidden],
+    .batch-git-extract-warn-banner[hidden] {
+      display: none !important;
+    }
+
+    /* 상태 구분 안내 (URL 현황 섹션 위) */
+    .dist-status-guide {
+      margin: 0 0 14px 0;
+      padding: 10px 12px;
+      border-radius: 8px;
+      border: 1px solid #bae6fd;
+      background: #f0f9ff;
+      font-size: 11px;
+      color: #0c4a6e;
+      line-height: 1.75;
+    }
+    .dist-status-guide-title {
+      font-weight: 800;
+      margin-bottom: 8px;
+      color: #075985;
+    }
+    .dist-status-guide-section {
+      margin-top: 8px;
+      padding-top: 8px;
+      border-top: 1px dashed #7dd3fc;
+    }
+    .dist-status-guide-section:first-of-type {
+      margin-top: 0;
+      padding-top: 0;
+      border-top: 0;
+    }
+    [data-theme="dark"] .dist-status-guide {
+      border-color: #0369a1;
+      background: rgba(12, 74, 110, 0.35);
+      color: #bae6fd;
+    }
+    [data-theme="dark"] .dist-status-guide-title { color: #e0f2fe; }
+    [data-theme="dark"] .dist-status-guide-section { border-top-color: #0c4a6e; }
+
     /* URL 현황: "잔여 ~ ①-② 담당자판단" 컬럼만 외곽 강조 */
     :root { --ov-block-outline: rgba(159,18,57,.45); } /* #9f1239 약하게 */
     /* 기본 셀(border:0 !important)보다 우선하도록 테이블 ID까지 포함해 강제 */
@@ -490,18 +530,6 @@
       </div>
     </div>
 
-    <!-- ── 상태 구분 안내 (9 leaf v2) ── -->
-    <div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:10px 16px;margin-bottom:14px;font-size:11px;color:#0c4a6e;line-height:1.8;">
-      <b>상태 구분 안내</b><br>
-      <span style="background:#dcfce7;padding:1px 6px;border-radius:3px;">사용</span> 실제 또는 현업검토 결과 사용중인 URL &nbsp;|&nbsp;
-      <span style="background:#f1f5f9;padding:1px 6px;border-radius:3px;color:#64748b;">차단완료</span> @Deprecated + javadoc표기 + UnsupportedOperationException<br>
-      <span style="background:#fee2e2;padding:1px 6px;border-radius:3px;color:#991b1b;">①-① 차단대상</span> 호출 0건 + 소스변경 1년 경과 &nbsp;|&nbsp;
-      <span style="background:#ffedd5;padding:1px 6px;border-radius:3px;color:#ea580c;">①-② 담당자 판단</span> IT담당자 검토결과 미사용/업무종료 &nbsp;|&nbsp;
-      <span style="background:#f3e8ff;padding:1px 6px;border-radius:3px;color:#7c3aed;">①-③ 현업요청 제외대상</span> 현업요청 차단 제외<br>
-      <span style="background:#ecfccb;padding:1px 6px;border-radius:3px;color:#3f6212;">①-④/②-③ 사용으로 변경</span> 담당자 수동 판단 &nbsp;|&nbsp;
-      <span style="background:#fef3c7;padding:1px 6px;border-radius:3px;color:#92400e;">②-①/②-② 추가검토대상</span> 호출 0건 + 1년 미만 변경, 호출 1~<span id="guideReviewThreshold">3</span>건 + 1년 경과
-    </div>
-
     <!-- ── 상태 분포 + 당일 배치 요약 ── -->
     <div class="two-col two-col-equal-height" id="dashDistBatchRow">
       <div class="card dash-dist-card">
@@ -539,6 +567,34 @@
             </tbody>
           </table>
         </div>
+      </div>
+    </div>
+
+    <!-- ── 상태 구분 안내 (9 leaf v2) — URL 현황 바로 위 ── -->
+    <div id="distStatusGuide" class="dist-status-guide">
+      <div class="dist-status-guide-title">상태 구분 안내</div>
+      <div>
+        <span style="background:#dcfce7;padding:1px 6px;border-radius:3px;">사용</span> 실제 또는 현업검토 결과 사용중인 URL &nbsp;|&nbsp;
+        <span style="background:#f1f5f9;padding:1px 6px;border-radius:3px;color:#64748b;">차단완료</span> @Deprecated + javadoc표기 + UnsupportedOperationException
+      </div>
+      <div class="dist-status-guide-section">
+        <strong style="color:#991b1b;">차단대상 잔여</strong> <span style="color:var(--text-muted);font-weight:600;">(전체 상태 분포 막대 · 빨간색 구간)</span><br>
+        대시보드에서 <strong>①-① 차단대상</strong>과 <strong>①-② 담당자 판단</strong>을 합친 그룹입니다.<br>
+        <span style="background:#fee2e2;padding:1px 6px;border-radius:3px;color:#991b1b;">①-① 차단대상</span> 호출 0건 + 소스변경 1년 경과 &nbsp;|&nbsp;
+        <span style="background:#ffedd5;padding:1px 6px;border-radius:3px;color:#ea580c;">①-② 담당자 판단</span> IT담당자 검토결과 미사용·업무종료 등 수동 지정
+      </div>
+      <div class="dist-status-guide-section">
+        <strong style="color:#a16207;">차단대상 제외건</strong> <span style="color:var(--text-muted);font-weight:600;">(노란색 구간)</span><br>
+        <strong>①-③ 현업요청 제외대상</strong>과 <strong>①-④ 사용으로 변경</strong>을 합친 그룹입니다.<br>
+        <span style="background:#f3e8ff;padding:1px 6px;border-radius:3px;color:#7c3aed;">①-③ 현업요청 제외대상</span> 현업요청에 따른 차단 제외 &nbsp;|&nbsp;
+        <span style="background:#ecfccb;padding:1px 6px;border-radius:3px;color:#3f6212;">①-④ 사용으로 변경</span> 차단대상이었으나 담당자 판단으로 사용 유지
+      </div>
+      <div class="dist-status-guide-section">
+        <strong style="color:#c2410c;">검토대상</strong> <span style="color:var(--text-muted);font-weight:600;">(주황색 구간)</span><br>
+        <strong>②-①</strong>·<strong>②-②</strong>·<strong>②-③</strong> 추가검토대상 leaf 를 합친 그룹입니다.<br>
+        <span style="background:#fef3c7;padding:1px 6px;border-radius:3px;color:#92400e;">②-① 호출0건+변경있음</span> 호출 0건 + 소스변경 1년 미만 &nbsp;|&nbsp;
+        <span style="background:#ffedd5;padding:1px 6px;border-radius:3px;color:#9a3412;">②-② 호출 N건 이하+변경없음</span> 호출 1~<span id="guideReviewThreshold">3</span>건 + 1년 경과 (N=설정 reviewThreshold) &nbsp;|&nbsp;
+        <span style="background:#ecfccb;padding:1px 6px;border-radius:3px;color:#3f6212;">②-③ 사용으로 변경</span> 추가검토대상에서 담당자 판단으로 사용 유지
       </div>
     </div>
 

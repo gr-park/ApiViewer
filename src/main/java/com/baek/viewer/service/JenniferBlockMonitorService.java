@@ -79,7 +79,7 @@ public class JenniferBlockMonitorService {
      * Jennifer 에러 검색.
      *
      * @param repoName        null/blank = 전체 활성 Jennifer 레포
-     * @param serviceLike     null/blank = 전체. 입력 시 applicationName contains (대소문자 구분 X)
+     * @param serviceLike     null/blank = 전체. 입력 시 {@code applicationName} 또는 {@code message}(에러 본문, URL path 포함) 부분일치 (대소문자 무시)
      * @param from..to        포함 일자 범위
      * @param excludeBot      현재 Jennifer 응답에는 봇 판단 필드 없음 — 항상 false (파라미터 일관성 유지)
      * @param extraBotKeywords 현재 미사용 (Jennifer 응답에 userAgent 없음)
@@ -117,8 +117,11 @@ public class JenniferBlockMonitorService {
                 List<BlockedTxRow> rows = fetchRows(base, r, instanceId, stime, etime);
                 log.debug("[URL차단모니터][JENNIFER] {} 응답={}건", r.getRepoName(), rows.size());
                 for (BlockedTxRow row : rows) {
-                    if (!svc.isEmpty() && (row.getApplicationName() == null
-                            || !row.getApplicationName().toLowerCase(Locale.ROOT).contains(svc))) continue;
+                    if (!svc.isEmpty()) {
+                        String app = row.getApplicationName() == null ? "" : row.getApplicationName().toLowerCase(Locale.ROOT);
+                        String msg = row.getMessage() == null ? "" : row.getMessage().toLowerCase(Locale.ROOT);
+                        if (!app.contains(svc) && !msg.contains(svc)) continue;
+                    }
                     result.add(row);
                 }
             } catch (Exception e) {

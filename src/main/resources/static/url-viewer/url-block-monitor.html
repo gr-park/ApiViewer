@@ -48,6 +48,10 @@
     .toggle-group button.on{background:var(--primary);color:#fff;}
     .toggle-group.toggle-sm button{padding:4px 10px;font-size:11px;line-height:1;}
 
+    .mon-check-row{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--text);cursor:pointer;user-select:none;}
+    .mon-check-row input{width:15px;height:15px;cursor:pointer;accent-color:var(--primary);flex-shrink:0;}
+    [data-theme="dark"] .mon-check-row{color:var(--text);}
+
     /* 요약 카드 */
     .summary-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px;}
     .sum-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px 14px;box-shadow:var(--shadow);position:relative;overflow:hidden;}
@@ -167,18 +171,19 @@
                style="flex:1;max-width:300px;padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;"
                onkeydown="if(event.key==='Enter'){event.preventDefault();addMonBotKeyword();}">
         <button type="button" class="btn btn-ghost" style="font-size:11px;padding:4px 12px;height:auto;" onclick="addMonBotKeyword()">+ 추가</button>
-        <div class="toggle-group toggle-sm">
-          <button id="btnExcludeBot" class="on" onclick="setExcludeBot(true)">봇 제외</button>
-          <button id="btnIncludeBot" onclick="setExcludeBot(false)">전체 보기</button>
-        </div>
-        <div style="display:inline-flex;align-items:center;gap:4px;padding-left:6px;border-left:1px dashed var(--border);"
-             title="IT담당자 모니터링 테스트 시간대 [start ≤ t < end] 안의 트랜잭션은 결과에서 제외됩니다. 기본값은 설정에서 가져옵니다.">
-          <span style="font-size:11px;color:var(--text-muted);font-weight:600;">IT담당자 모니터링 테스트 시간대 제외</span>
-          <input id="fExclStart" type="time" step="60" style="width:90px;padding:4px 6px;border:1px solid var(--border);border-radius:6px;font-size:12px;">
+        <label class="mon-check-row" title="봇 키워드에 매칭된 트랜잭션을 표에서 제외합니다.">
+          <input type="checkbox" id="chkExcludeBot" checked onchange="onMonFilterChanged()">
+          <span>봇 제외</span>
+        </label>
+        <div style="display:inline-flex;align-items:center;gap:8px;padding-left:8px;border-left:1px dashed var(--border);flex-wrap:wrap;"
+             title="체크 시 [시작 ≤ endtime &lt; 종료] 구간의 트랜잭션을 표에서 제외합니다. 시간은 설정 기본값으로 채워지며, 해제 시에도 값은 유지됩니다.">
+          <label class="mon-check-row">
+            <input type="checkbox" id="chkExcludeTime" checked onchange="onMonFilterChanged()">
+            <span>IT담당자 모니터링 테스트 시간대 제외</span>
+          </label>
+          <input id="fExclStart" type="time" step="60" style="width:90px;padding:4px 6px;border:1px solid var(--border);border-radius:6px;font-size:12px;" onchange="onMonFilterChanged()">
           <span style="color:var(--text-muted);">~</span>
-          <input id="fExclEnd" type="time" step="60" style="width:90px;padding:4px 6px;border:1px solid var(--border);border-radius:6px;font-size:12px;">
-          <button id="btnExclTimeOff" type="button" class="btn btn-ghost" style="font-size:11px;padding:3px 8px;height:auto;"
-                  title="IT담당자 모니터링 테스트 시간대 제외 비활성화 (모든 시간대 표시)" onclick="clearExcludeTimeRange()">해제</button>
+          <input id="fExclEnd" type="time" step="60" style="width:90px;padding:4px 6px;border:1px solid var(--border);border-radius:6px;font-size:12px;" onchange="onMonFilterChanged()">
         </div>
       </div>
     </div>
@@ -315,6 +320,7 @@
 
   /** endtime("YYYY-MM-DD HH:mm:ss") 시각이 [start, end) 안이면 true. start>=end면 비활성. */
   function isInExcludeTimeRange(endtime){
+    if (!document.getElementById('chkExcludeTime')?.checked) return false;
     const startV = (document.getElementById('fExclStart')?.value || '').trim();
     const endV   = (document.getElementById('fExclEnd')?.value || '').trim();
     if (!startV || !endV) return false;
@@ -327,14 +333,17 @@
     return tM >= sM && tM < eM;
   }
 
-  function clearExcludeTimeRange(){
-    document.getElementById('fExclStart').value = '';
-    document.getElementById('fExclEnd').value = '';
+  function syncMonFiltersFromUi(){
+    const b = document.getElementById('chkExcludeBot');
+    if (b) excludeBot = b.checked;
+  }
+
+  function onMonFilterChanged(){
+    syncMonFiltersFromUi();
     currentPage = 0;
     renderSummary();
     renderTable();
     document.getElementById('excelBtn').disabled = visibleRows().length === 0;
-    showToast('IT담당자 모니터링 테스트 시간대 제외 비활성화', 'success');
   }
 
   function esc(s){ if(s==null) return ''; return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
@@ -372,17 +381,8 @@
     document.getElementById('fTo').value = tStr;
   }
 
-  function setExcludeBot(v){
-    excludeBot = v;
-    document.getElementById('btnExcludeBot').classList.toggle('on', v);
-    document.getElementById('btnIncludeBot').classList.toggle('on', !v);
-    currentPage = 0;
-    renderSummary();
-    renderTable();
-    document.getElementById('excelBtn').disabled = visibleRows().length === 0;
-  }
-
   function visibleRows(){
+    syncMonFiltersFromUi();
     let rows = excludeBot ? allRows.filter(r => !r.bot) : allRows.slice();
     // IT담당자 모니터링 테스트 시간대 제외 (Jennifer는 endtime 컬럼이 없어 time 필드가 있을 때만 시도)
     rows = rows.filter(r => !isInExcludeTimeRange(r.endtime || r.time));
@@ -563,10 +563,12 @@
     document.getElementById('sumBot').textContent = fmt(bots);
     document.getElementById('sumSvc').textContent = fmt(svcSet.size);
     document.getElementById('sumOkd').textContent = fmt(okdSet.size);
+    syncMonFiltersFromUi();
     const tStart = (document.getElementById('fExclStart')?.value || '').trim();
     const tEnd   = (document.getElementById('fExclEnd')?.value || '').trim();
     const sM = _hhmmToMinutes(tStart), eM = _hhmmToMinutes(tEnd);
-    const timeNote = (sM >= 0 && eM >= 0 && sM < eM) ? `, ${tStart}~${tEnd} 제외` : '';
+    const timeOn = document.getElementById('chkExcludeTime')?.checked;
+    const timeNote = (timeOn && sM >= 0 && eM >= 0 && sM < eM) ? `, ${tStart}~${tEnd} 제외` : '';
     document.getElementById('sumTotalSub').textContent = (excludeBot ? '(봇 제외 표시' : '(봇 포함 전체') + timeNote + ')';
   }
 

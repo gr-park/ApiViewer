@@ -33,7 +33,8 @@ import java.util.*;
  *   Referer : {base}{GlobalConfig.blockMonitorWhatapReferer, {pcode}치환}  — 기본 "/v2/project/apm/{pcode}/new/tx_profile" (화면 URL)
  *   Body    : { type:"profiles", path:"/v2/txsearch", pcode:"<pcode>",
  *               params:{ okinds:0, stime:<ms>, etime:<ms>, option:"forward",
- *                        ptotal:100, filter:{ error:"차단" } } }
+ *                        ptotal:100, filter:{ error:"차단", url:"<path>"? } } }
+ *   화면에서 URL 경로를 입력하면 {@code filter.url} 에 넣어 와탭 측에서 path 기준으로 좁힌다(미입력 시 생략).
  *
  * 와탭 flush는 body의 {type}+{pcode}+{path} 를 합쳐 "/profiles/pcode/{pcode}/v2/txsearch" 로 내부 라우팅하므로
  * path는 화면 URL이 아니라 실제 API 경로("/v2/txsearch")여야 한다.
@@ -187,7 +188,7 @@ public class WhatapTxSearchService {
      * 검색.
      * @param repoName       null/blank = 전체 활성 레포
      * @param okindNames     null/empty = 해당 레포의 모든 okind. 입력 시 인덱스 매칭으로 id 추출
-     * @param serviceLike    null/blank = 전체. 입력 시 service contains (대소문자 구분 X)
+     * @param serviceLike    null/blank = 전체. 와탭: {@code filter.url} + 응답 후 service 경로 부분일치(대소문자 무시) 재확인
      * @param from..to       포함 일자 범위, 최대 7일
      * @param excludeBot     true = 봇 키워드 매칭된 row 제외
      * @param extraBotKeywords 사용자가 추가 입력한 봇 키워드 (GlobalConfig 기본값에 합산)
@@ -211,10 +212,11 @@ public class WhatapTxSearchService {
 
         // 봇 키워드: GlobalConfig 자동 합산 제거 — 프론트에서 초기값으로 세팅하여 사용자가 직접 제어
         Set<String> botSet = buildBotSet(extraBotKeywords);
-        String svc = (serviceLike == null) ? "" : serviceLike.trim().toLowerCase(Locale.ROOT);
+        String urlFilterApi = (serviceLike == null || serviceLike.isBlank()) ? null : serviceLike.trim();
+        String svc = urlFilterApi == null ? "" : urlFilterApi.toLowerCase(Locale.ROOT);
 
-        log.info("[URL차단모니터] 검색 시작 repos={} days={} excludeBot={} botSize={} serviceLike='{}'",
-                repos.size(), days, excludeBot, botSet.size(), svc);
+        log.info("[URL차단모니터] 검색 시작 repos={} days={} excludeBot={} botSize={} pathFilter='{}'",
+                repos.size(), days, excludeBot, botSet.size(), urlFilterApi == null ? "" : urlFilterApi);
 
         // (pcode|okindName) → repoName 맵 — Whatap 응답의 okindName 이 어느 레포 설정에 속하는지 판정.
         // 매칭 안 되면 row.repoName 은 null (화면 레포 컬럼 공란) — "okind 와 레포가 안 맞는데 레포명 태그됨" 이슈 해결.
@@ -234,7 +236,7 @@ public class WhatapTxSearchService {
                 long etime = cursor.plusDays(1).atStartOfDay(KST).toInstant().toEpochMilli() - 1;
                 try {
                     String restrictToRepo = (repoName == null || repoName.isBlank()) ? null : r.getRepoName();
-                    List<BlockedTxRow> day = fetchOneDay(base, refererPath, r, stime, etime, ptotal, repoByPcodeOkind, restrictToRepo);
+                    List<BlockedTxRow> day = fetchOneDay(base, refererPath, r, stime, etime, ptotal, repoByPcodeOkind, restrictToRepo, urlFilterApi);
                     log.debug("[URL차단모니터] {} {} 응답={}건", r.getRepoName(), cursor, day.size());
                     for (BlockedTxRow row : day) {
                         if (row.getErrMessage() == null || !row.getErrMessage().startsWith(BLOCK_PREFIX)) continue;
@@ -302,7 +304,8 @@ public class WhatapTxSearchService {
     private List<BlockedTxRow> fetchOneDay(String base, String refererPath, RepoConfig repo,
                                             long stime, long etime, int ptotal,
                                             Map<String, String> repoByPcodeOkind,
-                                            String restrictToRepoName) throws Exception {
+                                            String restrictToRepoName,
+                                            String urlFilterForApi) throws Exception {
         boolean debug = globalRepo.findById(1L).map(GlobalConfig::isApmDebug).orElse(false);
 
         // 페이로드: 사용자 캡쳐 형식 그대로
@@ -314,6 +317,9 @@ public class WhatapTxSearchService {
         params.put("ptotal", ptotal);
         Map<String, Object> filter = new LinkedHashMap<>();
         filter.put("error", BLOCK_PREFIX);
+        if (urlFilterForApi != null && !urlFilterForApi.isBlank()) {
+            filter.put("url", urlFilterForApi);
+        }
         params.put("filter", filter);
 
         Map<String, Object> body = new LinkedHashMap<>();

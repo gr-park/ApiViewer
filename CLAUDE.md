@@ -74,7 +74,7 @@ Spring Boot 기반 웹 애플리케이션. Controller 소스를 파싱하여 URL
 
 `GET /api/db/record-by-key` — 차단 모니터링 등에서 사용. **동일 레포·`apiPath`에서 HTTP 메소드 대소문자 무시 일치**를 먼저 시도하고, 없으면 `REQUEST`/`ALL`/빈값 등은 **동일 경로 행만**으로 폴백(복수 시 GET→POST→첫 행). `httpMethod` 파라미터는 생략 가능.
 
-**URL 차단 모니터링** (`/api/url-block-monitor/search`): 레포를 **지정**해 조회할 때, 와탭 응답은 동일 pcode에 여러 okind가 섞일 수 있어 **`(pcode|okindName)` → 레포 매핑 결과가 선택 레포와 일치하는 행만** 포함한다(전체 레포 조회 시에는 기존처럼 전 행). Jennifer는 인스턴스 API에서 `name.contains(repo)` 대신 **구분자(`-` `_` `.`) 경계를 만족하는 부분 일치·전체 일치**만 허용해 `pers` 등 짧은 공통 부문 오탐을 막는다.
+**URL 차단 모니터링** (`/api/url-block-monitor/search`): 레포를 **지정**해 조회할 때, 와탭 응답은 동일 pcode에 여러 okind가 섞일 수 있어 **`(pcode|okindName)` → 레포 매핑 결과가 선택 레포와 일치하는 행만** 포함한다(전체 레포 조회 시에는 기존처럼 전 행). Jennifer는 인스턴스 API에서 `name.contains(repo)` 대신 **구분자(`-` `_` `.`) 경계를 만족하는 부분 일치·전체 일치**만 허용해 `pers` 등 짧은 공통 부문 오탐을 막는다. URL 경로 필터: **와탭**은 flush `params.filter.url`에 넣어 서버 측 좁힘, **제니퍼**는 `applicationName` 또는 `message` 부분일치(에러 본문에 path 포함 가정). 화면에서 봇 제외·IT 테스트 시간대 제외는 **체크박스** 토글(시간 입력값은 해제 후에도 유지).
 
 구 경로는 `WebConfig.addViewControllers` 리다이렉트. 인증: `auth.js` `AuthState`, 60초·포커스 `/api/auth/check`, `auth:change`, `data-admin-only`.
 
@@ -83,7 +83,7 @@ Spring Boot 기반 웹 애플리케이션. Controller 소스를 파싱하여 URL
 # 상태 (status) — 9 leaf v2, 상위 4-tier (사용 / 차단완료 / ① 차단대상 / ② 추가검토대상)
 
 DB `status` 컬럼은 leaf 값을 직접 저장한다. 화면 라벨 = DB 값 (전체 표기).
-대시보드는 7카드 한 줄로 통합: `총URL / 사용 / 차단완료 / 차단대상 잔여 / 차단대상 제외건 / 검토대상 / 삭제`.
+대시보드는 7카드 한 줄로 통합: `총URL / 사용 / 차단완료 / 차단대상 잔여 / 차단대상 제외건 / 검토대상 / 삭제`. 상태 구분 안내(파란 박스)는 **URL 현황** 섹션 헤더 바로 위(분포·배치 2열 아래)에 두며, 잔여(빨강)·제외건(노랑)·검토대상(주황)과 leaf 매핑을 병기한다. 시스템 배치 노티 배너는 내용 없을 때 숨김(`[hidden]` + `display:none !important`로 flex 덮어쓰기 방지).
 
 ## Leaf 9종
 
