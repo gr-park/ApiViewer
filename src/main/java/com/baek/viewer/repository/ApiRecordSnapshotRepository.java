@@ -14,24 +14,36 @@ public interface ApiRecordSnapshotRepository extends JpaRepository<ApiRecordSnap
     Page<ApiRecordSnapshot> findBySnapshotAtBetweenOrderBySnapshotAtDesc(LocalDateTime from, LocalDateTime to, Pageable pageable);
 
     /**
-     * 기준시각(cutoff) 이전(<=) 스냅샷 중 가장 최신 1건의 ID를 반환한다.
-     * repos가 있으면 해당 repos 중 1개 이상 row가 존재하는 스냅샷만 대상으로 한다.
-     * (H2/PostgreSQL 호환: LIMIT 1)
+     * 기준시각(cutoff) 이전(<=) 스냅샷 중 가장 최신 1건의 ID (레포 필터 없음).
+     * PostgreSQL: {@code (? IS NULL OR ... IN (?))} 형태는 바인딩 타입 추론 실패(42P18)가 나므로 분리한다.
      */
     @Query(value = """
             SELECT s.id
             FROM api_record_snapshot s
             WHERE s.snapshot_at <= :cutoff
-              AND (:repos IS NULL OR EXISTS (
+            ORDER BY s.snapshot_at DESC
+            LIMIT 1
+            """, nativeQuery = true)
+    Long findLatestSnapshotIdAtOrBefore(@Param("cutoff") LocalDateTime cutoff);
+
+    /**
+     * 기준시각(cutoff) 이전(<=) 스냅샷 중, 지정 레포 중 하나 이상을 포함하는 가장 최신 1건의 ID.
+     * {@code repos}는 비어 있지 않은 리스트여야 한다.
+     */
+    @Query(value = """
+            SELECT s.id
+            FROM api_record_snapshot s
+            WHERE s.snapshot_at <= :cutoff
+              AND EXISTS (
                 SELECT 1
                 FROM api_record_snapshot_row r
                 WHERE r.snapshot_id = s.id
                   AND r.repository_name IN (:repos)
-              ))
+              )
             ORDER BY s.snapshot_at DESC
             LIMIT 1
             """, nativeQuery = true)
-    Long findLatestSnapshotIdAtOrBefore(@Param("cutoff") LocalDateTime cutoff, @Param("repos") List<String> repos);
+    Long findLatestSnapshotIdAtOrBeforeMatchingRepos(@Param("cutoff") LocalDateTime cutoff, @Param("repos") List<String> repos);
 
     /**
      * 기준시각(cutoff) 이전(<=) 스냅샷 중 가장 최신 1건의 ID를 반환한다. (전체 스냅샷 우선)
@@ -49,26 +61,39 @@ public interface ApiRecordSnapshotRepository extends JpaRepository<ApiRecordSnap
     Long findLatestGlobalSnapshotIdAtOrBefore(@Param("cutoff") LocalDateTime cutoff);
 
     /**
-     * 특정 기간(from~to) 내 스냅샷 ID 목록(최신순).
-     * repos가 있으면 해당 repos 중 1개 이상 row가 존재하는 스냅샷만 대상으로 한다.
-     * (정렬/페이지네이션은 Pageable로 제어)
+     * 특정 기간(from~to) 내 스냅샷 ID 목록(최신순). 레포 필터 없음.
      */
     @Query(value = """
             SELECT s.id
             FROM api_record_snapshot s
             WHERE s.snapshot_at >= :from
               AND s.snapshot_at <= :to
-              AND (:repos IS NULL OR EXISTS (
-                SELECT 1
-                FROM api_record_snapshot_row r
-                WHERE r.snapshot_id = s.id
-                  AND r.repository_name IN (:repos)
-              ))
             ORDER BY s.snapshot_at DESC
             """, nativeQuery = true)
     List<Long> findIdsBySnapshotAtBetween(@Param("from") LocalDateTime from,
                                          @Param("to") LocalDateTime to,
-                                         @Param("repos") List<String> repos,
                                          Pageable pageable);
+
+    /**
+     * 특정 기간 내 스냅샷 ID 목록(최신순) — 지정 레포 중 하나 이상을 포함하는 스냅샷만.
+     * {@code repos}는 비어 있지 않은 리스트여야 한다.
+     */
+    @Query(value = """
+            SELECT s.id
+            FROM api_record_snapshot s
+            WHERE s.snapshot_at >= :from
+              AND s.snapshot_at <= :to
+              AND EXISTS (
+                SELECT 1
+                FROM api_record_snapshot_row r
+                WHERE r.snapshot_id = s.id
+                  AND r.repository_name IN (:repos)
+              )
+            ORDER BY s.snapshot_at DESC
+            """, nativeQuery = true)
+    List<Long> findIdsBySnapshotAtBetweenMatchingRepos(@Param("from") LocalDateTime from,
+                                                      @Param("to") LocalDateTime to,
+                                                      @Param("repos") List<String> repos,
+                                                      Pageable pageable);
 }
 

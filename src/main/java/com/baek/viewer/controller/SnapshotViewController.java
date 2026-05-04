@@ -74,9 +74,8 @@ public class SnapshotViewController {
         List<String> requestedRepos = parseRepos(repository, repositories);
 
         try {
-            // repos=null 로 호출 → 일자 범위 내 모든 스냅샷(=전체 풀) 최신순 반환
-            List<Long> ids = snapshotRepository.findIdsBySnapshotAtBetween(from, to, null,
-                    PageRequest.of(0, limit));
+            // 일자 범위 내 모든 스냅샷(=전체 풀) 최신순 — PG는 (:repos IS NULL OR IN(:repos)) 타입 추론 실패하므로 레포 미필터 전용 쿼리 사용
+            List<Long> ids = snapshotRepository.findIdsBySnapshotAtBetween(from, to, PageRequest.of(0, limit));
             Map<Long, ApiRecordSnapshot> byId = new HashMap<>();
             for (ApiRecordSnapshot s : snapshotRepository.findAllById(ids)) {
                 byId.put(s.getId(), s);
