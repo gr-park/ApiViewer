@@ -14,11 +14,11 @@
 
 Spring Boot 기반 웹 애플리케이션. Controller 소스를 파싱하여 URL 목록을 추출하고, H2 DB에 저장·조회·관리하는 내부 도구.
 
-# UI 버전 표기(캐시 확인용)
+# 앱 버전 표기(`APP_UI_VERSION`, 캐시·배포 식별용)
 
-`static/**` 캐시 이슈로 상단 브랜드 뒤 `ver1.4.18` 표시(`nav.js`의 `APP_UI_VERSION`). 배포·반입 시마다 증가. 로컬 재기동: `sh stop.sh` 후 `sh run.sh`(에이전트는 `run.sh`만 백그라운드 가능, CI·읽기 전용은 생략 가능). 형식 `ver<major>.<minor>.<patch>` — patch 기본 2자리 zero-pad, 100+는 자연 확장(강제 동일 자릿수 패딩 없음). patch=동작 동일한 표시·문구 개선, minor=체감 기능 추가(오르면 patch `01`부터), major=큰 개편·호환(오르면 minor/patch 초기화), 애매하면 patch→minor 보수적. 기동 완료 로그: UI 버전+주요 링크(`UiVersionStartupLogger`).
+표시 위치는 상단 네비 브랜드 뒤(`nav.js`의 `APP_UI_VERSION`, 현재 예: `ver1.4.20`). **화면(`static/**`)만이 아니라 서버 로직·API·배치·DB 처리 등 배포 단위로 동작이 바뀌는 변경이 있으면 반드시 버전을 올린다** — 운영/반입 후 “같은 숫자인데 동작이 다름”을 줄이기 위함. `static/**` 캐시 이슈로 브라우저에서 숫자 확인이 특히 유효하다. 배포·반입 시마다 증가시키는 것을 원칙으로 한다. 로컬 재기동: `sh stop.sh` 후 `sh run.sh`(에이전트는 `run.sh`만 백그라운드 가능, CI·읽기 전용은 생략 가능). 형식 `ver<major>.<minor>.<patch>` — patch 기본 2자리 zero-pad, 100+는 자연 확장(강제 동일 자릿수 패딩 없음). patch=소규모 수정·버그픽스·내부 로직 조정·표시·문구 개선, minor=체감 기능 추가(오르면 patch `01`부터), major=큰 개편·호환(오르면 minor/patch 초기화), 애매하면 patch→minor 보수적. 기동 완료 로그: 동일 버전 문자열+주요 링크(`UiVersionStartupLogger`가 `nav.js`에서 파싱).
 
-- **에이전트 응답 규칙(운영 편의)**: 정적 UI(`src/main/resources/static/**`) 변경이 포함된 작업을 수행한 경우, 에이전트는 **응답 마지막 줄에 반드시 현재 UI 버전(`APP_UI_VERSION`)을 표기**한다. 예) `현재 UI 버전: ver1.4.18`
+- **에이전트 응답 규칙(운영 편의)**: 이번 작업에서 **`APP_UI_VERSION`을 올렸거나**, 정적 UI(`src/main/resources/static/**`)를 변경한 경우, 에이전트는 **응답 마지막 줄에 반드시 현재 `APP_UI_VERSION`을 표기**한다. 예) `현재 앱 버전: ver1.4.20`
 
 # 기술 스택 · 환경 제약 · DB
 
