@@ -576,49 +576,53 @@
     </div>
   </details>
 
-  <!-- 스냅샷 비교 (관리자 전용) -->
-  <details class="card" id="compareCard" open style="display:none;">
+  <!-- 검색/필터 (조회 전에도 입력 가능 — 상태카드 위) -->
+  <details class="card" id="filterCard" open>
     <summary class="card-title">
-      <span class="dot"></span>스냅샷 비교
-      <span style="font-size:11px;font-weight:400;color:var(--text-muted);margin-left:6px;">(관리자)</span>
+      <span class="dot"></span>검색 필터
       <span class="collapser inline" aria-hidden="true">
         <span class="c-label"></span>
         <span class="c-arrow">▾</span>
       </span>
+      <button class="summary-btn" type="button" onclick="resetAllFilters(event)">전체 리셋</button>
     </summary>
     <div class="card-body">
-      <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;">
-        <label class="field">A(From) 기준일자
-          <input id="cmpFromDate" type="date" style="min-width:160px;">
-        </label>
-        <label class="field">A 스냅샷(시간)
-          <select id="cmpFromSnapshotId" style="min-width:220px;">
-            <option value="">(날짜를 선택하세요)</option>
-          </select>
-        </label>
-        <label class="field">B(To) 기준일자
-          <input id="cmpToDate" type="date" style="min-width:160px;">
-        </label>
-        <label class="field">B 스냅샷(시간)
-          <select id="cmpToSnapshotId" style="min-width:220px;">
-            <option value="">(날짜를 선택하세요)</option>
-          </select>
-        </label>
-        <button class="btn btn-ghost" style="height:34px;" onclick="runSnapshotCompare()">🔎 비교</button>
-        <div style="display:flex;gap:6px;align-items:flex-end;flex-wrap:wrap;">
-          <button class="btn btn-ghost btn-sm" onclick="renderSnapshotCompare('all')">전체</button>
-          <button class="btn btn-ghost btn-sm" onclick="renderSnapshotCompare('new')" title="A→B 사이 새로 등장한 URL">➕ 신규건</button>
-          <button class="btn btn-ghost btn-sm" onclick="renderSnapshotCompare('deleted')" title="A→B 사이 사라진 URL">➖ 삭제건</button>
-          <button class="btn btn-ghost btn-sm" onclick="renderSnapshotCompare('changed')" title="A→B 사이 상태/속성이 바뀐 URL">📝 상태변경건</button>
+      <div class="filter-bar" id="filterBar" style="display:flex;flex-wrap:wrap;gap:6px;">
+        <div class="filter-row">
+          <input type="text" id="searchInput" placeholder="URL, 메소드명, 메뉴명, 비고 검색" oninput="filterTable()" style="width:260px;">
+          <input type="text" id="searchTeam" placeholder="팀 검색" oninput="filterTable()" style="width:100px;">
+          <input type="text" id="searchManager" placeholder="담당자 검색" oninput="filterTable()" style="width:100px;">
+          <span class="filter-count" id="filterCount"></span>
         </div>
-        <label class="field" style="margin-left:auto;">레포 필터
-          <select id="cmpRepoFilter" style="min-width:200px;" onchange="onCmpRepoFilterChange()">
-            <option value="">(전체 레포)</option>
-          </select>
-        </label>
-        <div id="compareMeta" style="font-size:11px;color:var(--text-muted);width:100%;"></div>
-      </div>
-      <div id="compareResult" style="display:none;margin-top:10px;"></div>
+
+        <!-- 변경일시: 한 줄 -->
+        <div class="filter-row">
+          <span class="label">변경일시</span>
+          <input class="date" type="datetime-local" id="modifiedFrom" onchange="filterTable({immediate:true,page:0})">
+          <span class="label">~</span>
+          <input class="date" type="datetime-local" id="modifiedTo" onchange="filterTable({immediate:true,page:0})">
+          <button class="btn-mini" type="button" onclick="setDatePreset(5,'minutes')">최근 5분</button>
+          <button class="btn-mini" type="button" onclick="setDatePreset(1,'hours')">최근 1시간</button>
+          <button class="btn-mini" type="button" onclick="setDatePreset(0,'today')">오늘</button>
+          <button class="btn-mini muted" type="button" onclick="clearDateFilter()" title="변경일시 초기화">변경일시 초기화</button>
+        </div>
+
+        <!-- CBO/배포/배포담당자: 한 줄 -->
+        <div class="filter-row">
+          <span class="label">CBO일자</span>
+          <input class="date" type="date" id="cboFrom" onchange="filterTable({immediate:true,page:0})">
+          <span class="label">~</span>
+          <input class="date" type="date" id="cboTo" onchange="filterTable({immediate:true,page:0})">
+
+          <span class="label" style="margin-left:6px;">배포일자</span>
+          <input class="date" type="date" id="deployFrom" onchange="filterTable({immediate:true,page:0})">
+          <span class="label">~</span>
+          <input class="date" type="date" id="deployTo" onchange="filterTable({immediate:true,page:0})">
+
+          <input type="text" id="searchDeployManager" placeholder="배포담당자 검색" oninput="filterTable()" style="width:120px;">
+          <button class="btn-mini muted" type="button" onclick="clearScheduleFilter()" title="CBO/배포일자 초기화">일자 초기화</button>
+        </div>
+  </div>
     </div>
   </details>
 
@@ -675,56 +679,6 @@
     </div>
   </div>
 
-    </div>
-  </details>
-
-  <!-- 검색/필터 -->
-  <details class="card" id="filterCard" open style="display:none;">
-    <summary class="card-title">
-      <span class="dot"></span>검색 필터
-      <span class="collapser inline" aria-hidden="true">
-        <span class="c-label"></span>
-        <span class="c-arrow">▾</span>
-      </span>
-      <button class="summary-btn" type="button" onclick="resetAllFilters(event)">전체 리셋</button>
-    </summary>
-    <div class="card-body">
-      <div class="filter-bar" id="filterBar" style="display:none;flex-wrap:wrap;gap:6px;">
-        <div class="filter-row">
-          <input type="text" id="searchInput" placeholder="URL, 메소드명, 메뉴명, 비고 검색" oninput="filterTable()" style="width:260px;">
-          <input type="text" id="searchTeam" placeholder="팀 검색" oninput="filterTable()" style="width:100px;">
-          <input type="text" id="searchManager" placeholder="담당자 검색" oninput="filterTable()" style="width:100px;">
-          <span class="filter-count" id="filterCount"></span>
-        </div>
-
-        <!-- 변경일시: 한 줄 -->
-        <div class="filter-row">
-          <span class="label">변경일시</span>
-          <input class="date" type="datetime-local" id="modifiedFrom" onchange="filterTable({immediate:true,page:0})">
-          <span class="label">~</span>
-          <input class="date" type="datetime-local" id="modifiedTo" onchange="filterTable({immediate:true,page:0})">
-          <button class="btn-mini" type="button" onclick="setDatePreset(5,'minutes')">최근 5분</button>
-          <button class="btn-mini" type="button" onclick="setDatePreset(1,'hours')">최근 1시간</button>
-          <button class="btn-mini" type="button" onclick="setDatePreset(0,'today')">오늘</button>
-          <button class="btn-mini muted" type="button" onclick="clearDateFilter()" title="변경일시 초기화">변경일시 초기화</button>
-        </div>
-
-        <!-- CBO/배포/배포담당자: 한 줄 -->
-        <div class="filter-row">
-          <span class="label">CBO일자</span>
-          <input class="date" type="date" id="cboFrom" onchange="filterTable({immediate:true,page:0})">
-          <span class="label">~</span>
-          <input class="date" type="date" id="cboTo" onchange="filterTable({immediate:true,page:0})">
-
-          <span class="label" style="margin-left:6px;">배포일자</span>
-          <input class="date" type="date" id="deployFrom" onchange="filterTable({immediate:true,page:0})">
-          <span class="label">~</span>
-          <input class="date" type="date" id="deployTo" onchange="filterTable({immediate:true,page:0})">
-
-          <input type="text" id="searchDeployManager" placeholder="배포담당자 검색" oninput="filterTable()" style="width:120px;">
-          <button class="btn-mini muted" type="button" onclick="clearScheduleFilter()" title="CBO/배포일자 초기화">일자 초기화</button>
-        </div>
-  </div>
     </div>
   </details>
 
@@ -843,6 +797,52 @@
 
     <button class="btn-cancel" onclick="clearSelection()">✕ 취소</button>
   </div>
+
+  <!-- 스냅샷 비교 (관리자 전용) — 목록·필터·일괄바 아래 -->
+  <details class="card" id="compareCard" open style="display:none;">
+    <summary class="card-title">
+      <span class="dot"></span>스냅샷 비교
+      <span style="font-size:11px;font-weight:400;color:var(--text-muted);margin-left:6px;">(관리자)</span>
+      <span class="collapser inline" aria-hidden="true">
+        <span class="c-label"></span>
+        <span class="c-arrow">▾</span>
+      </span>
+    </summary>
+    <div class="card-body">
+      <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;">
+        <label class="field">A(From) 기준일자
+          <input id="cmpFromDate" type="date" style="min-width:160px;">
+        </label>
+        <label class="field">A 스냅샷(시간)
+          <select id="cmpFromSnapshotId" style="min-width:220px;">
+            <option value="">(날짜를 선택하세요)</option>
+          </select>
+        </label>
+        <label class="field">B(To) 기준일자
+          <input id="cmpToDate" type="date" style="min-width:160px;">
+        </label>
+        <label class="field">B 스냅샷(시간)
+          <select id="cmpToSnapshotId" style="min-width:220px;">
+            <option value="">(날짜를 선택하세요)</option>
+          </select>
+        </label>
+        <button class="btn btn-ghost" style="height:34px;" onclick="runSnapshotCompare()">🔎 비교</button>
+        <div style="display:flex;gap:6px;align-items:flex-end;flex-wrap:wrap;">
+          <button class="btn btn-ghost btn-sm" onclick="renderSnapshotCompare('all')">전체</button>
+          <button class="btn btn-ghost btn-sm" onclick="renderSnapshotCompare('new')" title="A→B 사이 새로 등장한 URL">➕ 신규건</button>
+          <button class="btn btn-ghost btn-sm" onclick="renderSnapshotCompare('deleted')" title="A→B 사이 사라진 URL">➖ 삭제건</button>
+          <button class="btn btn-ghost btn-sm" onclick="renderSnapshotCompare('changed')" title="A→B 사이 상태/속성이 바뀐 URL">📝 상태변경건</button>
+        </div>
+        <label class="field" style="margin-left:auto;">레포 필터
+          <select id="cmpRepoFilter" style="min-width:200px;" onchange="onCmpRepoFilterChange()">
+            <option value="">(전체 레포)</option>
+          </select>
+        </label>
+        <div id="compareMeta" style="font-size:11px;color:var(--text-muted);width:100%;"></div>
+      </div>
+      <div id="compareResult" style="display:none;margin-top:10px;"></div>
+    </div>
+  </details>
 
   <!-- 테이블 -->
   <div class="table-wrap">
@@ -1422,10 +1422,8 @@
       updateNewNotice(true);
       updateDeletedNotice(true);
       document.getElementById('statsCard').style.display = 'block';
-      document.getElementById('filterCard').style.display = 'block';
       document.getElementById('statsBar').style.display = 'flex';
       if (!isNoticeDismissed('noticeBar')) document.getElementById('noticeBar').style.display = 'block';
-      document.getElementById('filterBar').style.display = 'flex';
       document.getElementById('dbMeta').style.display = 'flex';
       document.getElementById('metaRepo').textContent =
         selectedArr.length === 0 ? '전체' : (selectedArr.length === 1 ? selectedArr[0] : `${selectedArr.length}개 레포`);
@@ -1462,7 +1460,8 @@
   initDetailsState('queryCard', 'viewer.ui.queryCard', true);
   // UX: 초기 진입 시 화면 점유가 커서 기본은 접힘(사용자가 열어두면 localStorage 상태 유지)
   initDetailsState('statsCard', 'viewer.ui.statsCard', false);
-  initDetailsState('filterCard', 'viewer.ui.filterCard', false);
+  // 검색 필터는 조회 전 입력이 잦아 기본 펼침(저장값 있으면 우선)
+  initDetailsState('filterCard', 'viewer.ui.filterCard', true);
 
   // ── 전체 재로드 (카운트 + 현재 페이지) ────────────────────
   // 변경 작업(편집/일괄/알림해제 등) 이후 서버 상태와 UI 동기화
