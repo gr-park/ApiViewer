@@ -16,9 +16,9 @@ Spring Boot 기반 웹 애플리케이션. Controller 소스를 파싱하여 URL
 
 # 앱 버전 표기(`APP_UI_VERSION`, 캐시·배포 식별용)
 
-표시 위치는 상단 네비 브랜드 뒤(`nav.js`의 `APP_UI_VERSION`, 현재 예: `ver1.4.21`). **화면(`static/**`)만이 아니라 서버 로직·API·배치·DB 처리 등 배포 단위로 동작이 바뀌는 변경이 있으면 반드시 버전을 올린다** — 운영/반입 후 “같은 숫자인데 동작이 다름”을 줄이기 위함. `static/**` 캐시 이슈로 브라우저에서 숫자 확인이 특히 유효하다. 배포·반입 시마다 증가시키는 것을 원칙으로 한다. 로컬 재기동: `sh stop.sh` 후 `sh run.sh`(에이전트는 `run.sh`만 백그라운드 가능, CI·읽기 전용은 생략 가능). 형식 `ver<major>.<minor>.<patch>` — patch 기본 2자리 zero-pad, 100+는 자연 확장(강제 동일 자릿수 패딩 없음). patch=소규모 수정·버그픽스·내부 로직 조정·표시·문구 개선, minor=체감 기능 추가(오르면 patch `01`부터), major=큰 개편·호환(오르면 minor/patch 초기화), 애매하면 patch→minor 보수적. 기동 완료 로그: 동일 버전 문자열+주요 링크(`UiVersionStartupLogger`가 `nav.js`에서 파싱).
+표시 위치는 상단 네비 브랜드 뒤(`nav.js`의 `APP_UI_VERSION`, 현재 예: `ver1.4.22`). **화면(`static/**`)만이 아니라 서버 로직·API·배치·DB 처리 등 배포 단위로 동작이 바뀌는 변경이 있으면 반드시 버전을 올린다** — 운영/반입 후 “같은 숫자인데 동작이 다름”을 줄이기 위함. `static/**` 캐시 이슈로 브라우저에서 숫자 확인이 특히 유효하다. 배포·반입 시마다 증가시키는 것을 원칙으로 한다. 로컬 재기동: `sh stop.sh` 후 `sh run.sh`(에이전트는 `run.sh`만 백그라운드 가능, CI·읽기 전용은 생략 가능). 형식 `ver<major>.<minor>.<patch>` — patch 기본 2자리 zero-pad, 100+는 자연 확장(강제 동일 자릿수 패딩 없음). patch=소규모 수정·버그픽스·내부 로직 조정·표시·문구 개선, minor=체감 기능 추가(오르면 patch `01`부터), major=큰 개편·호환(오르면 minor/patch 초기화), 애매하면 patch→minor 보수적. 기동 완료 로그: 동일 버전 문자열+주요 링크(`UiVersionStartupLogger`가 `nav.js`에서 파싱).
 
-- **에이전트 응답 규칙(운영 편의)**: 이번 작업에서 **`APP_UI_VERSION`을 올렸거나**, 정적 UI(`src/main/resources/static/**`)를 변경한 경우, 에이전트는 **응답 마지막 줄에 반드시 현재 `APP_UI_VERSION`을 표기**한다. 예) `현재 앱 버전: ver1.4.21`
+- **에이전트 응답 규칙(운영 편의)**: 이번 작업에서 **`APP_UI_VERSION`을 올렸거나**, 정적 UI(`src/main/resources/static/**`)를 변경한 경우, 에이전트는 **응답 마지막 줄에 반드시 현재 `APP_UI_VERSION`을 표기**한다. 예) `현재 앱 버전: ver1.4.22`
 
 # 기술 스택 · 환경 제약 · DB
 
@@ -70,7 +70,9 @@ Spring Boot 기반 웹 애플리케이션. Controller 소스를 파싱하여 URL
 | `/url-viewer/extract.html`, `/settings/`, `/h2-console` | 관리자 |
 | `/encrypt-viewer/` | 공개(자리표시자) |
 
-`viewer.html` 세로 순서(대략): **조회 조건** → **검색 필터**(조회 전에도 표시·기본 펼침) → **상태 카드**(조회 성공 후 표시) → 안내·알림·일괄바 → **스냅샷 비교**(관리자, URL 테이블 직전) → 테이블.
+`viewer.html` 세로 순서(대략): **조회 조건** → **검색 필터**(조회 전에도 표시·기본 펼침) → **상태 카드**(조회 성공 후 표시) → 안내·알림·일괄바 → **스냅샷 비교**(관리자, URL 테이블 직전) → 테이블. 카드형 `details`는 **「펼치기/접기」 pill(`.collapser`)** 클릭 시에만 접힘(summary 빈 영역 클릭으로 접히지 않음).
+
+`GET /api/db/record-by-key` — 차단 모니터링 등에서 사용. **동일 레포·`apiPath`에서 HTTP 메소드 대소문자 무시 일치**를 먼저 시도하고, 없으면 `REQUEST`/`ALL`/빈값 등은 **동일 경로 행만**으로 폴백(복수 시 GET→POST→첫 행). `httpMethod` 파라미터는 생략 가능.
 
 구 경로는 `WebConfig.addViewControllers` 리다이렉트. 인증: `auth.js` `AuthState`, 60초·포커스 `/api/auth/check`, `auth:change`, `data-admin-only`.
 

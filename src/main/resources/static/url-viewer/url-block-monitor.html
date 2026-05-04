@@ -729,15 +729,15 @@
   }
 
   async function openApiRecordModal(repoName, apiPath, httpMethod){
-    // method가 없으면 조회 불가 → 관련 없음 모달
-    if (!repoName || !apiPath || !httpMethod) {
+    // 레포·경로 필수. 메소드는 와탭 등에서 REQUEST/빈값일 수 있음 → 서버에서 경로 폴백 매칭
+    if (!repoName || !apiPath) {
       document.getElementById('apiDetailModal').style.display = 'flex';
       renderApiDetailNotFound(repoName, apiPath, httpMethod);
       return;
     }
     openApiDetailModalLoading(repoName, apiPath, httpMethod);
     try {
-      const url = `/api/db/record-by-key?repositoryName=${encodeURIComponent(repoName)}&apiPath=${encodeURIComponent(apiPath)}&httpMethod=${encodeURIComponent(httpMethod)}`;
+      const url = `/api/db/record-by-key?repositoryName=${encodeURIComponent(repoName)}&apiPath=${encodeURIComponent(apiPath)}&httpMethod=${encodeURIComponent(httpMethod || '')}`;
       const res = await fetch(url);
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {

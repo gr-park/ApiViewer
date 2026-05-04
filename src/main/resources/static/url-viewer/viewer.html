@@ -35,7 +35,7 @@
     details.card > summary.card-title {
       padding: 14px 18px;
       margin: 0;
-      cursor: pointer;
+      cursor: default;
       list-style: none;
       user-select: none;
       border-radius: 10px;
@@ -54,6 +54,7 @@
       border: 1px solid var(--border);
       border-radius: 999px;
       padding: 3px 10px;
+      cursor: pointer;
     }
     .collapser.inline { margin-left: 6px; }
     /* 조회 건수 (조회 조건 헤더 — 펼치기 옆) */
@@ -1462,6 +1463,19 @@
   initDetailsState('statsCard', 'viewer.ui.statsCard', false);
   // 검색 필터는 조회 전 입력이 잦아 기본 펼침(저장값 있으면 우선)
   initDetailsState('filterCard', 'viewer.ui.filterCard', true);
+
+  // details 카드: summary 전체가 아니라 「펼치기/접기」(.collapser) 클릭 시에만 접힘 (빈 여백·힌트 클릭 오동작 방지)
+  document.querySelectorAll('details.card').forEach(function (details) {
+    const sum = details.querySelector(':scope > summary.card-title');
+    if (!sum) return;
+    sum.addEventListener('click', function (e) {
+      if (e.type !== 'click' || e.button !== 0) return;
+      if (e.target.closest('button.summary-btn')) return;
+      if (e.target.closest('a')) return;
+      if (e.target.closest('input, select, textarea, label')) return;
+      if (!e.target.closest('.collapser')) e.preventDefault();
+    });
+  });
 
   // ── 전체 재로드 (카운트 + 현재 페이지) ────────────────────
   // 변경 작업(편집/일괄/알림해제 등) 이후 서버 상태와 UI 동기화

@@ -26,6 +26,9 @@ public interface ApiRecordRepository extends JpaRepository<ApiRecord, Long>,
     Optional<ApiRecord> findByRepositoryNameAndApiPathAndHttpMethod(
             String repositoryName, String apiPath, String httpMethod);
 
+    /** 동일 레포·URL 경로의 모든 HTTP 메소드 행 (차단 모니터링 완화 매칭용) */
+    List<ApiRecord> findByRepositoryNameAndApiPathOrderByIdAsc(String repositoryName, String apiPath);
+
     @Query("SELECT DISTINCT r.repositoryName FROM ApiRecord r ORDER BY r.repositoryName")
     List<String> findAllRepositoryNames();
 

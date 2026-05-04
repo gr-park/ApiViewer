@@ -758,25 +758,89 @@ public class ApiViewController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    /** 레포+URL+메소드 키로 단건 조회 — 모니터링/딥링크용 */
+    /** 레포+URL+메소드 키로 단건 조회 — 모니터링/딥링크용. httpMethod 생략 가능. */
     @GetMapping("/db/record-by-key")
     public ResponseEntity<?> getRecordByKey(@RequestParam String repositoryName,
                                             @RequestParam String apiPath,
-                                            @RequestParam String httpMethod) {
-        log.info("[단건 조회] GET /api/db/record-by-key repo={}, method={}, path={}", repositoryName, httpMethod, apiPath);
+                                            @RequestParam(required = false) String httpMethod) {
+        String hmRaw = httpMethod == null ? "" : httpMethod;
+        log.info("[단건 조회] GET /api/db/record-by-key repo={}, method={}, path={}", repositoryName, hmRaw, apiPath);
         if (repositoryName == null || repositoryName.isBlank()
-                || apiPath == null || apiPath.isBlank()
-                || httpMethod == null || httpMethod.isBlank()) {
-            return ResponseEntity.badRequest().body(Map.of("error", "repositoryName, apiPath, httpMethod 가 필요합니다."));
+                || apiPath == null || apiPath.isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "repositoryName, apiPath 가 필요합니다."));
         }
-        return recordRepository.findByRepositoryNameAndApiPathAndHttpMethod(repositoryName, apiPath, httpMethod)
-                .<ResponseEntity<?>>map(r -> ResponseEntity.ok(toSummaryMap(r)))
+        Optional<ApiRecord> found = resolveRecordByKeyForMonitor(repositoryName, apiPath, hmRaw);
+        return found.<ResponseEntity<?>>map(r -> ResponseEntity.ok(toSummaryMap(r)))
                 .orElseGet(() -> ResponseEntity.status(404).body(Map.of(
                         "error", "레코드를 찾을 수 없습니다.",
                         "repositoryName", repositoryName,
                         "apiPath", apiPath,
-                        "httpMethod", httpMethod
+                        "httpMethod", hmRaw
                 )));
+    }
+
+    /**
+     * 차단 모니터링 등 APM 문자열과 DB 키 불일치 대응:
+     * 1) 동일 레포·경로에서 HTTP 메소드 대소문자 무시 일치
+     * 2) 없으면 REQUEST/ALL 등 일반 토큰이거나 메소드 불일치 시 — 동일 경로 단일 행이면 그 행, 복수면 GET→POST→첫 행 순
+     */
+    private Optional<ApiRecord> resolveRecordByKeyForMonitor(String repositoryName, String apiPath, String httpMethodRaw) {
+        List<ApiRecord> byPath = recordRepository.findByRepositoryNameAndApiPathOrderByIdAsc(repositoryName, apiPath);
+        if (byPath.isEmpty()) {
+            return Optional.empty();
+        }
+        String trimmed = httpMethodRaw == null ? "" : httpMethodRaw.trim();
+        if (!trimmed.isEmpty()) {
+            Optional<ApiRecord> strict = recordRepository.findByRepositoryNameAndApiPathAndHttpMethod(
+                    repositoryName, apiPath, trimmed);
+            if (strict.isPresent()) {
+                return strict;
+            }
+        }
+        String canonIn = canonHttpMethod(trimmed);
+        if (!canonIn.isEmpty() && !isGenericHttpVerb(canonIn)) {
+            for (ApiRecord r : byPath) {
+                if (canonHttpMethod(r.getHttpMethod()).equals(canonIn)) {
+                    log.debug("[단건 조회] record-by-key 메소드 대소문자/정규화 매칭 repo={}, path={}, dbMethod={}",
+                            repositoryName, apiPath, r.getHttpMethod());
+                    return Optional.of(r);
+                }
+            }
+        }
+        ApiRecord picked = pickRecordWhenMethodUnmatched(byPath);
+        log.debug("[단건 조회] record-by-key 경로 폴백 매칭 repo={}, path={}, rows={}, pickedMethod={}",
+                repositoryName, apiPath, byPath.size(), picked.getHttpMethod());
+        return Optional.of(picked);
+    }
+
+    private static String canonHttpMethod(String m) {
+        if (m == null) {
+            return "";
+        }
+        return m.trim().toUpperCase(Locale.ROOT);
+    }
+
+    private static boolean isGenericHttpVerb(String canon) {
+        return canon.isEmpty()
+                || "REQUEST".equals(canon)
+                || "ALL".equals(canon)
+                || "ANY".equals(canon)
+                || "*".equals(canon)
+                || "-".equals(canon)
+                || "UNKNOWN".equals(canon);
+    }
+
+    private static ApiRecord pickRecordWhenMethodUnmatched(List<ApiRecord> byPath) {
+        if (byPath.size() == 1) {
+            return byPath.get(0);
+        }
+        return byPath.stream()
+                .filter(r -> "GET".equals(canonHttpMethod(r.getHttpMethod())))
+                .findFirst()
+                .or(() -> byPath.stream()
+                        .filter(r -> "POST".equals(canonHttpMethod(r.getHttpMethod())))
+                        .findFirst())
+                .orElseGet(() -> byPath.get(0));
     }
 
     /** 일괄 변경 (상태/차단대상/차단대상기준/현업검토 등)
