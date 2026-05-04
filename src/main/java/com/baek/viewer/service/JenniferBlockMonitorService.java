@@ -19,6 +19,7 @@ import java.time.Duration;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.*;
+import java.util.regex.Pattern;
 
 /**
  * URL 차단 모니터링 — Jennifer 에러 검색 호출 전용 서비스.
@@ -298,7 +299,7 @@ public class JenniferBlockMonitorService {
                 for (JsonNode instance : resultNode) {
                     String name       = text(instance, "name");
                     String instanceId = text(instance, "instanceId");
-                    if (name != null && instanceId != null && name.contains(repoName)) {
+                    if (name != null && instanceId != null && jenniferInstanceNameMatchesRepo(name, repoName)) {
                         log.debug("[URL차단모니터][JENNIFER] instance 매칭: name={}, instanceId={}", name, instanceId);
                         sj.add(instanceId);
                     }
@@ -316,6 +317,25 @@ public class JenniferBlockMonitorService {
             log.warn("[URL차단모니터][JENNIFER] instance API 조회 실패: {}", e.getMessage());
             return "";
         }
+    }
+
+    /**
+     * instance name 과 레포명 매칭 — {@code name.contains(repo)} 는 "pers" 공통 부분 등 오탐이 나므로 사용하지 않는다.
+     * 전체 일치(대소문자 무시) 또는 구분자(- _ .) 경계로 둘러싸인 부분 문자열만 허용.
+     */
+    static boolean jenniferInstanceNameMatchesRepo(String instanceName, String repoName) {
+        if (instanceName == null || repoName == null) {
+            return false;
+        }
+        String rn = repoName.trim();
+        if (rn.isEmpty()) {
+            return false;
+        }
+        if (instanceName.equalsIgnoreCase(rn)) {
+            return true;
+        }
+        Pattern p = Pattern.compile("(^|[-_.])" + Pattern.quote(rn) + "($|[-_.])", Pattern.CASE_INSENSITIVE);
+        return p.matcher(instanceName).find();
     }
 
     /** jennifer_oids JSON → "10021,10022" */

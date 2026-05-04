@@ -233,7 +233,8 @@ public class WhatapTxSearchService {
                 long stime = cursor.atStartOfDay(KST).toInstant().toEpochMilli();
                 long etime = cursor.plusDays(1).atStartOfDay(KST).toInstant().toEpochMilli() - 1;
                 try {
-                    List<BlockedTxRow> day = fetchOneDay(base, refererPath, r, stime, etime, ptotal, repoByPcodeOkind);
+                    String restrictToRepo = (repoName == null || repoName.isBlank()) ? null : r.getRepoName();
+                    List<BlockedTxRow> day = fetchOneDay(base, refererPath, r, stime, etime, ptotal, repoByPcodeOkind, restrictToRepo);
                     log.debug("[URL차단모니터] {} {} 응답={}건", r.getRepoName(), cursor, day.size());
                     for (BlockedTxRow row : day) {
                         if (row.getErrMessage() == null || !row.getErrMessage().startsWith(BLOCK_PREFIX)) continue;
@@ -300,7 +301,8 @@ public class WhatapTxSearchService {
 
     private List<BlockedTxRow> fetchOneDay(String base, String refererPath, RepoConfig repo,
                                             long stime, long etime, int ptotal,
-                                            Map<String, String> repoByPcodeOkind) throws Exception {
+                                            Map<String, String> repoByPcodeOkind,
+                                            String restrictToRepoName) throws Exception {
         boolean debug = globalRepo.findById(1L).map(GlobalConfig::isApmDebug).orElse(false);
 
         // 페이로드: 사용자 캡쳐 형식 그대로
@@ -349,15 +351,17 @@ public class WhatapTxSearchService {
         if (resp.statusCode() != 200) {
             throw new RuntimeException("HTTP " + resp.statusCode() + " — " + resp.body());
         }
-        return parseRows(resp.body(), String.valueOf(repo.getWhatapPcode()), repoByPcodeOkind);
+        return parseRows(resp.body(), String.valueOf(repo.getWhatapPcode()), repoByPcodeOkind, restrictToRepoName);
     }
 
     /**
      * Whatap 응답을 BlockedTxRow 로 파싱.
      * repoName 은 (pcode|okindName) 매칭으로 결정 — 매칭 실패 시 null.
      * "okinds:0" 으로 전체 okind 를 한 번에 받으므로, 선택한 레포 외 okind row 도 섞여 들어옴 → 레포 컬럼을 신뢰 가능한 라벨로 맞춰줌.
+     * {@code restrictToRepoName} 이 비어 있지 않으면 해당 레포로 매핑된 행만 포함(단일·지정 레포 조회 시 타 레포 okind 누수 방지).
      */
-    private List<BlockedTxRow> parseRows(String body, String pcode, Map<String, String> repoByPcodeOkind) throws Exception {
+    private List<BlockedTxRow> parseRows(String body, String pcode, Map<String, String> repoByPcodeOkind,
+                                         String restrictToRepoName) throws Exception {
         List<BlockedTxRow> out = new ArrayList<>();
         JsonNode root = om.readTree(body);
         JsonNode arr = root.isArray() ? root : root.path("data").isArray() ? root.path("data") :
@@ -370,6 +374,11 @@ public class WhatapTxSearchService {
             row.setOkindName(okindName);
             // (pcode, okindName) 매칭되는 레포만 라벨링 — 매칭 실패면 null (화면 레포 공란)
             String matchedRepo = okindName == null ? null : repoByPcodeOkind.get(pcode + "|" + okindName);
+            if (restrictToRepoName != null && !restrictToRepoName.isBlank()) {
+                if (matchedRepo == null || !restrictToRepoName.equals(matchedRepo)) {
+                    continue;
+                }
+            }
             row.setRepoName(matchedRepo);
             row.setService(text(n, "service"));
             row.setMethod(text(n, "method"));
