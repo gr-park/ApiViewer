@@ -307,6 +307,40 @@
     }
     [data-theme="dark"] .batch-block-alert-banner a { color: #fca5a5; }
 
+    /* Git Pull·추출: 부분 실패(SUCCESS + fail_item_count>0) */
+    #batchDashTable tbody tr.batch-dash-row--git-partial td {
+      background: #fffbeb !important;
+      border-bottom-color: #fde68a !important;
+    }
+    [data-theme="dark"] #batchDashTable tbody tr.batch-dash-row--git-partial td {
+      background: rgba(180, 83, 9, 0.22) !important;
+      border-bottom-color: #92400e !important;
+    }
+    .batch-git-extract-warn-banner {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      margin: 0 0 12px 0;
+      padding: 10px 12px;
+      border-radius: 8px;
+      border: 1px solid #fcd34d;
+      background: #fffbeb;
+      color: #92400e;
+      font-size: 12px;
+      line-height: 1.5;
+    }
+    .batch-git-extract-warn-banner a {
+      color: #b45309;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    [data-theme="dark"] .batch-git-extract-warn-banner {
+      border-color: #b45309;
+      background: rgba(180, 83, 9, 0.2);
+      color: #fde68a;
+    }
+    [data-theme="dark"] .batch-git-extract-warn-banner a { color: #fcd34d; }
+
     /* URL 현황: "잔여 ~ ①-② 담당자판단" 컬럼만 외곽 강조 */
     :root { --ov-block-outline: rgba(159,18,57,.45); } /* #9f1239 약하게 */
     /* 기본 셀(border:0 !important)보다 우선하도록 테이블 ID까지 포함해 강제 */
@@ -488,6 +522,7 @@
           <span id="batchDashTitleDate" style="font-size:10px;font-weight:600;color:var(--text-muted);text-transform:none;letter-spacing:0;"></span>
         </div>
         <div id="batchBlockAlertBanner" class="batch-block-alert-banner" hidden></div>
+        <div id="batchGitExtractWarnBanner" class="batch-git-extract-warn-banner" hidden></div>
         <div class="tbl-wrap dash-batch-scroll">
           <table id="batchDashTable" style="width:100%;border-collapse:collapse;font-size:12px;">
             <thead>
@@ -689,13 +724,21 @@
     return ok && n > 0;
   }
 
+  /** GIT_PULL_EXTRACT: 전체 status는 SUCCESS이나 일부 레포 추출 실패 */
+  function isGitPullPartialFailRow(r) {
+    if (!r || r.jobType !== 'GIT_PULL_EXTRACT') return false;
+    const ok = (r.status || '').toUpperCase() === 'SUCCESS';
+    const f = r.failItemCount != null ? Number(r.failItemCount) : 0;
+    return ok && f > 0;
+  }
+
   function renderBatchDashboard(rows) {
     const tbody = document.getElementById('batchDashTbody');
-    const banner = document.getElementById('batchBlockAlertBanner');
-    if (banner) {
-      banner.hidden = true;
-      banner.innerHTML = '';
-    }
+    const blockBanner = document.getElementById('batchBlockAlertBanner');
+    const gitBanner = document.getElementById('batchGitExtractWarnBanner');
+    [blockBanner, gitBanner].forEach(b => {
+      if (b) { b.hidden = true; b.innerHTML = ''; }
+    });
     if (!tbody) return;
     if (!rows || !rows.length) {
       tbody.innerHTML = '<tr><td colspan="5" style="padding:16px;text-align:center;color:var(--text-muted);font-size:12px;">당일 배치 이력이 없습니다.</td></tr>';
@@ -709,22 +752,36 @@
       return String(a.jobType || '').localeCompare(String(b.jobType || ''), 'ko');
     });
     const hit = sorted.find(isBlockUrlMonitorHitRow);
-    if (hit && banner) {
+    if (hit && blockBanner) {
       const n = Number(hit.itemCount);
-      banner.hidden = false;
-      banner.innerHTML =
+      blockBanner.hidden = false;
+      blockBanner.innerHTML =
         '<span style="flex-shrink:0;font-size:16px;line-height:1;" aria-hidden="true">⚠</span>' +
         '<span style="flex:1;min-width:0;"><strong>차단 URL 인입 감지</strong> — 차단 모니터링 배치가 정상 완료되었으나, ' +
         '와탭·제니퍼 조회 결과 <strong style="font-variant-numeric:tabular-nums;">' + n.toLocaleString() + '건</strong>의 차단 트랜잭션이 집계되었습니다. ' +
         '상세는 URL 차단 모니터링 화면에서 확인하세요.</span>' +
         '<a href="/url-viewer/url-block-monitor.html">모니터링 이동 →</a>';
     }
+    const gitHit = sorted.find(isGitPullPartialFailRow);
+    if (gitHit && gitBanner) {
+      const nf = Number(gitHit.failItemCount);
+      gitBanner.hidden = false;
+      gitBanner.innerHTML =
+        '<span style="flex-shrink:0;font-size:16px;line-height:1;" aria-hidden="true">⚠</span>' +
+        '<span style="flex:1;min-width:0;"><strong>Git Pull·추출 부분 실패</strong> — 배치는 완료(SUCCESS)로 기록되었으나 ' +
+        '<strong style="font-variant-numeric:tabular-nums;">' + nf.toLocaleString() + '개</strong> 레포에서 동기화 또는 추출 오류가 있었습니다. ' +
+        '메시지 열·로그와 설정의 배치 이력을 확인하세요. (네비 Git 동기화 경고와 함께 보면 원인 파악에 도움이 됩니다.)</span>' +
+        '<a href="/settings/">설정(배치 이력) →</a>';
+    }
     tbody.innerHTML = sorted.map(r => {
       const ok = (r.status || '').toUpperCase() === 'SUCCESS';
       const blockHit = isBlockUrlMonitorHitRow(r);
+      const gitPartial = isGitPullPartialFailRow(r);
       let badge;
       if (ok && blockHit) {
         badge = '<span class="st st-use" style="font-size:11px;">성공</span> <span style="display:inline-block;margin-left:4px;padding:2px 8px;border-radius:10px;background:#fee2e2;color:#991b1b;font-size:10px;font-weight:700;vertical-align:middle;">인입 ' + Number(r.itemCount).toLocaleString() + '건</span>';
+      } else if (ok && gitPartial) {
+        badge = '<span class="st st-use" style="font-size:11px;">성공</span> <span style="display:inline-block;margin-left:4px;padding:2px 8px;border-radius:10px;background:#fef3c7;color:#b45309;font-size:10px;font-weight:700;vertical-align:middle;">레포 실패 ' + Number(r.failItemCount).toLocaleString() + '개</span>';
       } else if (ok) {
         badge = '<span class="st st-use" style="font-size:11px;">성공</span>';
       } else {
@@ -732,10 +789,15 @@
       }
       const msg = (r.resultSummary || '').trim();
       const runs = (r.runCount != null && r.runCount > 0) ? r.runCount : 1;
-      const trClass = blockHit ? ' class="batch-dash-row--block-hit"' : '';
-      const rowStyle = blockHit
-        ? 'border-bottom:1px solid var(--border);box-shadow:inset 4px 0 0 #dc2626;'
-        : 'border-bottom:1px solid var(--border);';
+      let trClass = '';
+      let rowStyle = 'border-bottom:1px solid var(--border);';
+      if (blockHit) {
+        trClass = ' class="batch-dash-row--block-hit"';
+        rowStyle += 'box-shadow:inset 4px 0 0 #dc2626;';
+      } else if (gitPartial) {
+        trClass = ' class="batch-dash-row--git-partial"';
+        rowStyle += 'box-shadow:inset 4px 0 0 #d97706;';
+      }
       return `<tr${trClass} style="${rowStyle}">
         <td style="padding:6px 8px;"><span style="font-weight:700;font-size:11px;">${esc(r.jobType || '')}</span>${r.description ? `<div style="font-size:10px;color:var(--text-muted);font-weight:400;">${esc(r.description)}</div>` : ''}</td>
         <td style="padding:6px 8px;text-align:center;font-variant-numeric:tabular-nums;">${runs}</td>

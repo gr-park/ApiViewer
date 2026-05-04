@@ -69,6 +69,7 @@ public class BatchDashboardHistoryService {
             dto.setLastEndTime(r.getEndTime());
             dto.setDurationMs(r.getDurationMs());
             dto.setItemCount(r.getItemCount());
+            dto.setFailItemCount(r.getFailItemCount());
             dto.setStatus(r.getStatus());
             dto.setResultSummary(truncate(r.getResultSummary(), SUMMARY_MAX));
             out.add(dto);

@@ -41,6 +41,13 @@ public class BatchExecutionLog {
     @Column(name = "item_count")
     private Integer itemCount;
 
+    /**
+     * 보조 실패·스킵 건수 등 (예: {@code GIT_PULL_EXTRACT}에서 레포별 추출 실패 수).
+     * Job 결과 Map 의 {@code failCount} 로 기록. 미사용 배치는 null.
+     */
+    @Column(name = "fail_item_count")
+    private Integer failItemCount;
+
     /** 결과 요약 (성공 시 주요 수치, 실패 시 간단 사유) */
     @Column(name = "result_summary", length = 500)
     private String resultSummary;
@@ -67,6 +74,8 @@ public class BatchExecutionLog {
     public void setStatus(String status) { this.status = status; }
     public Integer getItemCount() { return itemCount; }
     public void setItemCount(Integer itemCount) { this.itemCount = itemCount; }
+    public Integer getFailItemCount() { return failItemCount; }
+    public void setFailItemCount(Integer failItemCount) { this.failItemCount = failItemCount; }
     public String getResultSummary() { return resultSummary; }
     public void setResultSummary(String resultSummary) { this.resultSummary = resultSummary; }
     public String getMessage() { return message; }

@@ -24,10 +24,11 @@ import java.util.concurrent.CompletableFuture;
  * 각 Job은 성공/실패 여부와 집계 정보를 {@code JobExecutionContext#setResult(Object)} 로
  * 다음 키를 가진 Map 으로 전달할 수 있다.
  * <pre>
- *  status  : "SUCCESS" | "FAIL"        (미지정 시 SUCCESS)
- *  count   : Integer/Long               (처리 건수, nullable)
- *  summary : String (≤ 500자)           (결과 요약)
- *  message : String (≤ 4000자)          (상세/에러 메시지)
+ *  status    : "SUCCESS" | "FAIL"        (미지정 시 SUCCESS)
+ *  count     : Integer/Long               (처리 건수, nullable)
+ *  failCount : Integer/Long               (부분 실패 건수 등, 선택. 예: GIT_PULL_EXTRACT 실패 레포 수)
+ *  summary   : String (≤ 500자)           (결과 요약)
+ *  message   : String (≤ 4000자)          (상세/에러 메시지)
  * </pre>
  * Job이 예외를 throw 하면 listener 가 status=FAIL 로 기록하며 스택트레이스를 message 에 담는다.
  */
@@ -85,6 +86,7 @@ public class BatchHistoryJobListener implements JobListener {
             String summary = null;
             String message = null;
             Integer count = null;
+            Integer failItemCount = null;
 
             Object result = context.getResult();
             if (result instanceof Map<?, ?> m) {
@@ -92,6 +94,8 @@ public class BatchHistoryJobListener implements JobListener {
                 if (st != null) status = st.toString();
                 Object cnt = m.get("count");
                 if (cnt instanceof Number n) count = n.intValue();
+                Object fc = m.get("failCount");
+                if (fc instanceof Number n) failItemCount = n.intValue();
                 Object sm = m.get("summary");
                 if (sm != null) summary = sm.toString();
                 Object msg = m.get("message");
@@ -106,6 +110,7 @@ public class BatchHistoryJobListener implements JobListener {
 
             row.setStatus(status);
             row.setItemCount(count);
+            row.setFailItemCount(failItemCount);
             row.setResultSummary(truncate(summary, 500));
             row.setMessage(truncate(message, 4000));
 

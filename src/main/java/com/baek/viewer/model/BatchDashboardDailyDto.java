@@ -15,6 +15,8 @@ public class BatchDashboardDailyDto {
     private LocalDateTime lastEndTime;
     private Long durationMs;
     private Integer itemCount;
+    /** GIT_PULL_EXTRACT 등 — 부분 실패 레포 수 (없으면 null) */
+    private Integer failItemCount;
     private String status;
     private String resultSummary;
 
@@ -34,6 +36,8 @@ public class BatchDashboardDailyDto {
     public void setDurationMs(Long durationMs) { this.durationMs = durationMs; }
     public Integer getItemCount() { return itemCount; }
     public void setItemCount(Integer itemCount) { this.itemCount = itemCount; }
+    public Integer getFailItemCount() { return failItemCount; }
+    public void setFailItemCount(Integer failItemCount) { this.failItemCount = failItemCount; }
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
     public String getResultSummary() { return resultSummary; }

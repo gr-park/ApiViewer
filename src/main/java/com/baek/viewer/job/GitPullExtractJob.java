@@ -119,6 +119,7 @@ public class GitPullExtractJob implements Job {
         context.setResult(java.util.Map.of(
                 "status", fail == 0 ? "SUCCESS" : (success == 0 ? "FAIL" : "SUCCESS"),
                 "count", success,
+                "failCount", fail,
                 "summary", result));
     }
 
