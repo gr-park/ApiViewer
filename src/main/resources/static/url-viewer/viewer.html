@@ -808,9 +808,7 @@
           <button class="btn btn-ghost btn-sm" onclick="renderSnapshotCompare('changed')" title="A→B 사이 상태/속성이 바뀐 URL">📝 상태변경건</button>
         </div>
         <label class="field" style="margin-left:auto;">레포 필터
-          <select id="cmpRepoFilter" style="min-width:200px;" onchange="onCmpRepoFilterChange()">
-            <option value="">전체</option>
-          </select>
+          <div id="cmpRepoFilter"></div>
         </label>
         <div id="compareMeta" style="font-size:11px;color:var(--text-muted);width:100%;"></div>
       </div>
@@ -3975,7 +3973,7 @@
 
       cmpCache = { from: da, to: db, diff: diffData };
       // 비교 직후 결과에 등장한 레포 목록으로 필터 드롭다운 채움 (기본 = 전체)
-      window._cmpRepoFilter = '';
+      window._cmpRepoFilters = [];
       try { populateCompareRepoFilter(); } catch (e) {}
       renderSnapshotCompare('all');
       showToast('비교 완료 (신규건 ' + ((diffData.counts||{}).new||0) + ' / 삭제건 ' + ((diffData.counts||{}).deleted||0) + ' / 상태변경건 ' + ((diffData.counts||{}).changed||0) + ')', 'success');
@@ -3986,7 +3984,7 @@
 
   // 비교 결과 상태 (현재 모드 + 레포 필터). 한 번 비교 후 모드/필터 토글 시 재렌더에 사용.
   window._cmpMode = window._cmpMode || 'all';
-  window._cmpRepoFilter = window._cmpRepoFilter || '';
+  window._cmpRepoFilters = Array.isArray(window._cmpRepoFilters) ? window._cmpRepoFilters : [];
 
   /** kind 영문 코드 → 한글 라벨 */
   function cmpKindLabel(kind) {
@@ -3998,15 +3996,20 @@
 
   /** 레포 필터 드롭다운 변경 핸들러 */
   function onCmpRepoFilterChange() {
-    const sel = document.getElementById('cmpRepoFilter');
-    window._cmpRepoFilter = sel ? (sel.value || '') : '';
+    // 공통 RepoSelect 기반 (selected=[] => 전체)
+    try {
+      const arr = (window._cmpRepoSel ? window._cmpRepoSel.getSelected() : []) || [];
+      window._cmpRepoFilters = Array.isArray(arr) ? arr : [];
+    } catch (e) {
+      window._cmpRepoFilters = [];
+    }
     renderSnapshotCompare(window._cmpMode || 'all');
   }
 
   /** 비교 직후 결과에 등장한 distinct repo 들로 필터 드롭다운 채움. 이전 선택값은 가능하면 보존. */
   function populateCompareRepoFilter() {
-    const sel = document.getElementById('cmpRepoFilter');
-    if (!sel || !cmpCache || !cmpCache.diff) return;
+    const mountEl = document.getElementById('cmpRepoFilter');
+    if (!mountEl || !cmpCache || !cmpCache.diff) return;
     const d = cmpCache.diff;
     const set = new Set();
     [].concat(d.new || [], d.deleted || [], d.changed || []).forEach(r => {
@@ -4014,11 +4017,31 @@
       if (repo) set.add(repo);
     });
     const repos = Array.from(set).sort((a, b) => a.localeCompare(b));
-    const prev = window._cmpRepoFilter || '';
-    sel.innerHTML = '<option value="">전체</option>'
-      + repos.map(rp => `<option value="${esc(rp)}">${esc(rp)}</option>`).join('');
-    if (prev && repos.includes(prev)) sel.value = prev;
-    else { sel.value = ''; window._cmpRepoFilter = ''; }
+    const prevArr = Array.isArray(window._cmpRepoFilters) ? window._cmpRepoFilters : [];
+    const repoListForMount = repos.map(rp => ({
+      repoName: rp,
+      businessName: (repoConfigMap && repoConfigMap[rp] && repoConfigMap[rp].businessName) ? repoConfigMap[rp].businessName : ''
+    }));
+    if (!window._cmpRepoSel) {
+      window._cmpRepoSel = RepoSelect.mountCompact('#cmpRepoFilter', {
+        repos: repoListForMount,
+        selected: [],
+        placeholder: '전체',
+        onChange: () => onCmpRepoFilterChange()
+      });
+    } else {
+      // 기존 인스턴스에 레포 목록 갱신
+      try { window._cmpRepoSel.destroy(); } catch (_) {}
+      window._cmpRepoSel = RepoSelect.mountCompact('#cmpRepoFilter', {
+        repos: repoListForMount,
+        selected: [],
+        placeholder: '전체',
+        onChange: () => onCmpRepoFilterChange()
+      });
+    }
+    const nextSel = prevArr.filter(x => repos.includes(x));
+    window._cmpRepoSel.setSelected(nextSel);
+    window._cmpRepoFilters = nextSel;
   }
 
   function renderSnapshotCompare(mode) {
@@ -4051,16 +4074,18 @@
               : taggedAll;
 
     // 레포 필터 적용
-    const repoFilter = (window._cmpRepoFilter || '').trim();
-    if (repoFilter) {
-      rows = rows.filter(r => (r.repositoryName || r.repo || '') === repoFilter);
+    const repoFilters = Array.isArray(window._cmpRepoFilters) ? window._cmpRepoFilters : [];
+    if (repoFilters.length) {
+      const s = new Set(repoFilters);
+      rows = rows.filter(r => s.has((r.repositoryName || r.repo || '')));
     }
 
     const title = mode === 'new' ? '신규건'
                 : mode === 'deleted' ? '삭제건'
                 : mode === 'changed' ? '상태변경건'
                 : '전체';
-    const repoTag = repoFilter ? ` · 레포 ${esc(repoFilter)}` : '';
+    const repoTag = repoFilters.length === 1 ? ` · 레포 ${esc(repoFilters[0])}`
+      : (repoFilters.length > 1 ? ` · 레포 ${repoFilters.length}개` : '');
 
     const head = `
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap;">

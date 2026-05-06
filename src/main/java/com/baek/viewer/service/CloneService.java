@@ -107,7 +107,7 @@ public class CloneService {
         return result;
     }
 
-    // ── Clone 실행 (비동기, 최대 5개) ────────────────────────────────────
+    // ── Clone 실행 (비동기, 순차 실행, 최대 5개) ─────────────────────────────
     public String startClone(List<Map<String, String>> repos) {
         if (repos == null || repos.isEmpty())
             throw new IllegalArgumentException("클론할 레포지토리를 선택하세요.");
@@ -134,15 +134,15 @@ public class CloneService {
         }
         jobMap.put(jobId, statuses);
 
-        List<CompletableFuture<Void>> futures = new ArrayList<>();
-        for (RepoCloneStatus status : statuses) {
-            futures.add(CompletableFuture.runAsync(() -> runGitClone(status, localPath, gitExe)));
-        }
-        // 모든 클론 완료 후 이메일 발송
-        CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
-                .thenRun(() -> sendCompletionMail(jobId, statuses));
+        // 안전을 위해 순차 실행: 동시에 여러 git clone을 돌리지 않는다.
+        CompletableFuture.runAsync(() -> {
+            for (RepoCloneStatus status : statuses) {
+                runGitClone(status, localPath, gitExe);
+            }
+            sendCompletionMail(jobId, statuses);
+        });
 
-        log.info("[Clone 시작] jobId={} repos={}", jobId, repos.stream().map(r -> r.get("slug")).toList());
+        log.info("[Clone 시작(순차)] jobId={} repos={}", jobId, repos.stream().map(r -> r.get("slug")).toList());
         return jobId;
     }
 
