@@ -282,8 +282,11 @@
   <div class="detail-overlay" onclick="closeDetail()"></div>
   <div class="detail-content">
     <div class="detail-header">
-      <h3>URL 상세 정보</h3>
-      <button onclick="closeDetail()" class="btn btn-ghost" style="height:30px;padding:6px 10px;">닫기 ✕</button>
+      <h3>URL 기본정보</h3>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <button onclick="openInViewerDetail()" class="btn btn-ghost" style="height:30px;padding:6px 10px;">URL분석현황 띄우기</button>
+        <button onclick="closeDetail()" class="btn btn-ghost" style="height:30px;padding:6px 10px;">닫기 ✕</button>
+      </div>
     </div>
     <div id="detailBody" class="detail-body"></div>
   </div>
@@ -690,9 +693,12 @@
   function gotoPage(p){ currentPage = p; renderTable(); window.scrollTo({top: document.querySelector('.table-wrap').offsetTop - 60, behavior: 'smooth'}); }
 
   // ── URL분석현황 상세 모달(차단 모니터링에서 재사용) ─────────────────────────
+  let viewerDetailRecordId = null;
+
   function closeDetail() {
     const m = document.getElementById('detailModal');
     if (m) m.style.display = 'none';
+    viewerDetailRecordId = null;
   }
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && document.getElementById('detailModal')?.style?.display === 'flex') {
@@ -703,6 +709,7 @@
   function renderDetailNotFound(repoName, apiPath, httpMethod) {
     const body = document.getElementById('detailBody');
     if (!body) return;
+    viewerDetailRecordId = null;
     body.innerHTML = `
       <div style="font-size:13px;font-weight:900;color:#b91c1c;">관련 URL 없음</div>
       <div style="margin-top:8px;font-size:12px;color:var(--text-muted);line-height:1.6;">
@@ -722,11 +729,28 @@
     if (!body) return;
     const r = record || {};
     const pill = (label, value) => `<span style="display:inline-flex;gap:6px;align-items:center;padding:4px 10px;border:1px solid var(--border);border-radius:999px;background:#f8fafc;font-size:11px;color:var(--text-muted);font-weight:800;">${esc(label)}<b style="color:var(--text);font-weight:900;">${esc(value ?? '-')}</b></span>`;
+    const statusPill = (status) => {
+      const s = String(status || '');
+      const map = (st) => {
+        if (!st) return { bg:'#f1f5f9', fg:'#64748b', bd:'var(--border)' };
+        if (st === '사용') return { bg:'#dcfce7', fg:'#166534', bd:'#86efac' };
+        if (st === '차단완료') return { bg:'#f1f5f9', fg:'#64748b', bd:'var(--border)' };
+        if (st === '삭제') return { bg:'#fee2e2', fg:'#991b1b', bd:'#fecaca' };
+        if (st.startsWith('①-')) {
+          if (st.startsWith('①-③') || st.startsWith('①-④')) return { bg:'#fef3c7', fg:'#92400e', bd:'#fde68a' };
+          return { bg:'#fee2e2', fg:'#991b1b', bd:'#fecaca' };
+        }
+        if (st.startsWith('②-')) return { bg:'#ffedd5', fg:'#9a3412', bd:'#fed7aa' };
+        return { bg:'#f1f5f9', fg:'#64748b', bd:'var(--border)' };
+      };
+      const c = map(s);
+      return `<span style="display:inline-flex;align-items:center;padding:2px 8px;border:1px solid ${c.bd};border-radius:999px;background:${c.bg};color:${c.fg};font-size:11px;font-weight:900;">${esc(s || '-')}</span>`;
+    };
     body.innerHTML = `
       <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;">
         ${pill('레포', r.repositoryName)}
         ${pill('Method', r.httpMethod)}
-        ${pill('상태', r.status)}
+        ${pill('상태', '')}${statusPill(r.status)}
         ${pill('호출(총)', (r.callCount ?? 0).toLocaleString())}
         ${pill('호출(월)', (r.callCountMonth ?? 0).toLocaleString())}
         ${pill('호출(주)', (r.callCountWeek ?? 0).toLocaleString())}
@@ -768,10 +792,20 @@
         renderDetailNotFound(repoName, apiPath, httpMethod);
         return;
       }
+      viewerDetailRecordId = data && data.id != null ? Number(data.id) : null;
       renderDetail(data);
     } catch (e) {
       renderDetailNotFound(repoName, apiPath, httpMethod);
     }
+  }
+
+  function openInViewerDetail() {
+    if (!viewerDetailRecordId || !Number.isFinite(Number(viewerDetailRecordId))) {
+      showToast('URL분석현황(DB)에서 해당 URL을 찾지 못했습니다.', 'error');
+      return;
+    }
+    const w = window.open(`/url-viewer/viewer.html?detailId=${encodeURIComponent(String(viewerDetailRecordId))}`, '_blank', 'noopener');
+    if (!w) showToast('팝업이 차단되었습니다. 브라우저 설정에서 팝업 허용 후 다시 시도하세요.', 'error');
   }
 
   function openViewerDetailModalFromEl(el) {

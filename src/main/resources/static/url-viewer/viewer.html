@@ -3895,6 +3895,25 @@
 
   initRepos();
 
+  // 딥링크: URL호출현황/차단모니터링에서 전달한 detailId 로 상세 모달 바로 오픈
+  // (목록 조회(loadApis)와 무관하게 /api/db/record/{id} 로 바로 로딩한다.)
+  try {
+    const qs = new URLSearchParams(location.search);
+    const detailIdRaw = (qs.get('detailId') || '').trim();
+    if (detailIdRaw && /^\d+$/.test(detailIdRaw)) {
+      const detailId = Number(detailIdRaw);
+      if (Number.isFinite(detailId)) {
+        setTimeout(() => { try { openDetail(detailId); } catch(e) {} }, 60);
+        // 새로고침 시 반복 오픈 방지
+        try {
+          qs.delete('detailId');
+          const rest = qs.toString();
+          history.replaceState(null, '', location.pathname + (rest ? '?' + rest : ''));
+        } catch(e) {}
+      }
+    }
+  } catch(e) {}
+
   // 비교 드롭다운 로딩 트리거
   try {
     const a = document.getElementById('cmpFromDate');
