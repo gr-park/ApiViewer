@@ -284,7 +284,7 @@
     <div class="detail-header">
       <h3>URL 기본정보</h3>
       <div style="display:flex;align-items:center;gap:6px;">
-        <button onclick="openInViewerDetail()" class="btn btn-ghost" style="height:30px;padding:6px 10px;">URL분석현황 띄우기</button>
+        <button onclick="openInViewerDetail()" class="btn btn-ghost" style="height:30px;padding:6px 10px;background:#dcfce7;border-color:#86efac;color:#166534;font-weight:900;">URL분석현황 상세보기(새창)</button>
         <button onclick="closeDetail()" class="btn btn-ghost" style="height:30px;padding:6px 10px;">닫기 ✕</button>
       </div>
     </div>
@@ -748,9 +748,6 @@
     };
     body.innerHTML = `
       <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;">
-        ${pill('레포', r.repositoryName)}
-        ${pill('Method', r.httpMethod)}
-        ${pill('상태', '')}${statusPill(r.status)}
         ${pill('호출(총)', (r.callCount ?? 0).toLocaleString())}
         ${pill('호출(월)', (r.callCountMonth ?? 0).toLocaleString())}
         ${pill('호출(주)', (r.callCountWeek ?? 0).toLocaleString())}
@@ -758,6 +755,9 @@
       <div style="border:1px solid var(--border);border-radius:12px;overflow:hidden;">
         <div style="padding:10px 12px;background:#f1f5f9;border-bottom:1px solid var(--border);font-size:11px;font-weight:900;color:var(--text-muted);">기본 정보</div>
         <div style="padding:12px 12px;display:grid;grid-template-columns:140px 1fr;gap:6px 12px;font-size:12px;">
+          <div style="color:var(--text-muted);font-weight:800;">레포</div><div style="color:var(--text);font-weight:900;">${esc(r.repositoryName||'-')}</div>
+          <div style="color:var(--text-muted);font-weight:800;">HTTP Method</div><div style="color:var(--text);font-weight:900;">${esc(r.httpMethod||'-')}</div>
+          <div style="color:var(--text-muted);font-weight:800;">상태</div><div>${statusPill(r.status)}</div>
           <div style="color:var(--text-muted);font-weight:800;">URL 경로</div><div style="color:var(--text);font-family:Consolas,monospace;word-break:break-all;">${esc(r.apiPath||'-')}</div>
           <div style="color:var(--text-muted);font-weight:800;">메소드명</div><div style="color:var(--text);">${esc(r.methodName||'-')}</div>
           <div style="color:var(--text-muted);font-weight:800;">컨트롤러</div><div style="color:var(--text);">${esc(r.controllerName||'-')}</div>
