@@ -108,6 +108,23 @@
     }
     .summary-btn:hover { background:#e2e8f0; }
 
+    /* 스냅샷 비교(관리자) — 연보라 음영 카드 */
+    #compareCard{
+      border-color:#c4b5fd;
+      background:#faf5ff;
+    }
+    #compareCard > summary.card-title{
+      background:#f3e8ff;
+      border-radius:10px;
+    }
+    [data-theme="dark"] #compareCard{
+      border-color:#5b21b6 !important;
+      background:rgba(124, 58, 237, 0.18) !important;
+    }
+    [data-theme="dark"] #compareCard > summary.card-title{
+      background:rgba(124, 58, 237, 0.22) !important;
+    }
+
     /* 조회 폼 */
     .query-layout { display: flex; gap: 16px; align-items: flex-end; }
     label.field, .field { display: flex; flex-direction: column; gap: 4px; font-size: 11px; color: var(--text-muted); font-weight: 600; }
@@ -496,6 +513,7 @@
   <meta name="nav-page" content="viewer">
   <link rel="stylesheet" href="/common/nav.css">
   <link rel="stylesheet" href="/common/repo-select.css">
+  <script src="/common/status-guide.js"></script>
   <script src="/exceljs.min.js"></script>
   <script src="/js/dialog.js"></script>
   <script src="/js/darkmode.js"></script>
@@ -505,6 +523,22 @@
 <div id="nav-container"></div>
 
 <div class="main">
+
+  <!-- 상태 구분 안내 (상세, 기본 접힘) -->
+  <details class="card" id="statusGuideCard" style="background:#f0f9ff;border-color:#bae6fd;">
+    <summary class="card-title" style="margin-bottom:0;">
+      <span class="dot"></span>상태 구분 안내 (상세)
+      <span class="collapser inline" aria-hidden="true">
+        <span class="c-label"></span>
+        <span class="c-arrow">▾</span>
+      </span>
+    </summary>
+    <div class="card-body" style="padding-top:10px;">
+      <div id="statusGuideDetailBox"
+           style="border:1px solid #bae6fd;border-radius:10px;padding:10px 12px;font-size:11px;color:#0c4a6e;line-height:1.75;background:#f0f9ff;">
+      </div>
+    </div>
+  </details>
 
   <!-- 조회 조건 -->
   <details class="card" id="queryCard" open>
@@ -656,6 +690,50 @@
     </div>
   </details>
 
+  <!-- 스냅샷 비교 (관리자 전용) — 상태카드 바로 아래 -->
+  <details class="card" id="compareCard" open style="display:none;">
+    <summary class="card-title">
+      <span class="dot"></span>스냅샷 비교
+      <span style="font-size:11px;font-weight:400;color:var(--text-muted);margin-left:6px;">(관리자)</span>
+      <span class="collapser inline" aria-hidden="true">
+        <span class="c-label"></span>
+        <span class="c-arrow">▾</span>
+      </span>
+    </summary>
+    <div class="card-body">
+      <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;">
+        <label class="field">A(From) 기준일자
+          <input id="cmpFromDate" type="date" style="min-width:160px;">
+        </label>
+        <label class="field">A 스냅샷(시간)
+          <select id="cmpFromSnapshotId" style="min-width:220px;">
+            <option value="">(날짜를 선택하세요)</option>
+          </select>
+        </label>
+        <label class="field">B(To) 기준일자
+          <input id="cmpToDate" type="date" style="min-width:160px;">
+        </label>
+        <label class="field">B 스냅샷(시간)
+          <select id="cmpToSnapshotId" style="min-width:220px;">
+            <option value="">(날짜를 선택하세요)</option>
+          </select>
+        </label>
+        <button class="btn btn-ghost" style="height:34px;" onclick="runSnapshotCompare()">🔎 비교</button>
+        <div style="display:flex;gap:6px;align-items:flex-end;flex-wrap:wrap;">
+          <button class="btn btn-ghost btn-sm" onclick="renderSnapshotCompare('all')">전체</button>
+          <button class="btn btn-ghost btn-sm" onclick="renderSnapshotCompare('new')" title="A→B 사이 새로 등장한 URL">➕ 신규건</button>
+          <button class="btn btn-ghost btn-sm" onclick="renderSnapshotCompare('deleted')" title="A→B 사이 사라진 URL">➖ 삭제건</button>
+          <button class="btn btn-ghost btn-sm" onclick="renderSnapshotCompare('changed')" title="A→B 사이 상태/속성이 바뀐 URL">📝 상태변경건</button>
+        </div>
+        <label class="field" style="margin-left:auto;">레포 필터
+          <div id="cmpRepoFilter"></div>
+        </label>
+        <div id="compareMeta" style="font-size:11px;color:var(--text-muted);width:100%;"></div>
+      </div>
+      <div id="compareResult" style="display:none;margin-top:10px;"></div>
+    </div>
+  </details>
+
   <!-- 엑셀 업로드 필터 칩 (업로드 직후 자동 표시) -->
   <div id="uploadedChipWrap" style="display:none;margin:4px 0 6px;">
     <span style="display:inline-flex;align-items:center;gap:6px;background:#dbeafe;border:1px solid #93c5fd;border-radius:20px;padding:4px 12px;font-size:12px;color:#1d4ed8;font-weight:600;">
@@ -665,19 +743,6 @@
               style="border:none;background:transparent;cursor:pointer;font-size:14px;line-height:1;color:#1d4ed8;padding:0;margin-left:2px;">×</button>
     </span>
   </div>
-
-  <!-- 상태 설명 (접이식) -->
-  <details style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:6px 16px;margin-bottom:8px;font-size:11px;color:#0c4a6e;">
-    <summary style="cursor:pointer;font-weight:700;line-height:1.8;user-select:none;">상태 구분 안내</summary>
-    <div style="line-height:1.8;padding-top:4px;">
-      <span style="background:#dcfce7;padding:1px 6px;border-radius:3px;">사용</span> 실제 또는 현업검토 결과 사용중인 URL &nbsp;|&nbsp;
-      <span style="background:#f1f5f9;padding:1px 6px;border-radius:3px;color:#64748b;">차단완료</span> @Deprecated + javadoc표기 + UnsupportedOperationException<br>
-      <span style="background:#fee2e2;padding:1px 6px;border-radius:3px;color:#991b1b;">①-① 차단대상</span> 호출 0건 + 소스변경 1년 경과 &nbsp;|&nbsp;
-      <span style="background:#ffedd5;padding:1px 6px;border-radius:3px;color:#ea580c;">①-② 담당자 판단</span> IT담당자 검토결과 미사용/업무종료 인지 &nbsp;|&nbsp;
-      <span style="background:#f3e8ff;padding:1px 6px;border-radius:3px;color:#7c3aed;">①-③ 현업요청 제외대상</span> 현업요청에 의한 차단 제외 &nbsp;|&nbsp;
-      <span style="background:#fef3c7;padding:1px 6px;border-radius:3px;color:#92400e;">②-①~②-② 추가검토대상</span> 호출 0건 + 1년 미만 변경 / 호출 1~<span id="guideReviewThreshold">3</span>건 + 1년 경과
-    </div>
-  </details>
 
   <!-- 알림바 (콤팩트 pill 형태) -->
   <div id="alertStack" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px;">
@@ -771,50 +836,6 @@
 
     <button class="btn-cancel" onclick="clearSelection()">✕ 취소</button>
   </div>
-
-  <!-- 스냅샷 비교 (관리자 전용) — 목록·필터·일괄바 아래 -->
-  <details class="card" id="compareCard" open style="display:none;">
-    <summary class="card-title">
-      <span class="dot"></span>스냅샷 비교
-      <span style="font-size:11px;font-weight:400;color:var(--text-muted);margin-left:6px;">(관리자)</span>
-      <span class="collapser inline" aria-hidden="true">
-        <span class="c-label"></span>
-        <span class="c-arrow">▾</span>
-      </span>
-    </summary>
-    <div class="card-body">
-      <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;">
-        <label class="field">A(From) 기준일자
-          <input id="cmpFromDate" type="date" style="min-width:160px;">
-        </label>
-        <label class="field">A 스냅샷(시간)
-          <select id="cmpFromSnapshotId" style="min-width:220px;">
-            <option value="">(날짜를 선택하세요)</option>
-          </select>
-        </label>
-        <label class="field">B(To) 기준일자
-          <input id="cmpToDate" type="date" style="min-width:160px;">
-        </label>
-        <label class="field">B 스냅샷(시간)
-          <select id="cmpToSnapshotId" style="min-width:220px;">
-            <option value="">(날짜를 선택하세요)</option>
-          </select>
-        </label>
-        <button class="btn btn-ghost" style="height:34px;" onclick="runSnapshotCompare()">🔎 비교</button>
-        <div style="display:flex;gap:6px;align-items:flex-end;flex-wrap:wrap;">
-          <button class="btn btn-ghost btn-sm" onclick="renderSnapshotCompare('all')">전체</button>
-          <button class="btn btn-ghost btn-sm" onclick="renderSnapshotCompare('new')" title="A→B 사이 새로 등장한 URL">➕ 신규건</button>
-          <button class="btn btn-ghost btn-sm" onclick="renderSnapshotCompare('deleted')" title="A→B 사이 사라진 URL">➖ 삭제건</button>
-          <button class="btn btn-ghost btn-sm" onclick="renderSnapshotCompare('changed')" title="A→B 사이 상태/속성이 바뀐 URL">📝 상태변경건</button>
-        </div>
-        <label class="field" style="margin-left:auto;">레포 필터
-          <div id="cmpRepoFilter"></div>
-        </label>
-        <div id="compareMeta" style="font-size:11px;color:var(--text-muted);width:100%;"></div>
-      </div>
-      <div id="compareResult" style="display:none;margin-top:10px;"></div>
-    </div>
-  </details>
 
   <!-- 테이블 -->
   <div class="table-wrap">
@@ -972,9 +993,11 @@
   let serverTotal = 0;           // 필터에 매칭되는 전체 건수
   let serverCounts = null;        // /api/db/apis/counts 응답 (상태/메소드/배지)
   let maxAnalyzedAt = '';         // 알림 '새 분석' 판단용 (counts 로드 시 갱신)
-  let sortKey = 'apiPath', sortAsc = true;
+  // 기본 정렬: 설정(레포 표시순서) → URL 경로 → 메소드
+  let sortKey = '__repo_api_path__', sortAsc = true;
   let selectedIds = new Set(); // api id 기준 (페이지 교차 유지)
   let repoConfigMap = {}; // repoName → {team, manager}
+  let repoOrderIndex = {}; // repoName → 표시순서 index (설정 기준)
   let vPageSize = 200, vPageNavSize = 10, vCurrentPage = 0;
   let reviewThreshold = 3; // default, 서버에서 갱신
   // 스냅샷 조회 모드
@@ -1070,6 +1093,9 @@
         try { if (c.managerMappings) mappings = JSON.parse(c.managerMappings); } catch(e) {}
         repoConfigMap[c.repoName] = { team: c.teamName || '', manager: c.managerName || '', businessName: c.businessName || '', mappings };
       });
+      // 레포 표시순서 인덱스 (cfgs 는 서버에서 displayOrder 기준 정렬되어 내려옴)
+      repoOrderIndex = {};
+      cfgs.forEach((c, i) => { repoOrderIndex[c.repoName] = i; });
 
       // 업무명|레포명 다중선택 (공용 RepoSelect)
       const repoListForMount = repos
@@ -1321,6 +1347,7 @@
     });
   }
   // 기본: 조회 조건은 펼침, 상태/검색은 펼침(표 공간 확보 위해 사용자가 접을 수 있게)
+  initDetailsState('statusGuideCard', 'viewer.ui.statusGuideCard', false);
   initDetailsState('queryCard', 'viewer.ui.queryCard', true);
   // UX: 초기 진입 시 화면 점유가 커서 기본은 접힘(사용자가 열어두면 localStorage 상태 유지)
   initDetailsState('statsCard', 'viewer.ui.statsCard', false);
@@ -1778,7 +1805,12 @@
     if (sk === 'teamName')     sk = 'teamOverride';
     else if (sk === 'managerName') sk = 'managerOverride';
     else if (sk === 'businessName') sk = 'repositoryName';
-    if (serverSortable.has(sk)) params.set('sort', `${sk},${sortAsc?'asc':'desc'}`);
+    if (sortKey === '__repo_api_path__') {
+      // 서버는 기본 정렬(레포+경로+메소드)을 갖되, 명시적으로도 전달해 DB/페이지 안정화
+      params.set('sort', 'repositoryName,asc;apiPath,asc;httpMethod,asc;id,asc');
+    } else if (serverSortable.has(sk)) {
+      params.set('sort', `${sk},${sortAsc?'asc':'desc'}`);
+    }
 
     params.set('page', String(pageIdx));
     params.set('size', String(vPageSize));
@@ -1807,7 +1839,9 @@
         if (sk === 'teamName') sk = 'teamOverride';
         else if (sk === 'managerName') sk = 'managerOverride';
         else if (sk === 'businessName') sk = 'repositoryName';
-        const sortVal = serverSortable.has(sk) ? `${sk},${sortAsc?'asc':'desc'}` : 'id,asc';
+        const sortVal = (sortKey === '__repo_api_path__')
+          ? 'repositoryName,asc;apiPath,asc;httpMethod,asc;id,asc'
+          : (serverSortable.has(sk) ? `${sk},${sortAsc?'asc':'desc'}` : 'id,asc');
         res = await fetch('/api/db/apis/by-ids', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -2155,6 +2189,21 @@
     filterDebounceId = setTimeout(() => {
       const targetPage = (opts && typeof opts.page === 'number') ? opts.page : 0;
       loadPage(targetPage).then(() => {
+        // 기본 정렬(설정 레포 표시순서 → URL 경로 → 메소드) 보정 (현재 페이지 내)
+        if (sortKey === '__repo_api_path__') {
+          filteredApis.sort((x, y) => {
+            const xi = (repoOrderIndex && repoOrderIndex[x.repositoryName] != null) ? repoOrderIndex[x.repositoryName] : 999999;
+            const yi = (repoOrderIndex && repoOrderIndex[y.repositoryName] != null) ? repoOrderIndex[y.repositoryName] : 999999;
+            if (xi !== yi) return xi - yi;
+            const ap = String(x.apiPath || '').localeCompare(String(y.apiPath || ''), 'ko');
+            if (ap !== 0) return ap;
+            const hm = String(x.httpMethod || '').localeCompare(String(y.httpMethod || ''), 'ko');
+            if (hm !== 0) return hm;
+            return (x.id || 0) - (y.id || 0);
+          });
+          renderRows(filteredApis, vCurrentPage * vPageSize);
+          return;
+        }
         // 클라이언트 파생 필드 정렬 보정 (현재 페이지 내만 재정렬)
         const clientOnly = new Set(['teamName','managerName','businessName']);
         if (clientOnly.has(sortKey)) {
@@ -4136,5 +4185,19 @@
 <script src="/common/auth.js"></script>
 <script src="/common/nav.js"></script>
 <script src="/common/repo-select.js"></script>
+<script>
+  // 상태 구분 안내(상세) — 공통 모듈 렌더 (파란 박스 내부에만 표시)
+  (function mountStatusGuide() {
+    function run() {
+      try {
+        if (window.StatusGuide) {
+          StatusGuide.mountDetailInto('#statusGuideDetailBox');
+        }
+      } catch (e) {}
+    }
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', run);
+    else run();
+  })();
+</script>
 </body>
 </html>

@@ -363,17 +363,17 @@
         <span style="font-size:13px;font-weight:700;color:var(--text);">레포별 수집</span>
         <span style="font-size:10px;color:var(--text-muted);">특정 레포 · APM 종류 · 기간을 지정하여 수집</span>
       </div>
-      <!-- 1줄: 레포 + APM 종류 -->
+      <!-- 1줄: APM 종류 + 레포(다중) -->
       <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:8px;">
-        <label class="field">레포지토리
-          <select id="apmCollectRepo" onchange="onApmRepoChange()" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;min-width:180px;"></select>
-        </label>
         <label class="field">APM 종류
           <select id="apmCollectSource" onchange="onApmSourceChange(true)" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;">
             <option value="WHATAP">WHATAP (최대 365일)</option>
             <option value="JENNIFER">JENNIFER (최대 30일)</option>
             <option value="MOCK">MOCK (테스트)</option>
           </select>
+        </label>
+        <label class="field" style="min-width:260px;">레포지토리 <span style="font-size:10px;color:var(--text-muted);font-weight:400;">(다중 선택 가능)</span>
+          <div id="apmCollectRepo" style="min-width:220px;"></div>
         </label>
       </div>
       <!-- 2줄: 기간 바로가기 -->
@@ -551,6 +551,7 @@
   let lastLogCount = 0;
   // RepoSelect 인스턴스 (전역 핸들 — value 조회용)
   window._repoConfigSel = null;   // URL 분석 추출 (MultiSelect 다중)
+  window._apmCollectRepoSel = null; // APM 레포별 수집 (다중)
   window._mockAnRepoSel = null;   // Mock 분석데이터 (다중)
   window._mockRepoSel   = null;   // MOCK 호출데이터 (다중)
   // 레포별 고급 오버라이드 (세션 전용)
@@ -592,18 +593,12 @@
         console.warn('[initRepoConfigs] invalid selector instance', window._repoConfigSel);
       }
 
-      // ── ② APM 호출건수 수집 (단일 native — 기존 유지: APM 종류/기간 폼 연동) ──
-      const apmSel = document.getElementById('apmCollectRepo');
-      if (apmSel) {
-        apmSel.innerHTML = '';
-        allRepos.forEach(r => {
-          const opt = document.createElement('option');
-          opt.value = r.repoName;
-          const lower = (r.repoName || '').toLowerCase();
-          opt.textContent = r.businessName ? `${r.businessName} | ${lower}` : lower;
-          apmSel.appendChild(opt);
-        });
-      }
+      // ── ② APM 호출건수 수집 (RepoSelect 다중) ──
+      window._apmCollectRepoSel = RepoSelect.mountCompact('#apmCollectRepo', {
+        repos: allRepos,
+        placeholder: '선택',
+        onChange: () => onApmRepoChange()
+      });
 
       // ── ③ Mock URL 분석데이터 생성 (다중 선택) ──
       window._mockAnRepoSel = RepoSelect.mountCompact('#mockAnRepoSelect', {
@@ -619,10 +614,8 @@
         onChange: () => {}
       });
 
-      // 첫 레포 선택 시 자동으로 APM 종류/기간 세팅
-      if (allRepos.length > 0 && document.getElementById('apmCollectRepo')) {
-        onApmRepoChange();
-      }
+      // 첫 진입: 레포 1개만 선택되어 있으면 자동으로 APM 종류/기간 세팅
+      if (allRepos.length > 0) onApmRepoChange();
     } catch(e) {
       console.warn('[initRepoConfigs] 실패', e);
       showToast('레포 목록 로드 실패 — 새로고침 후 다시 시도하세요.', 'error');
@@ -662,6 +655,16 @@
     const sel = window._mockRepoSel ? window._mockRepoSel.getSelected() : [];
     if (!sel.length) return allRepos.map(r => r.repoName);
     return sel;
+  }
+
+  // APM 레포별 수집 — 다중 선택 (0개 선택은 허용하지 않음)
+  function getApmSelectedRepos() {
+    try {
+      const sel = window._apmCollectRepoSel ? window._apmCollectRepoSel.getSelected() : [];
+      return Array.isArray(sel) ? sel : [];
+    } catch(e) {
+      return [];
+    }
   }
   // URL 분석 추출 셀렉터 — value 배열 추출 (repoConfigId ...)
   function getRepoConfigValues() {
@@ -832,7 +835,23 @@
 
   // 레포 선택 변경 시: yml 설정에 따라 APM source 자동 선택
   function onApmRepoChange() {
-    const repoName = document.getElementById('apmCollectRepo').value;
+    const selected = getApmSelectedRepos();
+    if (!selected.length) {
+      document.getElementById('apmCollectResult').innerHTML =
+        `<span style="color:var(--text-muted);">ℹ 레포를 선택하세요. (다건 선택 가능)</span>`;
+      return;
+    }
+
+    // 다건 선택 시 자동 source 판단은 생략 (혼동 방지). 기간 제한만 안내.
+    if (selected.length !== 1) {
+      const src = document.getElementById('apmCollectSource')?.value || 'WHATAP';
+      onApmSourceChange(false);
+      document.getElementById('apmCollectResult').innerHTML =
+        `<span style="color:var(--text-muted);">ℹ 다건 선택(${selected.length}개): APM 종류(${src})는 현재 선택값을 사용합니다. (기간 제한: WHATAP 365일 / JENNIFER 30일)</span>`;
+      return;
+    }
+
+    const repoName = selected[0];
     const repo = allRepos.find(r => r.repoName === repoName);
     if (!repo) return;
     const whatap = repo.whatapEnabled === 'Y';
@@ -969,11 +988,11 @@
   }
 
   async function collectApm() {
-    const repoName = document.getElementById('apmCollectRepo').value;
+    const repoNames = getApmSelectedRepos();
     const source = document.getElementById('apmCollectSource').value;
     const from = document.getElementById('apmCollectFrom').value;
     const to = document.getElementById('apmCollectTo').value;
-    if (!repoName) { showToast('레포지토리를 선택하세요.','error'); return; }
+    if (!repoNames.length) { showToast('레포지토리를 선택하세요.','error'); return; }
     if (!from || !to) { showToast('시작일/종료일을 선택하세요.','error'); return; }
     if (new Date(from) > new Date(to)) { showToast('시작일이 종료일보다 늦을 수 없습니다.','error'); return; }
     const diff = Math.ceil((new Date(to) - new Date(from)) / 86400000) + 1;
@@ -984,29 +1003,64 @@
     btn.disabled = true; btn.textContent = '수집 중...';
     clearLogs(); hideResult();
     showWorkCard(true, `APM 수집 (${source})`);
-    setRepoLabel(`${repoName} · ${source} · ${from} ~ ${to} (${diff}일)`);
-    addLocalLog('INFO', `── APM 수집 시작: ${repoName} / ${source} / ${from}~${to} (${diff}일) ──`);
+    setRepoLabel(`${repoNames.length}개 레포 · ${source} · ${from} ~ ${to} (${diff}일)`);
+    addLocalLog('INFO', `── APM 수집 시작: repos=${repoNames.join(', ')} / ${source} / ${from}~${to} (${diff}일) ──`);
     document.getElementById('progCount').textContent = `${source} 데이터 수집 중...`;
-    document.getElementById('apmCollectResult').innerHTML = `<span style="color:var(--text-muted);">${source} 수집 중... (${diff}일)</span>`;
+    document.getElementById('apmCollectResult').innerHTML = `<span style="color:var(--text-muted);">${source} 수집 중... (레포 ${repoNames.length}개)</span>`;
     apmProgressMode = 'single';
     startApmLogPolling();
     try {
-      const res = await fetch('/api/apm/collect', {
-        method: 'POST',
-        headers: {'Content-Type':'application/json','X-Admin-Token':sessionStorage.getItem('adminToken')||''},
-        body: JSON.stringify({ repoName, source, from, to })
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || '수집 실패');
+      let ok = 0, fail = 0, totalGenerated = 0, totalUpdated = 0;
+      for (let i = 0; i < repoNames.length; i++) {
+        const repoName = repoNames[i];
+        const pct = Math.round((i / Math.max(1, repoNames.length)) * 100);
+        document.getElementById('progFill').style.width = pct + '%';
+        document.getElementById('progPct').textContent = pct + '%';
+        document.getElementById('progCount').textContent = `${repoName} 수집 중... (${i+1}/${repoNames.length})`;
+        setRepoLabel(`${repoName} · ${source} · ${from} ~ ${to}`);
+
+        try {
+          const res = await fetch('/api/apm/collect', {
+            method: 'POST',
+            headers: {'Content-Type':'application/json','X-Admin-Token':sessionStorage.getItem('adminToken')||''},
+            body: JSON.stringify({ repoName, source, from, to })
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error || '수집 실패');
+          totalGenerated += (data.generated || 0);
+          addLocalLog('INFO', `  · ${repoName}: ${data.generated || 0}건 수집`);
+
+          // 수집 후 바로 집계 반영 (ApiRecord callCount 업데이트)
+          try {
+            const ar = await fetch('/api/apm/aggregate', {
+              method: 'POST',
+              headers: {'Content-Type':'application/json','X-Admin-Token':sessionStorage.getItem('adminToken')||''},
+              body: JSON.stringify({ repoName })
+            });
+            const ad = await ar.json();
+            if (!ar.ok) throw new Error(ad.error || '집계 실패');
+            totalUpdated += (ad.updated || 0);
+            addLocalLog('INFO', `  · ${repoName}: 집계 ${ad.updated || 0}건`);
+          } catch(e2) {
+            addLocalLog('WARN', `  · ${repoName}: 집계 실패(계속) - ${e2.message}`);
+          }
+
+          ok++;
+        } catch(e) {
+          fail++;
+          addLocalLog('ERROR', `  · ${repoName}: 실패 - ${e.message}`);
+        }
+      }
+
       document.getElementById('progFill').style.width = '100%';
       document.getElementById('progPct').textContent = '100%';
-      document.getElementById('progStatus').textContent = '완료';
+      document.getElementById('progStatus').textContent = fail > 0 ? `완료 (실패 ${fail}개)` : '완료';
       document.getElementById('progSpinner').style.display = 'none';
-      document.getElementById('progCount').textContent = `${data.generated}건 수집 완료`;
+      document.getElementById('progCount').textContent = `성공 ${ok} / 실패 ${fail} · 수집 ${totalGenerated}건 · 집계 ${totalUpdated}건`;
       document.getElementById('apmCollectResult').innerHTML =
-        `<span style="color:var(--success);">✓ ${data.source} 수집 완료: ${data.generated}건 (${data.from}~${data.to})</span>`;
-      showResult('ok', `APM 수집 완료 — ${data.generated}건`);
-      showToast(`${data.source} ${data.generated}건 수집`,'success');
+        `<span style="color:${fail>0?'var(--danger)':'var(--success)'};">${fail>0?'⚠':'✓'} ${source} 수집 완료: 레포 ${repoNames.length}개 (성공 ${ok}/실패 ${fail})</span>`;
+      showResult(fail>0?'fail':'ok', `APM 수집 완료 — 성공 ${ok}/실패 ${fail}, 수집 ${totalGenerated}건, 집계 ${totalUpdated}건`);
+      showToast(`${source} 수집: 성공 ${ok}/실패 ${fail}`,(fail>0)?'error':'success');
     } catch(e) {
       document.getElementById('progSpinner').style.display = 'none';
       document.getElementById('progStatus').textContent = '실패';
@@ -1151,31 +1205,47 @@
   }
 
   async function aggregateAfterCollect() {
-    const repoName = document.getElementById('apmCollectRepo').value;
-    if (!repoName) { showToast('레포지토리를 선택하세요.','error'); return; }
+    const repoNames = getApmSelectedRepos();
+    if (!repoNames.length) { showToast('레포지토리를 선택하세요.','error'); return; }
     clearLogs(); hideResult();
     showWorkCard(true, `APM 집계 반영`);
-    setRepoLabel(repoName);
-    addLocalLog('INFO', `── APM 집계 반영 시작: ${repoName} ──`);
+    setRepoLabel(`${repoNames.length}개 레포`);
+    addLocalLog('INFO', `── APM 집계 반영 시작: ${repoNames.join(', ')} ──`);
     document.getElementById('progCount').textContent = 'ApiRecord 집계 중...';
     try {
-      const res = await fetch('/api/apm/aggregate', {
-        method: 'POST',
-        headers: {'Content-Type':'application/json','X-Admin-Token':sessionStorage.getItem('adminToken')||''},
-        body: JSON.stringify({ repoName })
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || '집계 실패');
+      let totalUpdated = 0, ok = 0, fail = 0;
+      for (let i = 0; i < repoNames.length; i++) {
+        const repoName = repoNames[i];
+        const pct = Math.round((i / Math.max(1, repoNames.length)) * 100);
+        document.getElementById('progFill').style.width = pct + '%';
+        document.getElementById('progPct').textContent = pct + '%';
+        document.getElementById('progCount').textContent = `${repoName} 집계 중... (${i+1}/${repoNames.length})`;
+        setRepoLabel(repoName);
+        try {
+          const res = await fetch('/api/apm/aggregate', {
+            method: 'POST',
+            headers: {'Content-Type':'application/json','X-Admin-Token':sessionStorage.getItem('adminToken')||''},
+            body: JSON.stringify({ repoName })
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error || '집계 실패');
+          totalUpdated += (data.updated || 0);
+          ok++;
+          addLocalLog('INFO', `집계 반영 완료: ${repoName} (${data.updated || 0}건 업데이트)`);
+        } catch(e) {
+          fail++;
+          addLocalLog('ERROR', `집계 실패: ${repoName} - ${e.message}`);
+        }
+      }
       document.getElementById('progFill').style.width = '100%';
       document.getElementById('progPct').textContent = '100%';
-      document.getElementById('progStatus').textContent = '완료';
+      document.getElementById('progStatus').textContent = fail > 0 ? `완료 (실패 ${fail}개)` : '완료';
       document.getElementById('progSpinner').style.display = 'none';
-      document.getElementById('progCount').textContent = `${data.updated}건 업데이트 완료`;
+      document.getElementById('progCount').textContent = `성공 ${ok} / 실패 ${fail} · 총 ${totalUpdated}건 업데이트`;
       document.getElementById('apmCollectResult').innerHTML =
-        `<span style="color:var(--success);">✓ ApiRecord 집계 반영 완료: ${data.updated}건 업데이트</span>`;
-      addLocalLog('INFO', `집계 반영 완료: ${data.updated}건 업데이트`);
-      showResult('ok', `집계 반영 완료 — ${data.updated}건`);
-      showToast(`집계 반영: ${data.updated}건`,'success');
+        `<span style="color:${fail>0?'var(--danger)':'var(--success)'};">${fail>0?'⚠':'✓'} ApiRecord 집계 반영 완료: 총 ${totalUpdated}건 업데이트</span>`;
+      showResult(fail>0?'fail':'ok', `집계 반영 완료 — 성공 ${ok}/실패 ${fail}, ${totalUpdated}건`);
+      showToast(`집계 반영: ${totalUpdated}건` , (fail>0)?'error':'success');
     } catch(e) {
       document.getElementById('progSpinner').style.display = 'none';
       document.getElementById('progStatus').textContent = '실패';

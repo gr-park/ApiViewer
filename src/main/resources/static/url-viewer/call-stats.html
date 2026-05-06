@@ -167,6 +167,29 @@
     [data-theme="dark"] [style*="color:#991b1b"] { color:#f87171 !important; }
     [data-theme="dark"] [style*="color:#7c2d12"] { color:#fb923c !important; }
     .spinner{display:inline-block;width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--primary);border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;}
+
+    /* URL분석현황 상세 모달 (차단모니터링과 동일 컨셉) */
+    .viewer-detail-modal { display:none; position:fixed; inset:0; z-index:10001; align-items:center; justify-content:center; }
+    .viewer-detail-overlay { position:absolute; inset:0; background:rgba(15,23,42,.55); }
+    .viewer-detail-content {
+      position:relative; z-index:10002;
+      width:92%; max-width:1100px; max-height:88vh;
+      background:var(--card); border:1px solid var(--border); border-radius:12px;
+      box-shadow:0 16px 48px rgba(0,0,0,.35);
+      overflow:hidden;
+      display:flex; flex-direction:column;
+    }
+    .viewer-detail-header {
+      display:flex; align-items:center; justify-content:space-between; gap:10px;
+      padding:14px 18px; border-bottom:1px solid var(--border); background:var(--card);
+    }
+    .viewer-detail-header h3 { margin:0; font-size:13px; font-weight:900; color:var(--text); }
+    .viewer-detail-body { padding:16px 18px; overflow:auto; }
+    .viewer-detail-state { text-align:center; padding:28px 12px; color:var(--text-muted); font-size:12px; }
+
+    /* 클릭 가능한 URL */
+    .api-path.clickable { cursor:pointer; text-decoration: underline; text-decoration-style: dotted; text-underline-offset: 2px; }
+    .api-path.clickable:hover { text-decoration-style: solid; opacity: .85; }
   </style>
   <meta name="nav-segment" content="url-viewer">
   <meta name="nav-page" content="call-stats">
@@ -332,6 +355,18 @@
   </div>
 </div>
 
+<!-- URL분석현황 상세 모달 (ApiRecord) -->
+<div id="viewerDetailModal" class="viewer-detail-modal">
+  <div class="viewer-detail-overlay" onclick="closeViewerDetail()"></div>
+  <div class="viewer-detail-content">
+    <div class="viewer-detail-header">
+      <h3>URL 상세 정보</h3>
+      <button class="btn btn-ghost" onclick="closeViewerDetail()">닫기 ✕</button>
+    </div>
+    <div id="viewerDetailBody" class="viewer-detail-body"></div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -456,7 +491,10 @@
           const rankCls = i < 3 ? `rank r${i+1}` : 'rank';
           return `<tr style="cursor:pointer;" onclick="openDetail('${esc(r.repoName)}','${esc(r.apiPath)}')">
             <td><span class="${rankCls}">${i+1}</span></td>
-            <td><div class="api-path">${esc(r.apiPath)}</div><span class="repo-badge" style="font-size:9px;margin-top:2px;">${esc(r.repoName)}</span></td>
+            <td>
+              <div class="api-path clickable" title="URL분석현황 상세 보기" onclick="event.stopPropagation();openViewerDetailModal('${esc(r.repoName)}','${esc(r.apiPath)}','')">${esc(r.apiPath)}</div>
+              <span class="repo-badge" style="font-size:9px;margin-top:2px;">${esc(r.repoName)}</span>
+            </td>
             <td class="num">${fmt(r.callCount)}</td>
             <td class="num" style="color:${r.errorCount>0?'#dc2626':'inherit'};">${fmt(r.errorCount)}</td>
           </tr>`;
@@ -538,7 +576,10 @@
         tbody.innerHTML = d.items.map((a, idx) => `
           <tr>
             <td style="text-align:center;color:var(--text-muted);font-size:11px;">${startNo+idx+1}</td>
-            <td><div class="api-path">${esc(a.apiPath)}</div></td>
+            <td>
+              <div class="api-path clickable" title="URL분석현황 상세 보기"
+                   onclick="openViewerDetailModal('${esc(a.repoName)}','${esc(a.apiPath)}','')">${esc(a.apiPath)}</div>
+            </td>
             <td><span class="repo-badge">${esc(a.repoName)}</span></td>
             ${barCell(a.totalCall, maxCall, '#3b82f6')}
             <td class="num" style="color:${a.totalError>0?'#dc2626':'inherit'};">${fmt(a.totalError)}</td>
@@ -849,6 +890,86 @@
 
   // Enter 키 조회
   document.getElementById('searchInput').addEventListener('keydown', e => { if(e.key==='Enter') querySearch(); });
+
+  // ══════════════════════════════════════════════════════
+  // URL분석현황 상세 모달(ApiRecord)
+  // ══════════════════════════════════════════════════════
+  function closeViewerDetail() {
+    const m = document.getElementById('viewerDetailModal');
+    if (m) m.style.display = 'none';
+  }
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      const m = document.getElementById('viewerDetailModal');
+      if (m && m.style.display === 'flex') closeViewerDetail();
+    }
+  });
+
+  function renderViewerDetailNotFound(repoName, apiPath, httpMethod) {
+    const body = document.getElementById('viewerDetailBody');
+    if (!body) return;
+    body.innerHTML = `
+      <div style="font-size:13px;font-weight:900;color:#b91c1c;">관련 URL 없음</div>
+      <div style="margin-top:8px;font-size:12px;color:var(--text-muted);line-height:1.6;">
+        URL 호출현황 데이터의 URL이 URL 분석현황(DB)에 존재하지 않습니다.
+      </div>
+      <div style="margin-top:12px;border:1px solid var(--border);border-radius:12px;padding:12px 14px;background:var(--card);">
+        <div style="display:grid;grid-template-columns:120px 1fr;gap:6px 10px;font-size:12px;">
+          <div style="color:var(--text-muted);font-weight:800;">레포</div><div style="color:var(--text);font-weight:900;">${esc(repoName||'-')}</div>
+          <div style="color:var(--text-muted);font-weight:800;">HTTP Method</div><div style="color:var(--text);font-weight:900;">${esc(httpMethod||'-')}</div>
+          <div style="color:var(--text-muted);font-weight:800;">URL 경로</div><div style="color:var(--text);font-family:Consolas,monospace;word-break:break-all;">${esc(apiPath||'-')}</div>
+        </div>
+      </div>`;
+  }
+
+  function renderViewerDetail(record) {
+    const body = document.getElementById('viewerDetailBody');
+    if (!body) return;
+    const r = record || {};
+    const pill = (label, value) => `<span style="display:inline-flex;gap:6px;align-items:center;padding:4px 10px;border:1px solid var(--border);border-radius:999px;background:#f8fafc;font-size:11px;color:var(--text-muted);font-weight:800;">${esc(label)}<b style="color:var(--text);font-weight:900;">${esc(value ?? '-')}</b></span>`;
+    body.innerHTML = `
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;">
+        ${pill('레포', r.repositoryName)}
+        ${pill('Method', r.httpMethod)}
+        ${pill('상태', r.status)}
+        ${pill('호출(총)', (r.callCount ?? 0).toLocaleString())}
+        ${pill('호출(월)', (r.callCountMonth ?? 0).toLocaleString())}
+        ${pill('호출(주)', (r.callCountWeek ?? 0).toLocaleString())}
+      </div>
+      <div style="border:1px solid var(--border);border-radius:12px;overflow:hidden;">
+        <div style="padding:10px 12px;background:#f1f5f9;border-bottom:1px solid var(--border);font-size:11px;font-weight:900;color:var(--text-muted);">기본 정보</div>
+        <div style="padding:12px 12px;display:grid;grid-template-columns:140px 1fr;gap:6px 12px;font-size:12px;">
+          <div style="color:var(--text-muted);font-weight:800;">URL 경로</div><div style="color:var(--text);font-family:Consolas,monospace;word-break:break-all;">${esc(r.apiPath||'-')}</div>
+          <div style="color:var(--text-muted);font-weight:800;">메소드명</div><div style="color:var(--text);">${esc(r.methodName||'-')}</div>
+          <div style="color:var(--text-muted);font-weight:800;">컨트롤러</div><div style="color:var(--text);">${esc(r.controllerName||'-')}</div>
+          <div style="color:var(--text-muted);font-weight:800;">팀/담당자</div><div style="color:var(--text);">${esc((r.teamOverride||'') + ((r.managerOverride||'') ? ' / '+(r.managerOverride||'') : '')) || '-'}</div>
+          <div style="color:var(--text-muted);font-weight:800;">CBO 예정</div><div style="color:var(--text);">${esc(r.cboScheduledDate||'-')}</div>
+          <div style="color:var(--text-muted);font-weight:800;">배포 예정</div><div style="color:var(--text);">${esc(r.deployScheduledDate||'-')}</div>
+          <div style="color:var(--text-muted);font-weight:800;">배포담당자</div><div style="color:var(--text);">${esc(r.deployManager||'-')}</div>
+          <div style="color:var(--text-muted);font-weight:800;">현업검토결과</div><div style="color:var(--text);">${esc(r.reviewResult||'-')}</div>
+          <div style="color:var(--text-muted);font-weight:800;">현업검토의견</div><div style="color:var(--text);white-space:pre-wrap;">${esc(r.reviewOpinion||'-')}</div>
+          <div style="color:var(--text-muted);font-weight:800;">비고</div><div style="color:var(--text);white-space:pre-wrap;">${esc(r.memo||'-')}</div>
+        </div>
+      </div>`;
+  }
+
+  async function openViewerDetailModal(repoName, apiPath, httpMethod) {
+    const m = document.getElementById('viewerDetailModal');
+    const body = document.getElementById('viewerDetailBody');
+    if (!m || !body) return;
+    m.style.display = 'flex';
+    body.innerHTML = '<div class="viewer-detail-state"><div class="spinner" style="width:20px;height:20px;border-width:2px;"></div><br>상세 조회 중...</div>';
+    if (!repoName || !apiPath) { renderViewerDetailNotFound(repoName, apiPath, httpMethod); return; }
+    try {
+      const url = `/api/db/record-by-key?repositoryName=${encodeURIComponent(repoName)}&apiPath=${encodeURIComponent(apiPath)}&httpMethod=${encodeURIComponent(httpMethod || '')}`;
+      const res = await fetch(url);
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) { renderViewerDetailNotFound(repoName, apiPath, httpMethod); return; }
+      renderViewerDetail(data);
+    } catch (e) {
+      renderViewerDetailNotFound(repoName, apiPath, httpMethod);
+    }
+  }
 
   init();
 </script>

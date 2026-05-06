@@ -647,15 +647,34 @@ public class ApiViewController {
         return m;
     }
 
-    /** 정렬 파라미터 파싱: "id,desc" / "apiPath,asc" / null → UNSORTED */
+    /** 정렬 파라미터 파싱
+     * - 단일: "id,desc" / "apiPath,asc"
+     * - 다중: "repositoryName,asc;apiPath,asc;httpMethod,asc"
+     * - null/blank → 기본 정렬(레포+경로+메소드)
+     */
     private Sort parseSort(String sort) {
-        if (sort == null || sort.isBlank()) return Sort.unsorted();
-        String[] parts = sort.split(",");
-        String field = parts[0].trim();
-        if (field.isEmpty()) return Sort.unsorted();
-        Sort.Direction dir = (parts.length > 1 && "desc".equalsIgnoreCase(parts[1].trim()))
-                ? Sort.Direction.DESC : Sort.Direction.ASC;
-        return Sort.by(dir, field);
+        if (sort == null || sort.isBlank()) {
+            return Sort.by(
+                    Sort.Order.asc("repositoryName"),
+                    Sort.Order.asc("apiPath"),
+                    Sort.Order.asc("httpMethod"),
+                    Sort.Order.asc("id")
+            );
+        }
+        List<Sort.Order> orders = new ArrayList<>();
+        for (String token : sort.split(";")) {
+            if (token == null) continue;
+            String t = token.trim();
+            if (t.isEmpty()) continue;
+            String[] parts = t.split(",");
+            String field = parts[0].trim();
+            if (field.isEmpty()) continue;
+            Sort.Direction dir = (parts.length > 1 && "desc".equalsIgnoreCase(parts[1].trim()))
+                    ? Sort.Direction.DESC : Sort.Direction.ASC;
+            orders.add(new Sort.Order(dir, field));
+        }
+        if (orders.isEmpty()) return Sort.unsorted();
+        return Sort.by(orders);
     }
 
     /** viewer 배지용 서버 집계 — 전량 로드 없이 COUNT 쿼리만 사용 */
