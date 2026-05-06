@@ -99,6 +99,12 @@
     .spinner{display:inline-block;width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--primary);border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:6px;}
     @keyframes spin{to{transform:rotate(360deg);}}
 
+    /* URL분석현황과 동일한 복사 아이콘 버튼 */
+    .copy-btn { flex-shrink:0; padding:2px 5px; font-size:11px; background:transparent; border:1px solid var(--border); border-radius:3px; cursor:pointer; line-height:1; }
+    .copy-btn:hover { background:#f1f5f9; border-color:#94a3b8; }
+    .copy-btn:active { background:#e2e8f0; }
+    [data-theme="dark"] .copy-btn:hover { background:#293548 !important; border-color:#475569 !important; }
+
     /* 다크모드 */
     :root[data-theme="dark"]{--bg:#0f172a;--card:#1e293b;--text:#f1f5f9;--text-muted:#94a3b8;--border:#334155;--primary:#60a5fa;--primary-hover:#3b82f6;--shadow:0 1px 4px rgba(0,0,0,.4);}
     [data-theme="dark"] body{background:var(--bg);color:var(--text);}
@@ -758,8 +764,10 @@
     const copyBtn = (txt, label) => {
       const t = String(txt || '');
       const safe = t.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\n/g, '\\n');
-      return `<button type="button" class="btn btn-ghost" style="height:24px;padding:2px 8px;font-size:10px;margin-left:8px;"
-        onclick="copyText('${safe}','${esc(label||'복사')}')">복사</button>`;
+      return `<button type="button" class="copy-btn" title="${esc(label||'복사')} 복사"
+        onclick="copyText('${safe}','${esc(label||'복사')}')">
+        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+      </button>`;
     };
     body.innerHTML = `
       <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;"></div>
