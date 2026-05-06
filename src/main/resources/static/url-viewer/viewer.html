@@ -1113,6 +1113,7 @@
     const urlManager = qs.get('manager');
     const urlStatus = qs.get('status');
     const urlStatusGroup = qs.get('statusGroup');
+    const urlOpenDetail = qs.get('openDetail'); // first | <id>
     const urlDeployFrom = qs.get('deployFrom');
     const urlDeployTo = qs.get('deployTo');
     const urlDeployMgr = qs.get('deployManager');
@@ -1152,6 +1153,11 @@
         : (urlStatusGroup === 'blockExcluded') ? 'group:blockExcluded'
         : '';
       if (window._initialActiveFilter) shouldAutoLoad = true;
+    }
+    // 대시보드에서 "차단 URL 상세보기"로 진입한 경우: 조회 완료 후 상세 모달 자동 오픈
+    if (urlOpenDetail) {
+      window._autoOpenDetail = urlOpenDetail;
+      window._autoOpenDetailDone = false;
     }
     // 대시보드에서 필터 지정으로 들어온 경우 자동 조회
     if (shouldAutoLoad) loadApis();
@@ -1325,6 +1331,33 @@
       document.getElementById('excelBtn').style.display = 'inline-block';
       updateViewModeBadge();
       showToast(`${serverTotal.toLocaleString()}개 URL 조회 완료`, 'success');
+
+      // 딥링크: 차단 URL 상세 모달 자동 오픈
+      // - openDetail=first: 현재 조회 결과(페이지 1)의 첫 행을 오픈
+      // - openDetail=<id>: 지정 ID 오픈
+      try {
+        if (!window._autoOpenDetailDone && window._autoOpenDetail) {
+          let targetId = null;
+          const v = String(window._autoOpenDetail).trim();
+          if (/^\d+$/.test(v)) targetId = Number(v);
+          else if (v === 'first') {
+            const first = (allApis && allApis.length) ? allApis[0] : null;
+            if (first && first.id != null) targetId = Number(first.id);
+          }
+          if (targetId != null && Number.isFinite(targetId)) {
+            window._autoOpenDetailDone = true;
+            // UI 렌더 후 열리도록 살짝 지연
+            setTimeout(() => { try { openDetail(targetId); } catch(e) {} }, 60);
+            // 새로고침 시 반복 오픈 방지: openDetail 파라미터 제거
+            try {
+              const p = new URLSearchParams(location.search);
+              p.delete('openDetail');
+              const qs2 = p.toString();
+              history.replaceState(null, '', location.pathname + (qs2 ? '?' + qs2 : ''));
+            } catch(e) {}
+          }
+        }
+      } catch(e) {}
     } catch(e) {
       showToast(e.message || '조회 실패', 'error');
       document.getElementById('tbody').innerHTML =

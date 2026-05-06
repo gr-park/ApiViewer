@@ -1581,7 +1581,13 @@
   // 상태 구분(요약) — 공통 모듈로 렌더 + 상세 모달 연결
   try {
     if (window.StatusGuide) {
-      StatusGuide.mountCompact('#dashStatusGuideCompact', { linkAction: 'modal', linkText: '상세보기' });
+      // "상세보기"는 상태 안내 모달이 아니라 URL 상세 모달(차단 URL)로 진입
+      // - URL분석현황으로 이동 후, 차단대상 잔여(①-①/①-②) 필터를 적용한 뒤 첫 행 상세 모달을 자동 오픈한다.
+      StatusGuide.mountCompact('#dashStatusGuideCompact', {
+        linkAction: 'link',
+        linkText: '상세보기',
+        href: '/url-viewer/viewer.html?statusGroup=blockResidual&openDetail=first'
+      });
     }
   } catch (e) {}
   loadStats();
