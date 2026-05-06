@@ -114,12 +114,38 @@
       .sg-guide-actions{margin-top:10px;display:flex;justify-content:flex-end;}
       .sg-link-btn{font-size:11px;color:var(--primary,#3b82f6);text-decoration:none;padding:4px 10px;border:1px solid var(--primary,#3b82f6);border-radius:999px;font-weight:800;}
       .sg-link-btn:hover{text-decoration:underline;}
-      .sg-compact-btn{border:1px solid rgba(59,130,246,.55);background:linear-gradient(180deg,#eff6ff,#dbeafe);color:#1d4ed8;border-radius:999px;padding:4px 10px;font-size:11px;font-weight:900;cursor:pointer;white-space:nowrap;box-shadow:0 1px 0 rgba(255,255,255,.9) inset, 0 1px 2px rgba(15,23,42,.08);transition:transform .08s ease, box-shadow .12s ease, background .12s ease, border-color .12s ease;}
-      .sg-compact-btn:hover{background:linear-gradient(180deg,#dbeafe,#bfdbfe);border-color:rgba(59,130,246,.75);}
-      .sg-compact-btn:active{transform:translateY(1px);box-shadow:0 1px 0 rgba(255,255,255,.65) inset;}
-      .sg-compact-btn:focus-visible{outline:2px solid rgba(59,130,246,.65);outline-offset:2px;}
-      [data-theme="dark"] .sg-compact-btn{background:#1e3a5f;color:#93c5fd;border-color:#60a5fa;}
-      [data-theme="dark"] .sg-compact-btn:hover{background:#274169;}
+      /* 대시보드 "차단 배포일자"의 range-btn 과 톤/크기 통일 */
+      .sg-compact-btn{
+        border:1px solid var(--border,#e2e8f0);
+        background:#f8fafc;
+        color:var(--text-muted,#64748b);
+        border-radius:999px;
+        padding:3px 10px;
+        font-size:11px;
+        font-weight:700;
+        cursor:pointer;
+        white-space:nowrap;
+        user-select:none;
+        line-height:1.2;
+        transition:background .12s,color .12s,border-color .12s,transform .08s ease;
+      }
+      .sg-compact-btn:hover{
+        background:#eff6ff;
+        border-color:#bfdbfe;
+        color:#1d4ed8;
+      }
+      .sg-compact-btn:active{transform:translateY(1px);}
+      .sg-compact-btn:focus-visible{outline:2px solid rgba(59,130,246,.45);outline-offset:2px;}
+      [data-theme="dark"] .sg-compact-btn{
+        background:#293548;
+        border-color:var(--border,#334155);
+        color:var(--text-muted,#94a3b8);
+      }
+      [data-theme="dark"] .sg-compact-btn:hover{
+        background:#1e3a5f;
+        border-color:#1d4ed8;
+        color:#93c5fd;
+      }
     `;
     document.head.appendChild(st);
   }
