@@ -373,11 +373,11 @@
       const res = await fetch('/api/config/repos');
       const repos = await res.json();
       window._dashRepoSel = RepoSelect.mountCompact('#dashRepoSelect', {
-        repos, selected: [], placeholder: '(전체)',
+        repos, selected: [], placeholder: '전체',
         onChange: () => loadDashboard()
       });
       window._queryRepoSel = RepoSelect.mountCompact('#queryRepoSelect', {
-        repos, selected: [], placeholder: '(전체 — URL 검색 권장)'
+        repos, selected: [], placeholder: '전체'
       });
     } catch(e) {}
 

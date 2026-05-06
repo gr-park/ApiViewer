@@ -923,7 +923,7 @@
       window._dashTopRepoSel = RepoSelect.mountCompact('#dashTopRepoSelect', {
         repos,
         selected: repos.length > 0 ? [repos[0].repoName] : [],
-        placeholder: '(레포 선택)',
+        placeholder: '전체',
         onChange: () => loadTopApisByRepo()
       });
       if (repos.length > 0) loadTopApisByRepo();

@@ -462,8 +462,21 @@
         businessName: (cfgByName[r.repoName] && cfgByName[r.repoName].businessName) || '',
         source: r.source
       }));
+
+      // 레포 선택 UI 표시 순서는 설정의 표시순서(/api/config/repos) 기준으로 통일한다.
+      // - cfgList 는 서버에서 displayOrder → repoName 순으로 정렬되어 내려온다.
+      // - 차단 모니터링 전용 reposCache(/api/url-block-monitor/repos)의 순서가 달라도 UI는 cfgList 기준으로 정렬한다.
+      const idxByName = {};
+      cfgList.forEach((c, i) => { idxByName[c.repoName] = i; });
+      enriched.sort((a, b) => {
+        const ai = (idxByName[a.repoName] !== undefined) ? idxByName[a.repoName] : 999999;
+        const bi = (idxByName[b.repoName] !== undefined) ? idxByName[b.repoName] : 999999;
+        if (ai !== bi) return ai - bi;
+        return String(a.repoName || '').localeCompare(String(b.repoName || ''));
+      });
+
       window._fRepoSel = RepoSelect.mountCompact('#fRepo', {
-        repos: enriched, selected: [], placeholder: '(전체 활성 레포)',
+        repos: enriched, selected: [], placeholder: '전체',
         onChange: (arr) => { selectedRepos = arr || []; onRepoChange(); }
       });
       onRepoChange();

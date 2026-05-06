@@ -6,7 +6,7 @@
  *   const sel = RepoSelect.mountCompact('#fRepo', {
  *     selected: [],                  // 초기 선택 (빈 배열 = 전체)
  *     onChange: (arr) => doSearch(), // 변경 콜백, arr = 선택된 repoName[]
- *     placeholder: '(전체 활성 레포)'
+ *     placeholder: '전체'
  *   });
  *   sel.getSelected();               // 현재 선택 배열 (0개면 전체 의미)
  *
@@ -122,7 +122,7 @@
       repos: null,
       selected: new Set(opts.selected || []),
       onChange: typeof opts.onChange === 'function' ? opts.onChange : function () {},
-      placeholder: opts.placeholder || (useItems ? '선택' : '(전체 활성 레포)'),
+      placeholder: opts.placeholder || (useItems ? '선택' : '전체'),
       variant,
       // singleMode는 명시적 true만 허용 (문자열 등 truthy 오염 방어)
       singleMode: opts.singleMode === true,
@@ -388,7 +388,7 @@
     const total = (state.repos || []).length;
     const sel = state.selected.size;
     el.textContent = sel === 0
-      ? `전체 ${total}개 — 선택 없음 (= 전체 조회)`
+      ? `전체 ${total}개 — 선택 없음 (= 전체)`
       : `${sel}/${total} 선택`;
   }
 

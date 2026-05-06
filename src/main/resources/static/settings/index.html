@@ -55,15 +55,119 @@
 
     /* 레포 목록 */
     .repo-list{display:flex;flex-direction:column;gap:10px;}
-    .repo-card{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:14px 16px;display:flex;align-items:center;gap:12px;}
+    .repo-card{
+      background:var(--bg);
+      border:1px solid var(--border);
+      border-radius:8px;
+      padding:14px 16px;
+      display:flex;
+      align-items:center;
+      gap:12px;
+      /* 클릭/드래그는 “선택/정렬”에 집중: 텍스트 선택 방지 */
+      user-select:none;
+      -webkit-user-select:none;
+    }
     .repo-card:hover{border-color:var(--primary);}
     .repo-card.dragging{opacity:.6;}
     .repo-card.drag-over{outline:2px dashed #93c5fd; outline-offset:2px;}
+    /* 드롭 위치(삽입) 가이드 라인 — 카드 “사이(gap)” 영역에 표시 */
+    .repo-drop-marker{
+      height:0;
+      border-top:3px solid rgba(59,130,246,.95);
+      margin:-6px 10px; /* 카드 사이에 걸치게 */
+      border-radius:999px;
+      box-shadow:0 0 0 2px rgba(59,130,246,.10);
+      pointer-events:none;
+    }
+    /* 다건 선택 표시 */
+    .repo-card.selected{outline:2px solid rgba(59,130,246,.45); outline-offset:2px; background:#eff6ff;}
+    /* 드롭 완료 후 위치 강조 */
+    .repo-card.drop-flash{animation:repoDropFlash 1.2s ease;}
+    @keyframes repoDropFlash {
+      0%{background:#dbeafe;}
+      100%{background:var(--bg);}
+    }
     .repo-reorder{display:flex;gap:4px;align-items:center;flex-shrink:0;}
     .repo-reorder .btn{height:26px;padding:2px 8px;font-size:11px;}
-    .repo-drag-handle{cursor:grab; user-select:none; font-size:14px; color:var(--text-muted); padding:2px 6px; border:1px solid var(--border); border-radius:6px; background:var(--card);}
+    .repo-drag-handle{
+      cursor:grab;
+      user-select:none;
+      font-size:14px;
+      color:var(--text-muted);
+      padding:2px 6px;
+      border:1px solid var(--border);
+      border-radius:6px;
+      background:var(--card);
+      font-weight:900;
+      line-height:1;
+    }
     .repo-drag-handle:active{cursor:grabbing;}
-    .repo-name{font-weight:700;font-size:14px;color:var(--text);min-width:140px;}
+    /* 햄버거(≡) 색상 — APM 소스별 구분 */
+    .repo-card[data-apm="WHATAP"]   .repo-drag-handle{ color:#1d4ed8; border-color:#93c5fd; background:#eff6ff; }
+    .repo-card[data-apm="JENNIFER"] .repo-drag-handle{ color:#6d28d9; border-color:#c4b5fd; background:#faf5ff; }
+    .repo-card[data-apm="BOTH"]     .repo-drag-handle{ color:#b91c1c; border-color:#fecaca; background:#fef2f2; }
+    .repo-card[data-apm="NONE"]     .repo-drag-handle{ color:#64748b; border-color:var(--border); background:var(--card); }
+
+    /* 안내 문구용 햄버거 아이콘 */
+    .repo-hint-handle{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      width:20px;
+      height:18px;
+      margin-right:6px;
+      border:1px solid rgba(220,38,38,.35);
+      border-radius:6px;
+      background:rgba(220,38,38,.06);
+      color:#dc2626;
+      font-weight:900;
+      line-height:1;
+      user-select:none;
+    }
+    .repo-name{font-weight:800;font-size:14px;color:var(--text);min-width:140px;}
+    .repo-summary{
+      flex:1;
+      min-width: 0;
+      display:flex;
+      align-items:center;
+      gap:8px;
+      flex-wrap:nowrap;
+      overflow:hidden;
+      font-size:13px;
+      font-weight:800;
+      line-height:1.25;
+      color:var(--text);
+    }
+    .repo-summary .sep{
+      color:var(--border);
+      font-weight:900;
+      user-select:none;
+    }
+    .repo-summary .item{
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      padding:3px 8px;
+      border:1px solid var(--border);
+      border-radius:10px;
+      background:var(--card);
+      box-shadow:0 1px 2px rgba(15,23,42,.05);
+      max-width: 100%;
+      min-width: 0;
+    }
+    .repo-summary .item .v{
+      display:inline-block;
+      max-width: 520px;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      white-space:nowrap;
+      vertical-align:bottom;
+    }
+    .repo-summary .item.muted{
+      opacity:.45;
+      font-weight:700;
+      box-shadow:none;
+    }
     .repo-detail{flex:1;font-size:11px;color:var(--text-muted);line-height:1.7;}
     .repo-detail span{margin-right:14px;}
     .repo-actions{display:flex;gap:6px;flex-shrink:0;}
@@ -459,6 +563,11 @@ function updateAdminBadge(valid) {
       <span id="repoOrderDirty" style="margin-left:auto;font-size:11px;color:#b45309;font-weight:700;display:none;">변경됨 (저장 필요)</span>
       <button type="button" class="btn btn-blue" style="height:26px;padding:2px 12px;font-size:11px;" onclick="saveRepoOrder()">순서 저장하기</button>
       <button type="button" class="btn btn-ghost" style="height:26px;padding:2px 12px;font-size:11px;" onclick="resetRepoOrder()">되돌리기</button>
+      <div style="flex-basis:100%;height:0;"></div>
+      <div id="repoOrderHint" style="font-size:10.5px;color:#dc2626;font-weight:700;">
+        <span class="repo-hint-handle" aria-hidden="true">≡</span>
+        햄버거(≡)를 누르고 드래그하면 이동 · Ctrl/Shift로 다건 선택 가능 · ESC로 선택 취소
+      </div>
     </div>
     <div class="repo-list" id="repoList">
       <div class="empty-repos">등록된 레포지토리가 없습니다.</div>
@@ -1499,7 +1608,7 @@ function updateAdminBadge(valid) {
     if (!mountEl) return;
     const active = (repos || []).filter(r => r.whatapEnabled === 'Y' && r.whatapPcode != null);
     window._whatapTestRepoSel = RepoSelect.mountCompact(mountEl, {
-      repos: active, selected: [], placeholder: '(레포 선택)', singleMode: true
+      repos: active, selected: [], placeholder: '전체', singleMode: true
     });
   }
 
@@ -1536,7 +1645,7 @@ function updateAdminBadge(valid) {
       return;
     }
     el.innerHTML = repos.map(r => `
-      <div class="repo-card" data-id="${r.id}" draggable="true">
+      <div class="repo-card" data-id="${r.id}" data-apm="${repoApmKey(r)}" draggable="true">
         <div class="repo-reorder" title="드래그하여 순서 변경">
           <span class="repo-drag-handle" aria-hidden="true">≡</span>
           <button class="btn btn-ghost" type="button" title="맨 위로" onclick="event.stopPropagation();moveRepoCard(${r.id},'top')">⇡</button>
@@ -1544,17 +1653,11 @@ function updateAdminBadge(valid) {
           <button class="btn btn-ghost" type="button" title="아래로" onclick="event.stopPropagation();moveRepoCard(${r.id},'down')">▼</button>
           <button class="btn btn-ghost" type="button" title="맨 아래로" onclick="event.stopPropagation();moveRepoCard(${r.id},'bottom')">⇣</button>
         </div>
-        <div class="repo-name">${esc(r.repoName)}</div>
-        <div class="repo-detail">
-          <span>📁 ${esc(r.rootPath || '-')}</span>
-          <span>🌐 ${esc(r.domain || '-')}</span>
-          ${r.teamName ? `<span>👥 ${esc(r.teamName)}</span>` : ''}
-          ${r.managerName ? `<span>👤 ${esc(r.managerName)}${mappingBadge(r.managerMappings)}</span>` : ''}
-          ${r.businessName ? `<span>📝 ${esc(r.businessName)}</span>` : ''}
-          ${r.apiPathPrefix ? `<span>🔗 prefix: ${esc(r.apiPathPrefix)}</span>` : ''}
-          ${apmBadge(r)}
-          ${r.analysisBatchEnabled==='N'?'<span style="color:#dc2626;font-weight:600;">분석배치:OFF</span>':''}
-          ${r.apmBatchEnabled==='N'?'<span style="color:#dc2626;font-weight:600;">APM배치:OFF</span>':''}
+        <div class="repo-summary" aria-label="레포 요약 정보">
+          <span class="item" title="${esc(repoBizLabel(r))}"><span aria-hidden="true">📦</span><span class="v">${esc(repoBizLabel(r))}</span></span>
+          ${r.teamName ? `<span class="item"><span aria-hidden="true">👥</span><span class="v">${esc(r.teamName)}</span></span>` : ''}
+          ${r.managerName ? `<span class="item"><span aria-hidden="true">👤</span><span class="v">${esc(r.managerName)}</span></span>` : ''}
+          <span class="item"><span aria-hidden="true">📡</span>${apmBadge(r)}</span>
         </div>
         <div class="repo-actions">
           <button class="btn btn-ghost" style="font-size:11px;padding:3px 10px;" onclick="openModal(${r.id})">편집</button>
@@ -1645,6 +1748,47 @@ function updateAdminBadge(valid) {
     const idx = all.indexOf(card);
     if (idx < 0) return;
 
+    // 다건 선택된 상태에서, 선택된 카드 중 하나의 화살표를 누르면 "그룹" 이동
+    const selectedIds = Array.isArray(list._selectedRepoIds) ? list._selectedRepoIds : [];
+    const isGroupMove = selectedIds.length > 0 && selectedIds.includes(id);
+    if (isGroupMove) {
+      const selectedEls = all.filter(el => selectedIds.includes(parseInt(el.dataset.id, 10)));
+      if (!selectedEls.length) return;
+      const first = selectedEls[0];
+      const last = selectedEls[selectedEls.length - 1];
+
+      const removeAll = () => selectedEls.forEach(el => { if (el.parentNode === list) list.removeChild(el); });
+      const insertBefore = (anchor) => {
+        let node = anchor || null;
+        selectedEls.forEach(el => list.insertBefore(el, node));
+      };
+
+      if (dir === 'top') {
+        removeAll();
+        insertBefore(all[0] || null);
+      } else if (dir === 'bottom') {
+        removeAll();
+        insertBefore(null);
+      } else if (dir === 'up') {
+        const prev = first.previousElementSibling;
+        // 한 칸 위로: 블록을 prev 앞에
+        if (prev) {
+          removeAll();
+          insertBefore(prev);
+        }
+      } else if (dir === 'down') {
+        const next = last.nextElementSibling;
+        // 한 칸 아래로: 블록을 next 뒤(= next.nextSibling 앞)로
+        if (next) {
+          const anchor = next.nextSibling;
+          removeAll();
+          insertBefore(anchor);
+        }
+      }
+      setRepoOrderDirty(true);
+      return;
+    }
+
     if (dir === 'top') {
       list.insertBefore(card, all[0] || null);
     } else if (dir === 'bottom') {
@@ -1666,46 +1810,230 @@ function updateAdminBadge(valid) {
     list._repoOrderBound = true;
 
     let draggingEl = null;
+    let dropOverEl = null;
+    let dropPos = ''; // 'before' | 'after'
+    const dropMarker = document.createElement('div');
+    dropMarker.className = 'repo-drop-marker';
+
+    // 다건 선택 (CTRL/SHIFT)
+    const selectedIds = new Set();
+    let lastSelectedId = null;
+    const clearSelection = () => {
+      selectedIds.clear();
+      repoCardEls().forEach(c => c.classList.remove('selected'));
+      list._selectedRepoIds = [];
+    };
+    const applySelectionClasses = () => {
+      repoCardEls().forEach(c => {
+        const id = parseInt(c.dataset.id, 10);
+        c.classList.toggle('selected', Number.isFinite(id) && selectedIds.has(id));
+      });
+      list._selectedRepoIds = Array.from(selectedIds);
+    };
+    const setSingleSelection = (id) => {
+      clearSelection();
+      if (Number.isFinite(id)) selectedIds.add(id);
+      lastSelectedId = id;
+      applySelectionClasses();
+    };
+    const toggleSelection = (id) => {
+      if (!Number.isFinite(id)) return;
+      if (selectedIds.has(id)) selectedIds.delete(id);
+      else selectedIds.add(id);
+      lastSelectedId = id;
+      applySelectionClasses();
+    };
+    const selectRange = (fromId, toId) => {
+      const cards = repoCardEls();
+      const ids = cards.map(c => parseInt(c.dataset.id, 10)).filter(n => Number.isFinite(n));
+      const a = ids.indexOf(fromId);
+      const b = ids.indexOf(toId);
+      if (a < 0 || b < 0) return;
+      const start = Math.min(a, b);
+      const end = Math.max(a, b);
+      clearSelection();
+      for (let i = start; i <= end; i++) selectedIds.add(ids[i]);
+      lastSelectedId = toId;
+      applySelectionClasses();
+    };
+
+    // 클릭으로 선택 (버튼/입력/링크 클릭은 제외)
+    list.addEventListener('click', (e) => {
+      const t = e.target;
+      if (!t) return;
+      // reorder 버튼/액션 버튼/링크/입력 등은 선택 토글 대상에서 제외
+      if (t.closest && (t.closest('button') || t.closest('a') || t.closest('input') || t.closest('textarea') || t.closest('select'))) return;
+      const card = t.closest ? t.closest('.repo-card') : null;
+      if (!card) return;
+      const id = parseInt(card.dataset.id, 10);
+      const isCtrl = !!(e.ctrlKey || e.metaKey);
+      const isShift = !!e.shiftKey;
+      if (isShift && Number.isFinite(lastSelectedId)) {
+        selectRange(lastSelectedId, id);
+      } else if (isCtrl) {
+        toggleSelection(id);
+      } else {
+        setSingleSelection(id);
+      }
+    });
+
+    // ESC: 선택 취소
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape') return;
+      if (!selectedIds.size) return;
+      clearSelection();
+    });
+
+    function clearDropHint() {
+      repoCardEls().forEach(c => c.classList.remove('drag-over', 'drop-before', 'drop-after'));
+      dropOverEl = null;
+      dropPos = '';
+      if (dropMarker.parentNode === list) list.removeChild(dropMarker);
+    }
+
+    function autoscrollByPointer(clientY) {
+      // 드래그 중 포인터가 화면 상/하단 근처면 윈도우 스크롤
+      const edge = 90;
+      const speedMax = 26;
+      const vh = window.innerHeight || 0;
+      if (!vh) return;
+      if (clientY < edge) {
+        const k = (edge - clientY) / edge;
+        window.scrollBy(0, -Math.ceil(speedMax * k));
+      } else if (clientY > vh - edge) {
+        const k = (clientY - (vh - edge)) / edge;
+        window.scrollBy(0, Math.ceil(speedMax * k));
+      }
+    }
+
+    // 드래그 중 마우스가 리스트 밖으로 나가도 자동 스크롤 유지 (특히 "위로" 이동 시)
+    let docDragOverBound = false;
+    let rafId = 0;
+    const onDocDragOver = (e) => {
+      if (!draggingEl) return;
+      const y = e && typeof e.clientY === 'number' ? e.clientY : null;
+      if (y == null) return;
+      if (rafId) return;
+      rafId = requestAnimationFrame(() => {
+        rafId = 0;
+        autoscrollByPointer(y);
+      });
+    };
+    const bindDocDragOver = () => {
+      if (docDragOverBound) return;
+      docDragOverBound = true;
+      document.addEventListener('dragover', onDocDragOver);
+    };
+    const unbindDocDragOver = () => {
+      if (!docDragOverBound) return;
+      docDragOverBound = false;
+      document.removeEventListener('dragover', onDocDragOver);
+      if (rafId) { cancelAnimationFrame(rafId); rafId = 0; }
+    };
 
     list.addEventListener('dragstart', (e) => {
       const card = e.target && e.target.closest ? e.target.closest('.repo-card') : null;
       if (!card) return;
+      const id = parseInt(card.dataset.id, 10);
+      // 선택된 그룹 밖에서 드래그 시작하면 단일로 전환
+      if (!selectedIds.size || (Number.isFinite(id) && !selectedIds.has(id))) {
+        setSingleSelection(id);
+      }
       draggingEl = card;
       card.classList.add('dragging');
       try { e.dataTransfer.effectAllowed = 'move'; } catch (_) {}
+      try { e.dataTransfer.setData('text/plain', String(id || '')); } catch (_) {}
+      bindDocDragOver();
     });
 
     list.addEventListener('dragend', () => {
-      repoCardEls().forEach(c => c.classList.remove('dragging', 'drag-over'));
+      repoCardEls().forEach(c => c.classList.remove('dragging', 'drag-over', 'drop-before', 'drop-after'));
+      if (draggingEl) draggingEl.setAttribute('draggable', 'false');
       draggingEl = null;
+      clearDropHint();
+      unbindDocDragOver();
     });
 
     list.addEventListener('dragover', (e) => {
       if (!draggingEl) return;
       e.preventDefault();
       const over = e.target && e.target.closest ? e.target.closest('.repo-card') : null;
-      repoCardEls().forEach(c => c.classList.toggle('drag-over', c === over && c !== draggingEl));
+      autoscrollByPointer(e.clientY);
+      clearDropHint();
+      if (!over) return;
+      // 선택된 그룹 위에서는 가이드 표시 안 함
+      const overId = parseInt(over.dataset.id, 10);
+      if (Number.isFinite(overId) && selectedIds.has(overId)) return;
+      const rect = over.getBoundingClientRect();
+      const before = e.clientY < (rect.top + rect.height / 2);
+      dropOverEl = over;
+      dropPos = before ? 'before' : 'after';
+      over.classList.add('drag-over');
+      // 카드 내부가 아니라 “카드 사이”에 드롭 마커를 둔다.
+      if (before) list.insertBefore(dropMarker, over);
+      else list.insertBefore(dropMarker, over.nextSibling);
     });
 
     list.addEventListener('drop', async (e) => {
       if (!draggingEl) return;
       e.preventDefault();
-      const over = e.target && e.target.closest ? e.target.closest('.repo-card') : null;
-      repoCardEls().forEach(c => c.classList.remove('drag-over'));
-      if (!over || over === draggingEl) return;
+      const over = dropOverEl || (e.target && e.target.closest ? e.target.closest('.repo-card') : null);
+      if (!over) { clearDropHint(); return; }
 
-      const rect = over.getBoundingClientRect();
-      const before = e.clientY < (rect.top + rect.height / 2);
-      if (before) list.insertBefore(draggingEl, over);
-      else list.insertBefore(draggingEl, over.nextSibling);
+      // 그룹 드래그: 선택된 카드들을 한 번에 이동 (기존 순서 유지)
+      const cards = repoCardEls();
+      const selectedEls = cards.filter(c => {
+        const id = parseInt(c.dataset.id, 10);
+        return Number.isFinite(id) && selectedIds.has(id);
+      });
+      if (!selectedEls.length) { clearDropHint(); return; }
+
+      const overId = parseInt(over.dataset.id, 10);
+      if (Number.isFinite(overId) && selectedIds.has(overId)) { clearDropHint(); return; } // 자기 자신/그룹 내부 드롭 방지
+
+      // dropMarker가 표시된 위치가 “삽입 위치”의 진짜 anchor
+      const anchor = (dropMarker.parentNode === list) ? dropMarker.nextSibling : (dropPos === 'before' ? over : over.nextSibling);
+
+      // 먼저 DOM에서 제거 (appendChild로 이동 시 자동 제거되지만, 기준 계산 단순화를 위해)
+      selectedEls.forEach(el => { if (el.parentNode === list) list.removeChild(el); });
+
+      // anchor가 null이면 맨 끝
+      let insertBeforeNode = anchor;
+      selectedEls.forEach(el => {
+        list.insertBefore(el, insertBeforeNode || null);
+      });
+
       setRepoOrderDirty(true);
+      clearDropHint();
+
+      // 드롭 후 해당 위치가 보이도록 스크롤 + 강조
+      const focusEl = selectedEls[0];
+      if (focusEl && focusEl.scrollIntoView) {
+        focusEl.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        selectedEls.forEach(el => {
+          el.classList.remove('drop-flash');
+          // reflow to restart animation
+          void el.offsetWidth;
+          el.classList.add('drop-flash');
+        });
+        setTimeout(() => selectedEls.forEach(el => el.classList.remove('drop-flash')), 1400);
+      }
     });
 
     // 드래그 핸들에서만 드래그 시작되도록(버튼/텍스트 오동작 방지)
     list.querySelectorAll('.repo-card').forEach(card => {
       const h = card.querySelector('.repo-drag-handle');
       if (!h) return;
-      h.addEventListener('mousedown', () => { card.setAttribute('draggable', 'true'); });
+      card.setAttribute('draggable', 'false');
+      h.addEventListener('mousedown', (e) => {
+        // 드래그 핸들 클릭 시 선택도 해당 카드로 맞춤 (기존 선택이 없거나 그룹 밖이면)
+        const id = parseInt(card.dataset.id, 10);
+        if (!selectedIds.size || (Number.isFinite(id) && !selectedIds.has(id))) setSingleSelection(id);
+        card.setAttribute('draggable', 'true');
+      });
+      // 마우스 업 시 드래그 속성 원복
+      h.addEventListener('mouseup', () => { card.setAttribute('draggable', 'false'); });
+      h.addEventListener('mouseleave', () => { card.setAttribute('draggable', 'false'); });
     });
   }
 
@@ -1743,13 +2071,26 @@ function updateAdminBadge(valid) {
   }
 
   // APM 배지: 0개면 경고, 1개면 정상, 2개면 중복 경고
+  function repoApmKey(r) {
+    const w = r && r.whatapEnabled === 'Y';
+    const j = r && r.jenniferEnabled === 'Y';
+    if (w && j) return 'BOTH';
+    if (w) return 'WHATAP';
+    if (j) return 'JENNIFER';
+    return 'NONE';
+  }
+  function repoBizLabel(r) {
+    const biz = String((r && r.businessName) || '').trim();
+    const name = String((r && r.repoName) || '').toLowerCase();
+    return biz ? `${biz} | ${name}` : name;
+  }
   function apmBadge(r) {
     const w = r.whatapEnabled === 'Y';
     const j = r.jenniferEnabled === 'Y';
-    if (w && j) return `<span style="color:var(--danger);font-weight:600;">⚠ APM: whatap + jennifer (중복)</span>`;
-    if (w)      return `<span>APM: <b style="color:var(--success);">whatap</b></span>`;
-    if (j)      return `<span>APM: <b style="color:var(--success);">jennifer</b></span>`;
-    return `<span style="color:#ca8a04;font-weight:600;">⚠ APM 미설정</span>`;
+    if (w && j) return `<span style="color:var(--danger);font-weight:800;">⚠ whatap+jennifer</span>`;
+    if (w)      return `<span style="color:#1e40af;font-weight:800;">whatap</span>`;
+    if (j)      return `<span style="color:#6d28d9;font-weight:800;">jennifer</span>`;
+    return `<span style="color:#ca8a04;font-weight:800;">미설정</span>`;
   }
 
   // 매핑 건수 배지 (JSON 파싱 실패 시 경고 표시)
@@ -2877,7 +3218,7 @@ function updateAdminBadge(valid) {
       window._bhJobSel = MultiSelect.mountCompact('#bhJobTypes', {
         items,
         selected: allValues,   // 기본 전체선택 (기존 pill 동작 유지)
-        placeholder: '(전체 배치)'
+        placeholder: '전체'
       });
     } catch (e) {
       document.getElementById('bhJobTypes').innerHTML =
@@ -2964,7 +3305,7 @@ function updateAdminBadge(valid) {
         const mountEl = document.getElementById(selId);
         if (!mountEl) return;
         window._dataRepoSels[selId] = RepoSelect.mountCompact(mountEl, {
-          repos, selected: [], placeholder: '(전체 레포)'
+          repos, selected: [], placeholder: '전체'
         });
       });
     } catch(e) {}
@@ -3900,7 +4241,7 @@ function updateAdminBadge(valid) {
         repos: repos || [],
         selected: [],
         singleMode: true,
-        placeholder: '(전체 레포)'
+        placeholder: '전체'
       });
     } catch(e) { /* 레포 없음 */ }
   }
