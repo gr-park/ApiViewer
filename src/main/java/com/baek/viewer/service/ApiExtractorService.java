@@ -372,14 +372,18 @@ public class ApiExtractorService {
                         classPath.isEmpty() ? "(없음)" : classPath);
             }
 
+            // 주의: JavaParser가 실패해 Regex 폴백으로 왔을 때도
+            // @GetMapping 처럼 "괄호 없는" 애노테이션을 놓치지 않도록 ( ... ) 부분을 옵션으로 처리한다.
+            // group(1)=애노테이션 타입, group(3)=괄호 내부 파라미터(없으면 null)
             Matcher mMatcher = Pattern.compile(
-                    "@(GetMapping|PostMapping|RequestMapping|PutMapping|DeleteMapping|PatchMapping)\\s*\\((.*?)\\)",
+                    "@(GetMapping|PostMapping|RequestMapping|PutMapping|DeleteMapping|PatchMapping)(\\s*\\((.*?)\\))?",
                     Pattern.DOTALL).matcher(raw);
 
             while (mMatcher.find()) {
                 String mappingType = mMatcher.group(1);
-                String params = substituteConstants(mMatcher.group(2), pathConstantsMap)
-                        .replaceAll("\"\\s*\\+\\s*\"", "");
+                String paramsRaw = mMatcher.group(3); // 괄호 내부만
+                String params = paramsRaw == null ? "" :
+                        substituteConstants(paramsRaw, pathConstantsMap).replaceAll("\"\\s*\\+\\s*\"", "");
                 String httpMethod = resolveHttpMethodFromName(mappingType, params);
 
                 String afterMapping = clean.substring(mMatcher.end(), Math.min(mMatcher.end() + 1000, clean.length()));

@@ -117,6 +117,34 @@
     .log-msg.m-WARN  { color: #fde68a; }
     .log-empty { color: #475569; padding: 20px; text-align: center; }
 
+    /* ── 로그 강조/요약 ── */
+    .log-line.issue-error { background: rgba(248, 113, 113, .12); }
+    .log-line.issue-warn  { background: rgba(251, 191, 36, .12); }
+    .log-line.issue-zero  { background: rgba(147, 197, 253, .12); }
+    .log-line.issue-error .log-ts { color: #fca5a5; }
+    .log-line.issue-warn  .log-ts { color: #fde68a; }
+    .log-line.issue-zero  .log-ts { color: #93c5fd; }
+    .log-line.issue-error .log-msg { color: #fecaca; }
+    .log-line.issue-zero  .log-msg { color: #dbeafe; }
+
+    .log-issue-summary { margin-top: 12px; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+    .log-issue-summary .sum-head { display:flex; align-items:center; gap:10px; padding: 10px 12px; background: #f8fafc; border-bottom:1px solid var(--border); }
+    .log-issue-summary .sum-head strong { font-size: 12px; }
+    .log-issue-summary .sum-badges { display:flex; gap:8px; margin-left:auto; flex-wrap:wrap; justify-content:flex-end; }
+    .log-issue-summary .badge { font-size:11px; font-weight:700; padding: 3px 8px; border-radius: 999px; border: 1px solid transparent; }
+    .log-issue-summary .badge.err { background:#fee2e2; color:#991b1b; border-color:#fecaca; }
+    .log-issue-summary .badge.zero { background:#dbeafe; color:#1e40af; border-color:#bfdbfe; }
+    .log-issue-summary .badge.warn { background:#fef3c7; color:#92400e; border-color:#fde68a; }
+    .log-issue-summary .sum-body { padding: 10px 12px; background: #fff; }
+    .log-issue-summary .sum-body .hint { font-size:11px; color: var(--text-muted); margin-bottom: 8px; }
+    .log-issue-summary ul { margin: 0; padding-left: 18px; }
+    .log-issue-summary li { font-size: 12px; line-height: 1.6; }
+    .log-issue-summary code { font-size: 11px; background: #0f172a; color:#e2e8f0; padding: 1px 6px; border-radius: 6px; }
+
+    [data-theme="dark"] .log-issue-summary .sum-head { background: #0b1220 !important; }
+    [data-theme="dark"] .log-issue-summary .sum-body { background: var(--card) !important; }
+    [data-theme="dark"] .log-issue-summary code { background: #020617 !important; }
+
     /* APM 기간 바로가기 버튼 */
     .apm-range-btn { padding:4px 10px; border:1px solid var(--border); border-radius:6px; font-size:11px;
       font-weight:600; background:#f1f5f9; color:#334155; cursor:pointer; white-space:nowrap; }
@@ -541,6 +569,13 @@
       <div class="log-wrap" id="logWrap">
         <div class="log-empty">작업이 시작되면 로그가 여기에 표시됩니다.</div>
       </div>
+      <div class="log-issue-summary" id="logIssueSummary" style="display:none;">
+        <div class="sum-head">
+          <strong>문제 파일 요약</strong>
+          <div class="sum-badges" id="logIssueBadges"></div>
+        </div>
+        <div class="sum-body" id="logIssueBody"></div>
+      </div>
     </div>
   </div>
 
@@ -551,6 +586,8 @@
 <script>
   let allRepos = [];
   let lastLogCount = 0;
+  // 로그에서 발견한 "문제 파일" 수집 (파싱 에러 / 0개 추출)
+  let logIssues = { errors: new Map(), zeros: new Map(), warns: new Map() };
   // RepoSelect 인스턴스 (전역 핸들 — value 조회용)
   window._repoConfigSel = null;   // URL 분석 추출 (MultiSelect 다중)
   window._apmCollectRepoSel = null; // APM 레포별 수집 (다중)
@@ -1658,6 +1695,11 @@
       newLogs.forEach(line => appendLogLine(line));
       lastLogCount = logs.length;
     }
+
+    // 종료 시점: 문제 파일 요약을 고정 표시
+    if (!p.extracting) {
+      renderIssueSummaryIfNeeded(true);
+    }
   }
 
   // ── APM 서버 로그 폴링 ──────────────────────────────────────
@@ -1705,6 +1747,8 @@
     document.getElementById('logWrap').innerHTML = '';
     document.getElementById('logCounts').innerHTML = '';
     lastLogCount = 0;
+    logIssues = { errors: new Map(), zeros: new Map(), warns: new Map() };
+    hideIssueSummary();
   }
 
   function addLocalLog(level, msg) {
@@ -1730,10 +1774,42 @@
       `<span class="log-ts">${esc(ts)}</span>` +
       `<span class="log-tag t-${level}">${level}</span>` +
       `<span class="log-msg m-${level}">${esc(msg)}</span>`;
+
+    // 문제 라인 감지 (서버 로그 포맷: "{fileName} — {message}")
+    const fileAndRest = msg.split(' — ');
+    const fileName = fileAndRest.length > 1 ? String(fileAndRest[0]).trim() : '';
+    const restMsg = fileAndRest.length > 1 ? fileAndRest.slice(1).join(' — ').trim() : msg;
+
+    const isZeroExtract = /(^|[\s—])0개\s*API\s*추출\b/.test(msg);
+    const isParserFail = /JavaParser\s*실패/.test(msg) || /ParseProblemException/.test(msg);
+    const isExtractFail = /\b추출\s*실패\b/.test(msg);
+
+    if (fileName) {
+      if (isZeroExtract) {
+        div.classList.add('issue-zero');
+        if (!logIssues.zeros.has(fileName)) logIssues.zeros.set(fileName, []);
+        logIssues.zeros.get(fileName).push(restMsg);
+      }
+      if (level === 'ERROR' || isParserFail || isExtractFail) {
+        div.classList.add(level === 'WARN' ? 'issue-warn' : 'issue-error');
+        if (!logIssues.errors.has(fileName)) logIssues.errors.set(fileName, []);
+        logIssues.errors.get(fileName).push(`${level}: ${restMsg}`);
+      } else if (level === 'WARN') {
+        div.classList.add('issue-warn');
+        if (!logIssues.warns.has(fileName)) logIssues.warns.set(fileName, []);
+        logIssues.warns.get(fileName).push(restMsg);
+      }
+    } else {
+      // 파일명 없이도 0개 추출/에러는 강조
+      if (isZeroExtract) div.classList.add('issue-zero');
+      if (level === 'ERROR') div.classList.add('issue-error');
+      if (level === 'WARN') div.classList.add('issue-warn');
+    }
     wrap.appendChild(div);
     wrap.scrollTop = wrap.scrollHeight;
 
     updateLogCounts();
+    renderIssueSummaryIfNeeded();
   }
 
   function updateLogCounts() {
@@ -1750,7 +1826,64 @@
     if (ok)   parts.push(`<span class="cnt-ok">OK ${ok}</span>`);
     if (warn) parts.push(`<span class="cnt-warn">WARN ${warn}</span>`);
     if (err)  parts.push(`<span class="cnt-err">ERROR ${err}</span>`);
+    const zeroCnt = logIssues.zeros.size;
+    const errFiles = logIssues.errors.size;
+    if (zeroCnt) parts.push(`<span class="cnt-warn">0개추출 ${zeroCnt}</span>`);
+    if (errFiles) parts.push(`<span class="cnt-err">에러파일 ${errFiles}</span>`);
     document.getElementById('logCounts').innerHTML = parts.join('');
+  }
+
+  function hideIssueSummary() {
+    const box = document.getElementById('logIssueSummary');
+    if (!box) return;
+    box.style.display = 'none';
+    const badges = document.getElementById('logIssueBadges');
+    const body = document.getElementById('logIssueBody');
+    if (badges) badges.innerHTML = '';
+    if (body) body.innerHTML = '';
+  }
+
+  function renderIssueSummaryIfNeeded(forceShow = false) {
+    const box = document.getElementById('logIssueSummary');
+    const badges = document.getElementById('logIssueBadges');
+    const body = document.getElementById('logIssueBody');
+    if (!box || !badges || !body) return;
+
+    const errFiles = Array.from(logIssues.errors.keys());
+    const zeroFiles = Array.from(logIssues.zeros.keys());
+    const warnFiles = Array.from(logIssues.warns.keys());
+    const hasAny = errFiles.length || zeroFiles.length || warnFiles.length;
+
+    if (!hasAny) {
+      if (forceShow) hideIssueSummary();
+      return;
+    }
+
+    badges.innerHTML = [
+      errFiles.length ? `<span class="badge err">파싱/추출 에러 ${errFiles.length}</span>` : '',
+      zeroFiles.length ? `<span class="badge zero">0개 추출 ${zeroFiles.length}</span>` : '',
+      warnFiles.length ? `<span class="badge warn">WARN 파일 ${warnFiles.length}</span>` : ''
+    ].filter(Boolean).join('');
+
+    const escLi = (s) => esc(String(s || ''));
+    const errList = errFiles.length
+      ? `<div style="margin-bottom:10px;">
+           <div class="hint"><b>에러(파싱/추출 실패)</b></div>
+           <ul>${errFiles.map(f => `<li><code>${escLi(f)}</code></li>`).join('')}</ul>
+         </div>` : '';
+    const zeroList = zeroFiles.length
+      ? `<div style="margin-bottom:10px;">
+           <div class="hint"><b>0개 추출</b></div>
+           <ul>${zeroFiles.map(f => `<li><code>${escLi(f)}</code></li>`).join('')}</ul>
+         </div>` : '';
+    const warnList = (!errFiles.length && warnFiles.length)
+      ? `<div>
+           <div class="hint"><b>WARN만 있는 파일</b></div>
+           <ul>${warnFiles.map(f => `<li><code>${escLi(f)}</code></li>`).join('')}</ul>
+         </div>` : '';
+
+    body.innerHTML = `${errList}${zeroList}${warnList}`;
+    box.style.display = '';
   }
 
   // ── 작업 카드 UI ──────────────────────────────────────────
