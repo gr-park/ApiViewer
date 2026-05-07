@@ -185,6 +185,40 @@ class ApiExtractorServiceTest {
     }
 
     @Test
+    @DisplayName("extract — Swagger v3 @Operation(description 텍스트블록) 이 있어도 JavaParser로 정상 파싱되고 폴백 로그가 없다")
+    void extract_swaggerV3TextBlockOperation_noFallback(@TempDir Path tmp) throws Exception {
+        when(globalConfigRepository.findById(1L)).thenReturn(Optional.empty());
+        Path javaFile = tmp.resolve("MbrMergeController.java");
+        Files.writeString(javaFile, """
+                package test;
+                import org.springframework.web.bind.annotation.*;
+                import io.swagger.v3.oas.annotations.Operation;
+                @RestController
+                public class MbrMergeController {
+                    @Operation(summary = "회원 기본 배송지 병합 처리",
+                               description = \"\"\"
+                               ## 기능 설명
+                               - 회원 기본 배송지 병합 API 입니다.
+                               \"\"\")
+                    @PostMapping("/mergeMbrDlvyp")
+                    public String merge() { return "ok"; }
+                }
+                """);
+
+        ExtractRequest req = new ExtractRequest();
+        req.setRootPath(tmp.toString());
+        req.setDomain("http://example.com");
+
+        List<ApiInfo> result = service.extract(req);
+
+        assertThat(result).anyMatch(a -> "/mergeMbrDlvyp".equals(a.getApiPath()) && "POST".equals(a.getHttpMethod())
+                && "회원 기본 배송지 병합 처리".equals(a.getApiOperationValue()));
+        @SuppressWarnings("unchecked")
+        List<String> logs = (List<String>) service.getProgress().get("logs");
+        assertThat(logs).noneMatch(s -> s.contains("JavaParser 실패"));
+    }
+
+    @Test
     @DisplayName("extract — 추출 중에 다시 호출하면 IllegalStateException — 호출 후엔 다시 가능")
     void extract_subsequentCallOk(@TempDir Path tmp) {
         when(globalConfigRepository.findById(1L)).thenReturn(Optional.empty());

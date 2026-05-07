@@ -300,6 +300,36 @@
     .api-path { font-family:'Consolas',monospace; font-size:12px; color:#1e40af; }
     .api-path-click { cursor:pointer; padding:2px 4px; border-radius:3px; flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
     .api-path-click:hover { background:#eff6ff; text-decoration:underline; }
+
+    /* URL 경로 컬럼: 드래그 리사이즈 */
+    :root { --apiPathColWidth: 200px; }
+    th.col-apiPath, td.col-apiPath {
+      min-width: var(--apiPathColWidth) !important;
+      width: var(--apiPathColWidth) !important;
+      max-width: none !important;
+    }
+    th.col-apiPath { position: sticky; }
+    .col-resizer {
+      position:absolute;
+      right:-3px;
+      top:0;
+      width:7px;
+      height:100%;
+      cursor: ew-resize;
+      user-select:none;
+      touch-action:none;
+      z-index:10;
+    }
+    .col-resizer::after {
+      content:'';
+      position:absolute;
+      left:3px;
+      top:20%;
+      width:1px;
+      height:60%;
+      background: rgba(100,116,139,.35);
+    }
+    th.col-apiPath:hover .col-resizer::after { background: rgba(59,130,246,.8); }
     .copy-btn { flex-shrink:0; padding:2px 5px; font-size:11px; background:transparent; border:1px solid var(--border); border-radius:3px; cursor:pointer; line-height:1; }
     .copy-btn:hover { background:#f1f5f9; border-color:#94a3b8; }
     .copy-btn:active { background:#e2e8f0; }
@@ -847,7 +877,10 @@
           <th class="hg-info sticky-h" onclick="sortBy('businessName')" style="left:146px;min-width:100px;">업무명 <span class="sort-icon">↕</span></th>
           <th class="hg-info sticky-h" onclick="sortBy('teamName')" style="left:246px;min-width:80px;">팀 <span class="sort-icon">↕</span></th>
           <th class="hg-info sticky-h" onclick="sortBy('managerName')" style="left:326px;min-width:70px;">담당자 <span class="sort-icon">↕</span></th>
-          <th class="hg-info sticky-h sticky-last" onclick="sortBy('apiPath')" style="left:396px;min-width:200px;">URL 경로 <span class="sort-icon">↕</span></th>
+          <th id="thApiPath" class="hg-info sticky-h sticky-last col-apiPath" onclick="sortBy('apiPath')" style="left:396px;min-width:200px;">
+            URL 경로 <span class="sort-icon">↕</span>
+            <span class="col-resizer" data-col="apiPath" title="드래그로 컬럼 너비 조절"></span>
+          </th>
           <!-- 개발 메타 -->
           <th class="hg-info no-sort">URL호출</th>
           <!-- 상태 / 상태확정 -->
@@ -2252,7 +2285,12 @@
         <td class="sk" style="left:146px;min-width:100px;font-size:11px;color:var(--text-muted);">${esc(cfg.businessName || '')}</td>
         <td class="sk memo-cell" onclick="${locked?'':('editField(this,'+a.id+',&apos;teamOverride&apos;)')}" title="${locked?'수정불가':'클릭하여 편집'}" style="left:246px;min-width:80px;font-size:11px;color:var(--text-muted);white-space:nowrap;">${esc(a.teamOverride || cfg.team)}</td>
         <td class="sk memo-cell" onclick="${locked?'':('editField(this,'+a.id+',&apos;managerOverride&apos;)')}" title="${locked?'수정불가':'클릭하여 편집'}" style="left:326px;min-width:70px;font-size:11px;color:var(--text-muted);white-space:nowrap;">${esc(resolveManager(a))}</td>
-        <td class="sk sk-last" style="left:396px;min-width:200px;"><div style="display:flex;align-items:center;gap:4px;"><button class="copy-btn" onclick="copyApiPath(event,${a.id})" title="URL 경로 복사"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button><div class="api-path api-path-click" onclick="openDetail(${a.id})" title="클릭: 상세보기">${esc(a.apiPath)}</div></div></td>
+        <td class="sk sk-last col-apiPath" style="left:396px;min-width:200px;">
+          <div style="display:flex;align-items:center;gap:4px;">
+            <button class="copy-btn" onclick="copyApiPath(event,${a.id})" title="URL 경로 복사"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>
+            <div class="api-path api-path-click" onclick="openDetail(${a.id})" title="클릭: 상세보기">${esc(a.apiPath)}</div>
+          </div>
+        </td>
         <!-- 개발 메타 -->
         <td>${a.fullUrl ? `<a href="${esc(a.fullUrl)}" target="_blank" style="font-size:11px;color:var(--primary);text-decoration:none;padding:2px 8px;border:1px solid var(--primary);border-radius:4px;white-space:nowrap;">열기 ↗</a>` : '<span style="color:#cbd5e1;font-size:11px;">-</span>'}</td>
         <!-- 상태 / 상태확정 -->
@@ -2285,6 +2323,48 @@
       </tr>`;
     }).join('');
   }
+
+  // ── URL 경로 컬럼 리사이즈 ────────────────────────────────
+  (function initApiPathColResize() {
+    const KEY = 'viewer.colWidth.apiPath';
+    const minW = 200, maxW = 900;
+    const applyW = (w) => {
+      const v = Math.max(minW, Math.min(maxW, Number(w) || minW));
+      document.documentElement.style.setProperty('--apiPathColWidth', v + 'px');
+      return v;
+    };
+    try {
+      const saved = localStorage.getItem(KEY);
+      if (saved) applyW(parseInt(saved, 10));
+    } catch (e) {}
+
+    function onDown(ev) {
+      const tgt = ev.target;
+      if (!tgt || !tgt.classList || !tgt.classList.contains('col-resizer')) return;
+      ev.preventDefault();
+      ev.stopPropagation();
+      const startX = ev.clientX;
+      const startW = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--apiPathColWidth'), 10) || minW;
+
+      const move = (e) => {
+        const dx = e.clientX - startX;
+        applyW(startW + dx);
+      };
+      const up = () => {
+        document.removeEventListener('mousemove', move);
+        document.removeEventListener('mouseup', up);
+        try {
+          const cur = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--apiPathColWidth'), 10) || minW;
+          localStorage.setItem(KEY, String(cur));
+        } catch (e) {}
+      };
+      document.addEventListener('mousemove', move);
+      document.addEventListener('mouseup', up);
+    }
+
+    // 헤더 클릭 정렬과 충돌 방지: resizer만 별도 처리
+    document.addEventListener('mousedown', onDown, { capture: true });
+  })();
 
   const STATUS_TIPS = {
     '사용': '실제 또는 현업검토 결과 사용중인 URL',

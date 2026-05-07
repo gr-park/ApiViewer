@@ -2,6 +2,7 @@ package com.baek.viewer.service;
 
 import com.baek.viewer.model.ApiInfo;
 import com.baek.viewer.model.ExtractRequest;
+import com.github.javaparser.ParserConfiguration;
 import com.github.javaparser.StaticJavaParser;
 import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
@@ -27,6 +28,20 @@ public class ApiExtractorService {
 
     private static final List<String> MAPPING_ANNS = Arrays.asList(
             "RequestMapping", "GetMapping", "PostMapping", "PutMapping", "DeleteMapping", "PatchMapping");
+
+    private static volatile boolean JAVA_PARSER_CONFIGURED = false;
+
+    private static void ensureJavaParserConfigured() {
+        if (JAVA_PARSER_CONFIGURED) return;
+        synchronized (ApiExtractorService.class) {
+            if (JAVA_PARSER_CONFIGURED) return;
+            // Swagger v3의 @Operation(description=\"\"\"...\"\"\") 같은 Java 텍스트블록 문법은
+            // JavaParser 언어 레벨 설정이 낮으면 파싱 실패 → Regex 폴백으로 빠질 수 있다.
+            StaticJavaParser.getConfiguration()
+                    .setLanguageLevel(ParserConfiguration.LanguageLevel.JAVA_17);
+            JAVA_PARSER_CONFIGURED = true;
+        }
+    }
 
     @Value("${api.viewer.git-bin-path:git}")
     private String defaultGitBinPath;
@@ -287,6 +302,7 @@ public class ApiExtractorService {
                                                  List<String[]> git,
                                                  String apiPathPrefix,
                                                  Map<String, String> pathConstantsMap) throws Exception {
+        ensureJavaParserConfigured();
         boolean debug = debugMode;
         List<ApiInfo> apis = new ArrayList<>();
         String source = new String(Files.readAllBytes(filePath), StandardCharsets.UTF_8);
@@ -641,13 +657,36 @@ public class ApiExtractorService {
         if (ann.get() instanceof NormalAnnotationExpr ne) {
             return ne.getPairs().stream()
                     .filter(p -> p.getNameAsString().equals(attrName))
-                    .map(p -> p.getValue().toString().replaceAll("\"", ""))
+                    .map(p -> evalAnnotationStringValue(p.getValue()))
                     .findFirst().orElse("-");
         }
         if (ann.get() instanceof SingleMemberAnnotationExpr se && "value".equals(attrName)) {
-            return se.getMemberValue().toString().replaceAll("\"", "");
+            return evalAnnotationStringValue(se.getMemberValue());
         }
         return "-";
+    }
+
+    private String evalAnnotationStringValue(Expression expr) {
+        if (expr == null) return "-";
+        try {
+            if (expr.isStringLiteralExpr()) return expr.asStringLiteralExpr().getValue();
+            // Java 15+ text block: """ ... """
+            if (expr.isTextBlockLiteralExpr()) return expr.asTextBlockLiteralExpr().getValue();
+            // 문자열 연결: "a" + "b" / "a" + SOME_CONST (const는 소스 문자열로 fallback)
+            if (expr.isBinaryExpr() && expr.asBinaryExpr().getOperator() == BinaryExpr.Operator.PLUS) {
+                String left = evalAnnotationStringValue(expr.asBinaryExpr().getLeft());
+                String right = evalAnnotationStringValue(expr.asBinaryExpr().getRight());
+                if ("-".equals(left)) left = expr.asBinaryExpr().getLeft().toString().replace("\"", "");
+                if ("-".equals(right)) right = expr.asBinaryExpr().getRight().toString().replace("\"", "");
+                return (left + right).trim().isEmpty() ? "-" : (left + right);
+            }
+            // 그 외: 최대한 소스 문자열을 유지 (따옴표만 제거)
+            String s = expr.toString().replace("\"", "");
+            return s.isBlank() ? "-" : s;
+        } catch (Exception e) {
+            String s = expr.toString().replace("\"", "");
+            return s.isBlank() ? "-" : s;
+        }
     }
 
     private String extractRequestPropertyFromNode(com.github.javaparser.ast.nodeTypes.NodeWithAnnotations<?> node) {
