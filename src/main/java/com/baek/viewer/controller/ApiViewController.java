@@ -166,6 +166,20 @@ public class ApiViewController {
         return ResponseEntity.ok(extractorService.getProgress());
     }
 
+    /**
+     * 디버그: 단일 파일 JavaParser 파싱만 수행 (정규식 폴백/DB저장 없음).
+     * - 관리자 전용 (AdminInterceptor 보호)
+     */
+    @PostMapping("/extract/debug-parse-one")
+    public ResponseEntity<?> debugParseOne(@RequestBody Map<String, String> body) {
+        String rootPath = body != null ? body.get("rootPath") : null;
+        String relPath = body != null ? body.get("relPath") : null;
+        String apiPathPrefix = body != null ? body.get("apiPathPrefix") : null;
+        String pathConstants = body != null ? body.get("pathConstants") : null;
+        log.info("[DEBUG 단건파싱] relPath={}", relPath);
+        return ResponseEntity.ok(extractorService.debugParseSingleFile(rootPath, relPath, apiPathPrefix, pathConstants));
+    }
+
     /** 캐시된 결과 조회 */
     @GetMapping("/list")
     public ResponseEntity<?> list() {

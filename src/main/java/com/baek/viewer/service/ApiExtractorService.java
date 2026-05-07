@@ -4,6 +4,7 @@ import com.baek.viewer.model.ApiInfo;
 import com.baek.viewer.model.ExtractRequest;
 import com.github.javaparser.ParserConfiguration;
 import com.github.javaparser.StaticJavaParser;
+import com.github.javaparser.ParseProblemException;
 import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
 import com.github.javaparser.ast.body.MethodDeclaration;
@@ -1064,5 +1065,72 @@ public class ApiExtractorService {
             if (kv.length == 2) map.put(kv[0].trim(), kv[1].trim());
         }
         return map;
+    }
+
+    /**
+     * 디버그 용도: 특정 단일 파일을 JavaParser 경로로만 파싱해 결과/예외를 반환한다.
+     * - DB 저장/깃 실행/정규식 폴백 없음
+     * - JavaParser 에러의 원인(문법/위치)을 재현하는 목적
+     */
+    public Map<String, Object> debugParseSingleFile(String rootPath, String relPath, String apiPathPrefix, String pathConstantsRaw) {
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("ok", false);
+        out.put("rootPath", rootPath);
+        out.put("relPath", relPath);
+        out.put("apiPathPrefix", apiPathPrefix == null ? "" : apiPathPrefix);
+        try {
+            ensureJavaParserConfigured();
+            if (rootPath == null || rootPath.isBlank()) throw new IllegalArgumentException("rootPath is required");
+            if (relPath == null || relPath.isBlank()) throw new IllegalArgumentException("relPath is required");
+
+            Path root = Paths.get(rootPath);
+            Path file = root.resolve(relPath);
+            if (!Files.exists(file)) throw new IllegalArgumentException("file not found: " + file);
+            if (!Files.isRegularFile(file)) throw new IllegalArgumentException("not a file: " + file);
+
+            Map<String, String> constants = parsePathConstants(pathConstantsRaw);
+            // git history는 debug에서 생략
+            List<String[]> git = List.of(new String[]{"", "", ""}, new String[]{"", "", ""}, new String[]{"", "", ""}, new String[]{"", "", ""}, new String[]{"", "", ""});
+            List<ApiInfo> apis = extractWithJavaParser(file, relPath, git, apiPathPrefix == null ? "" : apiPathPrefix, constants);
+
+            out.put("ok", true);
+            out.put("apiCount", apis.size());
+            // payload 크기 방지: 상위 50개만
+            List<Map<String, Object>> rows = new ArrayList<>();
+            for (int i = 0; i < Math.min(apis.size(), 50); i++) {
+                ApiInfo a = apis.get(i);
+                rows.add(Map.of(
+                        "apiPath", a.getApiPath(),
+                        "httpMethod", a.getHttpMethod(),
+                        "methodName", a.getMethodName(),
+                        "apiOperationValue", a.getApiOperationValue(),
+                        "descriptionTag", a.getDescriptionTag(),
+                        "isDeprecated", a.getIsDeprecated(),
+                        "hasUrlBlock", a.getHasUrlBlock()
+                ));
+            }
+            out.put("apis", rows);
+            return out;
+        } catch (ParseProblemException ppe) {
+            out.put("errorType", "ParseProblemException");
+            out.put("message", ppe.getMessage());
+            out.put("problems", ppe.getProblems().stream().map(pr -> {
+                Map<String, Object> m = new LinkedHashMap<>();
+                m.put("message", pr.getMessage());
+                pr.getLocation().ifPresent(loc -> {
+                    // JavaParser 버전별 API 차이: Position 접근자가 다를 수 있어 toString()으로 안전하게 반환
+                    try {
+                        m.put("begin", String.valueOf(loc.getBegin()));
+                        m.put("end", String.valueOf(loc.getEnd()));
+                    } catch (Exception ignored) {}
+                });
+                return m;
+            }).toList());
+            return out;
+        } catch (Exception e) {
+            out.put("errorType", e.getClass().getSimpleName());
+            out.put("message", e.getMessage());
+            return out;
+        }
     }
 }

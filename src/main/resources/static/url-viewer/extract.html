@@ -1879,33 +1879,46 @@
     const fileKey = relPath ? `${repoName}||${relPath}` : '';
 
     if (relPath) {
-      if (isParserFail && fileKey) {
+      const isFallbackHint = /Regex\s*폴백\s*적용/.test(restMsg) || /Regex\s*폴백\s*적용/.test(msg);
+      if ((isParserFail || isFallbackHint) && fileKey) {
         window._rxFallbackSeenByFileKey.add(fileKey);
       }
       // OK 로그에서 "N개 API 추출"이 잡히고, 이전에 parser fail이 있었던 파일이면 정규식 추출 건수로 기록
       if (level === 'OK' && fileKey && mOkExtractCnt && window._rxFallbackSeenByFileKey.has(fileKey)) {
         const n = Number(mOkExtractCnt[1]);
         if (!Number.isNaN(n)) window._rxExtractCountByFileKey.set(fileKey, n);
-        // 이미 에러 아이템이 만들어진 경우도 있으니 갱신
-        const kParse = key('파싱에러');
-        const it = logIssues.errors.get(kParse);
-        if (it) it.regexExtractCount = n;
+        // 폴백 결과가 0건이면, 0개 추출이더라도 에러로 승격해 눈에 띄게 표시한다.
+        if (n === 0) {
+          const k0 = key('정규식0건');
+          if (!logIssues.errors.has(k0)) {
+            logIssues.errors.set(k0, {
+              repoName, relPath, fullPath,
+              regexExtractCount: 0,
+              reason: '정규식0건',
+              detail: `OK: ${restMsg}`
+            });
+          }
+        }
       }
 
       if (isZeroExtract) {
-        div.classList.add('issue-zero');
-        const k = key('0건');
-        if (!logIssues.zeros.has(k)) logIssues.zeros.set(k, { repoName, relPath, fullPath, reason: '0건', detail: restMsg });
+        // 폴백이 발생한 파일의 0개 추출은 에러로 올림 (요청사항)
+        if (fileKey && window._rxFallbackSeenByFileKey.has(fileKey)) {
+          div.classList.add('issue-error');
+          const k0 = key('정규식0건');
+          if (!logIssues.errors.has(k0)) logIssues.errors.set(k0, { repoName, relPath, fullPath, regexExtractCount: 0, reason: '정규식0건', detail: `${level}: ${restMsg}` });
+        } else {
+          div.classList.add('issue-zero');
+          const k = key('0건');
+          if (!logIssues.zeros.has(k)) logIssues.zeros.set(k, { repoName, relPath, fullPath, reason: '0건', detail: restMsg });
+        }
       }
       if (level === 'ERROR' || isParserFail || isExtractFail) {
         div.classList.add(level === 'WARN' ? 'issue-warn' : 'issue-error');
         const reason = isParserFail ? '파싱에러' : (isExtractFail ? '추출실패' : 'ERROR');
         const k = key(reason);
         if (!logIssues.errors.has(k)) {
-          const rxCnt = (fileKey && window._rxExtractCountByFileKey && window._rxExtractCountByFileKey.has(fileKey))
-            ? window._rxExtractCountByFileKey.get(fileKey)
-            : null;
-          logIssues.errors.set(k, { repoName, relPath, fullPath, regexExtractCount: rxCnt, reason, detail: `${level}: ${restMsg}` });
+          logIssues.errors.set(k, { repoName, relPath, fullPath, regexExtractCount: null, reason, detail: `${level}: ${restMsg}` });
         }
       } else if (level === 'WARN') {
         div.classList.add('issue-warn');
@@ -1962,7 +1975,16 @@
     const body = document.getElementById('logIssueBody');
     if (!box || !badges || !body) return;
 
-    const errItems = Array.from(logIssues.errors.values());
+    const errItems = Array.from(logIssues.errors.values()).map(it => {
+      try {
+        const rk = (it && it.repoName && it.relPath) ? `${it.repoName}||${it.relPath}` : '';
+        if (rk && window._rxExtractCountByFileKey && window._rxExtractCountByFileKey.has(rk)) {
+          const n = window._rxExtractCountByFileKey.get(rk);
+          if (it && it.regexExtractCount == null) it.regexExtractCount = n;
+        }
+      } catch (e) {}
+      return it;
+    });
     const zeroItems = Array.from(logIssues.zeros.values());
     const warnItems = Array.from(logIssues.warns.values());
     const hasAny = errItems.length || zeroItems.length || warnItems.length;
@@ -1992,6 +2014,11 @@
       const n = it && it.regexExtractCount != null ? Number(it.regexExtractCount) : null;
       return (n == null || Number.isNaN(n)) ? '-' : String(n);
     };
+    const debugBtn = (it) => {
+      const rel = (it && it.relPath) ? String(it.relPath) : '';
+      if (!rel) return '';
+      return `<button type="button" class="badge btn-excel" style="padding:2px 8px;" onclick="debugParseOneFile('${esc(rel).replace(/'/g, '&#39;')}')">단건파싱</button>`;
+    };
     const rowHtml = (it, cls) => `
       <tr>
         <td>${esc(it.repoName || '-')}</td>
@@ -2001,7 +2028,7 @@
         </td>
         <td style="min-width:92px;text-align:right;font-variant-numeric:tabular-nums;">${esc(rxCntCell(it))}</td>
         <td><span class="issue-reason ${cls}">${esc(it.reason || '-')}</span></td>
-        <td style="word-break:break-all;">${esc(it.detail || '')}</td>
+        <td style="word-break:break-all;">${esc(it.detail || '')}<div style="margin-top:6px;">${debugBtn(it)}</div></td>
       </tr>`;
 
     const table = (items, title, cls) => {
@@ -2094,6 +2121,36 @@
       setTimeout(() => URL.revokeObjectURL(a.href), 500);
     } catch (e) {
       showToast('엑셀 다운로드 실패', 'error');
+    }
+  }
+
+  async function debugParseOneFile(relPath) {
+    try {
+      const rootPath = currentExtractRoot || '';
+      const apiPathPrefix = document.getElementById('apiPathPrefix')?.value || '';
+      const pathConstants = document.getElementById('pathConstants')?.value || '';
+      if (!rootPath) { showToast('ROOT_PATH가 없어 단건 파싱을 실행할 수 없습니다.', 'error'); return; }
+      if (!relPath) { showToast('상대경로가 없어 단건 파싱을 실행할 수 없습니다.', 'error'); return; }
+      const res = await adminFetch('/api/extract/debug-parse-one', {
+        method: 'POST',
+        body: JSON.stringify({ rootPath, relPath, apiPathPrefix, pathConstants })
+      });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(d.error || '서버 오류');
+      const head = `단건 파싱 결과 — ${relPath}\n(root=${rootPath})\n\n`;
+      if (d.ok) {
+        const lines = (d.apis || []).map(a => `${a.httpMethod} ${a.apiPath} | ${a.methodName} | ${a.apiOperationValue || '-'}`);
+        await customAlert(head + `OK: apiCount=${d.apiCount}\n\n` + lines.join('\n'), { title: '🧩 JavaParser 단건 파싱' });
+      } else {
+        const probs = Array.isArray(d.problems) ? d.problems : [];
+        const ptxt = probs.slice(0, 20).map(p => {
+          const pos = (p.beginLine ? `L${p.beginLine}:${p.beginColumn || 1}` : '');
+          return `${pos} ${p.message || ''}`.trim();
+        }).join('\n');
+        await customAlert(head + `FAIL: ${d.errorType || 'Error'}\n${d.message || ''}\n\n` + (ptxt ? `Problems:\n${ptxt}` : ''), { title: '🧩 JavaParser 단건 파싱 (실패)' });
+      }
+    } catch (e) {
+      showToast(`단건 파싱 실패: ${e.message}`, 'error');
     }
   }
 
