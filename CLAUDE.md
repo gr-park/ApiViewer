@@ -69,6 +69,8 @@ Spring Boot 기반 웹 애플리케이션. Controller 소스를 파싱하여 URL
 | `/` → `/dashboard/`, `/dashboard/` | 공개 |
 | `/url-viewer/`, `/url-viewer/viewer.html`, `/url-viewer/call-stats.html`, `/url-viewer/url-block-monitor.html`, `/url-viewer/review.html`, `/url-viewer/workflow.html` | 공개 |
 | `/url-viewer/extract.html`, `/settings/`, `/h2-console` | 관리자 |
+
+`extract.html`(설정의 URL분석/검토 탭에 embed): **레포별 APM 수집**에서 **전체(레포설정)**(`ALL`) 선택 시 레포 셀렉터는 와탭·제니퍼 중 하나라도 **Y**인 레포만 표시하고, 수집 실행 시 선택 레포마다 `collectAllApm`과 동일하게(활성 와탭 최대 365일·활성 제니퍼 최대 30일 순차 수집 후 집계) 동작한다. WHATAP/JENNIFER 단일 선택 시에는 각각 `whatapEnabled`/`jenniferEnabled`가 **Y**인 레포만 표시한다. JENNIFER 선택 시 최대 30일 제한을 토스트·안내 문구로 알린다. MOCK(테스트) 선택 시에는 전체 레포 목록을 쓴다.
 | `/encrypt-viewer/` | 공개(자리표시자) |
 
 `viewer.html` 세로 순서(대략): **조회 조건** → **검색 필터**(조회 전에도 표시·기본 펼침) → **상태 카드**(조회 성공 후 표시) → 안내·알림·일괄바 → **스냅샷 비교**(관리자, URL 테이블 직전) → 테이블. 카드형 `details`는 **「펼치기/접기」 pill(`.collapser`)** 클릭 시에만 접힘(summary 빈 영역 클릭으로 접히지 않음).

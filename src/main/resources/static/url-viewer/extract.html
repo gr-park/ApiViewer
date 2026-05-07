@@ -367,10 +367,12 @@
       <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:8px;">
         <label class="field">APM 종류
           <select id="apmCollectSource" onchange="onApmSourceChange(true)" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;">
+            <option value="ALL">전체 (레포설정 기준)</option>
             <option value="WHATAP">WHATAP (최대 365일)</option>
             <option value="JENNIFER">JENNIFER (최대 30일)</option>
             <option value="MOCK">MOCK (테스트)</option>
           </select>
+          <span style="font-size:10px;font-weight:500;color:var(--text-muted);margin-top:4px;display:block;line-height:1.45;"><b>전체</b>는 선택 레포마다 전체 자동수집과 동일하게(와탭 365일·제니퍼 30일, 설정상 활성만) 수집합니다. 와탭/제니퍼 단일 선택 시 레포 목록은 해당 APM <b>활성</b> 레포만, MOCK은 전체 레포에서 선택합니다.</span>
         </label>
         <label class="field" style="min-width:260px;">레포지토리 <span style="font-size:10px;color:var(--text-muted);font-weight:400;">(다중 선택 가능)</span>
           <div id="apmCollectRepo" style="min-width:220px;"></div>
@@ -558,6 +560,63 @@
   const extractOverrides = {}; // { [repoName]: { apiPathPrefix:'', pathConstants:'' } }
   let advancedOpen = false;
 
+  /** 레포별 APM 수집 — ALL: 와탭 또는 제니퍼 활성, WHATAP/제니퍼: 해당 활성만, MOCK: 전체 */
+  function reposForApmCollectSource(src) {
+    const s = (src || 'ALL').toUpperCase();
+    if (s === 'MOCK') return allRepos.slice();
+    if (s === 'ALL') return allRepos.filter(r => r.whatapEnabled === 'Y' || r.jenniferEnabled === 'Y');
+    if (s === 'JENNIFER') return allRepos.filter(r => r.jenniferEnabled === 'Y');
+    return allRepos.filter(r => r.whatapEnabled === 'Y');
+  }
+
+  /** 전체 자동수집(collectAllApm)과 동일한 from/to (어제 종료, 소스별 일수) */
+  function apmCollectFromToForDays(days) {
+    const toD = new Date();
+    toD.setDate(toD.getDate() - 1);
+    const to = toD.toLocaleDateString('sv-SE');
+    const fromD = new Date();
+    fromD.setDate(fromD.getDate() - days);
+    const from = fromD.toLocaleDateString('sv-SE');
+    return { from, to };
+  }
+
+  /** 선택 레포에 대해 전체 자동수집과 동일한 소스 목록 */
+  function apmSourcesForAutoRepo(repo) {
+    if (!repo) return [];
+    const sources = [];
+    if (repo.whatapEnabled === 'Y') sources.push({ src: 'WHATAP', days: 365 });
+    if (repo.jenniferEnabled === 'Y') sources.push({ src: 'JENNIFER', days: 30 });
+    return sources;
+  }
+
+  /**
+   * APM 종류 변경 시 레포 셀렉터 재구성(목록 필터 + 유효한 선택만 유지).
+   * @returns {number} 필터 후 레포 개수
+   */
+  function remountApmCollectRepoSelect(opts) {
+    opts = opts || {};
+    if (!window.RepoSelect || !document.getElementById('apmCollectRepo')) return 0;
+    const src = (document.getElementById('apmCollectSource')?.value) || 'ALL';
+    const filtered = reposForApmCollectSource(src);
+    const prev = window._apmCollectRepoSel && typeof window._apmCollectRepoSel.getSelected === 'function'
+      ? window._apmCollectRepoSel.getSelected().filter(rn => filtered.some(r => r.repoName === rn))
+      : [];
+    if (window._apmCollectRepoSel && typeof window._apmCollectRepoSel.destroy === 'function') {
+      try { window._apmCollectRepoSel.destroy(); } catch (e) {}
+    }
+    const ph = !filtered.length
+      ? (src === 'JENNIFER' ? '제니퍼 미활성 레포 없음' : src === 'MOCK' ? '등록된 레포 없음' : src === 'ALL' ? '와탭·제니퍼 모두 미활성' : '와탭 미활성 레포 없음')
+      : '선택';
+    window._apmCollectRepoSel = RepoSelect.mountCompact('#apmCollectRepo', {
+      repos: filtered,
+      placeholder: ph,
+      selected: prev,
+      onChange: () => onApmRepoChange()
+    });
+    if (!opts.skipRepoChangeHook) onApmRepoChange();
+    return filtered.length;
+  }
+
   // ── 레포 설정 목록 로드 ───────────────────────────────────
   async function initRepoConfigs() {
     try {
@@ -593,10 +652,15 @@
         console.warn('[initRepoConfigs] invalid selector instance', window._repoConfigSel);
       }
 
-      // ── ② APM 호출건수 수집 (RepoSelect 다중) ──
+      // ── ② APM 호출건수 수집 (RepoSelect 다중) — APM 종류별 활성 레포만
+      const apmSrc0 = (document.getElementById('apmCollectSource')?.value) || 'ALL';
+      const apmRepos0 = reposForApmCollectSource(apmSrc0);
+      const ph0 = !apmRepos0.length
+        ? (apmSrc0 === 'JENNIFER' ? '제니퍼 미활성 레포 없음' : apmSrc0 === 'MOCK' ? '등록된 레포 없음' : apmSrc0 === 'ALL' ? '와탭·제니퍼 모두 미활성' : '와탭 미활성 레포 없음')
+        : '선택';
       window._apmCollectRepoSel = RepoSelect.mountCompact('#apmCollectRepo', {
-        repos: allRepos,
-        placeholder: '선택',
+        repos: apmRepos0,
+        placeholder: ph0,
         onChange: () => onApmRepoChange()
       });
 
@@ -768,9 +832,11 @@
   // APM 기간 바로가기 버튼
   function setApmRange(days) {
     const src = document.getElementById('apmCollectSource').value;
-    const maxDays = src === 'JENNIFER' ? 30 : 365;
+    const maxDays = src === 'JENNIFER' ? 30 : 365; // ALL/WHATAP/MOCK: 365까지(전체 모드 수집 시 일자는 무시)
     if (days > maxDays) {
-      showToast(`${src}는 최대 ${maxDays}일까지 가능합니다.`, 'error');
+      showToast(
+        src === 'ALL' ? `기간은 최대 ${maxDays}일까지 선택할 수 있습니다. (전체 수집은 레포별 자동 기간)` : `${src}는 최대 ${maxDays}일까지 가능합니다.`,
+        'error');
       return;
     }
     const to = new Date();
@@ -797,29 +863,45 @@
         yearBtn.title = 'JENNIFER는 최대 30일까지 가능';
       } else {
         yearBtn.classList.remove('disabled');
-        yearBtn.title = '';
+        yearBtn.title = src === 'ALL' ? '전체 모드 수집 시 레포별 자동 기간(와탭 365·제니퍼 30일)' : '';
       }
     }
   }
 
-  // APM 종류 변경 시: 기간 자동 세팅 (WHATAP=365일, JENNIFER=30일) + 가이드
+  // APM 종류 변경 시: 레포 목록 필터 + 기간 자동 세팅 (WHATAP=365일, JENNIFER=30일) + 가이드
   function onApmSourceChange(autoSetRange) {
     const src = document.getElementById('apmCollectSource').value;
     const maxDays = src === 'JENNIFER' ? 30 : 365;
     if (autoSetRange) {
+      const nRepos = remountApmCollectRepoSelect({ skipRepoChangeHook: true });
+      if (src === 'JENNIFER') {
+        showToast('제니퍼(JENNIFER)는 API 제약으로 최대 30일 구간만 수집할 수 있습니다.', 'info');
+      }
+      updateRangeButtons();
+      if (!nRepos) {
+        const emptyMsg = src === 'MOCK'
+          ? '등록된 레포가 없습니다.'
+          : src === 'ALL'
+            ? '⚠ 와탭·제니퍼가 모두 비활성화된 레포뿐이거나 등록된 레포가 없습니다.'
+            : `⚠ 이 APM으로 수집할 수 있는 레포가 없습니다. 설정에서 ${src === 'JENNIFER' ? '제니퍼' : '와탭'} 연동을 활성화하세요.`;
+        document.getElementById('apmCollectResult').innerHTML =
+          `<span style="color:var(--danger);">${emptyMsg}</span>`;
+        return;
+      }
       // 자동으로 기간 세팅
       const today = new Date();
       const fromDate = new Date(today.getTime() - (maxDays - 1) * 86400000);
       document.getElementById('apmCollectTo').value = today.toLocaleDateString('sv-SE');
       document.getElementById('apmCollectFrom').value = fromDate.toLocaleDateString('sv-SE');
       document.getElementById('apmCollectResult').innerHTML =
-        `<span style="color:var(--text-muted);">ℹ ${src} 최대 기간 ${maxDays}일로 자동 세팅되었습니다.</span>`;
+        `<span style="color:var(--text-muted);">ℹ ${src === 'ALL' ? '전체 모드: 수집 실행 시 선택 레포마다 와탭(최대 365일)·제니퍼(최대 30일)이 설정 활성 여부에 따라 자동 적용됩니다. 아래 기간은 단일 APM 선택 시에만 사용됩니다.' : `${src} 최대 기간 ${maxDays}일로 자동 세팅되었습니다.${src === 'JENNIFER' ? ' (제니퍼는 30일 초과 구간 불가)' : src === 'MOCK' ? ' (MOCK 테스트 데이터)' : ''}`}</span>`;
       // 바로가기 버튼 active 초기화 + 1년 버튼 상태 업데이트
       document.querySelectorAll('.apm-range-btn').forEach(b => b.classList.remove('active'));
-      updateRangeButtons();
       return;
     }
-    // 수동 변경 시 경고 체크
+    updateRangeButtons();
+    // 전체(ALL): UI 기간은 수집에 사용되지 않음 — 단일 APM 선택 시에만 검증 (안내 문구는 유지)
+    if (src === 'ALL') return;
     const from = document.getElementById('apmCollectFrom').value;
     const to = document.getElementById('apmCollectTo').value;
     if (from && to) {
@@ -844,26 +926,41 @@
 
     // 다건 선택 시 자동 source 판단은 생략 (혼동 방지). 기간 제한만 안내.
     if (selected.length !== 1) {
-      const src = document.getElementById('apmCollectSource')?.value || 'WHATAP';
+      const src = document.getElementById('apmCollectSource')?.value || 'ALL';
       onApmSourceChange(false);
       document.getElementById('apmCollectResult').innerHTML =
-        `<span style="color:var(--text-muted);">ℹ 다건 선택(${selected.length}개): APM 종류(${src})는 현재 선택값을 사용합니다. (기간 제한: WHATAP 365일 / JENNIFER 30일)</span>`;
+        src === 'ALL'
+          ? `<span style="color:var(--text-muted);">ℹ 다건 선택(${selected.length}개) · <b>전체</b> 모드: 각 레포에서 와탭·제니퍼 활성 분만 전체 자동수집과 동일하게 수집합니다.</span>`
+          : `<span style="color:var(--text-muted);">ℹ 다건 선택(${selected.length}개): APM 종류(${src})는 현재 선택값을 사용합니다. (기간 제한: WHATAP 365일 / JENNIFER 30일)</span>`;
       return;
     }
 
     const repoName = selected[0];
     const repo = allRepos.find(r => r.repoName === repoName);
     if (!repo) return;
+    const srcSel = document.getElementById('apmCollectSource');
+    if (srcSel && srcSel.value === 'ALL') {
+      onApmSourceChange(true);
+      document.getElementById('apmCollectResult').innerHTML =
+        `<span style="color:var(--text-muted);">ℹ "${repoName}" 선택 — 전체(레포설정) 모드: 활성화된 와탭·제니퍼만 순차 수집합니다.</span>`;
+      return;
+    }
     const whatap = repo.whatapEnabled === 'Y';
     const jennifer = repo.jenniferEnabled === 'Y';
-    const srcSel = document.getElementById('apmCollectSource');
     let autoSrc = null;
-    if (whatap && jennifer) autoSrc = 'WHATAP';  // 둘 다면 와탭 우선
+    let manual = null;
+    if (srcSel.value === 'JENNIFER' || srcSel.value === 'WHATAP') manual = srcSel.value;
+    else if (srcSel.value === 'MOCK') manual = 'MOCK';
+    if (whatap && jennifer) {
+      if (manual === 'JENNIFER') autoSrc = 'JENNIFER';
+      else if (manual === 'MOCK') autoSrc = 'MOCK';
+      else autoSrc = 'WHATAP';
+    }
     else if (whatap) autoSrc = 'WHATAP';
     else if (jennifer) autoSrc = 'JENNIFER';
     else autoSrc = 'MOCK';
     srcSel.value = autoSrc;
-    onApmSourceChange(true); // 기간 자동 세팅
+    onApmSourceChange(true); // 레포 목록·기간 자동 세팅
     document.getElementById('apmCollectResult').innerHTML =
       `<span style="color:var(--text-muted);">ℹ "${repoName}" 설정 기준: ${autoSrc} 자동 선택 + 최대 기간 세팅</span>`;
   }
@@ -993,6 +1090,128 @@
     const from = document.getElementById('apmCollectFrom').value;
     const to = document.getElementById('apmCollectTo').value;
     if (!repoNames.length) { showToast('레포지토리를 선택하세요.','error'); return; }
+
+    if (source === 'ALL') {
+      const plans = [];
+      const skipped = [];
+      for (const repoName of repoNames) {
+        const repo = allRepos.find(r => r.repoName === repoName);
+        const sources = apmSourcesForAutoRepo(repo);
+        if (sources.length) plans.push({ repoName, sources });
+        else skipped.push(repoName);
+      }
+      if (!plans.length) {
+        showToast('선택한 레포에 와탭·제니퍼가 모두 비활성화되어 수집할 수 없습니다.', 'error');
+        return;
+      }
+      const totalSteps = plans.reduce((acc, p) => acc + p.sources.length + 1, 0);
+      let confirmMsg =
+        `전체(레포설정) APM 수집을 실행하시겠습니까?\n` +
+        `대상 레포: ${plans.length}개 / 작업 단계: ${totalSteps}단계\n` +
+        `(각 레포: 활성 와탭 최대 365일 · 활성 제니퍼 최대 30일 순차 수집 후 집계 — 전체 자동수집과 동일)`;
+      if (skipped.length) {
+        confirmMsg += `\n\n건너뜀(APM 미활성): ${skipped.length}개 — ${skipped.join(', ')}`;
+      }
+      if (!await customConfirm(confirmMsg)) return;
+
+      const btn = document.getElementById('apmCollectBtn');
+      btn.disabled = true;
+      btn.textContent = '수집 중...';
+      try {
+        clearLogs();
+        hideResult();
+        showWorkCard(true, 'APM 수집 (전체·레포설정)');
+        addLocalLog('INFO', `── APM 전체(레포설정) 수집 시작: ${plans.length}개 레포 / ${totalSteps}단계 ──`);
+        await fetch('/api/apm/logs', { method: 'DELETE' }).catch(() => {});
+        apmProgressMode = 'batch';
+        startApmLogPolling();
+        document.getElementById('apmCollectResult').innerHTML =
+          `<span style="color:var(--text-muted);">전체(레포설정) 수집 실행 중... (작업 로그 확인)</span>`;
+
+        let stepDone = 0;
+        let failCount = 0;
+        let totalGenerated = 0;
+        let totalUpdated = 0;
+
+        for (let i = 0; i < plans.length; i++) {
+          const plan = plans[i];
+          setRepoLabel(`레포 ${i + 1}/${plans.length}: ${plan.repoName}`);
+          for (const s of plan.sources) {
+            stepDone++;
+            const pct = Math.round((stepDone / totalSteps) * 100);
+            document.getElementById('progFill').style.width = pct + '%';
+            document.getElementById('progPct').textContent = pct + '%';
+            document.getElementById('progCount').textContent =
+              `${plan.repoName} · ${s.src} 수집 중 (${stepDone}/${totalSteps})`;
+            const range = apmCollectFromToForDays(s.days);
+            try {
+              const res = await fetch('/api/apm/collect', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-Admin-Token': sessionStorage.getItem('adminToken') || '' },
+                body: JSON.stringify({ repoName: plan.repoName, source: s.src, from: range.from, to: range.to })
+              });
+              const data = await res.json();
+              if (!res.ok) throw new Error(data.error || '실패');
+              totalGenerated += (data.generated || 0);
+              addLocalLog('INFO', `  · ${plan.repoName} / ${s.src}: ${data.generated || 0}건 수집 (${s.days}일)`);
+            } catch (e) {
+              failCount++;
+              addLocalLog('ERROR', `  · ${plan.repoName} / ${s.src}: 실패 - ${e.message}`);
+            }
+          }
+          stepDone++;
+          const pct = Math.round((stepDone / totalSteps) * 100);
+          document.getElementById('progFill').style.width = pct + '%';
+          document.getElementById('progPct').textContent = pct + '%';
+          document.getElementById('progCount').textContent =
+            `${plan.repoName} · 집계 반영 중 (${stepDone}/${totalSteps})`;
+          try {
+            const res = await fetch('/api/apm/aggregate', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'X-Admin-Token': sessionStorage.getItem('adminToken') || '' },
+              body: JSON.stringify({ repoName: plan.repoName })
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || '집계 실패');
+            totalUpdated += (data.updated || 0);
+            addLocalLog('INFO', `  · ${plan.repoName}: 집계 반영 ${data.updated || 0}건`);
+          } catch (e) {
+            failCount++;
+            addLocalLog('ERROR', `  · ${plan.repoName}: 집계 실패 - ${e.message}`);
+          }
+        }
+
+        document.getElementById('progFill').style.width = '100%';
+        document.getElementById('progPct').textContent = '100%';
+        document.getElementById('progStatus').textContent = failCount > 0 ? `완료 (실패 ${failCount}건)` : '완료';
+        document.getElementById('progSpinner').style.display = 'none';
+        document.getElementById('progCount').textContent =
+          `레포 ${plans.length}개 · 수집 ${totalGenerated}건 · 집계 ${totalUpdated}건${failCount ? ` · 실패 ${failCount}` : ''}`;
+        setRepoLabel('');
+        const msg =
+          `전체(레포설정) 수집 완료 — 레포 ${plans.length}개, 수집 ${totalGenerated}건` +
+          (failCount ? `, 실패 ${failCount}건` : '');
+        document.getElementById('apmCollectResult').innerHTML =
+          `<span style="color:${failCount ? 'var(--danger)' : 'var(--success)'};">${failCount ? '⚠' : '✓'} ${msg}</span>`;
+        showResult(failCount ? 'fail' : 'ok', msg);
+        showToast(msg, failCount ? 'error' : 'success');
+      } catch (e) {
+        document.getElementById('progSpinner').style.display = 'none';
+        document.getElementById('progStatus').textContent = '실패';
+        addLocalLog('ERROR', `APM 전체(레포설정) 수집 중단: ${e.message}`);
+        document.getElementById('apmCollectResult').innerHTML =
+          `<span style="color:var(--danger);">${e.message}</span>`;
+        showResult('fail', e.message);
+        showToast(e.message, 'error');
+      } finally {
+        setTimeout(() => stopApmLogPolling(), 1500);
+        btn.disabled = false;
+        btn.textContent = '수집 실행';
+        setRepoLabel('');
+      }
+      return;
+    }
+
     if (!from || !to) { showToast('시작일/종료일을 선택하세요.','error'); return; }
     if (new Date(from) > new Date(to)) { showToast('시작일이 종료일보다 늦을 수 없습니다.','error'); return; }
     const diff = Math.ceil((new Date(to) - new Date(from)) / 86400000) + 1;
