@@ -1426,18 +1426,62 @@ public class ApiViewController {
             return acc;
         };
 
-        // 팀별
+        // 팀별 — 레포 표시순서(display_order) 기준 + 팀명 이름순
+        // team -> 대표 레포(display_order 최솟값, 없으면 repoName 사전순) 추출
+        Map<String, Integer> teamFirstRepoOrder = new HashMap<>();
+        Map<String, String> teamFirstRepoName = new HashMap<>();
+        for (DeployScheduleDto r : all) {
+            String team = teamOf.apply(r);
+            String repoName = r.getRepositoryName();
+            if (repoName == null) continue;
+            RepoConfig cfg = repoConfigMap.get(repoName);
+            Integer order = cfg != null ? cfg.getDisplayOrder() : null;
+
+            Integer curOrder = teamFirstRepoOrder.get(team);
+            String curRepo = teamFirstRepoName.get(team);
+            boolean replace;
+            if (curOrder == null && order == null) {
+                replace = (curRepo == null) || repoName.compareTo(curRepo) < 0;
+            } else if (curOrder == null) {
+                replace = order != null;
+            } else if (order == null) {
+                replace = false;
+            } else {
+                int oc = order.compareTo(curOrder);
+                replace = (oc < 0) || (oc == 0 && (curRepo == null || repoName.compareTo(curRepo) < 0));
+            }
+            if (replace) {
+                teamFirstRepoOrder.put(team, order);
+                teamFirstRepoName.put(team, repoName);
+            }
+        }
+
         Map<String, Map<String, Object>> teamAcc = aggregate.apply(teamOf, all);
         List<Map<String, Object>> byTeam = teamAcc.entrySet().stream()
-                .sorted((a, b) -> Long.compare((Long) b.getValue().get("total"), (Long) a.getValue().get("total")))
                 .map(e -> {
                     Map<String, Object> m = new LinkedHashMap<>();
-                    m.put("team", e.getKey());
+                    String team = e.getKey();
+                    m.put("team", team);
+                    m.put("teamSortOrder", teamFirstRepoOrder.get(team)); // nullable
+                    m.put("teamSortRepo", teamFirstRepoName.get(team));   // nullable
                     m.putAll(e.getValue());
                     return m;
-                }).collect(Collectors.toList());
+                })
+                .sorted((a, b) -> {
+                    Integer oa = (Integer) a.get("teamSortOrder");
+                    Integer ob = (Integer) b.get("teamSortOrder");
+                    int oc = Comparator.nullsLast(Integer::compareTo).compare(oa, ob);
+                    if (oc != 0) return oc;
+                    // repoName tie-break (nulls last)
+                    String ra = String.valueOf(a.getOrDefault("teamSortRepo", ""));
+                    String rb = String.valueOf(b.getOrDefault("teamSortRepo", ""));
+                    int rc = ra.compareTo(rb);
+                    if (rc != 0) return rc;
+                    return String.valueOf(a.getOrDefault("team", "")).compareTo(String.valueOf(b.getOrDefault("team", "")));
+                })
+                .collect(Collectors.toList());
 
-        // 담당자별 — 팀|레포|이름 (배포담당자 D: / 일반 담당자 M:, block-overview 와 동일 viewer 파라미터 규약)
+        // 담당자별 — 레포 표시순서(display_order) 기준 + 팀/업무/레포/담당자 이름순
         java.util.function.Function<DeployScheduleDto, String> mgrKey = r -> {
             String t = teamOf.apply(r);
             String repo = r.getRepositoryName() != null ? r.getRepositoryName() : "";
@@ -1467,13 +1511,16 @@ public class ApiViewController {
                     return m;
                 })
                 .sorted((a, b) -> {
-                    int tc = String.valueOf(a.getOrDefault("team", ""))
-                            .compareTo(String.valueOf(b.getOrDefault("team", "")));
-                    if (tc != 0) return tc;
                     Integer oa = (Integer) a.get("displayOrder");
                     Integer ob = (Integer) b.get("displayOrder");
                     int oc = Comparator.nullsLast(Integer::compareTo).compare(oa, ob);
                     if (oc != 0) return oc;
+                    int tc = String.valueOf(a.getOrDefault("team", ""))
+                            .compareTo(String.valueOf(b.getOrDefault("team", "")));
+                    if (tc != 0) return tc;
+                    int bc = String.valueOf(a.getOrDefault("businessName", ""))
+                            .compareTo(String.valueOf(b.getOrDefault("businessName", "")));
+                    if (bc != 0) return bc;
                     int rc = String.valueOf(a.getOrDefault("repo", ""))
                             .compareTo(String.valueOf(b.getOrDefault("repo", "")));
                     if (rc != 0) return rc;
@@ -1482,7 +1529,7 @@ public class ApiViewController {
                 })
                 .collect(Collectors.toList());
 
-        // 레포별 — 그룹 키는 팀+레포명 조합 (호환: 다른 팀 오버라이드가 있으면 별도 행)
+        // 레포별 — 레포 표시순서(display_order) 기준 + 팀/업무/레포 이름순
         java.util.function.Function<DeployScheduleDto, String> repoKey = r -> teamOf.apply(r) + "|" + r.getRepositoryName();
         Map<String, Map<String, Object>> repoAcc = aggregate.apply(repoKey, all);
         List<Map<String, Object>> byRepo = repoAcc.entrySet().stream()
@@ -1500,13 +1547,16 @@ public class ApiViewController {
                     return m;
                 })
                 .sorted((a, b) -> {
-                    int tc = String.valueOf(a.getOrDefault("team", ""))
-                            .compareTo(String.valueOf(b.getOrDefault("team", "")));
-                    if (tc != 0) return tc;
                     Integer oa = (Integer) a.get("displayOrder");
                     Integer ob = (Integer) b.get("displayOrder");
                     int oc = Comparator.nullsLast(Integer::compareTo).compare(oa, ob);
                     if (oc != 0) return oc;
+                    int tc = String.valueOf(a.getOrDefault("team", ""))
+                            .compareTo(String.valueOf(b.getOrDefault("team", "")));
+                    if (tc != 0) return tc;
+                    int bc = String.valueOf(a.getOrDefault("businessName", ""))
+                            .compareTo(String.valueOf(b.getOrDefault("businessName", "")));
+                    if (bc != 0) return bc;
                     return String.valueOf(a.getOrDefault("repo", "")).compareTo(String.valueOf(b.getOrDefault("repo", "")));
                 })
                 .collect(Collectors.toList());

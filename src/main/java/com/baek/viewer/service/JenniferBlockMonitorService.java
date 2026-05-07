@@ -44,6 +44,7 @@ public class JenniferBlockMonitorService {
     private static final Logger log = LoggerFactory.getLogger(JenniferBlockMonitorService.class);
     private static final ZoneId KST = ZoneId.of("Asia/Seoul");
     private static final String BLOCK_KEYWORD = "차단";
+    private static final String TARGET_ERROR_TYPE = "SERVICE_EXCEPTION";
     private static final String ERROR_SEARCH_PATH = "/api/dbsearch/error";
 
     private final HttpClient httpClient = HttpClient.newBuilder()
@@ -197,7 +198,9 @@ public class JenniferBlockMonitorService {
         StringBuilder url = new StringBuilder(base).append(ERROR_SEARCH_PATH)
                 .append("?domain_id=").append(repo.getJenniferSid())
                 .append("&start_time=").append(stime)
-                .append("&end_time=").append(etime);
+                .append("&end_time=").append(etime)
+                // Jennifer 서버에서 errorType 필터링 지원 (확인됨)
+                .append("&error_type=").append(TARGET_ERROR_TYPE);
         if (!instanceId.isBlank()) {
             url.append("&instance_id=").append(instanceId);
         }
@@ -238,6 +241,9 @@ public class JenniferBlockMonitorService {
         if (!arr.isArray()) return out;
 
         for (JsonNode n : arr) {
+            String errorType = text(n, "errorType");
+            // Jennifer 전체 에러 중 SERVICE_EXCEPTION만 대상
+            if (errorType == null || !TARGET_ERROR_TYPE.equalsIgnoreCase(errorType.trim())) continue;
             String message = text(n, "message");
             // "차단" 포함 여부로 필터링
             if (message == null || !message.contains(BLOCK_KEYWORD)) continue;
@@ -250,7 +256,7 @@ public class JenniferBlockMonitorService {
             row.setDomainName(text(n, "domainName"));
             row.setInstanceId(textNum(n, "instanceId"));
             row.setInstanceName(text(n, "instanceName"));
-            row.setErrorType(text(n, "errorType"));
+            row.setErrorType(errorType);
             row.setMessage(message);
             row.setBot(false); // Jennifer 응답에 botg 판단 필드 없음
 

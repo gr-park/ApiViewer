@@ -823,9 +823,8 @@
       blockBanner.hidden = false;
       blockBanner.innerHTML =
         '<span style="flex-shrink:0;font-size:16px;line-height:1;" aria-hidden="true">⚠</span>' +
-        '<span style="flex:1;min-width:0;"><strong>차단 URL 인입 감지</strong> — 차단 모니터링 배치가 정상 완료되었으나, ' +
-        '<strong style="font-variant-numeric:tabular-nums;">' + n.toLocaleString() + '건</strong>이 <strong>필터 적용 후</strong>(와탭 봇 제외·IT테스트 시간대 제외는 배치 B·T·전역 설정 기준) <strong>와탭+제니퍼 합산</strong>으로 집계되었습니다. ' +
-        '(원본 대비 제외 건수는 같은 행 메시지 열 요약 참고. 모니터 화면 조회 시 제외 시간 입력값이 설정과 다르면 건수가 달라질 수 있습니다.) ' +
+        '<span style="flex:1;min-width:0;"><strong>차단 URL 인입 감지</strong> — ' +
+        '<strong style="font-variant-numeric:tabular-nums;">' + n.toLocaleString() + '건</strong> (필터 적용 후, 와탭+제니퍼 합산)<br>' +
         '상세는 URL 차단 모니터링 화면에서 확인하세요.</span>' +
         '<a href="/url-viewer/url-block-monitor.html">모니터링 이동 →</a>';
     }
@@ -1268,23 +1267,27 @@
   }
   function sortBlockOverviewRepos(arr) {
     return [...(arr || [])].sort((a, b) => {
-      const tc = String(a.team || '').localeCompare(String(b.team || ''));
-      if (tc !== 0) return tc;
       const oa = a.displayOrder, ob = b.displayOrder;
       if (oa != null && ob != null && oa !== ob) return oa - ob;
       if (oa == null && ob != null) return 1;
       if (oa != null && ob == null) return -1;
+      const tc = String(a.team || '').localeCompare(String(b.team || ''));
+      if (tc !== 0) return tc;
+      const bc = String(a.businessName || '').localeCompare(String(b.businessName || ''));
+      if (bc !== 0) return bc;
       return String(a.repo || '').localeCompare(String(b.repo || ''));
     });
   }
   function sortBlockOverviewManagers(arr) {
     return [...(arr || [])].sort((a, b) => {
-      const tc = String(a.team || '').localeCompare(String(b.team || ''));
-      if (tc !== 0) return tc;
       const oa = a.displayOrder, ob = b.displayOrder;
       if (oa != null && ob != null && oa !== ob) return oa - ob;
       if (oa == null && ob != null) return 1;
       if (oa != null && ob == null) return -1;
+      const tc = String(a.team || '').localeCompare(String(b.team || ''));
+      if (tc !== 0) return tc;
+      const bc = String(a.businessName || '').localeCompare(String(b.businessName || ''));
+      if (bc !== 0) return bc;
       const rc = String(a.repo || '').localeCompare(String(b.repo || ''));
       if (rc !== 0) return rc;
       return String(a.manager || '').localeCompare(String(b.manager || ''));
@@ -1336,7 +1339,23 @@
       html += `<td rowspan="${rs[2]}" style="text-align:left;vertical-align:middle;${repoEnd};font-family:Consolas,monospace;font-size:10px;">${esc(r.t2)}</td>`;
     }
     if (mode === 'manager') {
-      html += `<td style="text-align:left;${borderEnd};font-weight:800;">${esc(r.t3)}</td>`;
+      // 담당자도 동일 값 연속이면 rowspan 병합 (팀/업무/레포/담당자 기준)
+      const prev = i > 0 ? rows[i - 1] : null;
+      const samePrev = prev
+        && (prev.t0 === r.t0)
+        && (prev.t1 === r.t1)
+        && (prev.t2 === r.t2)
+        && (prev.t3 === r.t3);
+      if (!samePrev) {
+        let j = i + 1;
+        while (j < rows.length) {
+          const x = rows[j];
+          if ((x.t0 === r.t0) && (x.t1 === r.t1) && (x.t2 === r.t2) && (x.t3 === r.t3)) j++;
+          else break;
+        }
+        const rsMgr = j - i;
+        html += `<td rowspan="${rsMgr}" style="text-align:left;vertical-align:middle;${borderEnd};font-weight:800;">${esc(r.t3)}</td>`;
+      }
     }
     return html;
   }
@@ -1733,7 +1752,16 @@
 
     document.getElementById('overviewTeamThead').innerHTML = headerHtml(1);
     {
-      const arr = d.byTeam || [];
+      const arr = [...(d.byTeam || [])].sort((a, b) => {
+        const oa = a.teamSortOrder, ob = b.teamSortOrder;
+        if (oa != null && ob != null && oa !== ob) return oa - ob;
+        if (oa == null && ob != null) return 1;
+        if (oa != null && ob == null) return -1;
+        const ra = String(a.teamSortRepo || ''), rb = String(b.teamSortRepo || '');
+        const rc = ra.localeCompare(rb);
+        if (rc !== 0) return rc;
+        return String(a.team || '').localeCompare(String(b.team || ''));
+      });
       const labelRows = arr.map(r => ({
         t0: r.team || '-', t1: '-', t2: '-', t3: '-', data: r,
         scope: `team=${encodeURIComponent(r.team || '')}`
@@ -2055,7 +2083,16 @@
     document.getElementById('deployTeamThead').className = 'deploy-schedule-thead';
     document.getElementById('deployTeamThead').innerHTML = deployScheduleThead(1, dates, mmdd);
     {
-      const rows = d.byTeam || [];
+      const rows = [...(d.byTeam || [])].sort((a, b) => {
+        const oa = a.teamSortOrder, ob = b.teamSortOrder;
+        if (oa != null && ob != null && oa !== ob) return oa - ob;
+        if (oa == null && ob != null) return 1;
+        if (oa != null && ob == null) return -1;
+        const ra = String(a.teamSortRepo || ''), rb = String(b.teamSortRepo || '');
+        const rc = ra.localeCompare(rb);
+        if (rc !== 0) return rc;
+        return String(a.team || '').localeCompare(String(b.team || ''));
+      });
       const labelRows = rows.map(r => ({
         t0: r.team || '-',
         data: r,
