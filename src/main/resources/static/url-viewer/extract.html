@@ -155,6 +155,21 @@
     [data-theme="dark"] .issue-reason.parse { color:#fca5a5; }
     [data-theme="dark"] .issue-reason.zero { color:#93c5fd; }
 
+    /* 문제 파일 요약: 파일명(절대경로) 컬럼 */
+    .issue-filecell { min-width: 360px; max-width: 520px; }
+    .issue-filecell .issue-fn { font-weight: 800; color: #0f172a; }
+    .issue-filecell .issue-path {
+      margin-top: 2px;
+      color: #0f172a;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 520px;
+    }
+    [data-theme="dark"] .issue-filecell .issue-fn { color: var(--text) !important; }
+    [data-theme="dark"] .issue-filecell .issue-path { color: var(--text) !important; }
+
     /* APM 기간 바로가기 버튼 */
     .apm-range-btn { padding:4px 10px; border:1px solid var(--border); border-radius:6px; font-size:11px;
       font-weight:600; background:#f1f5f9; color:#334155; cursor:pointer; white-space:nowrap; }
@@ -1895,11 +1910,19 @@
     errItems.sort((a,b)=>sortKey(a).localeCompare(sortKey(b)));
     zeroItems.sort((a,b)=>sortKey(a).localeCompare(sortKey(b)));
 
+    const fileNameOf = (p) => {
+      if (!p) return '-';
+      const s = String(p);
+      const parts = s.split(/[\\/]/).filter(Boolean);
+      return parts.length ? parts[parts.length - 1] : s;
+    };
     const rowHtml = (it, cls) => `
       <tr>
         <td>${esc(it.repoName || '-')}</td>
-        <td><code>${esc(it.relPath || '-')}</code></td>
-        <td><code>${esc(it.fullPath || it.relPath || '-')}</code></td>
+        <td class="issue-filecell" title="${esc(it.fullPath || it.relPath || '-')}">
+          <div class="issue-fn">${esc(fileNameOf(it.fullPath || it.relPath))}</div>
+          <div class="issue-path">${esc(it.fullPath || it.relPath || '-')}</div>
+        </td>
         <td><span class="issue-reason ${cls}">${esc(it.reason || '-')}</span></td>
         <td style="word-break:break-all;">${esc(it.detail || '')}</td>
       </tr>`;
@@ -1914,8 +1937,7 @@
               <thead>
                 <tr>
                   <th style="min-width:120px;">레포지토리</th>
-                  <th style="min-width:220px;">파일명(상대경로)</th>
-                  <th style="min-width:320px;">풀 패스</th>
+                  <th class="issue-filecell">파일명(절대경로)</th>
                   <th style="min-width:80px;">사유</th>
                   <th style="min-width:260px;">상세</th>
                 </tr>
