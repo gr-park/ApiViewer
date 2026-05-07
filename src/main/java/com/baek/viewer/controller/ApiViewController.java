@@ -1599,16 +1599,61 @@ public class ApiViewController {
             return m;
         };
 
-        // 팀 탭: 팀 단위 1행 집계, 팀명 기준 정렬
+        // 팀 탭: 팀 단위 1행 집계 + 레포설정 displayOrder 기반 정렬(팀 내 displayOrder→repoName 정렬 시 첫 레포 기준)
         Map<String, long[]> teamAcc = aggregate.apply(teamOf, all);
+        Map<String, int[]> teamFirstRepoKey = new HashMap<>(); // team -> [orderOrMax, repoNameHash(for tie-break only)]
+        Map<String, String> teamFirstRepoName = new HashMap<>(); // team -> repoName (tie-break)
+        Map<String, Integer> teamFirstRepoOrder = new HashMap<>(); // team -> displayOrder (null이면 없음)
+
+        for (BlockOverviewDto r : all) {
+            String team = teamOf.apply(r);
+            String repoName = r.getRepositoryName();
+            RepoConfig cfg = repoConfigMap.get(repoName);
+            Integer order = cfg != null ? cfg.getDisplayOrder() : null;
+
+            Integer curOrder = teamFirstRepoOrder.get(team);
+            String curRepo = teamFirstRepoName.get(team);
+            boolean replace;
+            if (curOrder == null && order == null) {
+                // 둘 다 null이면 repoName 사전순이 더 앞인 레포를 대표로
+                replace = (curRepo == null) || (repoName != null && repoName.compareTo(curRepo) < 0);
+            } else if (curOrder == null) {
+                // 기존 대표가 null, 신규가 숫자면 신규가 더 앞
+                replace = order != null;
+            } else if (order == null) {
+                replace = false;
+            } else {
+                int oc = order.compareTo(curOrder);
+                replace = (oc < 0) || (oc == 0 && repoName != null && (curRepo == null || repoName.compareTo(curRepo) < 0));
+            }
+
+            if (replace) {
+                teamFirstRepoOrder.put(team, order);
+                teamFirstRepoName.put(team, repoName);
+            }
+        }
+
         List<Map<String, Object>> byTeam = teamAcc.entrySet().stream()
                 .map(e -> {
                     Map<String, Object> m = new LinkedHashMap<>();
-                    m.put("team", e.getKey());
+                    String team = e.getKey();
+                    m.put("team", team);
+                    m.put("teamSortOrder", teamFirstRepoOrder.get(team)); // nullable
+                    m.put("teamSortRepo", teamFirstRepoName.get(team));   // nullable
                     m.putAll(rowOf.apply(e));
                     return m;
                 })
-                .sorted((a, b) -> String.valueOf(a.getOrDefault("team", "")).compareTo(String.valueOf(b.getOrDefault("team", ""))))
+                .sorted((a, b) -> {
+                    Integer oa = (Integer) a.get("teamSortOrder");
+                    Integer ob = (Integer) b.get("teamSortOrder");
+                    int oc = Comparator.nullsLast(Integer::compareTo).compare(oa, ob);
+                    if (oc != 0) return oc;
+                    String ra = String.valueOf(a.getOrDefault("teamSortRepo", ""));
+                    String rb = String.valueOf(b.getOrDefault("teamSortRepo", ""));
+                    int rc = ra.compareTo(rb);
+                    if (rc != 0) return rc;
+                    return String.valueOf(a.getOrDefault("team", "")).compareTo(String.valueOf(b.getOrDefault("team", "")));
+                })
                 .collect(Collectors.toList());
 
         // 업무(레포) 탭: team|repo 단위 집계 + displayOrder 기준 정렬
