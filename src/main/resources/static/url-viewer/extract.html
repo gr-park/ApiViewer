@@ -145,6 +145,16 @@
     [data-theme="dark"] .log-issue-summary .sum-body { background: var(--card) !important; }
     [data-theme="dark"] .log-issue-summary code { background: #020617 !important; }
 
+    .issue-table { width:100%; border-collapse:collapse; font-size:11.5px; }
+    .issue-table th, .issue-table td { border-top:1px solid var(--border); padding:6px 8px; vertical-align:top; }
+    .issue-table th { text-align:left; font-size:10px; letter-spacing:.04em; color:var(--text-muted); background:#f8fafc; }
+    [data-theme="dark"] .issue-table th { background:#0b1220 !important; }
+    .issue-reason { font-weight:900; }
+    .issue-reason.parse { color:#b91c1c; }
+    .issue-reason.zero { color:#1d4ed8; }
+    [data-theme="dark"] .issue-reason.parse { color:#fca5a5; }
+    [data-theme="dark"] .issue-reason.zero { color:#93c5fd; }
+
     /* APM 기간 바로가기 버튼 */
     .apm-range-btn { padding:4px 10px; border:1px solid var(--border); border-radius:6px; font-size:11px;
       font-weight:600; background:#f1f5f9; color:#334155; cursor:pointer; white-space:nowrap; }
@@ -587,7 +597,15 @@
   let allRepos = [];
   let lastLogCount = 0;
   // 로그에서 발견한 "문제 파일" 수집 (파싱 에러 / 0개 추출)
+  // key: `${repoName}||${relPath}||${reason}`
+  // val: { repoName, relPath, fullPath, reason, detail }
   let logIssues = { errors: new Map(), zeros: new Map(), warns: new Map() };
+  // 현재 추출 중인 레포 컨텍스트(서버 progress/logs에는 repo 정보가 없어서 프론트에서 보강)
+  let currentExtractRepo = '';
+  let currentExtractRoot = '';
+  // 현재 추출 중인 레포 컨텍스트(서버 로그에 repo 정보가 없어서 프론트에서 보강)
+  let currentExtractRepo = '';
+  let currentExtractRoot = '';
   // RepoSelect 인스턴스 (전역 핸들 — value 조회용)
   window._repoConfigSel = null;   // URL 분석 추출 (MultiSelect 다중)
   window._apmCollectRepoSel = null; // APM 레포별 수집 (다중)
@@ -1633,6 +1651,9 @@
   function extractOneRepo(rootPath, repositoryName, domain, apiPathPrefix, gitBinPath, pathConstants) {
     return new Promise(async (resolve, reject) => {
       try {
+        // 서버 progress/logs에는 repoName/rootPath가 포함되지 않으므로, 요약 표를 위해 프론트에서 컨텍스트로 보관한다.
+        currentExtractRepo = repositoryName || '';
+        currentExtractRoot = rootPath || '';
         // skipSnapshot=true: 일괄 추출 — 매 레포마다 스냅샷이 만들어지지 않도록 하고, 마지막에 1회만 생성한다.
         const res = await fetch('/api/extract', {
           method: 'POST',
@@ -1775,29 +1796,37 @@
       `<span class="log-tag t-${level}">${level}</span>` +
       `<span class="log-msg m-${level}">${esc(msg)}</span>`;
 
-    // 문제 라인 감지 (서버 로그 포맷: "{fileName} — {message}")
+    // 문제 라인 감지 (서버 로그 포맷: "{relPath} — {message}")
     const fileAndRest = msg.split(' — ');
-    const fileName = fileAndRest.length > 1 ? String(fileAndRest[0]).trim() : '';
+    const relPath = fileAndRest.length > 1 ? String(fileAndRest[0]).trim() : '';
     const restMsg = fileAndRest.length > 1 ? fileAndRest.slice(1).join(' — ').trim() : msg;
 
     const isZeroExtract = /(^|[\s—])0개\s*API\s*추출\b/.test(msg);
     const isParserFail = /JavaParser\s*실패/.test(msg) || /ParseProblemException/.test(msg);
     const isExtractFail = /\b추출\s*실패\b/.test(msg);
 
-    if (fileName) {
+    const repoName = currentExtractRepo || '';
+    const rootPath = currentExtractRoot || '';
+    const fullPath = (rootPath && relPath)
+      ? (String(rootPath).replace(/[\\\/]+$/, '') + '/' + String(relPath).replace(/^[\\\/]+/, ''))
+      : (relPath || '');
+    const key = (reason) => `${repoName}||${relPath}||${reason}`;
+
+    if (relPath) {
       if (isZeroExtract) {
         div.classList.add('issue-zero');
-        if (!logIssues.zeros.has(fileName)) logIssues.zeros.set(fileName, []);
-        logIssues.zeros.get(fileName).push(restMsg);
+        const k = key('0건');
+        if (!logIssues.zeros.has(k)) logIssues.zeros.set(k, { repoName, relPath, fullPath, reason: '0건', detail: restMsg });
       }
       if (level === 'ERROR' || isParserFail || isExtractFail) {
         div.classList.add(level === 'WARN' ? 'issue-warn' : 'issue-error');
-        if (!logIssues.errors.has(fileName)) logIssues.errors.set(fileName, []);
-        logIssues.errors.get(fileName).push(`${level}: ${restMsg}`);
+        const reason = isParserFail ? '파싱에러' : (isExtractFail ? '추출실패' : 'ERROR');
+        const k = key(reason);
+        if (!logIssues.errors.has(k)) logIssues.errors.set(k, { repoName, relPath, fullPath, reason, detail: `${level}: ${restMsg}` });
       } else if (level === 'WARN') {
         div.classList.add('issue-warn');
-        if (!logIssues.warns.has(fileName)) logIssues.warns.set(fileName, []);
-        logIssues.warns.get(fileName).push(restMsg);
+        const k = key('WARN');
+        if (!logIssues.warns.has(k)) logIssues.warns.set(k, { repoName, relPath, fullPath, reason: 'WARN', detail: restMsg });
       }
     } else {
       // 파일명 없이도 0개 추출/에러는 강조
@@ -1849,10 +1878,10 @@
     const body = document.getElementById('logIssueBody');
     if (!box || !badges || !body) return;
 
-    const errFiles = Array.from(logIssues.errors.keys());
-    const zeroFiles = Array.from(logIssues.zeros.keys());
-    const warnFiles = Array.from(logIssues.warns.keys());
-    const hasAny = errFiles.length || zeroFiles.length || warnFiles.length;
+    const errItems = Array.from(logIssues.errors.values());
+    const zeroItems = Array.from(logIssues.zeros.values());
+    const warnItems = Array.from(logIssues.warns.values());
+    const hasAny = errItems.length || zeroItems.length || warnItems.length;
 
     if (!hasAny) {
       if (forceShow) hideIssueSummary();
@@ -1860,29 +1889,52 @@
     }
 
     badges.innerHTML = [
-      errFiles.length ? `<span class="badge err">파싱/추출 에러 ${errFiles.length}</span>` : '',
-      zeroFiles.length ? `<span class="badge zero">0개 추출 ${zeroFiles.length}</span>` : '',
-      warnFiles.length ? `<span class="badge warn">WARN 파일 ${warnFiles.length}</span>` : ''
+      errItems.length ? `<span class="badge err">파싱/추출 에러 ${errItems.length}</span>` : '',
+      zeroItems.length ? `<span class="badge zero">0개 추출 ${zeroItems.length}</span>` : '',
+      warnItems.length ? `<span class="badge warn">WARN ${warnItems.length}</span>` : ''
     ].filter(Boolean).join('');
 
-    const escLi = (s) => esc(String(s || ''));
-    const errList = errFiles.length
-      ? `<div style="margin-bottom:10px;">
-           <div class="hint"><b>에러(파싱/추출 실패)</b></div>
-           <ul>${errFiles.map(f => `<li><code>${escLi(f)}</code></li>`).join('')}</ul>
-         </div>` : '';
-    const zeroList = zeroFiles.length
-      ? `<div style="margin-bottom:10px;">
-           <div class="hint"><b>0개 추출</b></div>
-           <ul>${zeroFiles.map(f => `<li><code>${escLi(f)}</code></li>`).join('')}</ul>
-         </div>` : '';
-    const warnList = (!errFiles.length && warnFiles.length)
-      ? `<div>
-           <div class="hint"><b>WARN만 있는 파일</b></div>
-           <ul>${warnFiles.map(f => `<li><code>${escLi(f)}</code></li>`).join('')}</ul>
-         </div>` : '';
+    const sortKey = (it) => `${it.repoName}||${it.relPath}||${it.reason}`;
+    errItems.sort((a,b)=>sortKey(a).localeCompare(sortKey(b)));
+    zeroItems.sort((a,b)=>sortKey(a).localeCompare(sortKey(b)));
 
-    body.innerHTML = `${errList}${zeroList}${warnList}`;
+    const rowHtml = (it, cls) => `
+      <tr>
+        <td>${esc(it.repoName || '-')}</td>
+        <td><code>${esc(it.relPath || '-')}</code></td>
+        <td><code>${esc(it.fullPath || it.relPath || '-')}</code></td>
+        <td><span class="issue-reason ${cls}">${esc(it.reason || '-')}</span></td>
+        <td style="word-break:break-all;">${esc(it.detail || '')}</td>
+      </tr>`;
+
+    const table = (items, title, cls) => {
+      if (!items.length) return '';
+      return `
+        <div style="margin-bottom:12px;">
+          <div class="hint"><b>${esc(title)}</b></div>
+          <div style="overflow:auto;border:1px solid var(--border);border-radius:8px;">
+            <table class="issue-table">
+              <thead>
+                <tr>
+                  <th style="min-width:120px;">레포지토리</th>
+                  <th style="min-width:220px;">파일명(상대경로)</th>
+                  <th style="min-width:320px;">풀 패스</th>
+                  <th style="min-width:80px;">사유</th>
+                  <th style="min-width:260px;">상세</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${items.map(it => rowHtml(it, cls)).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>`;
+    };
+
+    body.innerHTML = [
+      table(errItems, '파싱/추출 에러', 'parse'),
+      table(zeroItems, '0개 추출', 'zero')
+    ].join('');
     box.style.display = '';
   }
 

@@ -175,9 +175,9 @@ public class ApiExtractorService {
                     List<String[]> git = getRecentGitHistories(rel, rootPath, gitBin, 5);
                     List<ApiInfo> fileApis = extractApisHybrid(file, rel, git, apiPathPrefix, pathConstantsMap);
                     apis.addAll(fileApis);
-                    addLog("OK", fileName + " — " + fileApis.size() + "개 API 추출");
+                    addLog("OK", rel + " — " + fileApis.size() + "개 API 추출");
                 } catch (Exception e) {
-                    addLog("ERROR", fileName + " — " + e.getClass().getSimpleName() + ": " + e.getMessage());
+                    addLog("ERROR", rel + " — " + e.getClass().getSimpleName() + ": " + e.getMessage());
                 }
                 processedFiles++;
             });
@@ -267,7 +267,7 @@ public class ApiExtractorService {
         try {
             return extractWithJavaParser(path, rel, git, apiPathPrefix, pathConstantsMap);
         } catch (Exception e) {
-            addLog("WARN", path.getFileName() + " — JavaParser 실패 (" + e.getClass().getSimpleName() + "), Regex 폴백 적용");
+            addLog("WARN", rel + " — JavaParser 실패 (" + e.getClass().getSimpleName() + "), Regex 폴백 적용");
             return extractWithRegex(path, rel, git, apiPathPrefix, pathConstantsMap);
         }
     }
