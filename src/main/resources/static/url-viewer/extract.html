@@ -135,6 +135,8 @@
     .log-issue-summary .badge.err { background:#fee2e2; color:#991b1b; border-color:#fecaca; }
     .log-issue-summary .badge.zero { background:#dbeafe; color:#1e40af; border-color:#bfdbfe; }
     .log-issue-summary .badge.warn { background:#fef3c7; color:#92400e; border-color:#fde68a; }
+    .log-issue-summary .badge.btn-excel { background:#ecfdf5; color:#065f46; border-color:#a7f3d0; cursor:pointer; }
+    .log-issue-summary .badge.btn-excel:hover { filter: brightness(.98); }
     .log-issue-summary .sum-body { padding: 10px 12px; background: #fff; }
     .log-issue-summary .sum-body .hint { font-size:11px; color: var(--text-muted); margin-bottom: 8px; }
     .log-issue-summary ul { margin: 0; padding-left: 18px; }
@@ -1793,6 +1795,7 @@
       repoName: it.repoName || '',
       relPath: it.relPath || '',
       fullPath: it.fullPath || '',
+      regexExtractCount: (it.regexExtractCount == null ? null : it.regexExtractCount),
       reason: it.reason || '',
       detail: it.detail || ''
     }));
@@ -1860,6 +1863,7 @@
     const isZeroExtract = /(^|[\s—])0개\s*API\s*추출\b/.test(msg);
     const isParserFail = /JavaParser\s*실패/.test(msg) || /ParseProblemException/.test(msg);
     const isExtractFail = /\b추출\s*실패\b/.test(msg);
+    const mOkExtractCnt = restMsg.match(/(?:^|[\s—])(\d+)\s*개\s*API\s*추출\b/);
 
     const repoName = currentExtractRepo || '';
     const rootPath = currentExtractRoot || '';
@@ -1868,7 +1872,26 @@
       : (relPath || '');
     const key = (reason) => `${repoName}||${relPath}||${reason}`;
 
+    // JavaParser 실패 → Regex 폴백 적용 후, 같은 파일의 OK "N개 API 추출" 건수를 연결해준다.
+    // key: `${repoName}||${relPath}` → count
+    if (!window._rxExtractCountByFileKey) window._rxExtractCountByFileKey = new Map();
+    if (!window._rxFallbackSeenByFileKey) window._rxFallbackSeenByFileKey = new Set();
+    const fileKey = relPath ? `${repoName}||${relPath}` : '';
+
     if (relPath) {
+      if (isParserFail && fileKey) {
+        window._rxFallbackSeenByFileKey.add(fileKey);
+      }
+      // OK 로그에서 "N개 API 추출"이 잡히고, 이전에 parser fail이 있었던 파일이면 정규식 추출 건수로 기록
+      if (level === 'OK' && fileKey && mOkExtractCnt && window._rxFallbackSeenByFileKey.has(fileKey)) {
+        const n = Number(mOkExtractCnt[1]);
+        if (!Number.isNaN(n)) window._rxExtractCountByFileKey.set(fileKey, n);
+        // 이미 에러 아이템이 만들어진 경우도 있으니 갱신
+        const kParse = key('파싱에러');
+        const it = logIssues.errors.get(kParse);
+        if (it) it.regexExtractCount = n;
+      }
+
       if (isZeroExtract) {
         div.classList.add('issue-zero');
         const k = key('0건');
@@ -1878,7 +1901,12 @@
         div.classList.add(level === 'WARN' ? 'issue-warn' : 'issue-error');
         const reason = isParserFail ? '파싱에러' : (isExtractFail ? '추출실패' : 'ERROR');
         const k = key(reason);
-        if (!logIssues.errors.has(k)) logIssues.errors.set(k, { repoName, relPath, fullPath, reason, detail: `${level}: ${restMsg}` });
+        if (!logIssues.errors.has(k)) {
+          const rxCnt = (fileKey && window._rxExtractCountByFileKey && window._rxExtractCountByFileKey.has(fileKey))
+            ? window._rxExtractCountByFileKey.get(fileKey)
+            : null;
+          logIssues.errors.set(k, { repoName, relPath, fullPath, regexExtractCount: rxCnt, reason, detail: `${level}: ${restMsg}` });
+        }
       } else if (level === 'WARN') {
         div.classList.add('issue-warn');
         const k = key('WARN');
@@ -1945,7 +1973,7 @@
     }
 
     badges.innerHTML = [
-      errItems.length ? `<span class="badge err">파싱/추출 에러 ${errItems.length}</span>` : '',
+      errItems.length ? `<span class="badge err">파싱/추출 에러 ${errItems.length}</span><button type="button" class="badge btn-excel" onclick="downloadIssueExcel('err')">엑셀다운로드</button>` : '',
       zeroItems.length ? `<span class="badge zero">0개 추출 ${zeroItems.length}</span>` : '',
       warnItems.length ? `<span class="badge warn">WARN ${warnItems.length}</span>` : ''
     ].filter(Boolean).join('');
@@ -1960,6 +1988,10 @@
       const parts = s.split(/[\\/]/).filter(Boolean);
       return parts.length ? parts[parts.length - 1] : s;
     };
+    const rxCntCell = (it) => {
+      const n = it && it.regexExtractCount != null ? Number(it.regexExtractCount) : null;
+      return (n == null || Number.isNaN(n)) ? '-' : String(n);
+    };
     const rowHtml = (it, cls) => `
       <tr>
         <td>${esc(it.repoName || '-')}</td>
@@ -1967,6 +1999,7 @@
           <div class="issue-fn">${esc(fileNameOf(it.fullPath || it.relPath))}</div>
           <div class="issue-path">${esc(it.fullPath || it.relPath || '-')}</div>
         </td>
+        <td style="min-width:92px;text-align:right;font-variant-numeric:tabular-nums;">${esc(rxCntCell(it))}</td>
         <td><span class="issue-reason ${cls}">${esc(it.reason || '-')}</span></td>
         <td style="word-break:break-all;">${esc(it.detail || '')}</td>
       </tr>`;
@@ -1982,6 +2015,7 @@
                 <tr>
                   <th style="min-width:120px;">레포지토리</th>
                   <th class="issue-filecell">파일명(절대경로)</th>
+                  <th style="min-width:92px;text-align:right;">정규식추출건</th>
                   <th style="min-width:80px;">사유</th>
                   <th style="min-width:260px;">상세</th>
                 </tr>
@@ -1999,6 +2033,68 @@
       table(zeroItems, '0개 추출', 'zero')
     ].join('');
     box.style.display = '';
+  }
+
+  // 문제파일 요약: 엑셀 다운로드 (ExcelJS)
+  async function downloadIssueExcel(kind) {
+    try {
+      if (!window.ExcelJS) {
+        showToast('엑셀 모듈 로드 실패 (ExcelJS)', 'error');
+        return;
+      }
+      const errItems = Array.from(logIssues.errors.values());
+      const zeroItems = Array.from(logIssues.zeros.values());
+      const warnItems = Array.from(logIssues.warns.values());
+      let items = [];
+      let title = '';
+      if (kind === 'err') { items = errItems; title = '파싱-추출-에러'; }
+      else if (kind === 'zero') { items = zeroItems; title = '0개-추출'; }
+      else { items = warnItems; title = 'WARN'; }
+      if (!items.length) { showToast('다운로드할 데이터가 없습니다.', 'info'); return; }
+
+      const wb = new ExcelJS.Workbook();
+      wb.creator = 'URL Viewer';
+      const ws = wb.addWorksheet(title);
+      ws.columns = [
+        { header: '레포지토리', key: 'repo', width: 18 },
+        { header: '파일명(절대경로)', key: 'file', width: 70 },
+        { header: '정규식추출건', key: 'rx', width: 12 },
+        { header: '사유', key: 'reason', width: 12 },
+        { header: '상세', key: 'detail', width: 80 },
+      ];
+      ws.getRow(1).font = { bold: true };
+      ws.getRow(1).alignment = { vertical: 'middle', horizontal: 'center' };
+      ws.getRow(1).height = 18;
+      ws.views = [{ state: 'frozen', ySplit: 1 }];
+
+      items.forEach(it => {
+        const full = it.fullPath || it.relPath || '-';
+        const n = it.regexExtractCount != null && !Number.isNaN(Number(it.regexExtractCount)) ? Number(it.regexExtractCount) : '';
+        ws.addRow({
+          repo: it.repoName || '',
+          file: full,
+          rx: n,
+          reason: it.reason || '',
+          detail: it.detail || '',
+        });
+      });
+      ws.eachRow((row, rowNumber) => {
+        if (rowNumber === 1) return;
+        row.alignment = { vertical: 'top', wrapText: true };
+        row.getCell('rx').alignment = { vertical: 'top', horizontal: 'right' };
+      });
+
+      const buf = await wb.xlsx.writeBuffer();
+      const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const a = document.createElement('a');
+      const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+      a.href = URL.createObjectURL(blob);
+      a.download = `extract-issues-${title}-${ts}.xlsx`;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 500);
+    } catch (e) {
+      showToast('엑셀 다운로드 실패', 'error');
+    }
   }
 
   // ── 작업 카드 UI ──────────────────────────────────────────
