@@ -158,8 +158,15 @@ public class ApiExtractorService {
 
             currentFile = "Controller 파일 탐색 중...";
             List<Path> controllerFiles = Files.walk(root)
-                    .filter(p -> p.toString().endsWith(".java") &&
-                            (p.toString().contains("Controller") || p.toString().contains("Conrtoller")))
+                    .filter(p -> {
+                        String s = p.toString();
+                        if (!s.endsWith(".java")) return false;
+                        // 케이스/폴더명 차이로 컨트롤러가 누락되는 경우가 있어, controller 탐지 기준을 완화한다.
+                        // - 기존: "Controller"/오타 "Conrtoller" (대문자 포함 경로만)
+                        // - 개선: 대소문자 무시 "controller"/"conrtoller" 포함
+                        String lower = s.toLowerCase();
+                        return lower.contains("controller") || lower.contains("conrtoller");
+                    })
                     .collect(Collectors.toList());
 
             totalFiles = controllerFiles.size();
@@ -395,12 +402,14 @@ public class ApiExtractorService {
                 boolean isDeprecated = clean.substring(Math.max(0, mMatcher.start() - 300), mMatcher.start())
                         .contains("@Deprecated");
 
-                Matcher p = Pattern.compile("\"([^\"]+)\"").matcher(params);
-                boolean found = false;
-                while (p.find()) {
-                    String s = p.group(1).trim();
-                    if (s.contains("RequestMethod")) continue;
-                    found = true;
+                // Regex 폴백은 params 내 모든 문자열(consumes/produces 등)을 경로로 오인하기 쉽다.
+                // JavaParser와 동일하게 value/path 속성(또는 단일 멤버)만 경로로 취급한다.
+                List<String> paths = extractMappingPathsFromParams(params);
+                boolean found = !paths.isEmpty();
+                for (String s : paths) {
+                    if (s == null) continue;
+                    s = s.trim();
+                    if (s.isEmpty()) continue;
 
                     String finalPath = normalizePath(apiPathPrefix + classPath + "/" + s);
                     String headArea = raw.substring(Math.max(0, mMatcher.start() - 1000), mMatcher.start());
@@ -498,6 +507,36 @@ public class ApiExtractorService {
             log.debug("[파싱-RX] {} 완료 — {}개 API 추출", filePath.getFileName(), apis.size());
         }
         return apis;
+    }
+
+    /**
+     * Regex 폴백에서 Mapping 파라미터 문자열(params)로부터 "경로"만 추출한다.
+     * - 허용: (1) 단일 멤버 형태: {@code @PostMapping("/path")} → ["/path"]
+     * - 허용: (2) named 속성: {@code value="/path"} 또는 {@code path={"/a","/b"}}
+     * - 제외: consumes/produces/headers/params/name 등 부가 속성의 문자열
+     */
+    private List<String> extractMappingPathsFromParams(String params) {
+        if (params == null) return Collections.emptyList();
+        String s = params.trim();
+        if (s.isEmpty()) return Collections.emptyList();
+
+        // 1) named 속성(value/path) 우선
+        Matcher m = Pattern.compile("(?:(?:^|[,\\s])(?:value|path)\\s*=\\s*)(\\{[\\s\\S]*?\\}|\"[^\"]+\")",
+                Pattern.CASE_INSENSITIVE).matcher(s);
+        if (m.find()) {
+            String seg = m.group(1);
+            List<String> out = new ArrayList<>();
+            Matcher q = Pattern.compile("\"([^\"]+)\"").matcher(seg);
+            while (q.find()) out.add(q.group(1));
+            return out;
+        }
+
+        // 2) 단일 멤버: "=" 이 전혀 없고 문자열 리터럴 1개 이상이면 첫 문자열을 경로로 간주
+        if (!s.contains("=")) {
+            Matcher q = Pattern.compile("\"([^\"]+)\"").matcher(s);
+            if (q.find()) return List.of(q.group(1));
+        }
+        return Collections.emptyList();
     }
 
     // ======================================================
