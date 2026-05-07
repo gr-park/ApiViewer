@@ -1593,53 +1593,74 @@ public class ApiViewController {
             return m;
         };
 
-        // 팀별
+        // 팀 탭: 팀 단위 1행 집계, 팀명 기준 정렬
         Map<String, long[]> teamAcc = aggregate.apply(teamOf, all);
         List<Map<String, Object>> byTeam = teamAcc.entrySet().stream()
-                .sorted((a, b) -> Long.compare(b.getValue()[9], a.getValue()[9]))
                 .map(e -> {
                     Map<String, Object> m = new LinkedHashMap<>();
                     m.put("team", e.getKey());
                     m.putAll(rowOf.apply(e));
                     return m;
-                }).collect(Collectors.toList());
-
-        // 담당자별 (팀+담당자)
-        java.util.function.Function<BlockOverviewDto, String> mgrKey = r -> teamOf.apply(r) + "|" + managerOf.apply(r);
-        Map<String, long[]> mgrAcc = aggregate.apply(mgrKey, all);
-        List<Map<String, Object>> byManager = mgrAcc.entrySet().stream()
-                .sorted((a, b) -> Long.compare(b.getValue()[9], a.getValue()[9]))
-                .map(e -> {
-                    String[] parts = e.getKey().split("\\|", 2);
-                    Map<String, Object> m = new LinkedHashMap<>();
-                    m.put("team",    parts[0]);
-                    m.put("manager", parts.length > 1 ? parts[1] : "(미지정)");
-                    m.putAll(rowOf.apply(e));
-                    return m;
-                }).collect(Collectors.toList());
-
-        // 레포별 (팀+레포)
-        java.util.function.Function<BlockOverviewDto, String> repoKey = r -> teamOf.apply(r) + "|" + r.getRepositoryName();
-        Map<String, long[]> repoAcc = aggregate.apply(repoKey, all);
-        List<Map<String, Object>> byRepo = repoAcc.entrySet().stream()
-                .sorted((a, b) -> {
-                    String[] ka = a.getKey().split("\\|", 2);
-                    String[] kb = b.getKey().split("\\|", 2);
-                    int tc = ka[0].compareTo(kb[0]);
-                    return tc != 0 ? tc : Long.compare(b.getValue()[9], a.getValue()[9]);
                 })
+                .sorted((a, b) -> String.valueOf(a.getOrDefault("team", "")).compareTo(String.valueOf(b.getOrDefault("team", ""))))
+                .collect(Collectors.toList());
+
+        // 업무(레포) 탭: team|repo 단위 집계 + displayOrder 기준 정렬
+        java.util.function.Function<BlockOverviewDto, String> teamRepoKey = r -> teamOf.apply(r) + "|" + r.getRepositoryName();
+        Map<String, long[]> repoAcc = aggregate.apply(teamRepoKey, all);
+        List<Map<String, Object>> byRepo = repoAcc.entrySet().stream()
                 .map(e -> {
                     String[] parts = e.getKey().split("\\|", 2);
                     String teamVal = parts[0];
-                    String repoName = parts[1];
+                    String repoName = parts.length > 1 ? parts[1] : "";
                     RepoConfig cfg = repoConfigMap.get(repoName);
                     Map<String, Object> m = new LinkedHashMap<>();
                     m.put("team", teamVal);
                     m.put("repo", repoName);
-                    m.put("businessName", cfg != null && cfg.getBusinessName() != null ? cfg.getBusinessName() : "-");
+                    m.put("businessName", (cfg != null && cfg.getBusinessName() != null) ? cfg.getBusinessName() : "-");
+                    m.put("displayOrder", cfg != null ? cfg.getDisplayOrder() : null);
                     m.putAll(rowOf.apply(e));
                     return m;
-                }).collect(Collectors.toList());
+                })
+                .sorted((a, b) -> {
+                    Integer oa = (Integer) a.get("displayOrder");
+                    Integer ob = (Integer) b.get("displayOrder");
+                    int oc = Comparator.nullsLast(Integer::compareTo).compare(oa, ob);
+                    if (oc != 0) return oc;
+                    return String.valueOf(a.getOrDefault("repo", "")).compareTo(String.valueOf(b.getOrDefault("repo", "")));
+                })
+                .collect(Collectors.toList());
+
+        // 담당자 탭: team|repo|manager 단위 집계 + displayOrder → manager 정렬
+        java.util.function.Function<BlockOverviewDto, String> repoMgrKey =
+                r -> teamOf.apply(r) + "|" + r.getRepositoryName() + "|" + managerOf.apply(r);
+        Map<String, long[]> repoMgrAcc = aggregate.apply(repoMgrKey, all);
+        List<Map<String, Object>> byManager = repoMgrAcc.entrySet().stream()
+                .map(e -> {
+                    String[] parts = e.getKey().split("\\|", 3);
+                    String teamVal = parts.length > 0 ? parts[0] : "";
+                    String repoName = parts.length > 1 ? parts[1] : "";
+                    String mgr = parts.length > 2 ? parts[2] : "(미지정)";
+                    RepoConfig cfg = repoConfigMap.get(repoName);
+                    Map<String, Object> m = new LinkedHashMap<>();
+                    m.put("team", teamVal);
+                    m.put("repo", repoName);
+                    m.put("businessName", (cfg != null && cfg.getBusinessName() != null) ? cfg.getBusinessName() : "-");
+                    m.put("displayOrder", cfg != null ? cfg.getDisplayOrder() : null);
+                    m.put("manager", mgr);
+                    m.putAll(rowOf.apply(e));
+                    return m;
+                })
+                .sorted((a, b) -> {
+                    Integer oa = (Integer) a.get("displayOrder");
+                    Integer ob = (Integer) b.get("displayOrder");
+                    int oc = Comparator.nullsLast(Integer::compareTo).compare(oa, ob);
+                    if (oc != 0) return oc;
+                    String ma = String.valueOf(a.getOrDefault("manager", ""));
+                    String mb = String.valueOf(b.getOrDefault("manager", ""));
+                    return ma.compareTo(mb);
+                })
+                .collect(Collectors.toList());
 
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("reviewThreshold", reviewThreshold);

@@ -570,9 +570,9 @@
     </div>
     <div class="card">
       <div class="tabs">
-        <div class="tab active" onclick="switchOverviewTab('team',this)">팀별</div>
-        <div class="tab" onclick="switchOverviewTab('repo',this)">레포지토리별</div>
-        <div class="tab" onclick="switchOverviewTab('manager',this)">담당자별</div>
+        <div class="tab active" onclick="switchOverviewTab('team',this)">팀</div>
+        <div class="tab" onclick="switchOverviewTab('repo',this)">업무</div>
+        <div class="tab" onclick="switchOverviewTab('manager',this)">담당자</div>
       </div>
 
       <div class="tab-panel active" id="panel-overview-team">
@@ -1209,7 +1209,7 @@
   }
 
   // ── URL 현황(차단대상·검토대상) 렌더 (9 leaf v2 — 17컬럼, 차단대상 = 차단완료+잔여+제외) ──
-  // 검토부서 / 총합계 / 사용 / 차단대상[9: 소계·비율·차단완료·잔여·①-①·①-②·제외·①-③·①-④] / 검토대상[5: 소계·비율·②-①·②-②·②-③]
+  // 팀명 / 총합계 / 사용 / 차단대상[9: 소계·비율·차단완료·잔여·①-①·①-②·제외·①-③·①-④] / 검토대상[5: 소계·비율·②-①·②-②·②-③]
   function renderBlockOverview(d) {
     const empty = '<tr><td colspan="100" class="empty" style="padding:18px;text-align:center;color:var(--text-muted);">데이터 없음</td></tr>';
     if (!d) {
@@ -1220,7 +1220,7 @@
     const threshold = d.reviewThreshold || 3;
 
     // 2단 헤더
-    //   1단: 검토부서(r=2) / 총합계(r=2) / 사용(r=2) / 차단대상(colspan=9) / 검토대상(colspan=5)
+    //   1단: 팀명(r=2) / 총합계(r=2) / 사용(r=2) / 차단대상(colspan=9) / 검토대상(colspan=5)
     //   2단 차단대상: 소계 | 비율 || 차단완료 || 잔여 | ①-① | ①-② || 제외 | ①-③ | ①-④
     //   2단 검토대상: 소계 | 비율 || ②-① | ②-② | ②-③
     const headerHtml = (firstSpan) => {
@@ -1335,46 +1335,50 @@
       return acc;
     };
 
-    // 팀별 (검토부서 = 팀)
+    // 팀 탭: 팀 단위 1행(서버), 표시: 팀명
     document.getElementById('overviewTeamThead').innerHTML = headerHtml({
-      tier1: `<th rowspan="2" style="text-align:left;border-right:2px solid #999;">검토부서</th>`,
+      tier1: `<th rowspan="2" style="text-align:left;border-right:2px solid #999;">팀명</th>`,
       tier2: ``
     });
     {
       const arr = d.byTeam || [];
-      const body = arr.map(r => rowOf(`<td><b>${esc(r.team)}</b></td>`, r, `team=${encodeURIComponent(r.team||'')}`)).join('');
+      const body = arr.map(r => rowOf(
+        `<td><b>${esc(r.team || '-')}</b></td>`, r, `team=${encodeURIComponent(r.team||'')}`)).join('');
       const totalRow = arr.length ? rowOf(`<td><b>총합계</b></td>`, sumRows(arr), ``, {isTotal:true}) : '';
       document.getElementById('overviewTeamTbody').innerHTML = (body + totalRow) || empty;
     }
 
-    // 레포지토리별 — 첫 셀 한 묶음 (팀 + 레포 + 업무명, 두 줄 구성)
+    // 업무(레포) 탭: 레포 표시순서 정렬(서버)
+    // - 1줄(작게): 팀명 레포명
+    // - 2줄(크게/볼드): 업무명
     document.getElementById('overviewRepoThead').innerHTML = headerHtml({
-      tier1: `<th rowspan="2" style="text-align:left;border-right:2px solid #999;">검토부서</th>`,
+      tier1: `<th rowspan="2" style="text-align:left;border-right:2px solid #999;">팀명</th>`,
       tier2: ``
     });
     {
       const arr = d.byRepo || [];
       const body = arr.map(r => rowOf(
         `<td>
-           <div style="font-size:10px;color:var(--text-muted);">${esc(r.team)}</div>
-           <div><b>${esc(r.repo)}</b></div>
-           <div style="font-size:10px;color:var(--text-muted);">${esc(r.businessName || '-')}</div>
+           <div style="font-size:10px;color:var(--text-muted);white-space:nowrap;">${esc(r.team || '-')} | ${esc(r.repo || '-')}</div>
+           <div style="font-size:12px;font-weight:800;white-space:nowrap;">${esc(r.businessName || '-')}</div>
          </td>`, r, `repo=${encodeURIComponent(r.repo||'')}`)).join('');
       const totalRow = arr.length ? rowOf(`<td><b>총합계</b></td>`, sumRows(arr), ``, {isTotal:true}) : '';
       document.getElementById('overviewRepoTbody').innerHTML = (body + totalRow) || empty;
     }
 
-    // 담당자별 — 첫 셀 한 묶음 (팀 + 담당자, 두 줄 구성)
+    // 담당자 탭: 레포 표시순서 + 이름순 정렬(서버)
+    // - 1줄(작게): 팀명 업무명 레포명
+    // - 2줄(크게/볼드): 담당자명
     document.getElementById('overviewManagerThead').innerHTML = headerHtml({
-      tier1: `<th rowspan="2" style="text-align:left;border-right:2px solid #999;">검토부서</th>`,
+      tier1: `<th rowspan="2" style="text-align:left;border-right:2px solid #999;">팀명</th>`,
       tier2: ``
     });
     {
       const arr = d.byManager || [];
       const body = arr.map(r => rowOf(
         `<td>
-           <div style="font-size:10px;color:var(--text-muted);">${esc(r.team)}</div>
-           <div><b>${esc(r.manager)}</b></div>
+           <div style="font-size:10px;color:var(--text-muted);white-space:nowrap;">${esc(r.team || '-')} | ${esc(r.businessName || '-')} | ${esc(r.repo || '-')}</div>
+           <div style="font-size:12px;font-weight:800;white-space:nowrap;">${esc(r.manager || '-')}</div>
          </td>`, r, `manager=${encodeURIComponent(r.manager||'')}`)).join('');
       const totalRow = arr.length ? rowOf(`<td><b>총합계</b></td>`, sumRows(arr), ``, {isTotal:true}) : '';
       document.getElementById('overviewManagerTbody').innerHTML = (body + totalRow) || empty;
