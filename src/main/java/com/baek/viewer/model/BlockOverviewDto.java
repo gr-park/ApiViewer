@@ -15,6 +15,7 @@ public class BlockOverviewDto {
     private final String reviewResult;
     private final String teamOverride;
     private final String managerOverride;
+    private final String deployManager;
     private final String apiPath;
 
     public BlockOverviewDto(Long id,
@@ -26,6 +27,7 @@ public class BlockOverviewDto {
                             String reviewResult,
                             String teamOverride,
                             String managerOverride,
+                            String deployManager,
                             String apiPath) {
         this.id = id;
         this.repositoryName = repositoryName;
@@ -36,6 +38,7 @@ public class BlockOverviewDto {
         this.reviewResult = reviewResult;
         this.teamOverride = teamOverride;
         this.managerOverride = managerOverride;
+        this.deployManager = deployManager;
         this.apiPath = apiPath;
     }
 
@@ -48,5 +51,6 @@ public class BlockOverviewDto {
     public String getReviewResult() { return reviewResult; }
     public String getTeamOverride() { return teamOverride; }
     public String getManagerOverride() { return managerOverride; }
+    public String getDeployManager() { return deployManager; }
     public String getApiPath() { return apiPath; }
 }

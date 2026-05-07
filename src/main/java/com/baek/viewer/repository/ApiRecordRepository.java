@@ -176,7 +176,7 @@ public interface ApiRecordRepository extends JpaRepository<ApiRecord, Long>,
      * status / callCount / logWorkExcluded / recentLogOnly / reviewResult / team / manager / apiPath.
      */
     @Query("SELECT new com.baek.viewer.model.BlockOverviewDto("
-            + "r.id, r.repositoryName, r.status, r.callCount, r.logWorkExcluded, r.recentLogOnly, r.reviewResult, r.teamOverride, r.managerOverride, r.apiPath) "
+            + "r.id, r.repositoryName, r.status, r.callCount, r.logWorkExcluded, r.recentLogOnly, r.reviewResult, r.teamOverride, r.managerOverride, r.deployManager, r.apiPath) "
             + "FROM ApiRecord r WHERE r.status IS NULL OR r.status <> '삭제'")
     List<BlockOverviewDto> findForBlockOverview();
 

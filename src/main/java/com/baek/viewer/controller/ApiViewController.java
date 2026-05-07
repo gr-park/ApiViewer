@@ -1537,6 +1537,12 @@ public class ApiViewController {
             List<Map<String, String>> mappings = mappingCache.getOrDefault(r.getRepositoryName(), List.of());
             return resolveManager(r.getManagerOverride(), r.getApiPath(), c, mappings);
         };
+        // 대시보드 "담당자" 탭 기준: 배포담당자(deployManager) 우선, 없으면 기존 담당자 폴백
+        java.util.function.Function<BlockOverviewDto, String> ownerKeyOf = r -> {
+            String dm = r.getDeployManager();
+            if (dm != null && !dm.isBlank()) return "D:" + dm.trim();
+            return "M:" + managerOf.apply(r);
+        };
 
         // 그룹 키별 10컬럼 카운터 누적 헬퍼 (9 leaf + grandTotal)
         java.util.function.BiFunction<java.util.function.Function<BlockOverviewDto, String>,
@@ -1631,23 +1637,26 @@ public class ApiViewController {
                 })
                 .collect(Collectors.toList());
 
-        // 담당자 탭: team|repo|manager 단위 집계 + displayOrder → manager 정렬
+        // 담당자 탭: team|repo|배포담당자(우선)/담당자 단위 집계 + displayOrder → 이름 정렬
         java.util.function.Function<BlockOverviewDto, String> repoMgrKey =
-                r -> teamOf.apply(r) + "|" + r.getRepositoryName() + "|" + managerOf.apply(r);
+                r -> teamOf.apply(r) + "|" + r.getRepositoryName() + "|" + ownerKeyOf.apply(r);
         Map<String, long[]> repoMgrAcc = aggregate.apply(repoMgrKey, all);
         List<Map<String, Object>> byManager = repoMgrAcc.entrySet().stream()
                 .map(e -> {
                     String[] parts = e.getKey().split("\\|", 3);
                     String teamVal = parts.length > 0 ? parts[0] : "";
                     String repoName = parts.length > 1 ? parts[1] : "";
-                    String mgr = parts.length > 2 ? parts[2] : "(미지정)";
+                    String rawOwner = parts.length > 2 ? parts[2] : "M:(미지정)";
+                    boolean isDeploy = rawOwner.startsWith("D:");
+                    String ownerName = rawOwner.length() >= 2 ? rawOwner.substring(2) : rawOwner;
                     RepoConfig cfg = repoConfigMap.get(repoName);
                     Map<String, Object> m = new LinkedHashMap<>();
                     m.put("team", teamVal);
                     m.put("repo", repoName);
                     m.put("businessName", (cfg != null && cfg.getBusinessName() != null) ? cfg.getBusinessName() : "-");
                     m.put("displayOrder", cfg != null ? cfg.getDisplayOrder() : null);
-                    m.put("manager", mgr);
+                    m.put("manager", ownerName);
+                    m.put("managerParamKey", isDeploy ? "deployManager" : "manager");
                     m.putAll(rowOf.apply(e));
                     return m;
                 })

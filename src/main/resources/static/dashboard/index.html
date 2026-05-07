@@ -594,6 +594,9 @@
       </div>
 
       <div class="tab-panel" id="panel-overview-manager">
+        <div style="margin:10px 2px 8px;font-size:10px;color:var(--text-muted);font-weight:500;">
+          ℹ️ 배포담당자 기준, 없을경우 담당자 기준으로 집계합니다.
+        </div>
         <div class="tbl-wrap" style="overflow:auto;">
           <table id="overviewManagerTable" style="min-width:100%;font-size:11px;">
             <thead id="overviewManagerThead"></thead>
@@ -1379,7 +1382,7 @@
         `<td>
            <div style="font-size:10px;color:var(--text-muted);white-space:nowrap;">${esc(r.team || '-')} | ${esc(r.businessName || '-')} | ${esc(r.repo || '-')}</div>
            <div style="font-size:12px;font-weight:800;white-space:nowrap;">${esc(r.manager || '-')}</div>
-         </td>`, r, `manager=${encodeURIComponent(r.manager||'')}`)).join('');
+         </td>`, r, `${encodeURIComponent(r.managerParamKey || 'manager')}=${encodeURIComponent(r.manager||'')}`)).join('');
       const totalRow = arr.length ? rowOf(`<td><b>총합계</b></td>`, sumRows(arr), ``, {isTotal:true}) : '';
       document.getElementById('overviewManagerTbody').innerHTML = (body + totalRow) || empty;
     }
