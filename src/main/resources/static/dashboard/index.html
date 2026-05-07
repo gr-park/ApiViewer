@@ -547,7 +547,7 @@
               <tr>
                 <th style="text-align:left;padding:6px 8px;background:#f8fafc;border-bottom:2px solid var(--border);font-size:10px;font-weight:700;color:var(--text-muted);">배치명</th>
                 <th style="text-align:center;padding:6px 8px;background:#f8fafc;border-bottom:2px solid var(--border);font-size:10px;font-weight:700;color:var(--text-muted);white-space:nowrap;" title="당일 실행 횟수">횟수</th>
-                <th style="text-align:right;padding:6px 8px;background:#f8fafc;border-bottom:2px solid var(--border);font-size:10px;font-weight:700;color:var(--text-muted);white-space:nowrap;">건수</th>
+                <th style="text-align:right;padding:6px 8px;background:#f8fafc;border-bottom:2px solid var(--border);font-size:10px;font-weight:700;color:var(--text-muted);white-space:nowrap;" title="차단 모니터링(BLOCK_URL_MONITOR): 배치 jobParam(B·T) 및 전역 설정 반영 후 와탭+제니퍼 합산(필터 후). 동일 인입이 양쪽에 잡히면 중복 가능.">건수</th>
                 <th style="text-align:center;padding:6px 8px;background:#f8fafc;border-bottom:2px solid var(--border);font-size:10px;font-weight:700;color:var(--text-muted);white-space:nowrap;">상태</th>
                 <th style="text-align:center;padding:6px 8px;background:#f8fafc;border-bottom:2px solid var(--border);font-size:10px;font-weight:700;color:var(--text-muted);white-space:nowrap;">결과</th>
                 <th style="text-align:left;padding:6px 8px;background:#f8fafc;border-bottom:2px solid var(--border);font-size:10px;font-weight:700;color:var(--text-muted);">메시지</th>
@@ -777,7 +777,8 @@
       blockBanner.innerHTML =
         '<span style="flex-shrink:0;font-size:16px;line-height:1;" aria-hidden="true">⚠</span>' +
         '<span style="flex:1;min-width:0;"><strong>차단 URL 인입 감지</strong> — 차단 모니터링 배치가 정상 완료되었으나, ' +
-        '와탭·제니퍼 조회 결과 <strong style="font-variant-numeric:tabular-nums;">' + n.toLocaleString() + '건</strong>의 차단 트랜잭션이 집계되었습니다. ' +
+        '<strong style="font-variant-numeric:tabular-nums;">' + n.toLocaleString() + '건</strong>이 <strong>필터 적용 후</strong>(와탭 봇 제외·IT테스트 시간대 제외는 배치 B·T·전역 설정 기준) <strong>와탭+제니퍼 합산</strong>으로 집계되었습니다. ' +
+        '(원본 대비 제외 건수는 같은 행 메시지 열 요약 참고. 모니터 화면 조회 시 제외 시간 입력값이 설정과 다르면 건수가 달라질 수 있습니다.) ' +
         '상세는 URL 차단 모니터링 화면에서 확인하세요.</span>' +
         '<a href="/url-viewer/url-block-monitor.html">모니터링 이동 →</a>';
     }
@@ -801,7 +802,7 @@
         : '<span style="display:inline-block;padding:2px 8px;border-radius:10px;background:#fee2e2;color:#991b1b;font-size:11px;font-weight:600;">실패</span>';
       let resultBadge = '-';
       if (ok && blockHit) {
-        resultBadge = '<span style="display:inline-block;padding:2px 8px;border-radius:10px;background:#fee2e2;color:#991b1b;font-size:10px;font-weight:700;vertical-align:middle;">인입 ' + Number(r.itemCount).toLocaleString() + '건</span>';
+        resultBadge = '<span style="display:inline-block;padding:2px 8px;border-radius:10px;background:#fee2e2;color:#991b1b;font-size:10px;font-weight:700;vertical-align:middle;">필터 후 ' + Number(r.itemCount).toLocaleString() + '건</span>';
       } else if (ok && gitPartial) {
         resultBadge = '<span style="display:inline-block;padding:2px 8px;border-radius:10px;background:#fef3c7;color:#b45309;font-size:10px;font-weight:700;vertical-align:middle;">레포 실패 ' + Number(r.failItemCount).toLocaleString() + '개</span>';
       }

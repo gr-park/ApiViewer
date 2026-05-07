@@ -79,7 +79,7 @@ Spring Boot 기반 웹 애플리케이션. Controller 소스를 파싱하여 URL
 
 `GET /api/db/record-by-key` — 차단 모니터링 등에서 사용. **동일 레포·`apiPath`에서 HTTP 메소드 대소문자 무시 일치**를 먼저 시도하고, 없으면 `REQUEST`/`ALL`/빈값 등은 **동일 경로 행만**으로 폴백(복수 시 GET→POST→첫 행). `httpMethod` 파라미터는 생략 가능.
 
-**URL 차단 모니터링** (`/api/url-block-monitor/search`): 레포를 **지정**해 조회할 때, 와탭 응답은 동일 pcode에 여러 okind가 섞일 수 있어 **`(pcode|okindName)` → 레포 매핑 결과가 선택 레포와 일치하는 행만** 포함한다(전체 레포 조회 시에는 기존처럼 전 행). Jennifer는 인스턴스 API에서 `name.contains(repo)` 대신 **구분자(`-` `_` `.`) 경계를 만족하는 부분 일치·전체 일치**만 허용해 `pers` 등 짧은 공통 부문 오탐을 막는다. URL 경로 필터: **와탭**은 flush `params.filter.url`에 넣어 서버 측 좁힘, **제니퍼**는 `applicationName` 또는 `message` 부분일치(에러 본문에 path 포함 가정). 화면에서 봇 제외·IT 테스트 시간대 제외는 **체크박스** 토글(시간 입력값은 해제 후에도 유지).
+**URL 차단 모니터링** (`/api/url-block-monitor/search`): 레포를 **지정**해 조회할 때, 와탭 응답은 동일 pcode에 여러 okind가 섞일 수 있어 **`(pcode|okindName)` → 레포 매핑 결과가 선택 레포와 일치하는 행만** 포함한다(전체 레포 조회 시에는 기존처럼 전 행). Jennifer는 인스턴스 API에서 `name.contains(repo)` 대신 **구분자(`-` `_` `.`) 경계를 만족하는 부분 일치·전체 일치**만 허용해 `pers` 등 짧은 공통 부문 오탐을 막는다. URL 경로 필터: **와탭**은 flush `params.filter.url`에 넣어 서버 측 좁힘, **제니퍼**는 `applicationName` 또는 `message` 부분일치(에러 본문에 path 포함 가정). 화면에서 봇 제외·IT 테스트 시간대 제외는 **체크박스** 토글(시간 입력값은 해제 후에도 유지). 조회 시 `excludeBot`은 체크 상태를 API에 전달(와탭 행은 서버에서 봇 제외 가능). IT 테스트 시간대는 여전히 화면에서 `endtime` 기준으로 필터(배치는 `global_config` 구간).
 
 구 경로는 `WebConfig.addViewControllers` 리다이렉트. 인증: `auth.js` `AuthState`, 60초·포커스 `/api/auth/check`, `auth:change`, `data-admin-only`.
 
@@ -175,7 +175,7 @@ DB `status` 컬럼은 leaf 값을 직접 저장한다. 화면 라벨 = DB 값 (�
 | 배치 요약 | `BatchHistoryJobListener` 성공 후 비동기 `ops_digest` (트리거 jobType 기본: GIT_PULL_EXTRACT, APM_COLLECT, DATA_BACKUP) → `global_config.ai_last_ops_digest` · 공개 `GET /api/config/ops-digest-summary` → 공통 네비 상단 노란 배너(운영·배치 요약) |
 
 - Mock URL 분석데이터: `POST /api/mock/analysis/generate?repoName=&countMin=&countMax=` — `countMin`·`countMax` 함께 지정 시 레포당 **[min,max] 균등 랜덤** 건수. `count` 단독(1~5000)은 고정 건수(하위 호환). Mock 상태 분포에 **`삭제`**(약 5%, `statusOverridden=true`) 포함.
-- 공개 경로: `GET /api/config/global`, `GET /api/config/repos`, `GET /api/config/repos/sync-warnings`, `GET /api/config/ops-digest-summary`, `GET /api/schedule/history/dashboard-daily?days=` (`WebConfig`에서 `/api/schedule/**` 예외 — 대시보드는 `days=1`로 당일·배치별 1행 집계, 기간별 상세는 설정 배치 이력). `dashboard-daily` 응답의 `failItemCount`: `batch_execution_log.fail_item_count`(Job 결과 Map 키 `failCount`, 현재 `GIT_PULL_EXTRACT`만 기록) — 일부 레포만 실패해도 배치 status는 SUCCESS일 수 있음 → 대시보드 시스템 배치 카드에서 노란 배너·행 강조.
+- 공개 경로: `GET /api/config/global`, `GET /api/config/repos`, `GET /api/config/repos/sync-warnings`, `GET /api/config/ops-digest-summary`, `GET /api/schedule/history/dashboard-daily?days=` (`WebConfig`에서 `/api/schedule/**` 예외 — 대시보드는 `days=1`로 당일·배치별 1행 집계, 기간별 상세는 설정 배치 이력). `dashboard-daily` 응답의 `failItemCount`: `batch_execution_log.fail_item_count`(Job 결과 Map 키 `failCount`, 현재 `GIT_PULL_EXTRACT`만 기록) — 일부 레포만 실패해도 배치 status는 SUCCESS일 수 있음 → 대시보드 시스템 배치 카드에서 노란 배너·행 강조. **`BLOCK_URL_MONITOR`의 `itemCount`**: Job 결과 Map `count` = `UrlBlockMonitorJob`에서 와탭(봇 제외는 B)·제니퍼 행 병합 후 IT테스트 시간대 제외(T·`global_config`) 적용 **후** 건수(와탭+제니퍼 합산, 동일 인입 중복 가능). 대시보드 배너·결과 뱃지는 이를 「필터 후」로 표기한다.
 
 # 주요 DB 컬럼 (api_record)
 

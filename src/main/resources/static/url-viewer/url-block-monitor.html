@@ -544,6 +544,8 @@
 
     const src = selectedRepoSource();
     const loadingLabel = src === 'JENNIFER' ? 'Jennifer' : src === 'WHATAP' ? '와탭' : 'APM';
+    syncMonFiltersFromUi();
+    const excludeBotApi = !!document.getElementById('chkExcludeBot')?.checked;
 
     document.getElementById('searchBtn').disabled = true;
     document.getElementById('excelBtn').disabled = true;
@@ -559,7 +561,7 @@
           okindNames: null,
           serviceLike: serviceLike || null,
           from, to,
-          excludeBot: false,
+          excludeBot: excludeBotApi,
           extraBotKeywords: extraBot.length ? extraBot : null
         })
       });
