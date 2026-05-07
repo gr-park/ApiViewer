@@ -222,8 +222,30 @@ public class WhatapTxSearchService {
         // 매칭 안 되면 row.repoName 은 null (화면 레포 컬럼 공란) — "okind 와 레포가 안 맞는데 레포명 태그됨" 이슈 해결.
         Map<String, String> repoByPcodeOkind = buildRepoByPcodeOkindMap();
 
+        // 전체(레포 미지정) 모드에서: 같은 pcode를 공유하는 레포가 많으면
+        // okinds=0 응답(=pcode 단위 전체 okind)이 레포 수만큼 반복 호출/중복 집계될 수 있다.
+        // 따라서 (base|pcode) 단위로 1회만 호출하도록 대표 레포로 묶어서 중복 호출을 제거한다.
+        boolean isAllMode = (repoName == null || repoName.isBlank());
+        List<RepoConfig> fetchTargets;
+        if (isAllMode) {
+            Map<String, RepoConfig> byBasePcode = new LinkedHashMap<>();
+            for (RepoConfig r : repos) {
+                String base = extractBase(r.getWhatapUrl());
+                if (base == null || r.getWhatapPcode() == null) continue;
+                String key = base + "|" + r.getWhatapPcode();
+                byBasePcode.putIfAbsent(key, r);
+            }
+            fetchTargets = new ArrayList<>(byBasePcode.values());
+            if (fetchTargets.size() != repos.size()) {
+                log.info("[URL차단모니터] WHATAP 전체모드 중복 pcode 호출 제거: repos={} → fetchTargets={}",
+                        repos.size(), fetchTargets.size());
+            }
+        } else {
+            fetchTargets = repos;
+        }
+
         List<BlockedTxRow> result = new ArrayList<>();
-        for (RepoConfig r : repos) {
+        for (RepoConfig r : fetchTargets) {
             String base = extractBase(r.getWhatapUrl());
             if (base == null) {
                 log.warn("[URL차단모니터] {} whatapUrl 미설정/파싱 실패 — 스킵", r.getRepoName());
@@ -235,8 +257,9 @@ public class WhatapTxSearchService {
                 long stime = cursor.atStartOfDay(KST).toInstant().toEpochMilli();
                 long etime = cursor.plusDays(1).atStartOfDay(KST).toInstant().toEpochMilli() - 1;
                 try {
-                    String restrictToRepo = (repoName == null || repoName.isBlank()) ? null : r.getRepoName();
-                    List<BlockedTxRow> day = fetchOneDay(base, refererPath, r, stime, etime, ptotal, repoByPcodeOkind, restrictToRepo, urlFilterApi);
+                    String restrictToRepo = isAllMode ? null : r.getRepoName();
+                    List<BlockedTxRow> day = fetchOneDay(base, refererPath, r, stime, etime, ptotal,
+                            repoByPcodeOkind, restrictToRepo, urlFilterApi);
                     log.debug("[URL차단모니터] {} {} 응답={}건", r.getRepoName(), cursor, day.size());
                     for (BlockedTxRow row : day) {
                         if (row.getErrMessage() == null || !row.getErrMessage().startsWith(BLOCK_PREFIX)) continue;
