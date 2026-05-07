@@ -1732,6 +1732,7 @@
     // 종료 시점: 문제 파일 요약을 고정 표시
     if (!p.extracting) {
       renderIssueSummaryIfNeeded(true);
+      saveExtractIssueReportIfNeeded();
     }
   }
 
@@ -1776,12 +1777,55 @@
   }
 
   // ── 로그 패널 ──────────────────────────────────────────────
+  let issueReportSavedForRun = false;
+
   function clearLogs() {
     document.getElementById('logWrap').innerHTML = '';
     document.getElementById('logCounts').innerHTML = '';
     lastLogCount = 0;
     logIssues = { errors: new Map(), zeros: new Map(), warns: new Map() };
+    issueReportSavedForRun = false;
     hideIssueSummary();
+  }
+
+  function buildExtractIssueReportPayload() {
+    const toArr = (m) => Array.from((m || new Map()).values()).map(it => ({
+      repoName: it.repoName || '',
+      relPath: it.relPath || '',
+      fullPath: it.fullPath || '',
+      reason: it.reason || '',
+      detail: it.detail || ''
+    }));
+    const err = toArr(logIssues.errors);
+    const zero = toArr(logIssues.zeros);
+    const warn = toArr(logIssues.warns);
+    const at = new Date().toISOString();
+    const repo = currentExtractRepo || '';
+    const label = currentExtractRoot ? `root=${currentExtractRoot}` : '';
+    return {
+      type: 'EXTRACT_ISSUE_REPORT',
+      at,
+      repoName: repo,
+      label,
+      errorFileCount: err.length,
+      zeroFileCount: zero.length,
+      warnFileCount: warn.length,
+      errorItems: err,
+      zeroItems: zero,
+      warnItems: warn
+    };
+  }
+
+  async function saveExtractIssueReportIfNeeded() {
+    if (issueReportSavedForRun) return;
+    issueReportSavedForRun = true;
+    try {
+      const payload = buildExtractIssueReportPayload();
+      if ((payload.errorFileCount || 0) <= 0 && (payload.zeroFileCount || 0) <= 0 && (payload.warnFileCount || 0) <= 0) return;
+      await adminFetch('/api/config/extract-issue-report', { method: 'POST', body: JSON.stringify(payload) });
+    } catch (e) {
+      // 저장 실패는 분석 결과와 무관 — 조용히 무시
+    }
   }
 
   function addLocalLog(level, msg) {

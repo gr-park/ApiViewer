@@ -31,6 +31,7 @@ public class AdminInterceptor implements HandlerInterceptor {
                         || uri.equals("/api/config/repos/sync-warnings")
                         || uri.equals("/api/config/ops-digest-summary")
                         || uri.equals("/api/config/apm-match-summary")
+                        || uri.equals("/api/config/extract-issue-summary")
                         || uri.equals("/api/apm/data") || uri.equals("/api/jira/config"))) {
             return true;
         }

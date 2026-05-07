@@ -201,6 +201,18 @@ public class GlobalConfig {
     @Column(name = "apm_match_report_at")
     private LocalDateTime apmMatchReportAt;
 
+    /**
+     * URL 분석(Extract) 문제 파일 요약 리포트(JSON).
+     * - extract.html에서 추출 종료 시점(오류/0개추출 발생 시) 저장
+     * - 대시보드/상단 배너 및 설정 화면에서 재확인/다운로드 용도
+     */
+    @Column(name = "extract_issue_report", columnDefinition = "TEXT")
+    private String extractIssueReport;
+
+    /** 마지막 URL 분석(Extract) 문제 파일 요약 리포트 생성 시각 */
+    @Column(name = "extract_issue_report_at")
+    private LocalDateTime extractIssueReportAt;
+
 
     public Long getId() { return id; }
     public String getStartDate() { return startDate; }
@@ -318,6 +330,11 @@ public class GlobalConfig {
     public void setApmMatchReport(String v) { this.apmMatchReport = v; }
     public LocalDateTime getApmMatchReportAt() { return apmMatchReportAt; }
     public void setApmMatchReportAt(LocalDateTime v) { this.apmMatchReportAt = v; }
+
+    public String getExtractIssueReport() { return extractIssueReport; }
+    public void setExtractIssueReport(String v) { this.extractIssueReport = v; }
+    public LocalDateTime getExtractIssueReportAt() { return extractIssueReportAt; }
+    public void setExtractIssueReportAt(LocalDateTime v) { this.extractIssueReportAt = v; }
 
     /** 채팅 API 전체 URL */
     public String resolveAiChatEndpoint() {

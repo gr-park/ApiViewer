@@ -105,6 +105,81 @@ public class ConfigController {
         return ResponseEntity.ok(apmMatchReportService.getStoredReport());
     }
 
+    /**
+     * 대시보드/전역 네비 배너용 — URL 분석(Extract) 문제파일 요약(공개).
+     * 설정/상세는 admin-only 로 별도 조회한다.
+     */
+    @GetMapping("/extract-issue-summary")
+    public ResponseEntity<?> getExtractIssueSummary() {
+        return globalRepo.findById(1L)
+                .map(gc -> {
+                    String at = gc.getExtractIssueReportAt() != null ? gc.getExtractIssueReportAt().toString() : "";
+                    String json = gc.getExtractIssueReport();
+                    if (json == null || json.isBlank()) {
+                        return ResponseEntity.ok(Map.of("ok", true, "at", at, "errorFileCount", 0, "zeroFileCount", 0, "warnFileCount", 0));
+                    }
+                    try {
+                        @SuppressWarnings("unchecked")
+                        Map<String, Object> m = new ObjectMapper().readValue(json, new TypeReference<>() {});
+                        int err = ((Number) m.getOrDefault("errorFileCount", 0)).intValue();
+                        int zero = ((Number) m.getOrDefault("zeroFileCount", 0)).intValue();
+                        int warn = ((Number) m.getOrDefault("warnFileCount", 0)).intValue();
+                        String repo = String.valueOf(m.getOrDefault("repoName", ""));
+                        String label = String.valueOf(m.getOrDefault("label", ""));
+                        return ResponseEntity.ok(Map.of(
+                                "ok", true,
+                                "at", at,
+                                "repoName", repo,
+                                "label", label,
+                                "errorFileCount", err,
+                                "zeroFileCount", zero,
+                                "warnFileCount", warn
+                        ));
+                    } catch (Exception e) {
+                        return ResponseEntity.ok(Map.of("ok", false, "at", at, "error", "parse_failed"));
+                    }
+                })
+                .orElse(ResponseEntity.ok(Map.of("ok", true, "at", "", "errorFileCount", 0, "zeroFileCount", 0, "warnFileCount", 0)));
+    }
+
+    /** 설정/상세 화면용 — 저장된 문제파일 리포트 조회 (admin-only). */
+    @GetMapping("/extract-issue-report")
+    public ResponseEntity<?> getExtractIssueReport() {
+        return globalRepo.findById(1L)
+                .map(gc -> {
+                    String at = gc.getExtractIssueReportAt() != null ? gc.getExtractIssueReportAt().toString() : "";
+                    String json = gc.getExtractIssueReport();
+                    if (json == null || json.isBlank()) {
+                        return ResponseEntity.ok(Map.of("ok", true, "at", at));
+                    }
+                    try {
+                        @SuppressWarnings("unchecked")
+                        Map<String, Object> m = new ObjectMapper().readValue(json, new TypeReference<>() {});
+                        m.put("ok", true);
+                        m.put("at", at);
+                        return ResponseEntity.ok(m);
+                    } catch (Exception e) {
+                        return ResponseEntity.ok(Map.of("ok", false, "at", at, "error", "parse_failed"));
+                    }
+                })
+                .orElse(ResponseEntity.ok(Map.of("ok", true, "at", "")));
+    }
+
+    /** extract.html 종료 시점에 문제파일 요약 저장 (admin-only). */
+    @PostMapping("/extract-issue-report")
+    public ResponseEntity<?> saveExtractIssueReport(@RequestBody Map<String, Object> body) {
+        try {
+            GlobalConfig gc = globalRepo.findById(1L).orElseGet(GlobalConfig::new);
+            String json = new ObjectMapper().writeValueAsString(body != null ? body : Map.of());
+            gc.setExtractIssueReport(json);
+            gc.setExtractIssueReportAt(java.time.LocalDateTime.now());
+            globalRepo.save(gc);
+            return ResponseEntity.ok(Map.of("ok", true));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of("ok", false, "error", "save_failed"));
+        }
+    }
+
     @PutMapping("/global")
     public ResponseEntity<?> saveGlobal(@RequestBody GlobalConfig config) {
         log.info("[공통설정 저장] PUT /api/config/global");

@@ -12,7 +12,7 @@
  * ═══════════════════════════════════════════════════════════════ */
 (function () {
   // UI 버전 표기 (캐시/반영 여부 확인용) — 변경 시 이 값만 갱신
-  const APP_UI_VERSION = 'ver1.7.05';
+  const APP_UI_VERSION = 'ver1.7.06';
 
   const SEGMENTS = [
     {
@@ -139,6 +139,7 @@
         <div id="sync-warning-slot"></div>
         <div id="ops-digest-slot"></div>
         <div id="apm-match-slot"></div>
+        <div id="extract-issue-slot"></div>
       </div>
     `;
 
@@ -162,6 +163,7 @@
   const SYNC_WARN_DISMISS_KEY = 'syncWarnDismiss';
   const OPS_DIGEST_DISMISS_KEY = 'opsDigestDismissAt';
   const APM_MATCH_DISMISS_KEY = 'apmMatchDismissAt';
+  const EXTRACT_ISSUE_DISMISS_KEY = 'extractIssueDismissAt';
 
   function renderSyncWarnings(list) {
     const slot = document.getElementById('sync-warning-slot');
@@ -369,6 +371,60 @@
       .catch(() => {});
   }
 
+  // ─── URL 분석(Extract) 문제파일 요약 배너 ─────────────────
+  function renderExtractIssueBanner(data) {
+    const slot = document.getElementById('extract-issue-slot');
+    if (!slot) return;
+    if (!data || data.ok === false) { slot.innerHTML = ''; return; }
+    const err = Number(data.errorFileCount || 0);
+    const zero = Number(data.zeroFileCount || 0);
+    const warn = Number(data.warnFileCount || 0);
+    const at = data.at || '';
+    if (err <= 0 && zero <= 0 && warn <= 0) { slot.innerHTML = ''; return; }
+    try {
+      const dismissed = sessionStorage.getItem(EXTRACT_ISSUE_DISMISS_KEY);
+      if (dismissed && at && dismissed === at) { slot.innerHTML = ''; return; }
+    } catch(e) {}
+
+    const timeStr = fmtDigestTime(at);
+    const loggedIn = window.AuthState && window.AuthState.loggedIn;
+    const link = loggedIn
+      ? `<a href="/settings/#extract" class="sync-warning-toggle" style="text-decoration:none;">설정에서 보기 ▶</a>`
+      : '';
+    const parts = [];
+    if (err > 0) parts.push(`에러파일 <strong>${esc(err)}</strong>`);
+    if (zero > 0) parts.push(`0개추출 <strong>${esc(zero)}</strong>`);
+    if (warn > 0) parts.push(`WARN <strong>${esc(warn)}</strong>`);
+    slot.innerHTML = `
+      <div class="sync-warning-banner ops-digest-banner" role="alert">
+        <div class="sync-warning-summary">
+          <span class="sync-warning-icon" aria-hidden="true">🧩</span>
+          <div class="sync-warning-text ops-digest-text-wrap">
+            <div><strong>URL 분석 오류 요약</strong></div>
+            ${timeStr ? `<div class="ops-digest-time">갱신: ${esc(timeStr)}</div>` : ''}
+            <div class="ops-digest-preview">${parts.join(' · ')}</div>
+          </div>
+          ${link}
+          <button type="button" class="sync-warning-close" aria-label="이 알림 닫기 (다음 갱신 시 다시 표시)" title="닫기">✕</button>
+        </div>
+      </div>`;
+    const root = slot.querySelector('.ops-digest-banner');
+    const closeBtn = root && root.querySelector('.sync-warning-close');
+    if (closeBtn) {
+      closeBtn.addEventListener('click', () => {
+        try { sessionStorage.setItem(EXTRACT_ISSUE_DISMISS_KEY, at || '1'); } catch (e) {}
+        slot.innerHTML = '';
+      });
+    }
+  }
+
+  function loadExtractIssueBanner() {
+    fetch('/api/config/extract-issue-summary', { credentials: 'same-origin' })
+      .then(r => (r.ok ? r.json() : null))
+      .then(data => renderExtractIssueBanner(data))
+      .catch(() => {});
+  }
+
   // ─── 관리자 인디케이터/버튼 렌더 ─────────────────────────
   function renderAdminSlot() {
     const slot = document.getElementById('nav-admin-slot');
@@ -401,10 +457,12 @@
     loadSyncWarnings();
     loadOpsDigestBanner();
     loadApmMatchBanner();
+    loadExtractIssueBanner();
     window.addEventListener('auth:change', () => {
       renderAdminSlot();
       applyAdminVisibility();
       loadApmMatchBanner();
+      loadExtractIssueBanner();
     });
   }
   if (document.readyState === 'loading') {
