@@ -31,6 +31,15 @@ public class ApiRecord {
     @Column(name = "repository_name", nullable = false)
     private String repositoryName;
 
+    /**
+     * 레포 설정(표시순서/업무명 등) 조인.
+     * - repositoryName(repo_name) 기반의 느슨한 매핑이므로 FK 제약은 없다.
+     * - 표시순서 기반 정렬을 위해 사용한다.
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "repository_name", referencedColumnName = "repo_name", insertable = false, updatable = false)
+    private RepoConfig repoConfig;
+
     @Column(name = "api_path", nullable = false, length = 2000)
     private String apiPath;
 

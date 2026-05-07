@@ -30,6 +30,9 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import jakarta.persistence.criteria.Predicate;
+import jakarta.persistence.criteria.Expression;
+import jakarta.persistence.criteria.Join;
+import jakarta.persistence.criteria.JoinType;
 
 import java.io.IOException;
 import java.nio.file.*;
@@ -309,12 +312,16 @@ public class ApiViewController {
         if (paged || hasDynamicFilter) {
             int pageIdx  = paged ? Math.max(0, page) : 0;
             int pageSize = (size != null && size > 0) ? Math.min(size, 1000) : 200;
-            Sort sortSpec = parseSort(sort);
-            Pageable pageable = PageRequest.of(pageIdx, pageSize, sortSpec);
+            boolean useRepoDisplayOrderSort = "__repoOrder__".equalsIgnoreCase(String.valueOf(sort).trim());
+            Sort sortSpec = useRepoDisplayOrderSort ? Sort.unsorted() : parseSort(sort);
+            Pageable pageable = sortSpec.isUnsorted()
+                    ? PageRequest.of(pageIdx, pageSize)
+                    : PageRequest.of(pageIdx, pageSize, sortSpec);
 
             Specification<ApiRecord> spec = buildSpec(repository, repoList, blockTargetOnly,
                     status, statusGroup, testSuspect, pathParams, logWorkExcluded, recentLogOnly, httpMethod, isDeprecated, q, alert, ids,
-                    modifiedFrom, modifiedTo, cboFrom, cboTo, deployFrom, deployTo, deployManager, deployUnscheduled);
+                    modifiedFrom, modifiedTo, cboFrom, cboTo, deployFrom, deployTo, deployManager, deployUnscheduled,
+                    useRepoDisplayOrderSort);
 
             Page<ApiRecord> entityPage = recordRepository.findAll(spec, pageable);
             // 엔티티 → 경량 summary Map 변환 (TEXT 필드 강제 제외)
@@ -387,10 +394,29 @@ public class ApiViewController {
         int pageSize = body.containsKey("size")  ? ((Number) body.get("size")).intValue()  : 100;
         pageSize = Math.min(Math.max(pageSize, 1), 1000);
         String sortStr = body.containsKey("sort") ? (String) body.get("sort") : null;
-        Sort sortSpec = parseSort(sortStr);
-        Pageable pageable = PageRequest.of(pageIdx, pageSize, sortSpec);
+        boolean useRepoDisplayOrderSort = sortStr != null && "__repoOrder__".equalsIgnoreCase(sortStr.trim());
+        Sort sortSpec = useRepoDisplayOrderSort ? Sort.unsorted() : parseSort(sortStr);
+        Pageable pageable = sortSpec.isUnsorted()
+                ? PageRequest.of(pageIdx, pageSize)
+                : PageRequest.of(pageIdx, pageSize, sortSpec);
 
-        Specification<ApiRecord> spec = (root, query, cb) -> root.get("id").in(idList);
+        Specification<ApiRecord> spec = (root, query, cb) -> {
+            // count query(Long)에서는 orderBy를 걸지 않는다.
+            try {
+                if (useRepoDisplayOrderSort && query.getResultType() != Long.class) {
+                    Join<ApiRecord, RepoConfig> j = root.join("repoConfig", JoinType.LEFT);
+                    Expression<Integer> ord = cb.coalesce(j.get("displayOrder"), 999999);
+                    query.orderBy(
+                            cb.asc(ord),
+                            cb.asc(root.get("repositoryName")),
+                            cb.asc(root.get("apiPath")),
+                            cb.asc(root.get("httpMethod")),
+                            cb.asc(root.get("id"))
+                    );
+                }
+            } catch (Exception ignored) { }
+            return root.get("id").in(idList);
+        };
         Page<ApiRecord> entityPage = recordRepository.findAll(spec, pageable);
 
         List<Map<String, Object>> summaryList = entityPage.getContent().stream()
@@ -415,9 +441,28 @@ public class ApiViewController {
                                                 String ids, String modifiedFrom, String modifiedTo,
                                                 String cboFrom, String cboTo,
                                                 String deployFrom, String deployTo,
-                                                String deployManager, Boolean deployUnscheduled) {
+                                                String deployManager, Boolean deployUnscheduled,
+                                                boolean useRepoDisplayOrderSort) {
         return (root, query, cb) -> {
             List<Predicate> ps = new ArrayList<>();
+
+            // 기본 정렬(레포 표시순서 → 레포명 → URL 경로 → 메소드 → id)
+            // - 서버 페이지네이션에서 전체 결과의 정렬 안정화를 위해 서버에서 수행한다.
+            // - count query(Long)에서는 orderBy를 걸지 않는다.
+            try {
+                if (useRepoDisplayOrderSort && query.getResultType() != Long.class) {
+                    Join<ApiRecord, RepoConfig> j = root.join("repoConfig", JoinType.LEFT);
+                    Expression<Integer> ord = cb.coalesce(j.get("displayOrder"), 999999);
+                    query.orderBy(
+                            cb.asc(ord),
+                            cb.asc(root.get("repositoryName")),
+                            cb.asc(root.get("apiPath")),
+                            cb.asc(root.get("httpMethod")),
+                            cb.asc(root.get("id"))
+                    );
+                }
+            } catch (Exception ignored) { }
+
             if (repository != null && !repository.isBlank()) {
                 ps.add(cb.equal(root.get("repositoryName"), repository));
             }

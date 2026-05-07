@@ -1806,8 +1806,8 @@
     else if (sk === 'managerName') sk = 'managerOverride';
     else if (sk === 'businessName') sk = 'repositoryName';
     if (sortKey === '__repo_api_path__') {
-      // 서버는 기본 정렬(레포+경로+메소드)을 갖되, 명시적으로도 전달해 DB/페이지 안정화
-      params.set('sort', 'repositoryName,asc;apiPath,asc;httpMethod,asc;id,asc');
+      // 기본 정렬: 레포 표시순서(displayOrder) → 레포명 → URL 경로 → 메소드 → id
+      params.set('sort', '__repoOrder__');
     } else if (serverSortable.has(sk)) {
       params.set('sort', `${sk},${sortAsc?'asc':'desc'}`);
     }
@@ -1840,7 +1840,7 @@
         else if (sk === 'managerName') sk = 'managerOverride';
         else if (sk === 'businessName') sk = 'repositoryName';
         const sortVal = (sortKey === '__repo_api_path__')
-          ? 'repositoryName,asc;apiPath,asc;httpMethod,asc;id,asc'
+          ? '__repoOrder__'
           : (serverSortable.has(sk) ? `${sk},${sortAsc?'asc':'desc'}` : 'id,asc');
         res = await fetch('/api/db/apis/by-ids', {
           method: 'POST',
@@ -3893,17 +3893,29 @@
     if (b && !b.value) b.value = t;
   } catch (e) {}
 
-  initRepos();
+  const _initPromise = initRepos();
 
   // 딥링크: URL호출현황/차단모니터링에서 전달한 detailId 로 상세 모달 바로 오픈
-  // (목록 조회(loadApis)와 무관하게 /api/db/record/{id} 로 바로 로딩한다.)
+  // - 상세 모달만 열리면 닫기 후 "행이 없는" UX가 되어, 딥링크 진입 시에는 해당 행(1건)이라도 같이 보여준다.
+  // - 전체 조회는 safety cap(413) 위험이 있어, by-ids(1건) 경로로 안전하게 렌더한다.
   try {
     const qs = new URLSearchParams(location.search);
     const detailIdRaw = (qs.get('detailId') || '').trim();
     if (detailIdRaw && /^\d+$/.test(detailIdRaw)) {
       const detailId = Number(detailIdRaw);
       if (Number.isFinite(detailId)) {
-        setTimeout(() => { try { openDetail(detailId); } catch(e) {} }, 60);
+        _initPromise.then(() => {
+          try {
+            uploadedIdsFilter = [detailId];
+            renderUploadedFilterChip();
+            // 목록 1건 로드 후 상세 모달 오픈
+            loadPage(0, true).then(() => {
+              setTimeout(() => { try { openDetail(detailId); } catch(e) {} }, 60);
+            });
+          } catch(e) {
+            setTimeout(() => { try { openDetail(detailId); } catch(e) {} }, 60);
+          }
+        });
         // 새로고침 시 반복 오픈 방지
         try {
           qs.delete('detailId');

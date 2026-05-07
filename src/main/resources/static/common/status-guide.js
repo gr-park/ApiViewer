@@ -1,7 +1,7 @@
 (function () {
   /**
    * Status Guide (공통)
-   * - viewer.html: "상태 구분 안내(상세)"를 파란 박스 내에서 접기/펼치기
+   * - viewer.html: "상태 구분 안내"를 파란 박스 내에서 접기/펼치기
    * - dashboard/index.html: "상태 구분(요약)"을 설명형 문구로 + "상세 보기" 모달
    */
   const GUIDE_ID_THRESHOLD = 'guideReviewThreshold';
@@ -48,7 +48,7 @@
     // NOTE: viewer/dashboard 공통으로 쓰기 위해 색상은 inline 유지(다크모드 오버라이드가 이미 프로젝트 전역에 있음)
     return `
       <div class="sg-detail-head">
-        <div class="sg-detail-title">상태 구분 안내 (상세)</div>
+        <div class="sg-detail-title">상태 구분 안내</div>
         <button type="button" class="sg-detail-toggle" data-sg-detail-toggle="1" aria-expanded="true">접기</button>
       </div>
       <div class="sg-detail-body" data-sg-detail-body="1">
@@ -85,8 +85,8 @@
     const linkAction = o.linkAction || 'modal';
     const href = o.href || '/url-viewer/viewer.html';
     const open = (linkAction === 'link')
-      ? `<a href="${esc(href)}" class="sg-compact-btn" title="상태 구분 안내(상세) 확인">${esc(linkText)}</a>`
-      : `<button type="button" class="sg-compact-btn" data-sg-open="1" title="상태 구분 안내(상세) 보기">${esc(linkText)}</button>`;
+      ? `<a href="${esc(href)}" class="sg-compact-btn" title="상태 구분 안내 확인">${esc(linkText)}</a>`
+      : `<button type="button" class="sg-compact-btn" data-sg-open="1" title="상태 구분 안내 보기">${esc(linkText)}</button>`;
 
     return `
       <div class="sg-compact-head">
@@ -181,9 +181,9 @@
     overlay.id = 'sgModalOverlay';
     overlay.className = 'sg-modal-overlay';
     overlay.innerHTML = `
-      <div class="sg-modal" role="dialog" aria-modal="true" aria-label="상태 구분 안내(상세)">
+      <div class="sg-modal" role="dialog" aria-modal="true" aria-label="상태 구분 안내">
         <div class="sg-modal-header">
-          <div class="sg-modal-title">상태 구분 안내 (상세)</div>
+          <div class="sg-modal-title">상태 구분 안내</div>
           <button type="button" class="sg-modal-close" data-sg-close="1">닫기</button>
         </div>
         <div class="sg-modal-body">
