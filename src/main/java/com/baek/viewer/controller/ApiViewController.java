@@ -1361,8 +1361,9 @@ public class ApiViewController {
 
     /**
      * 배포일자 분포 통계 — 잔여(①-①/①-②)만 집계.
-     * 행: 팀/담당자/레포 별 (탭). 열: 배포일자(YYYY-MM-DD) + "일정수립필요"(일자 미정).
-     * 담당자 컬럼은 deployManager 우선, 없으면 managerOverride → 매핑 → 팀대표 폴백.
+     * 행: 팀별(팀명만) / 레포별(팀·업무·레포 3열) / 담당자별(팀·업무·레포·담당자 4열, 팀·업무·레포 rowspan).
+     * 열: 합계·일정수립필요·배포일정(YYYY-MM-DD 일자 열). 레포·담당자 행 정렬: 팀 → display_order → 레포명 → 담당자.
+     * 담당자 그룹 키는 팀|레포|이름(배포담당자면 D:, 아니면 M:) — viewer 딥링크용 managerParamKey 포함.
      */
     @GetMapping("/db/stats/deploy-schedule")
     public ResponseEntity<?> dbDeployScheduleStats() {
@@ -1436,37 +1437,55 @@ public class ApiViewController {
                     return m;
                 }).collect(Collectors.toList());
 
-        // 담당자별 — 그룹 키는 팀+담당자 조합 (팀 다르면 별도 행)
-        Map<String, String> mgrToTeam = new HashMap<>();
+        // 담당자별 — 팀|레포|이름 (배포담당자 D: / 일반 담당자 M:, block-overview 와 동일 viewer 파라미터 규약)
         java.util.function.Function<DeployScheduleDto, String> mgrKey = r -> {
             String t = teamOf.apply(r);
-            String m = managerOf.apply(r);
-            String composite = t + "|" + m;
-            mgrToTeam.putIfAbsent(composite, t);
-            return composite;
+            String repo = r.getRepositoryName() != null ? r.getRepositoryName() : "";
+            boolean fromDeploy = r.getDeployManager() != null && !r.getDeployManager().isBlank();
+            String prefix = fromDeploy ? "D:" : "M:";
+            String name = managerOf.apply(r);
+            return t + "|" + repo + "|" + prefix + name;
         };
         Map<String, Map<String, Object>> mgrAcc = aggregate.apply(mgrKey, all);
         List<Map<String, Object>> byManager = mgrAcc.entrySet().stream()
-                .sorted((a, b) -> Long.compare((Long) b.getValue().get("total"), (Long) a.getValue().get("total")))
                 .map(e -> {
-                    String[] parts = e.getKey().split("\\|", 2);
+                    String[] parts = e.getKey().split("\\|", 3);
+                    String teamVal = parts.length > 0 ? parts[0] : "";
+                    String repoName = parts.length > 1 ? parts[1] : "";
+                    String rawOwner = parts.length > 2 ? parts[2] : "M:(미지정)";
+                    boolean isDeploy = rawOwner.startsWith("D:");
+                    String mgr = rawOwner.length() >= 2 ? rawOwner.substring(2) : rawOwner;
+                    RepoConfig cfg = repoConfigMap.get(repoName);
                     Map<String, Object> m = new LinkedHashMap<>();
-                    m.put("team",    parts[0]);
-                    m.put("manager", parts.length > 1 ? parts[1] : "(미지정)");
+                    m.put("team", teamVal);
+                    m.put("repo", repoName);
+                    m.put("businessName", cfg != null && cfg.getBusinessName() != null ? cfg.getBusinessName() : "-");
+                    m.put("displayOrder", cfg != null ? cfg.getDisplayOrder() : null);
+                    m.put("manager", mgr);
+                    m.put("managerParamKey", isDeploy ? "deployManager" : "manager");
                     m.putAll(e.getValue());
                     return m;
-                }).collect(Collectors.toList());
+                })
+                .sorted((a, b) -> {
+                    int tc = String.valueOf(a.getOrDefault("team", ""))
+                            .compareTo(String.valueOf(b.getOrDefault("team", "")));
+                    if (tc != 0) return tc;
+                    Integer oa = (Integer) a.get("displayOrder");
+                    Integer ob = (Integer) b.get("displayOrder");
+                    int oc = Comparator.nullsLast(Integer::compareTo).compare(oa, ob);
+                    if (oc != 0) return oc;
+                    int rc = String.valueOf(a.getOrDefault("repo", ""))
+                            .compareTo(String.valueOf(b.getOrDefault("repo", "")));
+                    if (rc != 0) return rc;
+                    return String.valueOf(a.getOrDefault("manager", ""))
+                            .compareTo(String.valueOf(b.getOrDefault("manager", "")));
+                })
+                .collect(Collectors.toList());
 
         // 레포별 — 그룹 키는 팀+레포명 조합 (호환: 다른 팀 오버라이드가 있으면 별도 행)
         java.util.function.Function<DeployScheduleDto, String> repoKey = r -> teamOf.apply(r) + "|" + r.getRepositoryName();
         Map<String, Map<String, Object>> repoAcc = aggregate.apply(repoKey, all);
         List<Map<String, Object>> byRepo = repoAcc.entrySet().stream()
-                .sorted((a, b) -> {
-                    String[] ka = a.getKey().split("\\|", 2);
-                    String[] kb = b.getKey().split("\\|", 2);
-                    int tc = ka[0].compareTo(kb[0]);
-                    return tc != 0 ? tc : Long.compare((Long) b.getValue().get("total"), (Long) a.getValue().get("total"));
-                })
                 .map(e -> {
                     String[] parts = e.getKey().split("\\|", 2);
                     String teamVal = parts[0];
@@ -1476,9 +1495,21 @@ public class ApiViewController {
                     m.put("team",         teamVal);
                     m.put("repo",         repoName);
                     m.put("businessName", cfg != null && cfg.getBusinessName() != null ? cfg.getBusinessName() : "-");
+                    m.put("displayOrder", cfg != null ? cfg.getDisplayOrder() : null);
                     m.putAll(e.getValue());
                     return m;
-                }).collect(Collectors.toList());
+                })
+                .sorted((a, b) -> {
+                    int tc = String.valueOf(a.getOrDefault("team", ""))
+                            .compareTo(String.valueOf(b.getOrDefault("team", "")));
+                    if (tc != 0) return tc;
+                    Integer oa = (Integer) a.get("displayOrder");
+                    Integer ob = (Integer) b.get("displayOrder");
+                    int oc = Comparator.nullsLast(Integer::compareTo).compare(oa, ob);
+                    if (oc != 0) return oc;
+                    return String.valueOf(a.getOrDefault("repo", "")).compareTo(String.valueOf(b.getOrDefault("repo", "")));
+                })
+                .collect(Collectors.toList());
 
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("dates",     dateColumns);
@@ -1674,6 +1705,9 @@ public class ApiViewController {
                     return m;
                 })
                 .sorted((a, b) -> {
+                    int tc = String.valueOf(a.getOrDefault("team", ""))
+                            .compareTo(String.valueOf(b.getOrDefault("team", "")));
+                    if (tc != 0) return tc;
                     Integer oa = (Integer) a.get("displayOrder");
                     Integer ob = (Integer) b.get("displayOrder");
                     int oc = Comparator.nullsLast(Integer::compareTo).compare(oa, ob);
@@ -1706,10 +1740,16 @@ public class ApiViewController {
                     return m;
                 })
                 .sorted((a, b) -> {
+                    int tc = String.valueOf(a.getOrDefault("team", ""))
+                            .compareTo(String.valueOf(b.getOrDefault("team", "")));
+                    if (tc != 0) return tc;
                     Integer oa = (Integer) a.get("displayOrder");
                     Integer ob = (Integer) b.get("displayOrder");
                     int oc = Comparator.nullsLast(Integer::compareTo).compare(oa, ob);
                     if (oc != 0) return oc;
+                    int rc = String.valueOf(a.getOrDefault("repo", ""))
+                            .compareTo(String.valueOf(b.getOrDefault("repo", "")));
+                    if (rc != 0) return rc;
                     String ma = String.valueOf(a.getOrDefault("manager", ""));
                     String mb = String.valueOf(b.getOrDefault("manager", ""));
                     return ma.compareTo(mb);

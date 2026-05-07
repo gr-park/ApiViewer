@@ -19,6 +19,7 @@ import java.time.Duration;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.*;
+import java.util.stream.Collectors;
 import java.util.regex.Pattern;
 
 /**
@@ -81,8 +82,8 @@ public class JenniferBlockMonitorService {
      * @param repoName        null/blank = 전체 활성 Jennifer 레포
      * @param serviceLike     null/blank = 전체. 입력 시 {@code applicationName} 또는 {@code message}(에러 본문, URL path 포함) 부분일치 (대소문자 무시)
      * @param from..to        포함 일자 범위
-     * @param excludeBot      현재 Jennifer 응답에는 봇 판단 필드 없음 — 항상 false (파라미터 일관성 유지)
-     * @param extraBotKeywords 현재 미사용 (Jennifer 응답에 userAgent 없음)
+     * @param excludeBot       true = 봇 키워드 매칭된 row 제외 (Jennifer 응답에 userAgent 없음 → message/applicationName/instanceName 기반)
+     * @param extraBotKeywords 사용자 입력(또는 배치/프론트 기본값으로 주입된) 봇 키워드. 비어있으면 GlobalConfig 기본값 사용.
      */
     public List<BlockedTxRow> search(String repoName, String serviceLike,
                                       LocalDate from, LocalDate to,
@@ -97,6 +98,7 @@ public class JenniferBlockMonitorService {
         }
 
         String svc = (serviceLike == null) ? "" : serviceLike.trim().toLowerCase(Locale.ROOT);
+        Set<String> botSet = buildBotSet(extraBotKeywords);
         long days = java.time.temporal.ChronoUnit.DAYS.between(from, to) + 1;
 
         log.info("[URL차단모니터][JENNIFER] 검색 시작 repos={} days={} serviceLike='{}'",
@@ -122,6 +124,9 @@ public class JenniferBlockMonitorService {
                         String msg = row.getMessage() == null ? "" : row.getMessage().toLowerCase(Locale.ROOT);
                         if (!app.contains(svc) && !msg.contains(svc)) continue;
                     }
+                    boolean isBot = matchBot(row, botSet);
+                    row.setBot(isBot);
+                    if (excludeBot && isBot) continue;
                     result.add(row);
                 }
             } catch (Exception e) {
@@ -137,6 +142,39 @@ public class JenniferBlockMonitorService {
 
         log.info("[URL차단모니터][JENNIFER] 검색 완료 총={}건", result.size());
         return result;
+    }
+
+    private Set<String> buildBotSet(List<String> extraBotKeywords) {
+        List<String> src = (extraBotKeywords != null && !extraBotKeywords.isEmpty())
+                ? extraBotKeywords
+                : splitCsv(globalRepo.findById(1L).map(GlobalConfig::getBotKeywords).orElse(null));
+        return src.stream()
+                .filter(Objects::nonNull)
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .map(s -> s.toLowerCase(Locale.ROOT))
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+    }
+
+    private static List<String> splitCsv(String s) {
+        if (s == null || s.isBlank()) return List.of();
+        String t = s.replace('\n', ',').replace('\r', ',');
+        return Arrays.stream(t.split(","))
+                .map(String::trim)
+                .filter(x -> !x.isEmpty())
+                .toList();
+    }
+
+    private static boolean matchBot(BlockedTxRow row, Set<String> botSet) {
+        if (botSet == null || botSet.isEmpty() || row == null) return false;
+        String msg = row.getMessage() == null ? "" : row.getMessage().toLowerCase(Locale.ROOT);
+        String app = row.getApplicationName() == null ? "" : row.getApplicationName().toLowerCase(Locale.ROOT);
+        String ins = row.getInstanceName() == null ? "" : row.getInstanceName().toLowerCase(Locale.ROOT);
+        for (String k : botSet) {
+            if (k == null || k.isBlank()) continue;
+            if (msg.contains(k) || app.contains(k) || ins.contains(k)) return true;
+        }
+        return false;
     }
 
     private List<RepoConfig> pickRepos(String repoName) {

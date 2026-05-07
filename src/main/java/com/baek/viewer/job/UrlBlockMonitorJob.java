@@ -18,6 +18,7 @@ import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -56,16 +57,19 @@ public class UrlBlockMonitorJob implements Job {
             LocalDate to = range[1];
             log.debug("[BLOCK_URL_MONITOR] KST 오늘={}, 조회기간 {} ~ {}", today, from, to);
 
+            GlobalConfig gc = globalRepo.findById(1L).orElse(new GlobalConfig());
+            // 배치에서는 프론트가 봇 키워드를 주입하지 않으므로(GlobalConfig 기본값을 그대로 사용)
+            List<String> botKeywords = splitKeywords(gc.getBotKeywords());
+
             List<BlockedTxRow> rows = new ArrayList<>();
-            log.debug("[BLOCK_URL_MONITOR] 와탭 검색 호출 excludeBot={}", p.excludeBot);
-            rows.addAll(whatapTxSearchService.search(null, null, null, from, to, p.excludeBot, null));
-            log.debug("[BLOCK_URL_MONITOR] Jennifer 검색 호출 (봇필터 미적용)");
-            rows.addAll(jenniferBlockMonitorService.search(null, null, from, to, false, null));
+            log.debug("[BLOCK_URL_MONITOR] 와탭 검색 호출 excludeBot={} botKeywords={}", p.excludeBot, botKeywords.size());
+            rows.addAll(whatapTxSearchService.search(null, null, null, from, to, p.excludeBot, botKeywords));
+            log.debug("[BLOCK_URL_MONITOR] Jennifer 검색 호출 excludeBot={} botKeywords={}", p.excludeBot, botKeywords.size());
+            rows.addAll(jenniferBlockMonitorService.search(null, null, from, to, p.excludeBot, botKeywords));
 
             rows.sort(Comparator.comparing((BlockedTxRow a) -> a.getEndtime() == null ? "" : a.getEndtime()).reversed());
 
             int rawCount = rows.size();
-            GlobalConfig gc = globalRepo.findById(1L).orElse(new GlobalConfig());
             if (p.excludeItTestWindow) {
                 log.debug("[BLOCK_URL_MONITOR] IT테스트시간대 제외 적용: {} ~ {}", gc.getBlockMonitorExcludeStart(), gc.getBlockMonitorExcludeEnd());
                 rows = rows.stream().filter(r -> !inItTestExcludeWindow(r, gc)).toList();
@@ -138,6 +142,20 @@ public class UrlBlockMonitorJob implements Job {
             } catch (NumberFormatException ignored) { }
         }
         return -1;
+    }
+
+    private static List<String> splitKeywords(String csv) {
+        if (csv == null || csv.isBlank()) return List.of();
+        String s = csv.replace('\n', ',').replace('\r', ',');
+        String[] parts = s.split(",");
+        List<String> out = new java.util.ArrayList<>();
+        for (String p : parts) {
+            if (p == null) continue;
+            String t = p.trim();
+            if (t.isEmpty()) continue;
+            out.add(t);
+        }
+        return out;
     }
 
     private static boolean inItTestExcludeWindow(BlockedTxRow row, GlobalConfig gc) {

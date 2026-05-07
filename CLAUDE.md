@@ -75,7 +75,7 @@ Spring Boot 기반 웹 애플리케이션. Controller 소스를 파싱하여 URL
 
 `viewer.html` 세로 순서(대략): **조회 조건** → **검색 필터**(조회 전에도 표시·기본 펼침) → **상태 카드**(조회 성공 후 표시) → 안내·알림·일괄바 → **스냅샷 비교**(관리자, URL 테이블 직전) → 테이블. 카드형 `details`는 **「펼치기/접기」 pill(`.collapser`)** 클릭 시에만 접힘(summary 빈 영역 클릭으로 접히지 않음).
 
-대시보드 `URL 현황` 탭은 `GET /api/db/stats/block-overview` 기반이며, 탭 표시는 **팀/업무/담당자**(팀=팀 단위 1행, 업무=레포 표시순서 `display_order` 기준, 담당자=레포 표시순서+이름순)로 구성된다.
+대시보드 `URL 현황` 탭은 `GET /api/db/stats/block-overview` 기반이며, **팀** 탭은 **팀명만**, **업무** 탭은 **팀·업무·레포 3열**(담당 열 없음), **담당** 탭은 **4열**·2단 헤더·연속 동일 값 **rowspan**이다. **엑셀** 시트도 동일(팀 1열·업무 3열·담당 4열)이며 헤더 2행 **행 높이**를 넉넉히 둔다. `URL 차단 배포일자`(`GET /api/db/stats/deploy-schedule`) 카드도 탭 **팀·업무·담당자**·동일 라벨 규칙, 지표는 **합계·일정수립필요·배포일정**(날짜) 2행 헤더·**엑셀 3시트**·헤더 행 높이 동일 정책이다. **담당자** 탭 행은 **팀|레포|담당(배포담당자 D:/일반 M:)** 단위이며 `businessName`·`repo`·`managerParamKey`를 포함한다.
 
 **URL분석현황 목록 정렬·딥링크**: 기본 정렬은 **레포 설정 `display_order`(표시순서) → `repository_name` → `api_path` → `http_method` → `id`**(서버 `GET /api/db/apis` 등, `sort=__repoOrder__`). `?detailId=<id>`로 진입 시 해당 행을 **by-ids로 먼저 로드**한 뒤 상세 모달을 연다(닫기 후 빈 테이블 방지). 상태 구분 안내 문구는 공통 `common/status-guide.js`(타이틀 **상태 구분 안내**, 접기/펼치기).
 
