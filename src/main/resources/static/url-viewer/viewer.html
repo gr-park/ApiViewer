@@ -3356,11 +3356,17 @@
 
     document.getElementById('detailBody').innerHTML = `
       <input type="hidden" id="df-id" value="${r.id}">
+      <input type="hidden" id="df-apiPathOriginal" value="${esc(r.apiPath)}">
       <div class="detail-section">
         <div class="detail-section-title">기본 정보${lockNote}</div>
         <div class="detail-grid">
           <div class="detail-label">레포지토리</div><div class="detail-value">${esc(r.repositoryName)} ${cfg.businessName ? '('+esc(cfg.businessName)+')' : ''}</div>
-          <div class="detail-label">URL 경로</div><div class="detail-value" style="display:flex;align-items:center;gap:6px;"><span class="api-path">${esc(r.apiPath)}</span><button class="copy-btn" onclick="copyText(event,'${esc(r.apiPath)}')" title="URL 경로 복사"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button></div>
+          <div class="detail-label">URL 경로</div><div class="detail-value" style="display:flex;align-items:center;gap:6px;min-width:0;">
+            <span id="df-apiPathText" class="api-path" style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(r.apiPath)}</span>
+            <input id="df-apiPath" class="df-input" value="${esc(r.apiPath)}" style="display:none;flex:1;min-width:0;font-family:Consolas,monospace;font-size:12px;" ${dis} oninput="showDetailSave()">
+            ${lk ? '' : `<button type="button" class="btn btn-sm btn-ghost" onclick="startApiPathEdit()" style="font-size:11px;border:1px solid var(--border);">수정</button>`}
+            <button class="copy-btn" onclick="copyText(event,'${esc(r.apiPath)}')" title="URL 경로 복사"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>
+          </div>
           <div class="detail-label">Full URL</div><div class="detail-value">${r.fullUrl ? `<a href="${esc(r.fullUrl)}" target="_blank">${esc(r.fullUrl)}</a>` : '-'}</div>
           <div class="detail-label">HTTP Method</div><div class="detail-value"><span class="badge badge-${r.httpMethod||'REQUEST'}">${r.httpMethod||'-'}</span></div>
           <div class="detail-label">컨트롤러</div><div class="detail-value" style="display:flex;align-items:center;gap:6px;">${esc(r.controllerName)}<button class="copy-btn" onclick="copyText(event,'${esc(r.controllerName)}')" title="컨트롤러명 복사"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button></div>
@@ -3621,6 +3627,10 @@
     if (!id) return;
     const g = (fid) => { const el = document.getElementById('df-' + fid); return el ? el.value.trim() : undefined; };
     const body = {};
+    const apiPathEl = document.getElementById('df-apiPath');
+    const apiPathOriginal = (document.getElementById('df-apiPathOriginal')?.value || '').trim();
+    const apiPathNew = apiPathEl ? (apiPathEl.value || '').trim() : '';
+    const apiPathChanged = !!apiPathEl && apiPathNew && apiPathNew !== apiPathOriginal;
     // 상태: 변경 시 자동 확정
     const status = g('status');
     if (status !== undefined) body.status = status || null;
@@ -3632,18 +3642,49 @@
     const team = g('teamOverride');   if (team !== undefined) body.teamOverride   = team || null;
     const mgr = g('managerOverride'); if (mgr !== undefined) body.managerOverride = mgr || null;
     const desc = g('descriptionOverride'); if (desc !== undefined) body.descriptionOverride = desc || null;
-    if (!Object.keys(body).length) { showToast('변경 사항 없음', 'info'); return; }
+    if (!Object.keys(body).length && !apiPathChanged) { showToast('변경 사항 없음', 'info'); return; }
     try {
-      const res = await adminFetch(`/api/db/record/${id}`, { method:'PATCH', body: JSON.stringify(body) });
-      const d = await res.json();
-      if (!res.ok) throw new Error(d.error || '저장 실패');
-      // 인메모리 데이터 갱신
-      const entry = allApis.find(a => a.id === id);
-      if (entry) Object.assign(entry, body);
+      // 1) apiPath 변경은 공개 엔드포인트로 먼저 처리 (분석 예외 케이스 보정)
+      if (apiPathChanged) {
+        if (!guardWritable('URL 경로 수정')) return;
+        const resP = await fetch(`/api/db/record/${id}/path`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ apiPath: apiPathNew })
+        });
+        const dP = await resP.json().catch(() => ({}));
+        if (!resP.ok) throw new Error(dP.error || 'URL 경로 저장 실패');
+        const entryP = allApis.find(a => a.id === id);
+        if (entryP) entryP.apiPath = apiPathNew;
+      }
+
+      // 2) 나머지 필드 변경(기존 로직 유지 — 관리자 토큰 필요할 수 있음)
+      if (Object.keys(body).length) {
+        const res = await adminFetch(`/api/db/record/${id}`, { method:'PATCH', body: JSON.stringify(body) });
+        const d = await res.json();
+        if (!res.ok) throw new Error(d.error || '저장 실패');
+        const entry = allApis.find(a => a.id === id);
+        if (entry) Object.assign(entry, body);
+      }
+
       showToast('저장 완료', 'success');
       openDetail(id);
       filterTable({ immediate:true });
     } catch(e) { showToast('저장 실패: ' + e.message, 'error'); }
+  }
+
+  async function startApiPathEdit() {
+    if (!guardWritable('URL 경로 수정')) return;
+    const ok = await customConfirm('분석에 의해 자동 추출된 URL입니다. 수정하시겠습니까?');
+    if (!ok) return;
+    const txt = document.getElementById('df-apiPathText');
+    const inp = document.getElementById('df-apiPath');
+    if (txt) txt.style.display = 'none';
+    if (inp) {
+      inp.style.display = '';
+      try { inp.focus(); inp.select(); } catch(e) {}
+    }
+    showDetailSave();
   }
 
   // ── 상태확정 토글 (상세 패널 전용, 독립 동작) ──────────────

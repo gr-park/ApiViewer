@@ -229,6 +229,8 @@
         <button class="btn btn-ghost" id="tab-3month"    onclick="selectPeriod('3month')">3달</button>
         <button class="btn btn-ghost" id="tab-6month"    onclick="selectPeriod('6month')">6달</button>
         <button class="btn btn-ghost" id="tab-year"      onclick="selectPeriod('year')">1년</button>
+        <div style="width:1px;height:20px;background:var(--border);margin:0 4px;"></div>
+        <button class="btn btn-blue" onclick="loadDashboard()">조회</button>
       </div>
       <span id="dashUpdatedAt" style="font-size:10px;color:var(--text-muted);margin-left:auto;"></span>
     </div>
@@ -269,7 +271,7 @@
             <th class="num">에러</th>
             <th class="num">API 수</th>
           </tr></thead>
-          <tbody id="dashByRepoTbody"><tr><td colspan="4" class="empty">기간을 선택하세요</td></tr></tbody>
+        <tbody id="dashByRepoTbody"><tr><td colspan="4" class="empty">조회 버튼을 클릭하세요</td></tr></tbody>
         </table>
       </div>
     </div>
@@ -283,7 +285,7 @@
             <th class="num">호출</th>
             <th class="num">에러</th>
           </tr></thead>
-          <tbody id="dashTopTbody"><tr><td colspan="4" class="empty">기간을 선택하세요</td></tr></tbody>
+          <tbody id="dashTopTbody"><tr><td colspan="4" class="empty">조회 버튼을 클릭하세요</td></tr></tbody>
         </table>
       </div>
     </div>
@@ -368,7 +370,7 @@
     <div class="viewer-detail-header">
       <h3>URL 기본정보</h3>
       <div style="display:flex;align-items:center;gap:6px;">
-        <button class="btn btn-ghost" onclick="openInViewerDetail()" style="height:30px;padding:6px 10px;background:#dcfce7;border-color:#86efac;color:#166534;font-weight:900;">URL분석현황 상세보기(새창)</button>
+        <button id="btnOpenViewerDetail" class="btn btn-ghost" onclick="openInViewerDetail()" style="height:30px;padding:6px 10px;background:#dcfce7;border-color:#86efac;color:#166534;font-weight:900;">URL분석현황 상세보기(새창)</button>
         <button class="btn btn-ghost" onclick="closeViewerDetail()">닫기 ✕</button>
       </div>
     </div>
@@ -383,6 +385,7 @@
   let currentPeriod = 'month';
   let currentDetail = { repo:'', apiPath:'', tab:'list' };
   let detailMonthRows = [], detailDailyRows = [];
+  let dashRepoOrderIndex = {}; // repoName -> display order index
 
   // ── 유틸 ──────────────────────────────────────────────
   function showToast(msg, type='success') {
@@ -416,17 +419,18 @@
     try {
       const res = await fetch('/api/config/repos');
       const repos = await res.json();
+      try {
+        dashRepoOrderIndex = {};
+        (repos || []).forEach((r, i) => { if (r && r.repoName) dashRepoOrderIndex[r.repoName] = i; });
+      } catch(e) { dashRepoOrderIndex = {}; }
       window._dashRepoSel = RepoSelect.mountCompact('#dashRepoSelect', {
         repos, selected: [], placeholder: '전체',
-        onChange: () => loadDashboard()
+        onChange: () => { /* 대시보드는 조회 버튼으로 실행 */ }
       });
       window._queryRepoSel = RepoSelect.mountCompact('#queryRepoSelect', {
         repos, selected: [], placeholder: '전체'
       });
     } catch(e) {}
-
-    // 대시보드 초기 로드
-    await loadDashboard();
   }
 
   // ══════════════════════════════════════════════════════
@@ -444,7 +448,7 @@
       if (!el) return;
       el.className = key === p ? 'btn btn-blue' : 'btn btn-ghost';
     });
-    loadDashboard();
+    // 대시보드는 조회 버튼으로 실행
   }
 
   async function loadDashboard() {
@@ -482,7 +486,14 @@
       if (!d.byRepo || !d.byRepo.length) {
         repoTbody.innerHTML = '<tr><td colspan="4" class="empty">데이터 없음</td></tr>';
       } else {
-        repoTbody.innerHTML = d.byRepo.map(r => `
+        const sortedRepos = [...d.byRepo].sort((a, b) => {
+          const oa = dashRepoOrderIndex[a.repoName], ob = dashRepoOrderIndex[b.repoName];
+          if (oa != null && ob != null && oa !== ob) return oa - ob;
+          if (oa == null && ob != null) return 1;
+          if (oa != null && ob == null) return -1;
+          return String(a.repoName || '').localeCompare(String(b.repoName || ''), 'ko');
+        });
+        repoTbody.innerHTML = sortedRepos.map(r => `
           <tr style="cursor:pointer;" onclick="filterQueryByRepo('${esc(r.repoName)}')">
             <td><span class="repo-badge">${esc(r.repoName)}</span></td>
             <td class="num">${fmt(r.callCount)}</td>
@@ -920,6 +931,11 @@
   function renderViewerDetailNotFound(repoName, apiPath, httpMethod) {
     const body = document.getElementById('viewerDetailBody');
     if (!body) return;
+    viewerDetailRecordId = null;
+    try {
+      const btn = document.getElementById('btnOpenViewerDetail');
+      if (btn) btn.style.display = 'none';
+    } catch(e) {}
     body.innerHTML = `
       <div style="font-size:13px;font-weight:900;color:#b91c1c;">관련 URL 없음</div>
       <div style="margin-top:8px;font-size:12px;color:var(--text-muted);line-height:1.6;">
@@ -937,6 +953,10 @@
   function renderViewerDetail(record) {
     const body = document.getElementById('viewerDetailBody');
     if (!body) return;
+    try {
+      const btn = document.getElementById('btnOpenViewerDetail');
+      if (btn) btn.style.display = '';
+    } catch(e) {}
     const r = record || {};
     const pill = (label, value) => `<span style="display:inline-flex;gap:6px;align-items:center;padding:4px 10px;border:1px solid var(--border);border-radius:999px;background:#f8fafc;font-size:11px;color:var(--text-muted);font-weight:800;">${esc(label)}<b style="color:var(--text);font-weight:900;">${esc(value ?? '-')}</b></span>`;
     const statusPill = (status) => {

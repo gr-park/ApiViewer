@@ -1111,6 +1111,62 @@ public class ApiViewController {
     }
 
     /**
+     * URL 경로(apiPath) 수정 — 분석 예외 케이스 수동 보정용.
+     * - UNIQUE(repo, apiPath, httpMethod) 충돌 시 거부.
+     * - 성공 시 modifiedAt/modifiedIp 갱신.
+     *
+     * Body: { "apiPath": "/foo/bar" }
+     */
+    @PatchMapping("/db/record/{id}/path")
+    public ResponseEntity<?> updateRecordApiPath(@PathVariable Long id, @RequestBody Map<String, Object> body, HttpServletRequest httpReq) {
+        try {
+            String ip = getClientIp(httpReq);
+            Object v = body.get("apiPath");
+            String newPath = v == null ? null : v.toString().trim();
+            if (newPath == null || newPath.isBlank()) {
+                return ResponseEntity.badRequest().body(Map.of("error", "apiPath가 비어 있습니다."));
+            }
+
+            ApiRecord r = recordRepository.findById(id)
+                    .orElseThrow(() -> new IllegalArgumentException("레코드를 찾을 수 없습니다: " + id));
+
+            String oldPath = r.getApiPath();
+            if (java.util.Objects.equals(oldPath, newPath)) {
+                return ResponseEntity.ok(Map.of("success", true, "id", r.getId(), "apiPath", r.getApiPath()));
+            }
+
+            String repo = r.getRepositoryName();
+            String hm = r.getHttpMethod();
+            Optional<ApiRecord> conflict = recordRepository.findByRepositoryNameAndApiPathAndHttpMethod(repo, newPath, hm);
+            if (conflict.isPresent() && !java.util.Objects.equals(conflict.get().getId(), r.getId())) {
+                return ResponseEntity.status(409).body(Map.of("error", "이미 존재하는 URL입니다. (repo/apiPath/httpMethod 중복)"));
+            }
+
+            r.setApiPath(newPath);
+            // apiPath 변경 시 기존 pathParamPattern 은 불일치할 수 있으므로 단건 보정은 clear (필요 시 별도 재계산 API 사용)
+            if (r.getPathParamPattern() != null && !r.getPathParamPattern().isBlank()) {
+                r.setPathParamPattern(null);
+            }
+            r.setModifiedAt(java.time.LocalDateTime.now());
+            r.setModifiedIp(ip);
+            recordRepository.save(r);
+            log.info("[URL 경로 수정] id={}, '{}' -> '{}'", id, oldPath, newPath);
+
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "id", r.getId(),
+                    "apiPath", r.getApiPath(),
+                    "modifiedAt", r.getModifiedAt() != null ? r.getModifiedAt().toString() : null
+            ));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            log.error("[URL 경로 수정 실패] id={}, 오류={}", id, e.getMessage(), e);
+            return ResponseEntity.internalServerError().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    /**
      * 현업검토 엑셀 업로드 — 공개 엔드포인트 (비관리자 접근 가능).
      * Body: [{ repositoryName, apiPath, httpMethod, reviewResult, reviewOpinion, reviewTeam, reviewManager }]
      * 응답: { matched, unmatched:[{repositoryName, apiPath, httpMethod}], skipped }
