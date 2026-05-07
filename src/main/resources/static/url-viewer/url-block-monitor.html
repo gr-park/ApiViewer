@@ -653,26 +653,34 @@
       tbody.innerHTML = slice.map((r, i) => `
         <tr class="${r.bot ? 'bot-row' : ''}">
           <td>${start + i + 1}</td>
-          <td class="col-time">${esc(r.endtime)}</td>
+          <td class="col-time">${esc(r.endtime || r.time || '')}</td>
           <td><span class="badge badge-repo">${esc(r.repoName)}</span></td>
-          <td>${r.okindName ? `<span class="badge badge-okd">${esc(r.okindName)}</span>` : ''}</td>
-          <td class="col-svc" title="${esc(r.service)}">
-            <span class="svc-link"
-                  data-repo-name="${esc(r.repoName)}"
-                  data-api-path="${esc(r.service)}"
-                  data-http-method="${esc(r.method||'')}"
-                  onclick="openViewerDetailModalFromEl(this)">${esc(r.service)}</span>
+          <td>${
+            (r.okindName || (r.source === 'JENNIFER' ? (r.instanceName || 'JENNIFER') : ''))
+              ? `<span class="badge badge-okd">${esc(r.okindName || (r.source === 'JENNIFER' ? (r.instanceName || 'JENNIFER') : ''))}</span>`
+              : ''
+          }</td>
+          <td class="col-svc" title="${esc(r.service || r.applicationName || '')}">
+            ${
+              (r.service && String(r.service).startsWith('/'))
+                ? `<span class="svc-link"
+                         data-repo-name="${esc(r.repoName)}"
+                         data-api-path="${esc(r.service)}"
+                         data-http-method="${esc(r.method||'')}"
+                         onclick="openViewerDetailModalFromEl(this)">${esc(r.service)}</span>`
+                : `${esc(r.service || r.applicationName || '')}`
+            }
           </td>
-          <td>${r.method ? `<span class="badge badge-method">${esc(r.method)}</span>` : ''}</td>
-          <td>${esc(r.domain)}</td>
-          <td>${esc(r.podName)}</td>
+          <td>${(r.method || r.errorType) ? `<span class="badge badge-method">${esc(r.method || r.errorType)}</span>` : ''}</td>
+          <td>${esc(r.domain || r.domainName || '')}</td>
+          <td>${esc(r.podName || r.instanceName || '')}</td>
           <td>${esc(r.country)}</td>
-          <td>${esc(r.clientType)}${r.bot ? '<span class="badge badge-bot">BOT</span>' : ''}</td>
-          <td>${esc(r.clientName)}</td>
-          <td>${esc(r.clientOs)}</td>
-          <td>${esc(r.oName)}</td>
-          <td>${esc(r.ipAddr)}</td>
-          <td class="col-ua" title="${esc(r.userAgent)}">${esc(r.userAgent)}</td>
+          <td>${esc(r.clientType || (r.source === 'JENNIFER' ? 'JENNIFER' : ''))}${r.bot ? '<span class="badge badge-bot">BOT</span>' : ''}</td>
+          <td>${esc(r.clientName || r.applicationName || '')}</td>
+          <td>${esc(r.clientOs || '')}</td>
+          <td>${esc(r.oName || r.domainId || '')}</td>
+          <td>${esc(r.ipAddr || '')}</td>
+          <td class="col-ua" title="${esc(r.userAgent || r.message || '')}">${esc(r.userAgent || r.message || '')}</td>
         </tr>
       `).join('');
     }

@@ -33,6 +33,8 @@ public class ApmCollectionService {
     private final RepoConfigRepository repoConfigRepo;
     private final WhatapApmService whatapApmService;
     private final JenniferApmService jenniferApmService;
+    private final ApiStorageService apiStorageService;
+    private final com.baek.viewer.repository.GlobalConfigRepository globalConfigRepository;
 
     /** UI 실시간 로그 (extract 로그와 동일 구조) */
     private final List<String> apmLogs = java.util.Collections.synchronizedList(new ArrayList<>());
@@ -66,13 +68,17 @@ public class ApmCollectionService {
     public ApmCollectionService(ApmCallDataRepository apmRepo, ApmUrlStatRepository apmUrlStatRepo,
                           ApiRecordRepository apiRecordRepo,
                           RepoConfigRepository repoConfigRepo,
-                          WhatapApmService whatapApmService, JenniferApmService jenniferApmService) {
+                          WhatapApmService whatapApmService, JenniferApmService jenniferApmService,
+                          ApiStorageService apiStorageService,
+                          com.baek.viewer.repository.GlobalConfigRepository globalConfigRepository) {
         this.apmRepo = apmRepo;
         this.apmUrlStatRepo = apmUrlStatRepo;
         this.apiRecordRepo = apiRecordRepo;
         this.repoConfigRepo = repoConfigRepo;
         this.whatapApmService = whatapApmService;
         this.jenniferApmService = jenniferApmService;
+        this.apiStorageService = apiStorageService;
+        this.globalConfigRepository = globalConfigRepository;
     }
 
     /** source 기본값 포함 오버로드 */
@@ -414,22 +420,47 @@ public class ApmCollectionService {
         // ApiRecord 업데이트 — APM 데이터에 없는 API는 0건으로 세팅
         boolean hasApmData = !totals.isEmpty();
         List<ApiRecord> records = apiRecordRepo.findByRepositoryName(repoName);
-        int updated = 0, zeroed = 0;
+        int updated = 0, zeroed = 0, statusChanged = 0;
+        int reviewThreshold = globalConfigRepository.findById(1L)
+                .map(com.baek.viewer.model.GlobalConfig::getReviewThreshold)
+                .orElse(3);
         for (ApiRecord rec : records) {
             long[] counts = totals.get(rec.getApiPath());
             if (counts != null) {
                 rec.setCallCount(counts[0]);
                 rec.setCallCountMonth(counts[1]);
                 rec.setCallCountWeek(counts[2]);
-                apiRecordRepo.save(rec);
                 updated++;
             } else if (hasApmData) {
                 // APM 데이터가 존재하는 레포인데 이 API만 없음 → 호출 0건 확정
                 rec.setCallCount(0L);
                 rec.setCallCountMonth(0L);
                 rec.setCallCountWeek(0L);
-                apiRecordRepo.save(rec);
                 zeroed++;
+            }
+
+            // ⚠ 상태 재계산: 호출건수는 상태판정의 핵심인데,
+            // aggregate 단계에서 상태를 갱신하지 않으면 "호출건수는 있는데 차단대상"처럼 보일 수 있다.
+            // - statusOverridden=true 또는 차단완료는 보호
+            // - ApiStorageService.calculateStatus의 sticky 규칙을 그대로 따른다.
+            if (!rec.isStatusOverridden() && !"차단완료".equals(rec.getStatus())) {
+                String oldStatus = rec.getStatus();
+                String newStatus = apiStorageService.calculateStatus(rec, reviewThreshold);
+                if (!java.util.Objects.equals(oldStatus, newStatus)) {
+                    rec.setStatus(newStatus);
+                    rec.setStatusChanged(true);
+                    rec.setStatusChangeLog(ApiStorageService.appendChangeLogText(
+                            rec.getStatusChangeLog(),
+                            oldStatus + "→" + newStatus + ": APM 집계 반영"
+                    ));
+                    statusChanged++;
+                }
+            }
+
+            // counts가 없는 레포(=hasApmData=false)에서는 callCount를 건드리지 않으므로 save 필요 없음.
+            // counts가 있거나(업데이트/0세팅) 또는 status가 바뀐 경우만 저장한다.
+            if (counts != null || hasApmData || statusChanged > 0) {
+                apiRecordRepo.save(rec);
             }
         }
 
@@ -441,8 +472,8 @@ public class ApmCollectionService {
                     e.getKey(), e.getValue()[0], e.getValue()[1], e.getValue()[2]);
         }
 
-        log.info("[APM 집계] 완료: repo={}, 업데이트={}건, 0건세팅={}건", repoName, updated, zeroed);
-        return Map.of("updated", updated, "zeroed", zeroed, "totalApis", totals.size());
+        log.info("[APM 집계] 완료: repo={}, 업데이트={}건, 0건세팅={}건, 상태변경={}건", repoName, updated, zeroed, statusChanged);
+        return Map.of("updated", updated, "zeroed", zeroed, "statusChanged", statusChanged, "totalApis", totals.size());
     }
 
     /**

@@ -17,7 +17,12 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.regex.Pattern;
@@ -43,6 +48,8 @@ public class JenniferBlockMonitorService {
 
     private static final Logger log = LoggerFactory.getLogger(JenniferBlockMonitorService.class);
     private static final ZoneId KST = ZoneId.of("Asia/Seoul");
+    private static final DateTimeFormatter TS_FMT =
+            DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").withZone(KST);
     private static final String BLOCK_KEYWORD = "차단";
     private static final String TARGET_ERROR_TYPE = "SERVICE_EXCEPTION";
     private static final String ERROR_SEARCH_PATH = "/api/dbsearch/error";
@@ -265,17 +272,50 @@ public class JenniferBlockMonitorService {
             if (timeStr != null && !timeStr.isBlank()) {
                 try {
                     long timeMs = Long.parseLong(timeStr.trim());
-                    row.setEndtime(java.time.format.DateTimeFormatter
-                            .ofPattern("yyyy-MM-dd HH:mm:ss")
-                            .withZone(KST)
-                            .format(java.time.Instant.ofEpochMilli(timeMs)));
+                    row.setEndtime(TS_FMT.format(java.time.Instant.ofEpochMilli(timeMs)));
                 } catch (NumberFormatException e) {
-                    row.setEndtime(timeStr);
+                    row.setEndtime(normalizeTimeString(timeStr));
                 }
             }
             out.add(row);
         }
         return out;
+    }
+
+    /**
+     * Jennifer time 문자열을 와탭 endtime 포맷(yyyy-MM-dd HH:mm:ss, KST)으로 정규화.
+     * - ISO-8601 (Instant/Offset/Zoned) 또는 LocalDateTime 패턴을 최대한 수용한다.
+     * - 파싱 실패 시 원문을 그대로 반환한다.
+     */
+    private static String normalizeTimeString(String raw) {
+        if (raw == null) return null;
+        String s = raw.trim();
+        if (s.isEmpty()) return null;
+
+        // 흔한 형태: "2026-05-07 20:11:22" 또는 "2026-05-07T20:11:22"
+        try {
+            LocalDateTime ldt = LocalDateTime.parse(s, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+            return ldt.atZone(KST).format(TS_FMT);
+        } catch (DateTimeParseException ignored) {}
+        try {
+            LocalDateTime ldt = LocalDateTime.parse(s, DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+            return ldt.atZone(KST).format(TS_FMT);
+        } catch (DateTimeParseException ignored) {}
+
+        // Offset/Zoned/Instant 형태
+        try {
+            OffsetDateTime odt = OffsetDateTime.parse(s, DateTimeFormatter.ISO_OFFSET_DATE_TIME);
+            return odt.atZoneSameInstant(KST).format(TS_FMT);
+        } catch (DateTimeParseException ignored) {}
+        try {
+            ZonedDateTime zdt = ZonedDateTime.parse(s, DateTimeFormatter.ISO_ZONED_DATE_TIME);
+            return zdt.withZoneSameInstant(KST).format(TS_FMT);
+        } catch (DateTimeParseException ignored) {}
+        try {
+            return TS_FMT.format(java.time.Instant.parse(s));
+        } catch (DateTimeParseException ignored) {}
+
+        return raw;
     }
 
     /** JSON 노드에서 문자열 추출 */

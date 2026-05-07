@@ -189,6 +189,18 @@ public class GlobalConfig {
     @Column(name = "ai_last_ops_digest_at")
     private LocalDateTime aiLastOpsDigestAt;
 
+    /**
+     * APM ↔ URL분석현황 매칭 진단 리포트 (JSON).
+     * - 대시보드/설정의 "자동 리포트" 노출용
+     * - 큰 데이터는 담지 않고 요약 + 레포별 top 미매칭 샘플만 저장한다.
+     */
+    @Column(name = "apm_match_report", columnDefinition = "TEXT")
+    private String apmMatchReport;
+
+    /** 마지막 APM 매칭 리포트 생성 시각 */
+    @Column(name = "apm_match_report_at")
+    private LocalDateTime apmMatchReportAt;
+
 
     public Long getId() { return id; }
     public String getStartDate() { return startDate; }
@@ -301,6 +313,11 @@ public class GlobalConfig {
     public void setAiLastOpsDigest(String v) { this.aiLastOpsDigest = v; }
     public LocalDateTime getAiLastOpsDigestAt() { return aiLastOpsDigestAt; }
     public void setAiLastOpsDigestAt(LocalDateTime v) { this.aiLastOpsDigestAt = v; }
+
+    public String getApmMatchReport() { return apmMatchReport; }
+    public void setApmMatchReport(String v) { this.apmMatchReport = v; }
+    public LocalDateTime getApmMatchReportAt() { return apmMatchReportAt; }
+    public void setApmMatchReportAt(LocalDateTime v) { this.apmMatchReportAt = v; }
 
     /** 채팅 API 전체 URL */
     public String resolveAiChatEndpoint() {

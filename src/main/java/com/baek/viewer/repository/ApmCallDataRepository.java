@@ -98,6 +98,14 @@ public interface ApmCallDataRepository extends JpaRepository<ApmCallData, Long> 
     List<Object[]> topApis(@Param("from") LocalDate from, @Param("to") LocalDate to,
                             @Param("repo") String repo, org.springframework.data.domain.Pageable pageable);
 
+    /** 레포별 distinct apiPath 목록 (매칭 진단용). */
+    @Query("SELECT DISTINCT a.apiPath FROM ApmCallData a " +
+           "WHERE a.repositoryName = :repo AND a.callDate BETWEEN :from AND :to " +
+           "ORDER BY a.apiPath ASC")
+    List<String> distinctApiPathsByRepo(@Param("repo") String repo,
+                                         @Param("from") LocalDate from,
+                                         @Param("to") LocalDate to);
+
     /**
      * URL별 집계 (페이징/검색용) — 4가지 기간 집계 동시 반환.
      * 반환: [repositoryName, apiPath, totalAll, totalError, year, month, week]

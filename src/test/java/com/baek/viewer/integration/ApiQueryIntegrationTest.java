@@ -1,7 +1,9 @@
 package com.baek.viewer.integration;
 
 import com.baek.viewer.model.ApiRecord;
+import com.baek.viewer.model.RepoConfig;
 import com.baek.viewer.repository.ApiRecordRepository;
+import com.baek.viewer.repository.RepoConfigRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -40,6 +42,7 @@ class ApiQueryIntegrationTest {
     private static final String REPO_C = "test-q-C";
 
     @Autowired ApiRecordRepository recordRepo;
+    @Autowired RepoConfigRepository repoConfigRepo;
     @Autowired MockMvc mockMvc;
 
     @BeforeEach
@@ -47,6 +50,15 @@ class ApiQueryIntegrationTest {
         recordRepo.deleteByRepositoryName(REPO_A);
         recordRepo.deleteByRepositoryName(REPO_B);
         recordRepo.deleteByRepositoryName(REPO_C);
+
+        // api_record.repository_name 은 repo_config.repo_name 과 조인되며 (환경에 따라 FK가 생성될 수 있음)
+        // 통합 테스트에서도 레포 설정을 먼저 준비한다.
+        repoConfigRepo.findByRepoName(REPO_A).ifPresent(rc -> repoConfigRepo.deleteById(rc.getId()));
+        repoConfigRepo.findByRepoName(REPO_B).ifPresent(rc -> repoConfigRepo.deleteById(rc.getId()));
+        repoConfigRepo.findByRepoName(REPO_C).ifPresent(rc -> repoConfigRepo.deleteById(rc.getId()));
+        repoConfigRepo.saveAll(List.of(
+                repo(REPO_A), repo(REPO_B), repo(REPO_C)
+        ));
 
         // REPO_A: 사용 2 / ①-② 1 / ②-③ 1 = 4건
         recordRepo.saveAll(List.of(
@@ -73,6 +85,16 @@ class ApiQueryIntegrationTest {
         r.setApiPath(path);
         r.setHttpMethod(method);
         r.setStatus(status);
+        return r;
+    }
+
+    private RepoConfig repo(String repoName) {
+        RepoConfig r = new RepoConfig();
+        r.setRepoName(repoName);
+        r.setBusinessName(repoName);
+        r.setTeamName("IT카드개발팀");
+        r.setWhatapEnabled("N");
+        r.setJenniferEnabled("N");
         return r;
     }
 

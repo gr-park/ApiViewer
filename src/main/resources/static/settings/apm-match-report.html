@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>URL Viewer — APM 매칭 리포트</title>
+  <meta name="nav-segment" content="settings">
+  <meta name="nav-page" content="apm-match-report">
+  <link rel="stylesheet" href="/common/nav.css">
+  <script src="/js/darkmode.js"></script>
+  <style>
+    :root{
+      --bg:#f4f6f9; --card:#fff; --primary:#3b82f6; --primary-hover:#2563eb;
+      --danger:#ef4444; --success:#22c55e; --warn:#f59e0b;
+      --text:#1e293b; --text-muted:#64748b; --border:#e2e8f0; --shadow:0 1px 4px rgba(0,0,0,.08);
+    }
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);font-size:13px;}
+    .main{max-width:1400px;margin:0 auto;padding:18px 24px;}
+    .card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px 18px;margin-bottom:12px;box-shadow:var(--shadow);}
+    .card-title{font-size:11px;font-weight:800;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;display:flex;align-items:center;gap:8px;}
+    .dot{width:8px;height:8px;border-radius:50%;}
+    .btn{padding:7px 14px;border:none;border-radius:6px;font-size:12px;font-weight:800;cursor:pointer;transition:background .15s;height:32px;}
+    .btn-blue{background:var(--primary);color:#fff;}
+    .btn-blue:hover{background:var(--primary-hover);}
+    .btn-ghost{background:#f1f5f9;color:var(--text-muted);border:1px solid var(--border);}
+    .btn-ghost:hover{background:#e2e8f0;}
+    .meta{font-size:11px;color:var(--text-muted);display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
+    .pill{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;border:1px solid var(--border);background:#f8fafc;font-weight:900;font-size:11px;}
+    .pill.bad{background:#fee2e2;border-color:#fecaca;color:#991b1b;}
+    .pill.ok{background:#dcfce7;border-color:#86efac;color:#166534;}
+    .tbl-wrap{overflow:auto;border:1px solid var(--border);border-radius:8px;background:var(--card);max-height:70vh;}
+    table{width:100%;border-collapse:collapse;font-size:12px;}
+    thead th{position:sticky;top:0;background:#f1f5f9;padding:8px 10px;text-align:left;font-size:11px;font-weight:900;color:var(--text-muted);border-bottom:1px solid var(--border);white-space:nowrap;}
+    tbody td{padding:7px 10px;border-bottom:1px solid var(--border);vertical-align:top;}
+    tbody tr:hover{background:#f8fafc;}
+    .mono{font-family:Consolas,monospace;}
+    .muted{color:var(--text-muted);}
+    .toast{position:fixed;bottom:24px;right:24px;padding:10px 18px;border-radius:8px;font-size:13px;color:#fff;z-index:9999;opacity:0;transition:opacity .3s;pointer-events:none;background:var(--text);}
+    .toast.show{opacity:1;}
+    .toast.error{background:var(--danger);} .toast.success{background:var(--success);}
+    :root[data-theme="dark"]{
+      --bg:#0f172a;--card:#1e293b;--text:#f1f5f9;--text-muted:#94a3b8;--border:#334155;
+      --primary:#60a5fa;--primary-hover:#3b82f6;--shadow:0 1px 4px rgba(0,0,0,.4);
+    }
+    [data-theme="dark"] .card,[data-theme="dark"] .tbl-wrap{background:var(--card)!important;border-color:var(--border)!important;}
+    [data-theme="dark"] thead th{background:#293548!important;}
+    [data-theme="dark"] tbody tr:hover{background:#293548!important;}
+    [data-theme="dark"] .btn-ghost{background:#293548;color:var(--text-muted);border-color:var(--border);}
+    [data-theme="dark"] .btn-ghost:hover{background:#334155;}
+    [data-theme="dark"] .pill{background:#293548;border-color:var(--border);}
+  </style>
+</head>
+<body>
+  <div id="nav-container"></div>
+  <div class="main">
+    <div class="card">
+      <div class="card-title"><span class="dot" style="background:#3b82f6;"></span>APM 매칭 진단 리포트</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+        <button class="btn btn-blue" onclick="refreshReport()">🔄 지금 재생성</button>
+        <button class="btn btn-ghost" onclick="download('json')">⬇ JSON</button>
+        <button class="btn btn-ghost" onclick="download('csv')">⬇ CSV</button>
+        <span id="meta" class="meta" style="margin-left:auto;"></span>
+      </div>
+      <div id="summary" class="meta" style="margin-top:10px;"></div>
+    </div>
+
+    <div class="card" style="padding:0;">
+      <div style="padding:12px 16px;display:flex;align-items:center;justify-content:space-between;">
+        <div class="card-title" style="margin:0;"><span class="dot" style="background:#ef4444;"></span>레포별 미매칭 요약</div>
+        <span class="muted" style="font-size:11px;">미매칭 상위 샘플은 호출건수 기준</span>
+      </div>
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>repo</th>
+              <th>analysisApi</th>
+              <th>apmApi</th>
+              <th>mismatch</th>
+              <th>matchRate</th>
+              <th>topMismatches</th>
+            </tr>
+          </thead>
+          <tbody id="tbody">
+            <tr><td colspan="6" class="muted" style="padding:18px;">로딩 중...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    function esc(s){ if(s==null) return ''; return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+    function showToast(msg, type){
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.className = 'toast show' + (type ? ' ' + type : '');
+      setTimeout(() => t.className = 'toast', 2400);
+    }
+    function fmt(n){ return Number(n||0).toLocaleString(); }
+    function pct(x){
+      const v = Number(x||0);
+      if (!isFinite(v)) return '0%';
+      return Math.round(v * 1000) / 10 + '%';
+    }
+    function fmtTime(iso){
+      if (!iso) return '';
+      const d = new Date(iso);
+      if (isNaN(d.getTime())) return String(iso).replace('T',' ').substring(0,19);
+      const pad = (n)=>String(n).padStart(2,'0');
+      return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    }
+
+    let lastReport = null;
+
+    async function loadReport(refresh){
+      const url = refresh ? '/api/config/apm-match-report?refresh=1' : '/api/config/apm-match-report';
+      const res = await fetch(url, { credentials:'same-origin' });
+      const data = await res.json().catch(()=> ({}));
+      if (!res.ok) throw new Error(data.error || '리포트 조회 실패');
+      lastReport = data;
+      render(data);
+    }
+
+    function render(r){
+      const meta = document.getElementById('meta');
+      const genAt = fmtTime(r.generatedAt || '');
+      meta.innerHTML = [
+        genAt ? `<span class="pill ok">갱신 ${esc(genAt)}</span>` : `<span class="pill">갱신 -</span>`,
+        `<span class="pill ${Number(r.totalMismatchPaths||0)>0?'bad':'ok'}">미매칭 ${fmt(r.totalMismatchPaths||0)}건</span>`,
+        `<span class="pill">기간 ${fmt(r.periodDays||365)}일</span>`
+      ].join(' ');
+
+      document.getElementById('summary').innerHTML =
+        `<span class="muted">레포 ${fmt(r.repoCount||0)}개 중, 미매칭 레포 ${fmt(r.mismatchRepoCount||0)}개</span>`;
+
+      const tbody = document.getElementById('tbody');
+      const repos = Array.isArray(r.repos) ? r.repos : [];
+      if (!repos.length){
+        tbody.innerHTML = `<tr><td colspan="6" class="muted" style="padding:18px;">미매칭 리포트가 없습니다. (APM 데이터가 없거나, 모두 매칭됨)</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = repos.map(x => {
+        const top = Array.isArray(x.topMismatches) ? x.topMismatches : [];
+        const topHtml = top.length ? top.map(t => {
+          const p = t.apiPath || '';
+          const c = t.callCount || 0;
+          return `<div class="mono" title="${esc(p)}">${esc(p)} <span class="muted">(${fmt(c)})</span></div>`;
+        }).join('') : '<span class="muted">-</span>';
+        return `
+          <tr>
+            <td><b>${esc(x.repoName)}</b></td>
+            <td class="muted">${fmt(x.analysisApiCount||0)}</td>
+            <td class="muted">${fmt(x.apmApiCount||0)}</td>
+            <td><b style="color:${(x.mismatchCount||0)>0?'#dc2626':'inherit'}">${fmt(x.mismatchCount||0)}</b></td>
+            <td class="muted">${pct(x.matchRate||0)}</td>
+            <td style="min-width:520px;max-width:760px;">${topHtml}</td>
+          </tr>`;
+      }).join('');
+    }
+
+    async function refreshReport(){
+      try {
+        showToast('리포트 재생성 중...', '');
+        await loadReport(true);
+        showToast('리포트 갱신 완료', 'success');
+      } catch(e) {
+        showToast('갱신 실패: ' + e.message, 'error');
+      }
+    }
+
+    function buildCsv(r){
+      const repos = Array.isArray(r.repos) ? r.repos : [];
+      const rows = [];
+      rows.push(['generatedAt','periodDays','repoName','analysisApiCount','apmApiCount','mismatchCount','matchRate','topMismatches'].join(','));
+      repos.forEach(x => {
+        const top = Array.isArray(x.topMismatches) ? x.topMismatches : [];
+        const topStr = top.map(t => `${t.apiPath}(${t.callCount||0})`).join(' | ');
+        const line = [
+          r.generatedAt || '',
+          r.periodDays || 365,
+          x.repoName || '',
+          x.analysisApiCount || 0,
+          x.apmApiCount || 0,
+          x.mismatchCount || 0,
+          x.matchRate || 0,
+          topStr
+        ].map(v => `"${String(v).replace(/"/g,'""')}"`).join(',');
+        rows.push(line);
+      });
+      return rows.join('\n');
+    }
+
+    function download(fmtType){
+      if (!lastReport){
+        showToast('리포트를 먼저 로드하세요', 'error');
+        return;
+      }
+      const ts = (lastReport.generatedAt || new Date().toISOString()).replace(/[:T]/g,'-').slice(0,19);
+      if (fmtType === 'json'){
+        const blob = new Blob([JSON.stringify(lastReport, null, 2)], {type:'application/json'});
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `apm-match-report-${ts}.json`;
+        a.click();
+        URL.revokeObjectURL(a.href);
+      } else {
+        const blob = new Blob([buildCsv(lastReport)], {type:'text/csv;charset=utf-8'});
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `apm-match-report-${ts}.csv`;
+        a.click();
+        URL.revokeObjectURL(a.href);
+      }
+    }
+
+    loadReport(false).catch(e => {
+      showToast('리포트 로드 실패: ' + e.message, 'error');
+      document.getElementById('tbody').innerHTML = `<tr><td colspan="6" class="muted" style="padding:18px;">로드 실패: ${esc(e.message)}</td></tr>`;
+    });
+  </script>
+
+  <script src="/common/auth.js"></script>
+  <script src="/common/nav.js"></script>
+</body>
+</html>
+

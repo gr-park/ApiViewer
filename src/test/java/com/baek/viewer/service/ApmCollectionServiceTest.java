@@ -5,7 +5,9 @@ import com.baek.viewer.model.ApmCallData;
 import com.baek.viewer.repository.ApiRecordRepository;
 import com.baek.viewer.repository.ApmCallDataRepository;
 import com.baek.viewer.repository.ApmUrlStatRepository;
+import com.baek.viewer.repository.GlobalConfigRepository;
 import com.baek.viewer.repository.RepoConfigRepository;
+import com.baek.viewer.model.GlobalConfig;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -41,6 +43,12 @@ class ApmCollectionServiceTest {
     @Mock
     private RepoConfigRepository repoConfigRepo;
 
+    @Mock
+    private ApiStorageService apiStorageService;
+
+    @Mock
+    private GlobalConfigRepository globalConfigRepository;
+
     // WhatapApmService / JenniferApmService 는 HttpClient final 필드 때문에
     // Mockito inline mock 이 Java 25 환경에서 실패 — 실제 인스턴스 주입 후 테스트에서는 호출하지 않음
     private WhatapApmService whatapApmService;
@@ -53,7 +61,12 @@ class ApmCollectionServiceTest {
         whatapApmService = new WhatapApmService(apmRepo, null);
         jenniferApmService = new JenniferApmService(apmRepo, null);
         service = new ApmCollectionService(apmRepo, apmUrlStatRepo, apiRecordRepo, repoConfigRepo,
-                whatapApmService, jenniferApmService);
+                whatapApmService, jenniferApmService, apiStorageService, globalConfigRepository);
+        // 기본값: reviewThreshold=3
+        GlobalConfig gc = new GlobalConfig();
+        gc.setReviewThreshold(3);
+        lenient().when(globalConfigRepository.findById(1L)).thenReturn(java.util.Optional.of(gc));
+        lenient().when(apiStorageService.calculateStatus(any(ApiRecord.class), anyInt())).thenReturn("사용");
     }
 
     // ═══════════════════ 파라미터 검증 ═══════════════════

@@ -438,6 +438,12 @@ function updateAdminBadge(valid) {
         <span class="field-hint">한 페이지 건수 (기본 10000)</span>
       </label>
     </div>
+    <div role="presentation" aria-hidden="true" style="border-top:1px solid var(--border);margin:14px 0 12px;"></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+      <span style="font-size:11px;color:var(--text-muted);font-weight:800;">APM↔URL 매칭 진단</span>
+      <button type="button" class="btn btn-ghost" style="height:28px;padding:4px 12px;font-size:11px;" onclick="window.open('/settings/apm-match-report.html','_blank','noopener')">🧪 리포트 상세 보기</button>
+      <span style="font-size:11px;color:var(--text-muted);">미매칭이 많으면 URL현황의 호출 집계/상태가 왜곡될 수 있습니다.</span>
+    </div>
   </div>
 
   <div class="card" style="border:1px solid #c4b5fd;margin-top:12px;">

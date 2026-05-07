@@ -2,8 +2,10 @@ package com.baek.viewer.integration;
 
 import com.baek.viewer.model.ApiRecord;
 import com.baek.viewer.model.ApiRecordSnapshot;
+import com.baek.viewer.model.RepoConfig;
 import com.baek.viewer.repository.ApiRecordRepository;
 import com.baek.viewer.repository.ApiRecordSnapshotRepository;
+import com.baek.viewer.repository.RepoConfigRepository;
 import com.baek.viewer.service.SnapshotService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -30,12 +32,22 @@ class SnapshotRestoreIntegrationTest {
     @Autowired
     private ApiRecordRepository recordRepo;
     @Autowired
+    private RepoConfigRepository repoConfigRepo;
+    @Autowired
     private ApiRecordSnapshotRepository snapshotRepository;
 
     @Test
     @DisplayName("restoreLiveFromSnapshot — 라이브 전체를 스냅샷 내용으로 교체")
     void restoreLive_replacesAllApiRecords() {
         recordRepo.deleteByRepositoryName(REPO);
+        repoConfigRepo.findByRepoName(REPO).ifPresent(rc -> repoConfigRepo.deleteById(rc.getId()));
+        RepoConfig rc = new RepoConfig();
+        rc.setRepoName(REPO);
+        rc.setBusinessName(REPO);
+        rc.setTeamName("IT카드개발팀");
+        rc.setWhatapEnabled("N");
+        rc.setJenniferEnabled("N");
+        repoConfigRepo.save(rc);
 
         ApiRecord a = new ApiRecord();
         a.setRepositoryName(REPO);

@@ -25,13 +25,16 @@ public class ConfigController {
     private final RepoConfigRepository repoRepo;
     private final GlobalConfigRepository globalRepo;
     private final YamlConfigService yamlConfigService;
+    private final com.baek.viewer.service.ApmMatchReportService apmMatchReportService;
 
     public ConfigController(RepoConfigRepository repoRepo,
                             GlobalConfigRepository globalRepo,
-                            YamlConfigService yamlConfigService) {
+                            YamlConfigService yamlConfigService,
+                            com.baek.viewer.service.ApmMatchReportService apmMatchReportService) {
         this.repoRepo = repoRepo;
         this.globalRepo = globalRepo;
         this.yamlConfigService = yamlConfigService;
+        this.apmMatchReportService = apmMatchReportService;
     }
 
     // ── 공통 설정 ──────────────────────────────────────────
@@ -57,6 +60,49 @@ public class ConfigController {
                     return ResponseEntity.ok(Map.of("text", text.trim(), "at", at));
                 })
                 .orElse(ResponseEntity.ok(Map.of("text", "", "at", "")));
+    }
+
+    /**
+     * 대시보드/전역 네비 배너용 — APM↔URL 매칭 진단 요약(공개).
+     * 설정/상세는 admin-only 페이지에서 별도 호출.
+     */
+    @GetMapping("/apm-match-summary")
+    public ResponseEntity<?> getApmMatchSummary() {
+        return globalRepo.findById(1L)
+                .map(gc -> {
+                    String at = gc.getApmMatchReportAt() != null ? gc.getApmMatchReportAt().toString() : "";
+                    String json = gc.getApmMatchReport();
+                    if (json == null || json.isBlank()) {
+                        return ResponseEntity.ok(Map.of("ok", true, "at", at, "mismatchRepoCount", 0, "totalMismatchPaths", 0));
+                    }
+                    try {
+                        @SuppressWarnings("unchecked")
+                        Map<String, Object> m = new ObjectMapper().readValue(json, new TypeReference<>() {});
+                        int mismatchRepoCount = ((Number) m.getOrDefault("mismatchRepoCount", 0)).intValue();
+                        long totalMismatchPaths = ((Number) m.getOrDefault("totalMismatchPaths", 0)).longValue();
+                        int days = ((Number) m.getOrDefault("periodDays", 365)).intValue();
+                        return ResponseEntity.ok(Map.of(
+                                "ok", true,
+                                "at", at,
+                                "periodDays", days,
+                                "mismatchRepoCount", mismatchRepoCount,
+                                "totalMismatchPaths", totalMismatchPaths
+                        ));
+                    } catch (Exception e) {
+                        return ResponseEntity.ok(Map.of("ok", false, "at", at, "error", "parse_failed"));
+                    }
+                })
+                .orElse(ResponseEntity.ok(Map.of("ok", true, "at", "", "mismatchRepoCount", 0, "totalMismatchPaths", 0)));
+    }
+
+    /** 설정 상세 화면용 — 저장된 리포트 조회. refresh=1이면 즉시 재생성 후 반환. */
+    @GetMapping("/apm-match-report")
+    public ResponseEntity<?> getApmMatchReport(@RequestParam(value = "refresh", required = false) String refresh) {
+        boolean doRefresh = "1".equals(refresh) || "true".equalsIgnoreCase(refresh);
+        if (doRefresh) {
+            return ResponseEntity.ok(apmMatchReportService.regenerateAndStore(365, 30));
+        }
+        return ResponseEntity.ok(apmMatchReportService.getStoredReport());
     }
 
     @PutMapping("/global")

@@ -90,6 +90,7 @@ public class WebConfig implements WebMvcConfigurer {
                         "/url-viewer/extract.html",
                         "/settings/",
                         "/settings/index.html",
+                        "/settings/apm-match-report.html",
                         "/encrypt-viewer/**"   // 암복호화 모듈 — 일반 사용자에게 노출 금지
                 );
     }

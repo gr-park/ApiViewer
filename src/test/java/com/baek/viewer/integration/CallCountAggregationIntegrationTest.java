@@ -2,7 +2,9 @@ package com.baek.viewer.integration;
 
 import com.baek.viewer.model.ApiInfo;
 import com.baek.viewer.model.ApiRecord;
+import com.baek.viewer.model.RepoConfig;
 import com.baek.viewer.repository.ApiRecordRepository;
+import com.baek.viewer.repository.RepoConfigRepository;
 import com.baek.viewer.service.ApiStorageService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -34,10 +36,19 @@ class CallCountAggregationIntegrationTest {
 
     @Autowired ApiStorageService storage;
     @Autowired ApiRecordRepository recordRepo;
+    @Autowired RepoConfigRepository repoConfigRepo;
 
     @BeforeEach
     void cleanup() {
         recordRepo.deleteByRepositoryName(REPO);
+        repoConfigRepo.findByRepoName(REPO).ifPresent(rc -> repoConfigRepo.deleteById(rc.getId()));
+        RepoConfig rc = new RepoConfig();
+        rc.setRepoName(REPO);
+        rc.setBusinessName(REPO);
+        rc.setTeamName("IT카드개발팀");
+        rc.setWhatapEnabled("N");
+        rc.setJenniferEnabled("N");
+        repoConfigRepo.save(rc);
     }
 
     private ApiInfo info(String path, String[] git) {

@@ -12,7 +12,7 @@
  * ═══════════════════════════════════════════════════════════════ */
 (function () {
   // UI 버전 표기 (캐시/반영 여부 확인용) — 변경 시 이 값만 갱신
-  const APP_UI_VERSION = 'ver1.6.03';
+  const APP_UI_VERSION = 'ver1.7.01';
 
   const SEGMENTS = [
     {
@@ -53,7 +53,8 @@
       home: '/settings/',
       adminOnly: true,
       pages: [
-        { id: 'settings-home', label: '⚙️ 설정 관리',        href: '/settings/' }
+        { id: 'settings-home',     label: '⚙️ 설정 관리',        href: '/settings/' },
+        { id: 'apm-match-report',  label: '🧪 APM 매칭 리포트',  href: '/settings/apm-match-report.html' }
       ]
     }
   ];
@@ -137,6 +138,7 @@
       <div id="nav-alert-stack" class="nav-alert-stack">
         <div id="sync-warning-slot"></div>
         <div id="ops-digest-slot"></div>
+        <div id="apm-match-slot"></div>
       </div>
     `;
 
@@ -159,6 +161,7 @@
   }
   const SYNC_WARN_DISMISS_KEY = 'syncWarnDismiss';
   const OPS_DIGEST_DISMISS_KEY = 'opsDigestDismissAt';
+  const APM_MATCH_DISMISS_KEY = 'apmMatchDismissAt';
 
   function renderSyncWarnings(list) {
     const slot = document.getElementById('sync-warning-slot');
@@ -310,6 +313,62 @@
       .catch(() => {});
   }
 
+  // ─── APM 매칭 진단 배너 ────────────────────────────────
+  function renderApmMatchBanner(data) {
+    const slot = document.getElementById('apm-match-slot');
+    if (!slot) return;
+    if (!data || data.ok === false) { slot.innerHTML = ''; return; }
+    const mismatchRepos = Number(data.mismatchRepoCount || 0);
+    const mismatchPaths = Number(data.totalMismatchPaths || 0);
+    const at = data.at || '';
+    const days = Number(data.periodDays || 365);
+    if (!mismatchRepos || mismatchRepos <= 0 || !mismatchPaths || mismatchPaths <= 0) {
+      slot.innerHTML = '';
+      return;
+    }
+    // 사용자가 닫은 동일 at 이면 숨김
+    try {
+      const dismissed = sessionStorage.getItem(APM_MATCH_DISMISS_KEY);
+      if (dismissed && at && dismissed === at) { slot.innerHTML = ''; return; }
+    } catch(e) {}
+
+    const timeStr = fmtDigestTime(at);
+    const loggedIn = window.AuthState && window.AuthState.loggedIn;
+    const link = loggedIn
+      ? `<a href="/settings/apm-match-report.html" class="sync-warning-toggle" style="text-decoration:none;">상세 보기 ▶</a>`
+      : '';
+    slot.innerHTML = `
+      <div class="sync-warning-banner ops-digest-banner" role="alert">
+        <div class="sync-warning-summary">
+          <span class="sync-warning-icon" aria-hidden="true">🧪</span>
+          <div class="sync-warning-text ops-digest-text-wrap">
+            <div><strong>APM↔URL 매칭 경고</strong></div>
+            ${timeStr ? `<div class="ops-digest-time">갱신: ${esc(timeStr)}</div>` : ''}
+            <div class="ops-digest-preview">
+              미매칭 레포 <strong>${esc(mismatchRepos)}</strong>개 · 미매칭 URL <strong>${esc(mismatchPaths)}</strong>건 (최근 ${esc(days)}일)
+            </div>
+          </div>
+          ${link}
+          <button type="button" class="sync-warning-close" aria-label="이 알림 닫기 (다음 갱신 시 다시 표시)" title="닫기">✕</button>
+        </div>
+      </div>`;
+    const root = slot.querySelector('.ops-digest-banner');
+    const closeBtn = root && root.querySelector('.sync-warning-close');
+    if (closeBtn) {
+      closeBtn.addEventListener('click', () => {
+        try { sessionStorage.setItem(APM_MATCH_DISMISS_KEY, at || '1'); } catch (e) {}
+        slot.innerHTML = '';
+      });
+    }
+  }
+
+  function loadApmMatchBanner() {
+    fetch('/api/config/apm-match-summary', { credentials: 'same-origin' })
+      .then(r => (r.ok ? r.json() : null))
+      .then(data => renderApmMatchBanner(data))
+      .catch(() => {});
+  }
+
   // ─── 관리자 인디케이터/버튼 렌더 ─────────────────────────
   function renderAdminSlot() {
     const slot = document.getElementById('nav-admin-slot');
@@ -341,9 +400,11 @@
     applyAdminVisibility();
     loadSyncWarnings();
     loadOpsDigestBanner();
+    loadApmMatchBanner();
     window.addEventListener('auth:change', () => {
       renderAdminSlot();
       applyAdminVisibility();
+      loadApmMatchBanner();
     });
   }
   if (document.readyState === 'loading') {

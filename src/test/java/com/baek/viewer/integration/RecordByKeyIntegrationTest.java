@@ -1,7 +1,9 @@
 package com.baek.viewer.integration;
 
 import com.baek.viewer.model.ApiRecord;
+import com.baek.viewer.model.RepoConfig;
 import com.baek.viewer.repository.ApiRecordRepository;
+import com.baek.viewer.repository.RepoConfigRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -30,11 +32,21 @@ class RecordByKeyIntegrationTest {
     @Autowired
     ApiRecordRepository recordRepo;
     @Autowired
+    RepoConfigRepository repoConfigRepo;
+    @Autowired
     MockMvc mockMvc;
 
     @BeforeEach
     void setup() {
         recordRepo.deleteByRepositoryName(R);
+        repoConfigRepo.findByRepoName(R).ifPresent(rc -> repoConfigRepo.deleteById(rc.getId()));
+        RepoConfig rc = new RepoConfig();
+        rc.setRepoName(R);
+        rc.setBusinessName(R);
+        rc.setTeamName("IT카드개발팀");
+        rc.setWhatapEnabled("N");
+        rc.setJenniferEnabled("N");
+        repoConfigRepo.save(rc);
         recordRepo.saveAll(List.of(
                 rec(R, "/api/x", "GET", "사용"),
                 rec(R, "/api/x", "POST", "사용"),
