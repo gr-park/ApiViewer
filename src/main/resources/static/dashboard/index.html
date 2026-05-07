@@ -1339,18 +1339,16 @@
       html += `<td rowspan="${rs[2]}" style="text-align:left;vertical-align:middle;${repoEnd};font-family:Consolas,monospace;font-size:10px;">${esc(r.t2)}</td>`;
     }
     if (mode === 'manager') {
-      // 담당자도 동일 값 연속이면 rowspan 병합 (팀/업무/레포/담당자 기준)
+      // 담당자도 동일 값 연속이면 rowspan 병합 (레포가 달라도 담당자가 같으면 병합)
       const prev = i > 0 ? rows[i - 1] : null;
       const samePrev = prev
         && (prev.t0 === r.t0)
-        && (prev.t1 === r.t1)
-        && (prev.t2 === r.t2)
         && (prev.t3 === r.t3);
       if (!samePrev) {
         let j = i + 1;
         while (j < rows.length) {
           const x = rows[j];
-          if ((x.t0 === r.t0) && (x.t1 === r.t1) && (x.t2 === r.t2) && (x.t3 === r.t3)) j++;
+          if ((x.t0 === r.t0) && (x.t3 === r.t3)) j++;
           else break;
         }
         const rsMgr = j - i;
@@ -1890,7 +1888,8 @@
     const lc = mode === 'team' ? 1 : (mode === 'repo' ? 3 : 4);
     const ws = wb.addWorksheet(sheetName, { properties: { defaultRowHeight: 22 } });
     applyDeployExcelHeader(ws, lc, dates);
-    const dataStart = dates.length ? 3 : 2;
+    // 헤더는 항상 2행 merge로 구성된다. 날짜 컬럼이 없어도 3행부터 데이터 시작.
+    const dataStart = 3;
     const lastCol = lc + 2 + dates.length;
     const labelW = lc === 1 ? [20] : lc === 3 ? [16, 22, 28] : [16, 22, 28, 14];
     const rest = [{ width: 12 }, { width: 13 }].concat(dates.map(() => ({ width: 11 })));
