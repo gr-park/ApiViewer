@@ -362,6 +362,26 @@ public class ApiExtractorService {
             return extractWithJavaParser(path, rel, git, apiPathPrefix, pathConstantsMap);
         } catch (Exception e) {
             addLog("WARN", rel + " — JavaParser 실패 (" + e.getClass().getSimpleName() + "), Regex 폴백 적용");
+            // 로컬/운영에서 원인 파악이 쉽도록 콘솔/파일에 스택트레이스+problems 출력
+            if (e instanceof ParseProblemException ppe) {
+                log.warn("[추출] {} — JavaParser ParseProblemException", rel, ppe);
+                try {
+                    String problems = ppe.getProblems().stream()
+                            .map(pr -> {
+                                String loc = pr.getLocation().map(l -> " @ " + l.getBegin()).orElse("");
+                                return pr.getMessage() + loc;
+                            })
+                            .limit(50)
+                            .collect(Collectors.joining("\n- ", "- ", ""));
+                    if (!problems.isBlank()) {
+                        log.warn("[추출] {} — JavaParser problems:\n{}", rel, problems);
+                    }
+                } catch (Exception ignored) {
+                    // problems 포맷 중 예외가 나도 본 예외 스택 출력은 유지
+                }
+            } else {
+                log.warn("[추출] {} — JavaParser 실패 ({})", rel, e.getClass().getSimpleName(), e);
+            }
             return extractWithRegex(path, rel, git, apiPathPrefix, pathConstantsMap);
         }
     }
@@ -2015,11 +2035,14 @@ public class ApiExtractorService {
                     return m;
                 }).toList());
                 addDebugStep(steps, "WARN", "JavaParser 실패 (ParseProblemException) → Regex 폴백 시도");
+                // 콘솔/파일에 스택트레이스도 남겨 로컬에서 원인 파악을 쉽게 한다.
+                log.warn("[DEBUG 단건파싱] {} — JavaParser ParseProblemException", effectiveRelPath, ppe);
             } catch (Exception jpEx) {
                 out.put("errorType", jpEx.getClass().getName());
                 out.put("message", jpEx.getMessage());
                 out.put("stackTrace", stackTraceString(jpEx));
                 addDebugStep(steps, "WARN", "JavaParser 실패 (" + jpEx.getClass().getSimpleName() + ") → Regex 폴백 시도");
+                log.warn("[DEBUG 단건파싱] {} — JavaParser 실패 ({})", effectiveRelPath, jpEx.getClass().getSimpleName(), jpEx);
             }
 
             out.put("regexFallbackUsed", true);
@@ -2112,11 +2135,13 @@ public class ApiExtractorService {
                     return m;
                 }).toList());
                 addDebugStep(steps, "WARN", "JavaParser 실패 (ParseProblemException) → Regex 폴백 시도");
+                log.warn("[DEBUG 업로드파싱] {} — JavaParser ParseProblemException", rel, ppe);
             } catch (Exception jpEx) {
                 out.put("errorType", jpEx.getClass().getName());
                 out.put("message", jpEx.getMessage());
                 out.put("stackTrace", stackTraceString(jpEx));
                 addDebugStep(steps, "WARN", "JavaParser 실패 (" + jpEx.getClass().getSimpleName() + ") → Regex 폴백 시도");
+                log.warn("[DEBUG 업로드파싱] {} — JavaParser 실패 ({})", rel, jpEx.getClass().getSimpleName(), jpEx);
             }
 
             out.put("regexFallbackUsed", true);
