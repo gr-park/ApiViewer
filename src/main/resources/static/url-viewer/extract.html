@@ -2541,11 +2541,17 @@
       if (!steps.length) {
         stepsEl.textContent = '(표시할 처리 과정 없음)';
       } else {
-        stepsEl.textContent = steps.map((s, idx) => {
+        const header = [];
+        if (meta && meta.rootPath) header.push(`입력 rootPath: ${String(meta.rootPath)}`);
+        if (meta && meta.relPath) header.push(`입력 relPath: ${String(meta.relPath)}`);
+        if (d && d.relPathSanitized) header.push(`정규화 relPath: ${String(d.relPathSanitized)}`);
+        if (d && d.absolutePath) header.push(`해석 absolutePath: ${String(d.absolutePath)}`);
+        const body = steps.map((s, idx) => {
           const lv = (s && s.level) ? String(s.level) : 'INFO';
           const msg = (s && s.message) ? String(s.message) : '';
           return `${String(idx + 1).padStart(2, '0')}. [${lv}] ${msg}`.trim();
         }).join('\n');
+        stepsEl.textContent = (header.length ? (header.join('\n') + '\n\n') : '') + body;
       }
     }
 
@@ -2736,9 +2742,29 @@
     try {
       const rawPath = String(relPath || '').trim();
       if (!rawPath) { showToast('파일 경로가 비어 있습니다.', 'error'); return; }
-      const ctx = resolveSingleDebugPathContext(rawPath, explicitRepoName);
+
+      // 로그/스택에서 복사한 문자열도 입력될 수 있어 1차 정규화
+      const normalizedInput = (function normalizeSingleDebugPathInput(s) {
+        let v = String(s || '');
+        // 라벨이 포함된 경우 라벨 뒤를 취함
+        const labelIdx = v.lastIndexOf('상대경로(relPath):');
+        if (labelIdx >= 0) v = v.slice(labelIdx + '상대경로(relPath):'.length);
+        // 줄바꿈/탭 섞이면 마지막 유효 라인을 취함
+        v = v.replace(/\r/g, '\n');
+        const lines = v.split('\n').map(x => x.trim()).filter(Boolean);
+        v = lines.length ? lines[lines.length - 1] : v.trim();
+        // 양끝 따옴표/백틱 제거
+        v = v.replace(/^['"`\s]+/, '').replace(/['"`\s]+$/, '');
+        // URL 인코딩 문자열이 섞였을 수 있어 decode 시도 (실패해도 원문 유지)
+        try {
+          if (/%[0-9A-Fa-f]{2}/.test(v)) v = decodeURIComponent(v);
+        } catch (e) {}
+        return v.trim();
+      })(rawPath);
+
+      const ctx = resolveSingleDebugPathContext(normalizedInput, explicitRepoName);
       if (ctx.error) { showToast(ctx.error, 'error'); return; }
-      const normRel = ctx.fromInfer ? ctx.relPathFromInfer : normalizeRelPathForRoot(rawPath, ctx.rootPath);
+      const normRel = ctx.fromInfer ? ctx.relPathFromInfer : normalizeRelPathForRoot(normalizedInput, ctx.rootPath);
       if (!normRel) {
         showToast('유효한 파일 경로를 입력하세요. (레포 ROOT 기준 상대경로 또는 ROOT를 포함한 절대경로)', 'error');
         return;

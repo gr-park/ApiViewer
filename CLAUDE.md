@@ -48,6 +48,8 @@ Spring Boot 기반 웹 애플리케이션. Controller 소스를 파싱하여 URL
 | 제약 | 네트워크·라이브러리 | 망분리(CDN·인터넷 불가), 로컬 번들·내부 Maven만 |
 | 제약 | ExcelJS | `/exceljs.min.js`만(CDN 금지) |
 
+**Regex 폴백**(`ApiExtractorService`): JavaParser 실패·업로드 단건 Regex 경로에서 매핑 애노테이션 인자는 **괄호 균형 스캔**으로 추출하고, 매핑 직후~메서드 시그니처는 **넓은 문자 윈도우**와 **패키지 프라이빗** 시그니처(제어문 키워드 제외)를 허용한다. `@Operation`은 본문만 균형으로 잘라 **`summary`/`description`의 일반 문자열·`"""` 텍스트 블록**을 지원한다(중첩 `@ApiResponses` 등에 대비). 타입 선언 직전의 클래스 레벨 `@RequestMapping`은 **엔드포인트 행으로 집계하지 않으며**, 클래스 경로 추출은 **첫 `class` 선언 이전** 구간만 본다.
+
 코드: JPQL 우선, 네이티브는 H2·PG 공통(`TRUNCATE`, `CONCAT('%',:q,'%')` LIKE, `CAST(x AS string)`). DDL 개발 `ddl-auto=update`, 운영 별도 DDL. PK `GenerationType.IDENTITY`, 컬럼 snake_case.
 
 ## H2·PostgreSQL 동시 호환(필수)

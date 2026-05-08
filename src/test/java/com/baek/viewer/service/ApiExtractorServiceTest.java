@@ -15,6 +15,8 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -434,5 +436,138 @@ class ApiExtractorServiceTest {
         assertThat(info.getHasUrlBlock()).isEqualTo("Y");
         // @Deprecated + [URL차단작업] 주석 모두 존재 → 차단처리미흡=false (완전 표기)
         assertThat(info.isBlockMarkingIncomplete()).isFalse();
+    }
+
+    private static List<String[]> emptyGitHistory5() {
+        return List.of(
+                new String[]{"", "", ""}, new String[]{"", "", ""}, new String[]{"", "", ""},
+                new String[]{"", "", ""}, new String[]{"", "", ""});
+    }
+
+    @Test
+    @DisplayName("Regex 폴백(소스) — @RequestMapping 중첩 괄호·path+method 에서 경로·POST 인식")
+    void regexFromSource_requestMappingBalancedParens_pathAndMethod() {
+        String src = """
+                package test;
+                import org.springframework.web.bind.annotation.*;
+                @RestController
+                public class R {
+                    @RequestMapping(path = "/deep/save", method = RequestMethod.POST)
+                    public String save() { return ""; }
+                }
+                """;
+        @SuppressWarnings("unchecked")
+        List<ApiInfo> apis = (List<ApiInfo>) ReflectionTestUtils.invokeMethod(service,
+                "extractWithRegexFromSource", src, Paths.get("R.java"), "test/R.java",
+                emptyGitHistory5(), "", Collections.emptyMap());
+        assertThat(apis).hasSize(1);
+        assertThat(apis.get(0).getApiPath()).isEqualTo("/deep/save");
+        assertThat(apis.get(0).getHttpMethod()).isEqualTo("POST");
+    }
+
+    @Test
+    @DisplayName("Regex 폴백(소스) — 패키지 프라이빗 메서드 + @PostMapping(path=…, consumes=…) 괄호 균형")
+    void regexFromSource_packagePrivate_andConsumesParens() {
+        String src = """
+                package test;
+                import org.springframework.web.bind.annotation.*;
+                import org.springframework.http.MediaType;
+                @RestController
+                @RequestMapping("/api")
+                public class P {
+                    @PostMapping(path = "/items", consumes = MediaType.APPLICATION_JSON_VALUE)
+                    String create() { return ""; }
+                }
+                """;
+        @SuppressWarnings("unchecked")
+        List<ApiInfo> apis = (List<ApiInfo>) ReflectionTestUtils.invokeMethod(service,
+                "extractWithRegexFromSource", src, Paths.get("P.java"), "test/P.java",
+                emptyGitHistory5(), "", Collections.emptyMap());
+        assertThat(apis).hasSize(1);
+        assertThat(apis.get(0).getApiPath()).isEqualTo("/api/items");
+        assertThat(apis.get(0).getHttpMethod()).isEqualTo("POST");
+        assertThat(apis.get(0).getMethodName()).isEqualTo("create");
+    }
+
+    @Test
+    @DisplayName("Regex 폴백(소스) — @Operation summary 텍스트블록 + @ApiResponses 중첩 후에도 요약 추출")
+    void regexFromSource_operationTextBlock_andNestedApiResponses() {
+        String src = """
+                package test;
+                import org.springframework.web.bind.annotation.*;
+                import io.swagger.v3.oas.annotations.Operation;
+                import io.swagger.v3.oas.annotations.responses.ApiResponse;
+                import io.swagger.v3.oas.annotations.responses.ApiResponses;
+                @RestController
+                public class S {
+                    @Operation(summary = \"\"\"
+                            회원 병합
+                            두 번째 줄
+                            \"\"\")
+                    @ApiResponses(@ApiResponse(responseCode = "200", description = "ok"))
+                    @PostMapping("/mergeMbrDlvp")
+                    public String mergeMbrDlvp() { return ""; }
+                }
+                """;
+        @SuppressWarnings("unchecked")
+        List<ApiInfo> apis = (List<ApiInfo>) ReflectionTestUtils.invokeMethod(service,
+                "extractWithRegexFromSource", src, Paths.get("S.java"), "test/S.java",
+                emptyGitHistory5(), "", Collections.emptyMap());
+        assertThat(apis).hasSize(1);
+        assertThat(apis.get(0).getApiPath()).isEqualTo("/mergeMbrDlvp");
+        assertThat(apis.get(0).getApiOperationValue()).startsWith("회원 병합");
+    }
+
+    @Test
+    @DisplayName("Regex 폴백(소스) — 매핑 직후 긴 애노테이션 체인(>1k자) 뒤에도 public 메서드 인식")
+    void regexFromSource_longAnnotationGap_beforePublicMethod() {
+        String filler = "@SuppressWarnings(\"deprecation\")\n".repeat(120);
+        String src = """
+                package test;
+                import org.springframework.web.bind.annotation.*;
+                @RestController
+                public class L {
+                    @GetMapping("/far")
+                """ + filler + """
+                    public String far() { return ""; }
+                }
+                """;
+        @SuppressWarnings("unchecked")
+        List<ApiInfo> apis = (List<ApiInfo>) ReflectionTestUtils.invokeMethod(service,
+                "extractWithRegexFromSource", src, Paths.get("L.java"), "test/L.java",
+                emptyGitHistory5(), "", Collections.emptyMap());
+        assertThat(apis).hasSize(1);
+        assertThat(apis.get(0).getApiPath()).isEqualTo("/far");
+        assertThat(apis.get(0).getMethodName()).isEqualTo("far");
+    }
+
+    @Test
+    @DisplayName("단건 디버그(업로드) — JavaParser 실패 시 Regex trace steps가 포함된다")
+    void debugParseJavaSource_whenJavaParserFails_containsRegexTraceSteps() {
+        // 일부러 문법을 깨서 JavaParser를 실패시키되, 매핑/메서드 시그니처는 Regex가 잡을 수 있게 한다.
+        String broken = """
+                package test;
+                import org.springframework.web.bind.annotation.*;
+                @RestController
+                public class X {
+                    @GetMapping("/rx")
+                    public String rx() { return ""; }
+                // <- class close brace 누락
+                """;
+
+        @SuppressWarnings("unchecked")
+        Map<String, Object> out = service.debugParseJavaSource(broken, "X.java", "", "");
+        assertThat(out).containsEntry("regexFallbackUsed", true);
+        assertThat(out).containsKey("regexTraceId");
+        assertThat(out.get("regexTraceId")).isInstanceOf(String.class);
+
+        Object stepsObj = out.get("steps");
+        assertThat(stepsObj).isInstanceOf(List.class);
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> steps = (List<Map<String, Object>>) stepsObj;
+        String joined = steps.stream().map(m -> String.valueOf(m.get("message"))).reduce("", (a, b) -> a + "\n" + b);
+        assertThat(joined).contains("[RX] 시작");
+        assertThat(joined).contains("mapping#0");
+        assertThat(joined).contains("ADD");
     }
 }

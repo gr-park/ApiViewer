@@ -30,6 +30,32 @@ public class ApiExtractorService {
     private static final List<String> MAPPING_ANNS = Arrays.asList(
             "RequestMapping", "GetMapping", "PostMapping", "PutMapping", "DeleteMapping", "PatchMapping");
 
+    /**
+     * Regex 폴백: 매핑 애노테이션 직후 ~ 메서드 시그니처 사이에 {@code @Secured}, 긴 {@code @Operation}+{@code @ApiResponses} 등이
+     * 연속될 수 있어 기존 1k 윈도우는 누락을 유발했다. JavaParser와 동일 구간을 더 넓게 본다.
+     */
+    private static final int RX_AFTER_MAPPING_SCAN_CHARS = 12_000;
+
+    private static final int RX_OPERATION_VALUE_MAX_LEN = 200;
+
+    private static final Pattern RX_MAPPING_HEAD = Pattern.compile(
+            "@(GetMapping|PostMapping|RequestMapping|PutMapping|DeleteMapping|PatchMapping)\\s*");
+
+    private static final Pattern RX_CLASS_REQUEST_MAPPING_HEAD = Pattern.compile("@RequestMapping\\s*");
+
+    private static final Pattern RX_METHOD_WITH_ACCESS = Pattern.compile(
+            "(?:public|private|protected)\\s+[\\w<>,\\s?]+\\s+(\\w+)\\s*\\(");
+
+    /** 패키지 프라이빗 등: {@code Type name(} — 키워드 오탐은 {@link #RX_METHOD_TYPEISH_BLACKLIST} 로 걸러낸다. */
+    private static final Pattern RX_METHOD_PKG_PRIVATE = Pattern.compile(
+            "([\\w<>,\\s?]+)\\s+(\\w+)\\s*\\(");
+
+    private static final Set<String> RX_METHOD_TYPEISH_BLACKLIST = Set.of(
+            "if", "for", "while", "switch", "catch", "try", "else", "do", "return", "throw", "new", "synchronized");
+
+    private static final Set<String> RX_METHOD_NAME_BLACKLIST = Set.of(
+            "true", "false", "null");
+
     private static volatile boolean JAVA_PARSER_CONFIGURED = false;
 
     private static void ensureJavaParserConfigured() {
@@ -376,162 +402,502 @@ public class ApiExtractorService {
     // Regex 기반 폴백 추출
     // ======================================================
 
+    private record RegexMappingSlice(int start, int endExclusive, String mappingType, String paramsRaw) {}
+
+    private record RegexMethodNameMatch(int signatureMatchEnd, String methodName, String matchKind) {}
+
+    /**
+     * 주석 제거(길이 변화)로 raw 인덱스가 어긋나지 않게, 매핑 직후 청크만 잘라 동일 규칙으로 정리한다.
+     */
+    private static String rxStripCommentsChunk(String chunk) {
+        if (chunk == null) return "";
+        return chunk.replaceAll("(?s)/\\*.*?\\*/", " ").replaceAll("//.*", " ");
+    }
+
+    /**
+     * {@code openIdx} 위치의 {@code '('} 에 대응하는 닫는 {@code ')'} 인덱스. 문자열·문자·텍스트블록·주석 내부 괄호는 무시.
+     */
+    private static int rxIndexOfClosingParenBalanced(String s, int openIdx) {
+        if (s == null || openIdx < 0 || openIdx >= s.length() || s.charAt(openIdx) != '(') return -1;
+        int depth = 1;
+        int i = openIdx + 1;
+        int n = s.length();
+        while (i < n && depth > 0) {
+            char c = s.charAt(i);
+            if (c == '/' && i + 1 < n) {
+                char d = s.charAt(i + 1);
+                if (d == '/') {
+                    i += 2;
+                    while (i < n && s.charAt(i) != '\n' && s.charAt(i) != '\r') i++;
+                    continue;
+                }
+                if (d == '*') {
+                    i += 2;
+                    while (i + 1 < n && !(s.charAt(i) == '*' && s.charAt(i + 1) == '/')) i++;
+                    i = Math.min(i + 2, n);
+                    continue;
+                }
+            }
+            if (c == '"' && i + 2 < n && s.charAt(i + 1) == '"' && s.charAt(i + 2) == '"') {
+                i += 3;
+                while (i + 2 < n) {
+                    if (s.charAt(i) == '"' && s.charAt(i + 1) == '"' && s.charAt(i + 2) == '"') {
+                        i += 3;
+                        break;
+                    }
+                    if (s.charAt(i) == '\\' && i + 1 < n) {
+                        i += 2;
+                        continue;
+                    }
+                    i++;
+                }
+                continue;
+            }
+            if (c == '"') {
+                i++;
+                while (i < n) {
+                    char q = s.charAt(i);
+                    if (q == '"') {
+                        i++;
+                        break;
+                    }
+                    if (q == '\\' && i + 1 < n) i += 2;
+                    else i++;
+                }
+                continue;
+            }
+            if (c == '\'') {
+                i++;
+                while (i < n) {
+                    char q = s.charAt(i);
+                    if (q == '\\' && i + 1 < n) {
+                        i += 2;
+                        continue;
+                    }
+                    if (q == '\'') {
+                        i++;
+                        break;
+                    }
+                    i++;
+                }
+                continue;
+            }
+            if (c == '(') depth++;
+            else if (c == ')') {
+                depth--;
+                if (depth == 0) return i;
+            }
+            i++;
+        }
+        return -1;
+    }
+
+    private static RegexMappingSlice rxNextMappingSlice(String raw, int fromIndex) {
+        Matcher mh = RX_MAPPING_HEAD.matcher(raw);
+        if (!mh.find(fromIndex)) return null;
+        int start = mh.start();
+        String mappingType = mh.group(1);
+        int pos = mh.end();
+        if (pos >= raw.length() || raw.charAt(pos) != '(') {
+            return new RegexMappingSlice(start, pos, mappingType, "");
+        }
+        int close = rxIndexOfClosingParenBalanced(raw, pos);
+        if (close < 0) return null;
+        String inner = raw.substring(pos + 1, close);
+        return new RegexMappingSlice(start, close + 1, mappingType, inner);
+    }
+
+    /**
+     * 타입 선언 직전까지(최대 3k)만 본다 — 본문 안 메서드의 {@code @RequestMapping} 을 클래스 레벨로 오인하지 않기 위함.
+     */
+    private static int rxIndexOfClassDeclarationStart(String raw) {
+        if (raw == null) return -1;
+        Matcher m = Pattern.compile("(?m)^\\s*public\\s+class\\s+\\w+\\b").matcher(raw);
+        if (m.find()) return m.start();
+        m = Pattern.compile("(?m)^\\s*class\\s+\\w+\\b").matcher(raw);
+        return m.find() ? m.start() : -1;
+    }
+
+    private String rxExtractClassLevelRequestMappingPath(String raw, Map<String, String> pathConstantsMap) {
+        int classDecl = rxIndexOfClassDeclarationStart(raw);
+        int headLen = classDecl >= 0 ? classDecl : Math.min(3000, raw.length());
+        headLen = Math.min(headLen, raw.length());
+        String head = raw.substring(0, headLen);
+        Matcher rm = RX_CLASS_REQUEST_MAPPING_HEAD.matcher(head);
+        if (!rm.find()) return "";
+        int pos = rm.end();
+        if (pos >= head.length() || head.charAt(pos) != '(') return "";
+        int close = rxIndexOfClosingParenBalanced(head, pos);
+        if (close < 0) return "";
+        String cParams = substituteConstants(head.substring(pos + 1, close), pathConstantsMap)
+                .replaceAll("\"\\s*\\+\\s*\"", "");
+        Matcher cp = Pattern.compile("\"([^\"]+)\"").matcher(cParams);
+        return cp.find() ? cp.group(1).trim() : "";
+    }
+
+    /** 클래스 선언 직후 블록에만 붙는 {@code @RequestMapping("/api")} 등 — 메서드 시그니처와 짝지으면 안 된다. */
+    private static boolean rxMappingSliceFollowedByClassDecl(String raw, int mappingEndExclusive) {
+        int to = Math.min(mappingEndExclusive + 256, raw.length());
+        String peek = rxStripCommentsChunk(raw.substring(mappingEndExclusive, to));
+        return Pattern.compile("^\\s*(public\\s+)?class\\s+\\w+\\s*\\{")
+                .matcher(peek).find();
+    }
+
+    private static RegexMethodNameMatch rxFindMethodNameMatch(String afterMappingStripped) {
+        Matcher m1 = RX_METHOD_WITH_ACCESS.matcher(afterMappingStripped);
+        if (m1.find()) return new RegexMethodNameMatch(m1.end(), m1.group(1), "access-modifier");
+        Matcher m2 = RX_METHOD_PKG_PRIVATE.matcher(afterMappingStripped);
+        RegexMethodNameMatch best = null;
+        int bestStart = Integer.MAX_VALUE;
+        while (m2.find()) {
+            String typeish = m2.group(1).trim();
+            String name = m2.group(2);
+            if (RX_METHOD_NAME_BLACKLIST.contains(name)) continue;
+            if (RX_METHOD_TYPEISH_BLACKLIST.contains(typeish)) continue;
+            int st = m2.start();
+            if (st < bestStart) {
+                bestStart = st;
+                best = new RegexMethodNameMatch(m2.end(), name, "package-private");
+            }
+        }
+        return best;
+    }
+
+    private static String rxNormalizeOperationText(String rawText) {
+        if (rawText == null) return "";
+        String t = rawText.replaceAll("\\s+", " ").trim();
+        if (t.length() > RX_OPERATION_VALUE_MAX_LEN) {
+            return t.substring(0, RX_OPERATION_VALUE_MAX_LEN) + "…";
+        }
+        return t;
+    }
+
+    private static String rxExtractQuotedOrTextBlockAfter(Matcher keyMatcher, String body) {
+        int from = keyMatcher.end();
+        if (from >= body.length()) return null;
+        int i = from;
+        while (i < body.length() && Character.isWhitespace(body.charAt(i))) i++;
+        if (i >= body.length()) return null;
+        if (body.startsWith("\"\"\"", i)) {
+            int j = i + 3;
+            int n = body.length();
+            while (j + 2 < n) {
+                if (body.charAt(j) == '"' && body.charAt(j + 1) == '"' && body.charAt(j + 2) == '"') {
+                    return rxNormalizeOperationText(body.substring(i + 3, j));
+                }
+                if (body.charAt(j) == '\\' && j + 1 < n) {
+                    j += 2;
+                    continue;
+                }
+                j++;
+            }
+            return null;
+        }
+        if (body.charAt(i) == '"') {
+            int j = i + 1;
+            StringBuilder sb = new StringBuilder();
+            while (j < body.length()) {
+                char c = body.charAt(j);
+                if (c == '"') return rxNormalizeOperationText(sb.toString());
+                if (c == '\\' && j + 1 < body.length()) {
+                    sb.append(body.charAt(j + 1));
+                    j += 2;
+                    continue;
+                }
+                sb.append(c);
+                j++;
+            }
+            return null;
+        }
+        return null;
+    }
+
+    /** {@code @Operation(...)} 본문에서 summary → description 순으로 텍스트블록·일반 문자열 추출. */
+    private static String rxParseOperationAnnotationBody(String inner) {
+        if (inner == null || inner.isBlank()) return null;
+        Matcher sm = Pattern.compile("\\bsummary\\s*=").matcher(inner);
+        if (sm.find()) {
+            String v = rxExtractQuotedOrTextBlockAfter(sm, inner);
+            if (v != null && !v.isBlank()) return v;
+        }
+        Matcher dm = Pattern.compile("\\bdescription\\s*=").matcher(inner);
+        if (dm.find()) {
+            String v = rxExtractQuotedOrTextBlockAfter(dm, inner);
+            if (v != null && !v.isBlank()) return v;
+        }
+        return null;
+    }
+
+    private static String rxExtractApiOperationFromHeadArea(String headArea) {
+        if (headArea == null || headArea.isEmpty()) return "-";
+        int lastAo = -1;
+        Matcher aoHead = Pattern.compile("@ApiOperation\\s*").matcher(headArea);
+        while (aoHead.find()) lastAo = aoHead.start();
+        if (lastAo >= 0) {
+            int paren = headArea.indexOf('(', lastAo);
+            if (paren >= 0) {
+                int close = rxIndexOfClosingParenBalanced(headArea, paren);
+                if (close > paren) {
+                    String inner = headArea.substring(paren + 1, close);
+                    Matcher vm = Pattern.compile("value\\s*=").matcher(inner);
+                    if (vm.find()) {
+                        String v = rxExtractQuotedOrTextBlockAfter(vm, inner);
+                        if (v != null && !v.isBlank()) return v;
+                    }
+                }
+            }
+        }
+        int lastOp = -1;
+        Matcher opHead = Pattern.compile("@Operation\\s*").matcher(headArea);
+        while (opHead.find()) lastOp = opHead.start();
+        if (lastOp >= 0) {
+            int paren = headArea.indexOf('(', lastOp);
+            if (paren >= 0) {
+                int close = rxIndexOfClosingParenBalanced(headArea, paren);
+                if (close > paren) {
+                    String inner = headArea.substring(paren + 1, close);
+                    String v = rxParseOperationAnnotationBody(inner);
+                    if (v != null && !v.isBlank()) return v;
+                }
+            }
+        }
+        return "-";
+    }
+
+    private List<ApiInfo> extractApisWithRegexCore(String raw, String relPath, String controllerFileName,
+                                                   List<String[]> git, String apiPathPrefix,
+                                                   Map<String, String> pathConstantsMap, Path logFileForDebug,
+                                                   List<Map<String, Object>> debugSteps, String traceId) {
+        boolean debug = debugMode;
+        List<ApiInfo> apis = new ArrayList<>();
+        String classPath = rxExtractClassLevelRequestMappingPath(raw, pathConstantsMap);
+        if (debugSteps != null) {
+            addRegexTrace(debugSteps, traceId, "INFO",
+                    "[RX] 시작: file=" + controllerFileName
+                            + " relPath=" + (relPath == null ? "" : relPath)
+                            + " classPath=" + (classPath == null || classPath.isBlank() ? "(없음)" : classPath)
+                            + " apiPathPrefix=" + (apiPathPrefix == null ? "" : apiPathPrefix)
+                            + " scanChars=" + RX_AFTER_MAPPING_SCAN_CHARS);
+        }
+        if (debug) {
+            String fn = logFileForDebug != null && logFileForDebug.getFileName() != null
+                    ? logFileForDebug.getFileName().toString()
+                    : controllerFileName;
+            log.debug("[파싱-RX] 파일={}, @RequestMapping={}", fn,
+                    classPath.isEmpty() ? "(없음)" : classPath);
+        }
+
+        String controllerComment = "-";
+        Matcher cM = Pattern.compile("/\\*\\*(.*?)\\*/", Pattern.DOTALL).matcher(raw);
+        if (cM.find()) controllerComment = cM.group(1).replaceAll("[\\r\\n*]", " ").trim();
+
+        int searchFrom = 0;
+        RegexMappingSlice slice;
+        int mappingIndex = 0;
+        while ((slice = rxNextMappingSlice(raw, searchFrom)) != null) {
+            searchFrom = slice.endExclusive;
+            if (debugSteps != null) {
+                addRegexTrace(debugSteps, traceId, "DEBUG",
+                        "[RX] mapping#" + mappingIndex + " detect"
+                                + " type=" + slice.mappingType
+                                + " range=[" + slice.start + "," + slice.endExclusive + ")"
+                                + " paramsRaw=\"" + rxDbgPreview(slice.paramsRaw, 400) + "\"");
+            }
+            if (rxMappingSliceFollowedByClassDecl(raw, slice.endExclusive)) {
+                if (debugSteps != null) {
+                    String to = raw.substring(slice.endExclusive, Math.min(slice.endExclusive + 120, raw.length()));
+                    addRegexTrace(debugSteps, traceId, "WARN",
+                            "[RX] mapping#" + mappingIndex + " SKIP_CLASS_LEVEL"
+                                    + " peek=\"" + rxDbgPreview(rxStripCommentsChunk(to), 200) + "\"");
+                }
+                mappingIndex++;
+                continue;
+            }
+            String mappingType = slice.mappingType;
+            String paramsRaw = slice.paramsRaw == null ? "" : slice.paramsRaw;
+            String params = substituteConstants(paramsRaw, pathConstantsMap).replaceAll("\"\\s*\\+\\s*\"", "");
+            String httpMethod = resolveHttpMethodFromName(mappingType, params);
+
+            int mapEnd = slice.endExclusive;
+            String afterChunk = raw.substring(mapEnd, Math.min(mapEnd + RX_AFTER_MAPPING_SCAN_CHARS, raw.length()));
+            String afterMapping = rxStripCommentsChunk(afterChunk);
+            RegexMethodNameMatch sig = rxFindMethodNameMatch(afterMapping);
+            if (sig == null) {
+                if (debugSteps != null) {
+                    addRegexTrace(debugSteps, traceId, "WARN",
+                            "[RX] mapping#" + mappingIndex + " SKIP_NO_METHOD_SIG"
+                                    + " afterPreview=\"" + rxDbgPreview(afterMapping, 260) + "\"");
+                }
+                mappingIndex++;
+                continue;
+            }
+
+            String methodName = sig.methodName();
+            int mapStart = slice.start;
+            boolean isDeprecated = raw.substring(Math.max(0, mapStart - 300), mapStart).contains("@Deprecated");
+            String headArea = raw.substring(Math.max(0, mapStart - 1000), mapStart);
+            if (debugSteps != null) {
+                addRegexTrace(debugSteps, traceId, "DEBUG",
+                        "[RX] mapping#" + mappingIndex + " methodSig"
+                                + " kind=" + sig.matchKind()
+                                + " methodName=" + methodName
+                                + " deprecated=" + (isDeprecated ? "Y" : "N")
+                                + " headPreview=\"" + rxDbgPreview(headArea, 260) + "\"");
+            }
+
+            List<String> paths = extractMappingPathsFromParams(params);
+            boolean found = !paths.isEmpty();
+            if (debugSteps != null) {
+                addRegexTrace(debugSteps, traceId, found ? "DEBUG" : "WARN",
+                        "[RX] mapping#" + mappingIndex + " paths"
+                                + " found=" + found
+                                + " rawParams=\"" + rxDbgPreview(params, 400) + "\""
+                                + " paths=" + paths);
+            }
+            for (String s : paths) {
+                if (s == null) continue;
+                s = s.trim();
+                if (s.isEmpty()) continue;
+
+                String finalPath = normalizePath(apiPathPrefix + classPath + "/" + s);
+
+                ApiInfo info = new ApiInfo();
+                info.setApiPath(finalPath);
+                info.setHttpMethod(httpMethod);
+                info.setMethodName(methodName);
+                info.setControllerName(controllerFileName);
+                info.setRepoPath(relPath.replace("\\", "/"));
+                info.setIsDeprecated(isDeprecated ? "Y" : "N");
+                String mBody = afterMapping.substring(sig.signatureMatchEnd(),
+                        Math.min(sig.signatureMatchEnd() + 500, afterMapping.length()));
+                info.setHasUrlBlock(detectUrlBlockRegex(mBody) ? "Y" : "N");
+                info.setProgramId(autoExtractProgramId(finalPath));
+                info.setControllerComment(controllerComment);
+                info.setGit1(git.get(0)); info.setGit2(git.get(1)); info.setGit3(git.get(2));
+                info.setGit4(git.get(3)); info.setGit5(git.get(4));
+
+                Matcher docM = Pattern.compile("/\\*\\*(.*?)\\*/", Pattern.DOTALL).matcher(headArea);
+                if (docM.find()) {
+                    String doc = docM.group(1);
+                    info.setFullComment(doc.replaceAll("[\\r\\n*]", " ").trim());
+                    Matcher dM = Pattern.compile("@?(description|deprecation)[\\s:]*([^@\\n\\r*]+)",
+                            Pattern.CASE_INSENSITIVE).matcher(doc);
+                    info.setDescriptionTag(dM.find() ? dM.group(2).trim() : "-");
+                } else {
+                    info.setFullComment("-"); info.setDescriptionTag("-");
+                }
+                if (isDeprecated && (info.getFullComment().equals("-") || !ApiStorageService.containsUrlBlockTag(info.getFullComment()))) {
+                    String depLine = extractDeprecatedLine(headArea);
+                    if (depLine != null && ApiStorageService.containsUrlBlockTag(depLine)) {
+                        info.setFullComment(depLine);
+                    }
+                }
+
+                String op = rxExtractApiOperationFromHeadArea(headArea);
+                info.setApiOperationValue(op);
+                info.setRequestPropertyValue("-");
+                info.setControllerRequestPropertyValue("-");
+                info.setBlockMarkingIncomplete(computeBlockMarkingIncomplete(
+                        isFirstStmtUrlBlockRegex(mBody),
+                        info.getIsDeprecated(),
+                        info.getFullComment()));
+                apis.add(info);
+                if (debugSteps != null) {
+                    addRegexTrace(debugSteps, traceId, "OK",
+                            "[RX] mapping#" + mappingIndex + " ADD"
+                                    + " " + httpMethod + " " + finalPath
+                                    + " methodName=" + methodName
+                                    + " op=\"" + rxDbgPreview(op, 200) + "\""
+                                    + " urlBlock=" + info.getHasUrlBlock());
+                }
+                if (debug) {
+                    log.debug("[파싱-RX]   {} {} | method={} | deprecated={} | urlBlock={} | markingIncomplete={}",
+                            httpMethod, finalPath, methodName, info.getIsDeprecated(), info.getHasUrlBlock(),
+                            info.isBlockMarkingIncomplete());
+                }
+            }
+
+            if (!found) {
+                String finalPath = normalizePath(apiPathPrefix + classPath);
+                ApiInfo info = new ApiInfo();
+                info.setApiPath(finalPath.isEmpty() ? "/" : finalPath);
+                info.setHttpMethod(httpMethod);
+                info.setMethodName(methodName);
+                info.setControllerName(controllerFileName);
+                info.setRepoPath(relPath.replace("\\", "/"));
+                info.setIsDeprecated(isDeprecated ? "Y" : "N");
+                String mBody2 = afterMapping.substring(sig.signatureMatchEnd(),
+                        Math.min(sig.signatureMatchEnd() + 500, afterMapping.length()));
+                info.setHasUrlBlock(detectUrlBlockRegex(mBody2) ? "Y" : "N");
+                info.setProgramId(autoExtractProgramId(finalPath));
+                info.setControllerComment(controllerComment);
+                info.setGit1(git.get(0)); info.setGit2(git.get(1)); info.setGit3(git.get(2));
+                info.setGit4(git.get(3)); info.setGit5(git.get(4));
+                Matcher docM2 = Pattern.compile("/\\*\\*(.*?)\\*/", Pattern.DOTALL).matcher(headArea);
+                if (docM2.find()) {
+                    String doc = docM2.group(1);
+                    info.setFullComment(doc.replaceAll("[\\r\\n*]", " ").trim());
+                    Matcher dM = Pattern.compile("@?(description|deprecation)[\\s:]*([^@\\n\\r*]+)",
+                            Pattern.CASE_INSENSITIVE).matcher(doc);
+                    info.setDescriptionTag(dM.find() ? dM.group(2).trim() : "-");
+                } else {
+                    info.setFullComment("-"); info.setDescriptionTag("-");
+                }
+                if (isDeprecated && (info.getFullComment().equals("-") || !ApiStorageService.containsUrlBlockTag(info.getFullComment()))) {
+                    String depLine = extractDeprecatedLine(headArea);
+                    if (depLine != null && ApiStorageService.containsUrlBlockTag(depLine)) {
+                        info.setFullComment(depLine);
+                    }
+                }
+                String op2 = rxExtractApiOperationFromHeadArea(headArea);
+                info.setApiOperationValue(op2);
+                info.setRequestPropertyValue("-");
+                info.setControllerRequestPropertyValue("-");
+                info.setBlockMarkingIncomplete(computeBlockMarkingIncomplete(
+                        isFirstStmtUrlBlockRegex(mBody2),
+                        info.getIsDeprecated(),
+                        info.getFullComment()));
+                apis.add(info);
+                if (debugSteps != null) {
+                    addRegexTrace(debugSteps, traceId, "OK",
+                            "[RX] mapping#" + mappingIndex + " ADD_EMPTY_MAPPING"
+                                    + " " + httpMethod + " " + info.getApiPath()
+                                    + " methodName=" + methodName
+                                    + " op=\"" + rxDbgPreview(op2, 200) + "\""
+                                    + " urlBlock=" + info.getHasUrlBlock());
+                }
+                if (debug) {
+                    log.debug("[파싱-RX]   {} {} (빈매핑) | method={} | deprecated={} | markingIncomplete={}",
+                            httpMethod, info.getApiPath(), methodName, info.getIsDeprecated(),
+                            info.isBlockMarkingIncomplete());
+                }
+            }
+            mappingIndex++;
+        }
+        if (debug) {
+            String fn = logFileForDebug != null && logFileForDebug.getFileName() != null
+                    ? logFileForDebug.getFileName().toString()
+                    : controllerFileName;
+            log.debug("[파싱-RX] {} 완료 — {}개 API 추출", fn, apis.size());
+        }
+        if (debugSteps != null) {
+            addRegexTrace(debugSteps, traceId, "INFO",
+                    "[RX] 종료: mappings=" + mappingIndex + " apis=" + apis.size());
+        }
+        return apis;
+    }
+
     private List<ApiInfo> extractWithRegex(Path filePath, String relPath,
                                             List<String[]> git,
                                             String apiPathPrefix,
                                             Map<String, String> pathConstantsMap) {
-        boolean debug = debugMode;
-        List<ApiInfo> apis = new ArrayList<>();
         try {
             String raw = new String(Files.readAllBytes(filePath), StandardCharsets.UTF_8);
-            String clean = raw.replaceAll("(?s)/\\*.*?\\*/", " ").replaceAll("//.*", " ");
-
-            String controllerComment = "-";
-            Matcher cM = Pattern.compile("/\\*\\*(.*?)\\*/", Pattern.DOTALL).matcher(raw);
-            if (cM.find()) controllerComment = cM.group(1).replaceAll("[\\r\\n*]", " ").trim();
-
-            String classPath = "";
-            String classHead = clean.substring(0, Math.min(clean.length(), 3000));
-            Matcher cm = Pattern.compile("@RequestMapping\\s*\\((.*?)\\)", Pattern.DOTALL).matcher(classHead);
-            if (cm.find()) {
-                String cParams = substituteConstants(cm.group(1), pathConstantsMap)
-                        .replaceAll("\"\\s*\\+\\s*\"", "");
-                Matcher cp = Pattern.compile("\"([^\"]+)\"").matcher(cParams);
-                if (cp.find()) classPath = cp.group(1).trim();
-            }
-            if (debug) {
-                log.debug("[파싱-RX] 파일={}, @RequestMapping={}", filePath.getFileName(),
-                        classPath.isEmpty() ? "(없음)" : classPath);
-            }
-
-            // 주의: JavaParser가 실패해 Regex 폴백으로 왔을 때도
-            // @GetMapping 처럼 "괄호 없는" 애노테이션을 놓치지 않도록 ( ... ) 부분을 옵션으로 처리한다.
-            // group(1)=애노테이션 타입, group(3)=괄호 내부 파라미터(없으면 null)
-            Matcher mMatcher = Pattern.compile(
-                    "@(GetMapping|PostMapping|RequestMapping|PutMapping|DeleteMapping|PatchMapping)(\\s*\\((.*?)\\))?",
-                    Pattern.DOTALL).matcher(raw);
-
-            while (mMatcher.find()) {
-                String mappingType = mMatcher.group(1);
-                String paramsRaw = mMatcher.group(3); // 괄호 내부만
-                String params = paramsRaw == null ? "" :
-                        substituteConstants(paramsRaw, pathConstantsMap).replaceAll("\"\\s*\\+\\s*\"", "");
-                String httpMethod = resolveHttpMethodFromName(mappingType, params);
-
-                String afterMapping = clean.substring(mMatcher.end(), Math.min(mMatcher.end() + 1000, clean.length()));
-                Matcher mName = Pattern.compile("(?:public|private|protected)\\s+[\\w<>,\\s]+\\s+(\\w+)\\s*\\(")
-                        .matcher(afterMapping);
-                if (!mName.find()) continue;
-
-                String methodName = mName.group(1);
-                boolean isDeprecated = clean.substring(Math.max(0, mMatcher.start() - 300), mMatcher.start())
-                        .contains("@Deprecated");
-
-                // Regex 폴백은 params 내 모든 문자열(consumes/produces 등)을 경로로 오인하기 쉽다.
-                // JavaParser와 동일하게 value/path 속성(또는 단일 멤버)만 경로로 취급한다.
-                List<String> paths = extractMappingPathsFromParams(params);
-                boolean found = !paths.isEmpty();
-                for (String s : paths) {
-                    if (s == null) continue;
-                    s = s.trim();
-                    if (s.isEmpty()) continue;
-
-                    String finalPath = normalizePath(apiPathPrefix + classPath + "/" + s);
-                    String headArea = raw.substring(Math.max(0, mMatcher.start() - 1000), mMatcher.start());
-
-                    ApiInfo info = new ApiInfo();
-                    info.setApiPath(finalPath);
-                    info.setHttpMethod(httpMethod);
-                    info.setMethodName(methodName);
-                    info.setControllerName(filePath.getFileName().toString());
-                    info.setRepoPath(relPath.replace("\\", "/"));
-                    info.setIsDeprecated(isDeprecated ? "Y" : "N");
-                    String mBody = afterMapping.substring(mName.end(), Math.min(mName.end() + 500, afterMapping.length()));
-                    info.setHasUrlBlock(detectUrlBlockRegex(mBody) ? "Y" : "N");
-                    info.setProgramId(autoExtractProgramId(finalPath));
-                    info.setControllerComment(controllerComment);
-                    info.setGit1(git.get(0)); info.setGit2(git.get(1)); info.setGit3(git.get(2));
-                    info.setGit4(git.get(3)); info.setGit5(git.get(4));
-
-                    Matcher docM = Pattern.compile("/\\*\\*(.*?)\\*/", Pattern.DOTALL).matcher(headArea);
-                    if (docM.find()) {
-                        String doc = docM.group(1);
-                        info.setFullComment(doc.replaceAll("[\\r\\n*]", " ").trim());
-                        Matcher dM = Pattern.compile("@?(description|deprecation)[\\s:]*([^@\\n\\r*]+)",
-                                Pattern.CASE_INSENSITIVE).matcher(doc);
-                        info.setDescriptionTag(dM.find() ? dM.group(2).trim() : "-");
-                    } else {
-                        info.setFullComment("-"); info.setDescriptionTag("-");
-                    }
-                    // @Deprecated 라인에서 [URL…차단…] 태그 정보 보충
-                    if (isDeprecated && (info.getFullComment().equals("-") || !ApiStorageService.containsUrlBlockTag(info.getFullComment()))) {
-                        String depLine = extractDeprecatedLine(headArea);
-                        if (depLine != null && ApiStorageService.containsUrlBlockTag(depLine)) {
-                            info.setFullComment(depLine);
-                        }
-                    }
-
-                    // @ApiOperation 우선, 없으면 @Operation(summary) 폴백
-                    Matcher aM = Pattern.compile("@ApiOperation\\s*\\(.*?value\\s*=\\s*\"([^\"]+)\".*?\\)",
-                            Pattern.DOTALL).matcher(headArea);
-                    if (aM.find()) {
-                        info.setApiOperationValue(aM.group(1));
-                    } else {
-                        Matcher opM = Pattern.compile("@Operation\\s*\\(.*?summary\\s*=\\s*\"([^\"]+)\".*?\\)",
-                                Pattern.DOTALL).matcher(headArea);
-                        info.setApiOperationValue(opM.find() ? opM.group(1) : "-");
-                    }
-                    info.setRequestPropertyValue("-");
-                    info.setControllerRequestPropertyValue("-");
-                    info.setBlockMarkingIncomplete(computeBlockMarkingIncomplete(
-                            isFirstStmtUrlBlockRegex(mBody),
-                            info.getIsDeprecated(),
-                            info.getFullComment()));
-                    apis.add(info);
-                    if (debug) {
-                        log.debug("[파싱-RX]   {} {} | method={} | deprecated={} | urlBlock={} | markingIncomplete={}",
-                                httpMethod, finalPath, methodName, info.getIsDeprecated(), info.getHasUrlBlock(),
-                                info.isBlockMarkingIncomplete());
-                    }
-                }
-
-                if (!found) {
-                    // 매핑 어노테이션은 있으나 경로 문자열이 없는 경우 (빈 매핑)
-                    String finalPath = normalizePath(apiPathPrefix + classPath);
-                    ApiInfo info = new ApiInfo();
-                    info.setApiPath(finalPath.isEmpty() ? "/" : finalPath);
-                    info.setHttpMethod(httpMethod);
-                    info.setMethodName(methodName);
-                    info.setControllerName(filePath.getFileName().toString());
-                    info.setRepoPath(relPath.replace("\\", "/"));
-                    info.setIsDeprecated(isDeprecated ? "Y" : "N");
-                    String mBody2 = afterMapping.substring(mName.end(), Math.min(mName.end() + 500, afterMapping.length()));
-                    info.setHasUrlBlock(detectUrlBlockRegex(mBody2) ? "Y" : "N");
-                    info.setProgramId(autoExtractProgramId(finalPath));
-                    info.setControllerComment(controllerComment);
-                    info.setGit1(git.get(0)); info.setGit2(git.get(1)); info.setGit3(git.get(2));
-                    info.setGit4(git.get(3)); info.setGit5(git.get(4));
-                    info.setFullComment("-"); info.setDescriptionTag("-");
-                    info.setApiOperationValue("-");
-                    info.setRequestPropertyValue("-");
-                    info.setControllerRequestPropertyValue("-");
-                    info.setBlockMarkingIncomplete(computeBlockMarkingIncomplete(
-                            isFirstStmtUrlBlockRegex(mBody2),
-                            info.getIsDeprecated(),
-                            info.getFullComment()));
-                    apis.add(info);
-                    if (debug) {
-                        log.debug("[파싱-RX]   {} {} (빈매핑) | method={} | deprecated={} | markingIncomplete={}",
-                                httpMethod, info.getApiPath(), methodName, info.getIsDeprecated(),
-                                info.isBlockMarkingIncomplete());
-                    }
-                }
-            }
-        } catch (Exception ignored) {}
-        if (debug) {
-            log.debug("[파싱-RX] {} 완료 — {}개 API 추출", filePath.getFileName(), apis.size());
+            return extractApisWithRegexCore(raw, relPath, filePath.getFileName().toString(), git,
+                    apiPathPrefix, pathConstantsMap, filePath, null, null);
+        } catch (Exception ignored) {
+            return new ArrayList<>();
         }
-        return apis;
     }
 
     /**
@@ -1101,106 +1467,75 @@ public class ApiExtractorService {
         )));
     }
 
+    private static String rxDbgPreview(String s, int maxChars) {
+        if (s == null) return "";
+        String v = s.replaceAll("\\s+", " ").trim();
+        if (maxChars <= 0) return v;
+        if (v.length() <= maxChars) return v;
+        return v.substring(0, maxChars) + "…";
+    }
+
+    private static String rxNewTraceId() {
+        return "RX-" + java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 10);
+    }
+
+    private static void addRegexTrace(List<Map<String, Object>> steps, String traceId, String level, String message) {
+        String msg = (traceId == null || traceId.isBlank())
+                ? message
+                : ("[" + traceId + "] " + message);
+        addDebugStep(steps, level, msg);
+
+        if (traceId == null || traceId.isBlank()) return;
+        String tag = "[파싱-RX-DBG] traceId=" + traceId + " ";
+        String lv = level == null ? "INFO" : level;
+        if ("ERROR".equalsIgnoreCase(lv)) log.error("{}{}", tag, message);
+        else if ("WARN".equalsIgnoreCase(lv)) log.warn("{}{}", tag, message);
+        else if ("OK".equalsIgnoreCase(lv)) log.info("{}{}", tag, message);
+        else log.debug("{}{}", tag, message);
+    }
+
+    private static String sanitizeDebugRelPath(String raw) {
+        if (raw == null) return "";
+        String v = raw;
+        int idx = v.lastIndexOf("상대경로(relPath):");
+        if (idx >= 0) v = v.substring(idx + "상대경로(relPath):".length());
+        v = v.replace('\r', '\n');
+        String[] lines = v.split("\n");
+        for (int i = lines.length - 1; i >= 0; i--) {
+            String t = lines[i] == null ? "" : lines[i].trim();
+            if (!t.isEmpty()) {
+                v = t;
+                break;
+            }
+        }
+        v = v.trim();
+        v = v.replaceAll("^[`'\"]+", "").replaceAll("[`'\"]+$", "").trim();
+        return v;
+    }
+
+    private static boolean isWindowsAbsPath(String s) {
+        if (s == null) return false;
+        return s.matches("^[A-Za-z]:[\\\\/].+");
+    }
+
+    private static boolean isUnixAbsPath(String s) {
+        if (s == null) return false;
+        return s.startsWith("/");
+    }
+
     /**
      * Regex 폴백 추출 (업로드 소스 문자열 기반).
-     * - {@link #extractWithRegex(Path, String, List, String, Map)} 의 로직을 최대한 동일하게 유지한다.
+     * - {@link #extractWithRegex(Path, String, List, String, Map)} 과 동일 코어({@link #extractApisWithRegexCore})를 사용한다.
      */
     private List<ApiInfo> extractWithRegexFromSource(String rawSource, Path pseudoPath, String relPath,
                                                      List<String[]> git,
                                                      String apiPathPrefix,
                                                      Map<String, String> pathConstantsMap) {
-        boolean debug = debugMode;
-        List<ApiInfo> apis = new ArrayList<>();
         String raw = rawSource == null ? "" : rawSource;
-        String clean = raw.replaceAll("(?s)/\\*.*?\\*/", " ").replaceAll("//.*", " ");
-
-        String controllerComment = "-";
-        Matcher cM = Pattern.compile("/\\*\\*(.*?)\\*/", Pattern.DOTALL).matcher(raw);
-        if (cM.find()) controllerComment = cM.group(1).replaceAll("[\\r\\n*]", " ").trim();
-
-        String classPath = "";
-        String classHead = clean.substring(0, Math.min(clean.length(), 3000));
-        Matcher cm = Pattern.compile("@RequestMapping\\s*\\((.*?)\\)", Pattern.DOTALL).matcher(classHead);
-        if (cm.find()) {
-            String cParams = substituteConstants(cm.group(1), pathConstantsMap)
-                    .replaceAll("\"\\s*\\+\\s*\"", "");
-            Matcher cp = Pattern.compile("\"([^\"]+)\"").matcher(cParams);
-            if (cp.find()) classPath = cp.group(1).trim();
-        }
-        if (debug) {
-            log.debug("[파싱-RX] (업로드) file={}, @RequestMapping={}",
-                    pseudoPath != null ? pseudoPath.getFileName() : "(unknown)",
-                    classPath.isEmpty() ? "(없음)" : classPath);
-        }
-
-        Matcher mMatcher = Pattern.compile(
-                "@(GetMapping|PostMapping|RequestMapping|PutMapping|DeleteMapping|PatchMapping)(\\s*\\((.*?)\\))?",
-                Pattern.DOTALL).matcher(raw);
-
-        while (mMatcher.find()) {
-            String mappingType = mMatcher.group(1);
-            String paramsRaw = mMatcher.group(3);
-            String params = paramsRaw == null ? "" :
-                    substituteConstants(paramsRaw, pathConstantsMap).replaceAll("\"\\s*\\+\\s*\"", "");
-            String httpMethod = resolveHttpMethodFromName(mappingType, params);
-
-            String afterMapping = clean.substring(mMatcher.end(), Math.min(mMatcher.end() + 1000, clean.length()));
-            Matcher mName = Pattern.compile("(?:public|private|protected)\\s+[\\w<>,\\s]+\\s+(\\w+)\\s*\\(")
-                    .matcher(afterMapping);
-            if (!mName.find()) continue;
-
-            String methodName = mName.group(1);
-            boolean isDeprecated = clean.substring(Math.max(0, mMatcher.start() - 300), mMatcher.start())
-                    .contains("@Deprecated");
-
-            List<String> paths = extractMappingPathsFromParams(params);
-            for (String s : paths) {
-                if (s == null) continue;
-                s = s.trim();
-                if (s.isEmpty()) continue;
-
-                String finalPath = normalizePath(apiPathPrefix + classPath + "/" + s);
-                String headArea = raw.substring(Math.max(0, mMatcher.start() - 1000), mMatcher.start());
-
-                ApiInfo info = new ApiInfo();
-                info.setApiPath(finalPath);
-                info.setHttpMethod(httpMethod);
-                info.setMethodName(methodName);
-                info.setControllerName(pseudoPath != null && pseudoPath.getFileName() != null
-                        ? pseudoPath.getFileName().toString()
-                        : "Uploaded.java");
-                info.setRepoPath(relPath.replace("\\", "/"));
-                info.setIsDeprecated(isDeprecated ? "Y" : "N");
-                String mBody = afterMapping.substring(mName.end(), Math.min(mName.end() + 500, afterMapping.length()));
-                info.setHasUrlBlock(detectUrlBlockRegex(mBody) ? "Y" : "N");
-                info.setProgramId(autoExtractProgramId(finalPath));
-                info.setControllerComment(controllerComment);
-                info.setGit1(git.get(0));
-                info.setGit2(git.get(1));
-                info.setGit3(git.get(2));
-                info.setGit4(git.get(3));
-                info.setGit5(git.get(4));
-
-                Matcher docM = Pattern.compile("/\\*\\*(.*?)\\*/", Pattern.DOTALL).matcher(headArea);
-                if (docM.find()) {
-                    String doc = docM.group(1);
-                    info.setFullComment(doc.replaceAll("[\\r\\n*]", " ").trim());
-                    Matcher dM = Pattern.compile("@?(description|deprecation)[\\s:]*([^@\\n\\r*]+)",
-                                    Pattern.CASE_INSENSITIVE)
-                            .matcher(doc);
-                    info.setDescriptionTag(dM.find() ? dM.group(2).trim() : "-");
-                } else {
-                    info.setFullComment("-");
-                    info.setDescriptionTag("-");
-                }
-
-                apis.add(info);
-            }
-        }
-        if (debug) {
-            log.debug("[파싱-RX] (업로드) 완료 — {}개 API 추출", apis.size());
-        }
-        return apis;
+        String controllerFileName = pseudoPath != null && pseudoPath.getFileName() != null
+                ? pseudoPath.getFileName().toString()
+                : "Uploaded.java";
+        return extractApisWithRegexCore(raw, relPath, controllerFileName, git, apiPathPrefix, pathConstantsMap, null, null, null);
     }
 
     /**
@@ -1221,12 +1556,28 @@ public class ApiExtractorService {
         out.put("steps", steps);
         try {
             addDebugStep(steps, "INFO", "입력값 확인");
-            if (rootPath == null || rootPath.isBlank()) throw new IllegalArgumentException("rootPath is required");
-            if (relPath == null || relPath.isBlank()) throw new IllegalArgumentException("relPath is required");
+            String relRaw = relPath;
+            String relSan = sanitizeDebugRelPath(relRaw);
+            out.put("relPathSanitized", relSan);
+            if (relRaw != null && !relRaw.equals(relSan)) {
+                addDebugStep(steps, "INFO", "relPath 정규화: '" + relRaw + "' → '" + relSan + "'");
+            }
 
-            Path root = Paths.get(rootPath);
-            Path file = root.resolve(relPath);
-            addDebugStep(steps, "INFO", "파일 경로 계산: " + file.toAbsolutePath().normalize());
+            if (relSan == null || relSan.isBlank()) throw new IllegalArgumentException("relPath is required");
+
+            final Path file;
+            final String effectiveRelPath;
+            if (isWindowsAbsPath(relSan) || isUnixAbsPath(relSan)) {
+                file = Paths.get(relSan);
+                effectiveRelPath = file.getFileName() != null ? file.getFileName().toString() : relSan;
+                addDebugStep(steps, "INFO", "절대경로 입력으로 처리: " + file.toAbsolutePath().normalize());
+            } else {
+                if (rootPath == null || rootPath.isBlank()) throw new IllegalArgumentException("rootPath is required");
+                Path root = Paths.get(rootPath);
+                file = root.resolve(relSan);
+                effectiveRelPath = relSan;
+                addDebugStep(steps, "INFO", "상대경로 입력으로 처리: " + file.toAbsolutePath().normalize());
+            }
             if (!Files.exists(file)) throw new IllegalArgumentException("file not found: " + file);
             if (!Files.isRegularFile(file)) throw new IllegalArgumentException("not a file: " + file);
 
@@ -1237,7 +1588,7 @@ public class ApiExtractorService {
             addDebugStep(steps, "INFO", "JavaParser 파싱 시작");
             try {
                 ensureJavaParserConfigured();
-                List<ApiInfo> apis = extractWithJavaParser(file, relPath, git, apiPathPrefix == null ? "" : apiPathPrefix, constants);
+                List<ApiInfo> apis = extractWithJavaParser(file, effectiveRelPath, git, apiPathPrefix == null ? "" : apiPathPrefix, constants);
                 out.put("ok", true);
                 out.put("javaParserOk", true);
                 out.put("parseMethod", "javaparser");
@@ -1273,7 +1624,12 @@ public class ApiExtractorService {
 
             out.put("regexFallbackUsed", true);
             addDebugStep(steps, "INFO", "Regex 폴백 추출 시작");
-            List<ApiInfo> rxApis = extractWithRegex(file, relPath, git, apiPathPrefix == null ? "" : apiPathPrefix, constants);
+            String traceId = rxNewTraceId();
+            out.put("regexTraceId", traceId);
+            addRegexTrace(steps, traceId, "INFO", "Regex trace 시작");
+            String raw = new String(Files.readAllBytes(file), StandardCharsets.UTF_8);
+            List<ApiInfo> rxApis = extractApisWithRegexCore(raw, effectiveRelPath, file.getFileName().toString(), git,
+                    apiPathPrefix == null ? "" : apiPathPrefix, constants, file, steps, traceId);
             out.put("ok", true);
             out.put("parseMethod", "regex");
             out.put("mode", "path");
@@ -1361,8 +1717,12 @@ public class ApiExtractorService {
 
             out.put("regexFallbackUsed", true);
             addDebugStep(steps, "INFO", "Regex 폴백 추출 시작");
-            List<ApiInfo> rxApis = extractWithRegexFromSource(javaSource, pseudo, rel, git,
-                    apiPathPrefix == null ? "" : apiPathPrefix, constants);
+            String traceId = rxNewTraceId();
+            out.put("regexTraceId", traceId);
+            addRegexTrace(steps, traceId, "INFO", "Regex trace 시작");
+            List<ApiInfo> rxApis = extractApisWithRegexCore(javaSource, rel,
+                    pseudo != null && pseudo.getFileName() != null ? pseudo.getFileName().toString() : rel,
+                    git, apiPathPrefix == null ? "" : apiPathPrefix, constants, null, steps, traceId);
             out.put("ok", true);
             out.put("parseMethod", "regex");
             out.put("apiCount", rxApis.size());
