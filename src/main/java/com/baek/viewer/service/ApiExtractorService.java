@@ -1110,10 +1110,12 @@ public class ApiExtractorService {
                 ));
             }
             out.put("apis", rows);
+            out.put("absolutePath", file.toAbsolutePath().normalize().toString());
             return out;
         } catch (ParseProblemException ppe) {
-            out.put("errorType", "ParseProblemException");
+            out.put("errorType", ParseProblemException.class.getName());
             out.put("message", ppe.getMessage());
+            out.put("stackTrace", stackTraceString(ppe));
             out.put("problems", ppe.getProblems().stream().map(pr -> {
                 Map<String, Object> m = new LinkedHashMap<>();
                 m.put("message", pr.getMessage());
@@ -1128,9 +1130,19 @@ public class ApiExtractorService {
             }).toList());
             return out;
         } catch (Exception e) {
-            out.put("errorType", e.getClass().getSimpleName());
+            out.put("errorType", e.getClass().getName());
             out.put("message", e.getMessage());
+            out.put("stackTrace", stackTraceString(e));
             return out;
         }
+    }
+
+    private static String stackTraceString(Throwable e) {
+        if (e == null) {
+            return null;
+        }
+        StringWriter sw = new StringWriter();
+        e.printStackTrace(new PrintWriter(sw));
+        return sw.toString();
     }
 }

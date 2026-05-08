@@ -179,6 +179,73 @@
     .apm-range-btn.active { background:var(--primary); color:#fff; border-color:var(--primary); }
     .apm-range-btn.disabled { opacity:.4; pointer-events:none; }
 
+    /* 단건 JavaParser 디버그 모달 */
+    .debug-parse-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 12000;
+      background: rgba(15, 23, 42, .55);
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+    .debug-parse-overlay.show { display: flex; }
+    .debug-parse-sheet {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      max-width: min(920px, 96vw);
+      max-height: 88vh;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, .22);
+    }
+    .debug-parse-sheet .dps-head {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      flex-shrink: 0;
+    }
+    .debug-parse-sheet .dps-body {
+      padding: 12px 16px 16px;
+      overflow: auto;
+      flex: 1;
+      min-height: 0;
+    }
+    pre.dps-pre {
+      margin: 0;
+      font-size: 11.5px;
+      line-height: 1.45;
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-family: ui-monospace, Menlo, Consolas, monospace;
+      background: #0f172a;
+      color: #e2e8f0;
+      padding: 10px 12px;
+      border-radius: 8px;
+      max-height: 38vh;
+      overflow: auto;
+    }
+    [data-theme="dark"] pre.dps-pre {
+      background: #020617;
+      color: #e2e8f0;
+    }
+    .single-debug-box {
+      margin-top: 12px;
+      padding: 12px 14px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: #fafbfc;
+    }
+    [data-theme="dark"] .single-debug-box {
+      background: var(--bg) !important;
+    }
+
     /* ─── 다크모드 오버라이드 ─── */
     :root[data-theme="dark"]{
       --bg:#0f172a; --card:#1e293b;
@@ -306,6 +373,32 @@
   </div>
 </div>
 
+<!-- 단건 JavaParser 상세 결과 -->
+<div id="debugParseOverlay" class="debug-parse-overlay" aria-hidden="true">
+  <div class="debug-parse-sheet" role="dialog" aria-modal="true" aria-labelledby="debugParseTitle" onclick="event.stopPropagation();">
+    <div class="dps-head">
+      <div style="min-width:0;">
+        <strong id="debugParseTitle">JavaParser 단건 파싱</strong>
+        <div id="debugParseMeta" style="font-size:11px;color:var(--text-muted);margin-top:4px;line-height:1.45;word-break:break-all;"></div>
+      </div>
+      <button type="button" class="btn btn-ghost" style="flex-shrink:0;height:34px;" onclick="closeDebugParseModal()">닫기</button>
+    </div>
+    <div class="dps-body">
+      <div id="debugParseStatus" style="margin-bottom:10px;font-weight:700;line-height:1.45;"></div>
+      <div id="debugParseAbsWrap" style="display:none;margin-bottom:10px;font-size:11px;line-height:1.45;color:var(--text-muted);"></div>
+
+      <div id="debugParseProblemsHdr" style="font-size:11px;font-weight:700;margin:8px 0 4px;color:var(--text-muted);display:none;">JavaParser 문제 (위치별)</div>
+      <pre id="debugParseProblems" class="dps-pre" style="display:none;"></pre>
+
+      <div id="debugParseApisHdr" style="font-size:11px;font-weight:700;margin:8px 0 4px;color:var(--text-muted);display:none;">추출된 API (최대 50건 표시)</div>
+      <pre id="debugParseApis" class="dps-pre" style="display:none;"></pre>
+
+      <div id="debugParseStackHdr" style="font-size:11px;font-weight:700;margin:8px 0 4px;color:var(--text-muted);display:none;">스택 트레이스</div>
+      <pre id="debugParseStack" class="dps-pre" style="display:none;max-height:42vh;"></pre>
+    </div>
+  </div>
+</div>
+
 <div class="main">
 
   <!-- ─── 테스트용 의심 키워드 (최상단 — 분석 시 매칭에 사용) ─── -->
@@ -385,6 +478,27 @@
     <!-- 공용 액션: 선택 개수와 무관하게 항상 노출 -->
     <div style="margin-top:12px;display:flex;justify-content:flex-end;">
       <button class="btn btn-blue" id="extractBtn" onclick="doExtract()">추출 시작</button>
+    </div>
+
+    <!-- 단건 JavaParser (레포 ROOT 기준, 정규식 폴백 없음) -->
+    <div class="single-debug-box">
+      <div style="font-size:11px;font-weight:800;color:var(--text-muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:.04em;">
+        단건 JavaParser 파싱 (디버그)
+      </div>
+      <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;">
+        <label class="field" style="flex:1;min-width:240px;text-transform:none;letter-spacing:0;">
+          파일명 / 경로
+          <input type="text" id="singleDebugRelPath"
+                 placeholder="ROOT 기준 상대경로 또는 절대경로 전체 붙여넣기 (예: src/main/java/.../XxxController.java)"
+                 style="width:100%;"
+                 onkeydown="if(event.key==='Enter'){event.preventDefault();runToolbarSingleDebugParse();}">
+        </label>
+        <button type="button" class="btn btn-purple" style="height:34px;" onclick="runToolbarSingleDebugParse()">파싱 실행</button>
+      </div>
+      <p style="font-size:10px;color:var(--text-muted);margin-top:8px;line-height:1.55;">
+        레포는 위에서 <b>정확히 1개</b>만 선택해야 합니다. 프리픽스·상수 치환은 해당 레포 설정(및 고급 오버라이드)을 따릅니다.
+        결과는 파싱 예외 메시지, JavaParser 문제 위치, 필요 시 스택 트레이스까지 포함합니다.
+      </p>
     </div>
   </div>
 
@@ -2016,8 +2130,11 @@
     };
     const debugBtn = (it) => {
       const rel = (it && it.relPath) ? String(it.relPath) : '';
+      const rn = (it && it.repoName) ? String(it.repoName) : '';
       if (!rel) return '';
-      return `<button type="button" class="badge btn-excel" style="padding:2px 8px;" onclick="debugParseOneFile('${esc(rel).replace(/'/g, '&#39;')}')">단건파싱</button>`;
+      const oRel = JSON.stringify(rel);
+      const oRn = JSON.stringify(rn);
+      return `<button type="button" class="badge btn-excel" style="padding:2px 8px;" onclick='debugParseOneFile(${oRel},${oRn})'>단건파싱</button>`;
     };
     const rowHtml = (it, cls) => `
       <tr>
@@ -2124,35 +2241,189 @@
     }
   }
 
-  async function debugParseOneFile(relPath) {
+  function normalizeRelPathForRoot(rawPath, rootPath) {
+    const s = (rawPath || '').trim();
+    if (!s) return '';
+    let p = s.replace(/\\/g, '/');
+    const normRoot = String(rootPath || '').replace(/\\/g, '/').replace(/\/+$/, '');
+    if (normRoot && (p === normRoot || p.startsWith(normRoot + '/'))) {
+      return p.slice(normRoot.length).replace(/^\/+/, '');
+    }
+    return p.replace(/^\/+/, '');
+  }
+
+  function resolveDebugParseRepoContext(explicitRepoName) {
+    const rnExplicit = (explicitRepoName != null && String(explicitRepoName).trim() !== '')
+      ? String(explicitRepoName).trim()
+      : '';
+    let r = null;
+    if (rnExplicit) {
+      r = allRepos.find(x => String(x.repoName || '') === rnExplicit);
+      if (!r) return { error: `레포를 찾을 수 없습니다: ${rnExplicit}` };
+    } else {
+      const sel = normalizeExtractSelection(getRepoConfigValues());
+      if (sel.length !== 1) {
+        return { error: '단건 파싱은 레포를 정확히 1개만 선택하거나, 문제 파일 표의 「단건파싱」으로 레포를 지정하세요.' };
+      }
+      r = allRepos.find(x => String(x.id) === String(sel[0]));
+      if (!r) return { error: '선택된 레포 설정을 찾지 못했습니다.' };
+    }
+    if (!r.rootPath) return { error: `ROOT_PATH 미설정: ${r.repoName}` };
+    const ov = extractOverrides[r.repoName] || {};
+    const apiPathPrefix = (ov.apiPathPrefix != null && String(ov.apiPathPrefix).trim() !== '')
+      ? String(ov.apiPathPrefix).trim()
+      : (r.apiPathPrefix || '');
+    const pathConstants = (ov.pathConstants != null && String(ov.pathConstants).trim() !== '')
+      ? String(ov.pathConstants).trim()
+      : (r.pathConstants || '');
+    return {
+      repoName: r.repoName,
+      rootPath: r.rootPath,
+      apiPathPrefix,
+      pathConstants
+    };
+  }
+
+  function closeDebugParseModal() {
+    const o = document.getElementById('debugParseOverlay');
+    if (!o) return;
+    o.classList.remove('show');
+    o.setAttribute('aria-hidden', 'true');
+  }
+
+  function openDebugParseModal() {
+    const o = document.getElementById('debugParseOverlay');
+    if (!o) return;
+    o.classList.add('show');
+    o.setAttribute('aria-hidden', 'false');
+  }
+
+  function showDebugParseResult(d, meta) {
+    const title = document.getElementById('debugParseTitle');
+    const metaEl = document.getElementById('debugParseMeta');
+    const stat = document.getElementById('debugParseStatus');
+    const absW = document.getElementById('debugParseAbsWrap');
+    const ph = document.getElementById('debugParseProblemsHdr');
+    const probs = document.getElementById('debugParseProblems');
+    const ah = document.getElementById('debugParseApisHdr');
+    const apisEl = document.getElementById('debugParseApis');
+    const sh = document.getElementById('debugParseStackHdr');
+    const stack = document.getElementById('debugParseStack');
+    if (title) title.textContent = d && d.ok ? 'JavaParser 단건 파싱 — 성공' : 'JavaParser 단건 파싱 — 오류';
+
+    const repo = meta && meta.repoName ? meta.repoName : '-';
+    const root = meta && meta.rootPath ? meta.rootPath : '';
+    const rel = meta && meta.relPath ? meta.relPath : '';
+    if (metaEl) {
+      metaEl.textContent =
+        `레포: ${repo}\nROOT: ${root}\n상대경로(relPath): ${rel}`;
+    }
+
+    const hideBlock = () => {
+      if (absW) { absW.style.display = 'none'; absW.textContent = ''; }
+      if (ph) ph.style.display = 'none';
+      if (probs) { probs.style.display = 'none'; probs.textContent = ''; }
+      if (ah) ah.style.display = 'none';
+      if (apisEl) { apisEl.style.display = 'none'; apisEl.textContent = ''; }
+      if (sh) sh.style.display = 'none';
+      if (stack) { stack.style.display = 'none'; stack.textContent = ''; }
+    };
+    hideBlock();
+
+    if (d.ok) {
+      if (stat) {
+        stat.textContent = `OK — JavaParser로 ${Number(d.apiCount) || 0}개 URL/API 항목을 추출했습니다.`;
+        stat.style.color = '#166534';
+      }
+      if (d.absolutePath && absW) {
+        absW.style.display = 'block';
+        absW.innerHTML =
+          `<span style="font-weight:700;color:var(--text);">실제 파일</span> · <span style="word-break:break-all;">${esc(String(d.absolutePath))}</span>`;
+      }
+      const lines = (d.apis || []).map(a =>
+        `${String(a.httpMethod || '')} ${String(a.apiPath || '')} │ ${String(a.methodName || '')} │ op=${String(a.apiOperationValue || '-')} │ desc=${String(a.descriptionTag || '-')}`);
+      if (apisEl && lines.length) {
+        if (ah) ah.style.display = 'block';
+        apisEl.style.display = 'block';
+        apisEl.textContent = lines.join('\n');
+      }
+    } else {
+      if (stat) {
+        const et = esc(String(d.errorType || 'Exception'));
+        const msg = esc(String(d.message != null ? d.message : ''));
+        stat.innerHTML =
+          `<span style="color:#991b1b;">FAIL — ${et}</span><br>${msg}`;
+      }
+      const pArr = Array.isArray(d.problems) ? d.problems : [];
+      const ptxt = pArr.map(pr => {
+        const pos = (pr && pr.begin) ? `[${String(pr.begin)}]` : '[?]';
+        return `${pos} ${String(pr.message || '').trim()}`.trim();
+      }).join('\n');
+      if (probs && ptxt) {
+        if (ph) ph.style.display = 'block';
+        probs.style.display = 'block';
+        probs.textContent = ptxt;
+      }
+      const st = d.stackTrace && String(d.stackTrace).trim();
+      if (stack && st) {
+        if (sh) sh.style.display = 'block';
+        stack.style.display = 'block';
+        stack.textContent = st;
+      }
+    }
+
+    openDebugParseModal();
+  }
+
+  async function debugParseOneFile(relPath, explicitRepoName) {
     try {
-      const rootPath = currentExtractRoot || '';
-      const apiPathPrefix = document.getElementById('apiPathPrefix')?.value || '';
-      const pathConstants = document.getElementById('pathConstants')?.value || '';
-      if (!rootPath) { showToast('ROOT_PATH가 없어 단건 파싱을 실행할 수 없습니다.', 'error'); return; }
-      if (!relPath) { showToast('상대경로가 없어 단건 파싱을 실행할 수 없습니다.', 'error'); return; }
+      const rawPath = String(relPath || '').trim();
+      if (!rawPath) { showToast('파일 경로가 비어 있습니다.', 'error'); return; }
+      const ctx = resolveDebugParseRepoContext(explicitRepoName);
+      if (ctx.error) { showToast(ctx.error, 'error'); return; }
+      const normRel = normalizeRelPathForRoot(rawPath, ctx.rootPath);
+      if (!normRel) {
+        showToast('유효한 파일 경로를 입력하세요. (레포 ROOT 기준 상대경로 또는 ROOT를 포함한 절대경로)', 'error');
+        return;
+      }
+
       const res = await adminFetch('/api/extract/debug-parse-one', {
         method: 'POST',
-        body: JSON.stringify({ rootPath, relPath, apiPathPrefix, pathConstants })
+        body: JSON.stringify({
+          rootPath: ctx.rootPath,
+          relPath: normRel,
+          apiPathPrefix: ctx.apiPathPrefix || '',
+          pathConstants: ctx.pathConstants || ''
+        })
       });
       const d = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(d.error || '서버 오류');
-      const head = `단건 파싱 결과 — ${relPath}\n(root=${rootPath})\n\n`;
-      if (d.ok) {
-        const lines = (d.apis || []).map(a => `${a.httpMethod} ${a.apiPath} | ${a.methodName} | ${a.apiOperationValue || '-'}`);
-        await customAlert(head + `OK: apiCount=${d.apiCount}\n\n` + lines.join('\n'), { title: '🧩 JavaParser 단건 파싱' });
-      } else {
-        const probs = Array.isArray(d.problems) ? d.problems : [];
-        const ptxt = probs.slice(0, 20).map(p => {
-          const pos = (p.beginLine ? `L${p.beginLine}:${p.beginColumn || 1}` : '');
-          return `${pos} ${p.message || ''}`.trim();
-        }).join('\n');
-        await customAlert(head + `FAIL: ${d.errorType || 'Error'}\n${d.message || ''}\n\n` + (ptxt ? `Problems:\n${ptxt}` : ''), { title: '🧩 JavaParser 단건 파싱 (실패)' });
-      }
+
+      showDebugParseResult(d, {
+        repoName: ctx.repoName,
+        rootPath: ctx.rootPath,
+        relPath: normRel
+      });
     } catch (e) {
       showToast(`단건 파싱 실패: ${e.message}`, 'error');
     }
   }
+
+  function runToolbarSingleDebugParse() {
+    const inp = document.getElementById('singleDebugRelPath');
+    debugParseOneFile(inp ? inp.value : '', null);
+  }
+
+  (function bindDebugParseOverlay() {
+    const o = document.getElementById('debugParseOverlay');
+    if (!o) return;
+    o.addEventListener('click', (e) => {
+      if (e.target === o) closeDebugParseModal();
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && o.classList.contains('show')) closeDebugParseModal();
+    });
+  })();
 
   // ── 작업 카드 UI ──────────────────────────────────────────
   function showWorkCard(v, title) {
