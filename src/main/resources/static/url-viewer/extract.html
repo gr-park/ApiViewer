@@ -401,9 +401,15 @@
       <div id="debugParseStackHdr" style="font-size:11px;font-weight:700;margin:8px 0 4px;color:var(--text-muted);display:none;">스택 트레이스</div>
       <pre id="debugParseStack" class="dps-pre" style="display:none;max-height:42vh;"></pre>
     </div>
-    <div class="dps-foot" id="debugParseFoot" style="flex-shrink:0;padding:10px 16px;border-top:1px solid var(--border);display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:flex-end;background:#f8fafc;">
-      <span id="debugParseFootHint" style="font-size:10px;color:var(--text-muted);flex:1;min-width:200px;line-height:1.45;"></span>
-      <button type="button" class="btn btn-blue" id="debugParseBtnSave" style="display:none;height:32px;font-size:12px;">레포 DB에 반영…</button>
+    <div class="dps-foot" id="debugParseFoot" style="flex-shrink:0;padding:10px 16px;border-top:1px solid var(--border);display:flex;flex-direction:column;align-items:stretch;gap:8px;background:#f8fafc;">
+      <div id="debugParseSaveRepoRow" style="display:none;align-items:center;gap:10px;flex-wrap:wrap;">
+        <label for="debugParseSaveRepoSelect" style="font-size:11px;font-weight:700;color:var(--text-muted);white-space:nowrap;">DB 저장 레포</label>
+        <select id="debugParseSaveRepoSelect" style="flex:1;min-width:200px;max-width:100%;padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:var(--card);color:var(--text);"></select>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:flex-end;">
+        <span id="debugParseFootHint" style="font-size:10px;color:var(--text-muted);flex:1;min-width:200px;line-height:1.45;"></span>
+        <button type="button" class="btn btn-blue" id="debugParseBtnSave" style="display:none;height:32px;font-size:12px;">레포 DB에 반영…</button>
+      </div>
     </div>
   </div>
 </div>
@@ -504,15 +510,15 @@
         </label>
         <input type="file" id="singleDebugFileInput" style="display:none"
                accept=".java,text/plain,text/x-java-source,application/octet-stream"
-               onchange="onSingleDebugFilePicked(event)">
+               onchange="onSingleDebugFileChosen(event)">
         <button type="button" class="btn btn-ghost" style="height:34px;"
                 onclick="document.getElementById('singleDebugFileInput').click()">파일 선택</button>
         <button type="button" class="btn btn-purple" style="height:34px;" onclick="runToolbarSingleDebugParse()">파싱 실행</button>
       </div>
       <p style="font-size:10px;color:var(--text-muted);margin-top:8px;line-height:1.55;">
-        레포는 위에서 <b>정확히 1개</b>만 선택해야 합니다. 프리픽스·상수 치환은 해당 레포 설정(및 고급 오버라이드)을 따릅니다.
-        <b>파일 선택</b>은 PC에서 <code style="font-size:10px;">.java</code>를 골라 서버로 보낸 뒤 같은 규칙으로 파싱합니다(레포 클론 경로와 다를 수 있음).
-        결과는 파싱 예외 메시지, JavaParser 문제 위치, 필요 시 스택 트레이스까지 포함합니다.
+        레포를 고르지 않아도 됩니다. 상대경로만 쓸 때는 상단에서 레포 <b>1개</b>를 선택하거나, 등록된 레포 <code style="font-size:10px;">ROOT_PATH</code>가 포함된 <b>전체 절대경로</b>를 붙여넣으세요.
+        DB 반영은 결과 모달에서 <b>저장할 레포</b>를 골라 실행합니다. 프리픽스·상수 치환은 저장 시 선택한 레포(및 고급 오버라이드)를 따릅니다.
+        <b>파일 선택</b>은 PC의 <code style="font-size:10px;">.java</code>를 지정만 하고, <b>파싱 실행</b>을 눌렀을 때 서버로 전송·파싱합니다(레포 미선택 시 프리픽스는 비우고 미리보기).
       </p>
     </div>
   </div>
@@ -2267,22 +2273,53 @@
     return p.replace(/^\/+/, '');
   }
 
-  function resolveDebugParseRepoContext(explicitRepoName) {
-    const rnExplicit = (explicitRepoName != null && String(explicitRepoName).trim() !== '')
-      ? String(explicitRepoName).trim()
-      : '';
-    let r = null;
-    if (rnExplicit) {
-      r = allRepos.find(x => String(x.repoName || '') === rnExplicit);
-      if (!r) return { error: `레포를 찾을 수 없습니다: ${rnExplicit}` };
-    } else {
-      const sel = normalizeExtractSelection(getRepoConfigValues());
-      if (sel.length !== 1) {
-        return { error: '단건 파싱은 레포를 정확히 1개만 선택하거나, 문제 파일 표의 「단건파싱」으로 레포를 지정하세요.' };
+  function normRootStr(p) {
+    if (p == null || p === '') return '';
+    let s = String(p).replace(/\\/g, '/');
+    while (s.length > 1 && s.endsWith('/')) s = s.slice(0, -1);
+    return s;
+  }
+
+  /** 레포 미선택 시 절대경로가 어느 등록 ROOT 아래인지 추적해 rel/프리픽스 결정 */
+  function tryInferRepoFromFilePath(rawPath) {
+    const s0 = String(rawPath || '').trim();
+    if (!s0) return { ok: false };
+    let p = s0.replace(/\\/g, '/');
+    while (p.length > 1 && p.endsWith('/')) p = p.slice(0, -1);
+    let bestR = null;
+    let bestLen = -1;
+    let bestRel = '';
+    for (const r of allRepos) {
+      const root = normRootStr(r.rootPath);
+      if (!root) continue;
+      if (p === root || p.startsWith(root + '/')) {
+        if (root.length > bestLen) {
+          bestLen = root.length;
+          bestR = r;
+          bestRel = p.slice(root.length).replace(/^\/+/, '');
+        }
       }
-      r = allRepos.find(x => String(x.id) === String(sel[0]));
-      if (!r) return { error: '선택된 레포 설정을 찾지 못했습니다.' };
     }
+    if (!bestR || !bestRel) return { ok: false };
+    const ov = extractOverrides[bestR.repoName] || {};
+    const apiPathPrefix = (ov.apiPathPrefix != null && String(ov.apiPathPrefix).trim() !== '')
+      ? String(ov.apiPathPrefix).trim()
+      : (bestR.apiPathPrefix || '');
+    const pathConstants = (ov.pathConstants != null && String(ov.pathConstants).trim() !== '')
+      ? String(ov.pathConstants).trim()
+      : (bestR.pathConstants || '');
+    return {
+      ok: true,
+      repoName: bestR.repoName,
+      rootPath: bestR.rootPath,
+      relPath: bestRel,
+      apiPathPrefix,
+      pathConstants
+    };
+  }
+
+  function buildCtxFromRepoRow(r) {
+    if (!r) return { error: '레포 정보가 없습니다.' };
     if (!r.rootPath) return { error: `ROOT_PATH 미설정: ${r.repoName}` };
     const ov = extractOverrides[r.repoName] || {};
     const apiPathPrefix = (ov.apiPathPrefix != null && String(ov.apiPathPrefix).trim() !== '')
@@ -2295,8 +2332,115 @@
       repoName: r.repoName,
       rootPath: r.rootPath,
       apiPathPrefix,
-      pathConstants
+      pathConstants,
+      fromInfer: false
     };
+  }
+
+  /**
+   * 단건 경로 파싱용: 명시 레포 / 상단 1개 선택 / ROOT 자동추론(절대경로)
+   */
+  function resolveSingleDebugPathContext(rawPath, explicitRepoName) {
+    const pathTrim = String(rawPath || '').trim();
+    const rnExplicit = (explicitRepoName != null && String(explicitRepoName).trim() !== '')
+      ? String(explicitRepoName).trim()
+      : '';
+    if (rnExplicit) {
+      const r = allRepos.find(x => String(x.repoName || '') === rnExplicit);
+      if (!r) return { error: `레포를 찾을 수 없습니다: ${rnExplicit}` };
+      const c = buildCtxFromRepoRow(r);
+      if (c.error) return c;
+      return c;
+    }
+    const sel = normalizeExtractSelection(getRepoConfigValues());
+    if (sel.length === 1) {
+      const r = allRepos.find(x => String(x.id) === String(sel[0]));
+      if (!r) return { error: '선택된 레포 설정을 찾지 못했습니다.' };
+      const c = buildCtxFromRepoRow(r);
+      if (c.error) return c;
+      return c;
+    }
+    const infer = tryInferRepoFromFilePath(pathTrim);
+    if (infer.ok) {
+      return {
+        repoName: infer.repoName,
+        rootPath: infer.rootPath,
+        apiPathPrefix: infer.apiPathPrefix,
+        pathConstants: infer.pathConstants,
+        fromInfer: true,
+        relPathFromInfer: infer.relPath
+      };
+    }
+    return {
+      error: '레포를 선택하지 않은 경우, 등록된 레포 ROOT가 포함된 전체 절대경로를 입력하세요. 상대경로만 쓸 때는 상단에서 레포를 정확히 1개 선택하세요.'
+    };
+  }
+
+  /** 업로드 파싱: 레포 1개 선택 시에만 프리픽스·상수 적용, 아니면 빈 값으로 미리보기 */
+  function resolveDebugUploadParseContext() {
+    const sel = normalizeExtractSelection(getRepoConfigValues());
+    if (sel.length !== 1) {
+      return { repoName: null, apiPathPrefix: '', pathConstants: '' };
+    }
+    const r = allRepos.find(x => String(x.id) === String(sel[0]));
+    if (!r) return { repoName: null, apiPathPrefix: '', pathConstants: '' };
+    const ov = extractOverrides[r.repoName] || {};
+    const apiPathPrefix = (ov.apiPathPrefix != null && String(ov.apiPathPrefix).trim() !== '')
+      ? String(ov.apiPathPrefix).trim()
+      : (r.apiPathPrefix || '');
+    const pathConstants = (ov.pathConstants != null && String(ov.pathConstants).trim() !== '')
+      ? String(ov.pathConstants).trim()
+      : (r.pathConstants || '');
+    return { repoName: r.repoName, apiPathPrefix, pathConstants };
+  }
+
+  function populateDebugSaveRepoSelect(ctx) {
+    const row = document.getElementById('debugParseSaveRepoRow');
+    const selEl = document.getElementById('debugParseSaveRepoSelect');
+    if (!row || !selEl || !allRepos.length) return;
+    let candidateRepos = allRepos.slice();
+    if (ctx && ctx.mode === 'repo' && ctx.rootPath && ctx.rootPath !== '(업로드)') {
+      const np = normRootStr(ctx.rootPath);
+      const matched = allRepos.filter(r => normRootStr(r.rootPath) === np);
+      if (matched.length > 0) candidateRepos = matched;
+    }
+    selEl.innerHTML = '';
+    const ph = document.createElement('option');
+    ph.value = '';
+    ph.textContent = '— 저장할 레포 선택 —';
+    selEl.appendChild(ph);
+    candidateRepos.forEach(r => {
+      const o = document.createElement('option');
+      o.value = r.repoName;
+      o.textContent = r.businessName ? `${r.businessName} (${r.repoName})` : r.repoName;
+      selEl.appendChild(o);
+    });
+    const preferred = ctx && ctx.repoName ? String(ctx.repoName) : '';
+    if (preferred && [...selEl.options].some(o => o.value === preferred)) {
+      selEl.value = preferred;
+    } else if (candidateRepos.length === 1) {
+      selEl.value = candidateRepos[0].repoName;
+    } else {
+      selEl.value = '';
+    }
+  }
+
+  function getDebugSaveRepoName() {
+    const selEl = document.getElementById('debugParseSaveRepoSelect');
+    return selEl && selEl.value ? String(selEl.value).trim() : '';
+  }
+
+  function getPrefixConstantsForRepoName(repoName) {
+    const r = allRepos.find(x => String(x.repoName) === String(repoName));
+    if (!r) return { apiPathPrefix: '', pathConstants: '' };
+    const ov = extractOverrides[repoName] || {};
+    const apiPathPrefix = (ov.apiPathPrefix != null && String(ov.apiPathPrefix).trim() !== '')
+      ? String(ov.apiPathPrefix).trim()
+      : (r.apiPathPrefix || '');
+    const pathConstants = (ov.pathConstants != null && String(ov.pathConstants).trim() !== '')
+      ? String(ov.pathConstants).trim()
+      : (r.pathConstants || '');
+    return { apiPathPrefix, pathConstants };
   }
 
   let debugPartialSavePrompted = false;
@@ -2339,7 +2483,7 @@
       else title.textContent = d.ok ? 'JavaParser 단건 파싱 — 성공' : 'JavaParser 단건 파싱 — 오류';
     }
 
-    const repo = meta && meta.repoName ? meta.repoName : '-';
+    const repo = meta && meta.repoName ? meta.repoName : '(미지정)';
     const root = meta && meta.rootPath ? meta.rootPath : '';
     const rel = meta && meta.relPath ? meta.relPath : '';
     if (metaEl) {
@@ -2427,19 +2571,23 @@
       }
     }
 
-    const canSave = !!(d && d.ok && Number(d.apiCount) > 0 && meta && meta.repoName);
+    const canSave = !!(d && d.ok && Number(d.apiCount) > 0);
+    const saveRow = document.getElementById('debugParseSaveRepoRow');
+    if (saveRow) saveRow.style.display = canSave ? 'flex' : 'none';
+
     const btn = document.getElementById('debugParseBtnSave');
     const hint = document.getElementById('debugParseFootHint');
+    if (canSave) populateDebugSaveRepoSelect(window.lastDebugParseContext);
     if (hint) {
       if (canSave) {
         hint.textContent =
-          'DB 부분 반영: 이 파일에서만 추출된 URL을 저장·갱신합니다. 레포의 다른 URL은 삭제 표시되지 않습니다.';
+          'DB 부분 반영: 위에서 저장할 레포를 선택한 뒤 반영합니다. 다른 등록 URL은 삭제 표시되지 않습니다.';
       } else if (d && d.ok && Number(d.apiCount) === 0) {
         hint.textContent = '저장할 매핑이 없습니다.';
       } else if (d && !d.ok) {
         hint.textContent = '파싱 오류 시 DB 반영은 하지 마세요. 소스·프리픽스·설정을 확인하세요.';
       } else {
-        hint.textContent = '레포 1개를 선택한 상태에서 파싱해야 DB 반영을 할 수 있습니다.';
+        hint.textContent = '먼저 단건 파싱을 완료하면 저장 레포를 고를 수 있습니다.';
       }
     }
     if (btn) {
@@ -2457,11 +2605,13 @@
   async function offerAutoDebugPartialSave() {
     const ctx = window.lastDebugParseContext;
     const d = ctx && ctx.lastResult;
-    if (!ctx || !d || !d.ok || Number(d.apiCount) <= 0 || !ctx.repoName) return;
+    if (!ctx || !d || !d.ok || Number(d.apiCount) <= 0) return;
+    if (!getDebugSaveRepoName()) return;
     if (debugPartialSavePrompted) return;
     debugPartialSavePrompted = true;
+    const rn = getDebugSaveRepoName();
     const yes = await customConfirm(
-      `레포 "${ctx.repoName}" DB에 이 파일에서 추출한 ${d.apiCount}건만 반영할까요?\n\n` +
+      `레포 "${rn}" DB에 이 파일에서 추출한 ${d.apiCount}건만 반영할까요?\n\n` +
       `· 다른 등록 URL은 삭제 표시되지 않습니다(부분 반영).\n` +
       `· 서버가 동일 소스로 한 번 더 파싱해 검증한 뒤 저장합니다.`,
       { title: 'DB 부분 반영', okLabel: '반영', cancelLabel: '나중에' }
@@ -2472,12 +2622,17 @@
   async function promptAndRunDebugPartialSave() {
     const ctx = window.lastDebugParseContext;
     const d = ctx && ctx.lastResult;
-    if (!ctx || !d || !d.ok || Number(d.apiCount) <= 0 || !ctx.repoName) {
+    if (!ctx || !d || !d.ok || Number(d.apiCount) <= 0) {
       showToast('반영할 파싱 결과가 없습니다.', 'info');
       return;
     }
+    const rn = getDebugSaveRepoName();
+    if (!rn) {
+      showToast('DB에 저장할 레포를 위 목록에서 선택하세요.', 'error');
+      return;
+    }
     const yes = await customConfirm(
-      `레포 "${ctx.repoName}" DB에 이 파일에서 추출한 ${d.apiCount}건만 반영할까요?\n\n` +
+      `레포 "${rn}" DB에 이 파일에서 추출한 ${d.apiCount}건만 반영할까요?\n\n` +
       `· 다른 등록 URL은 삭제 표시되지 않습니다.\n` +
       `· 서버가 동일 소스로 재파싱한 뒤 저장합니다.`,
       { title: 'DB 부분 반영', okLabel: '반영', cancelLabel: '취소' }
@@ -2487,7 +2642,24 @@
 
   async function executeDebugPartialSave() {
     const ctx = window.lastDebugParseContext;
-    if (!ctx || !ctx.repoName) { showToast('레포 정보가 없습니다.', 'error'); return; }
+    if (!ctx) { showToast('컨텍스트가 없습니다.', 'error'); return; }
+    const saveName = getDebugSaveRepoName();
+    if (!saveName) {
+      showToast('DB에 저장할 레포를 선택하세요.', 'error');
+      return;
+    }
+    const rSave = allRepos.find(x => x.repoName === saveName);
+    if (!rSave) {
+      showToast('선택한 레포 설정을 찾을 수 없습니다.', 'error');
+      return;
+    }
+    const { apiPathPrefix, pathConstants } = getPrefixConstantsForRepoName(saveName);
+    if (ctx.mode === 'repo' && ctx.rootPath && ctx.rootPath !== '(업로드)') {
+      if (normRootStr(rSave.rootPath) !== normRootStr(ctx.rootPath)) {
+        showToast('선택한 레포의 ROOT_PATH가 파싱한 파일 위치와 다릅니다. 해당 파일이 속한 레포를 선택하세요.', 'error');
+        return;
+      }
+    }
     try {
       if (ctx.mode === 'upload') {
         if (!ctx.uploadFile) {
@@ -2496,9 +2668,9 @@
         }
         const fd = new FormData();
         fd.append('file', ctx.uploadFile, ctx.uploadFile.name);
-        fd.append('repositoryName', ctx.repoName);
-        fd.append('apiPathPrefix', ctx.apiPathPrefix || '');
-        fd.append('pathConstants', ctx.pathConstants || '');
+        fd.append('repositoryName', saveName);
+        fd.append('apiPathPrefix', apiPathPrefix || '');
+        fd.append('pathConstants', pathConstants || '');
         const res = await adminFetchForm('/api/extract/debug-save-partial-upload', fd);
         const r = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(r.error || ('HTTP ' + res.status));
@@ -2508,11 +2680,11 @@
         const res = await adminFetch('/api/extract/debug-save-partial-repo', {
           method: 'POST',
           body: JSON.stringify({
-            repositoryName: ctx.repoName,
+            repositoryName: saveName,
             rootPath: ctx.rootPath,
             relPath: ctx.relPath,
-            apiPathPrefix: ctx.apiPathPrefix || '',
-            pathConstants: ctx.pathConstants || ''
+            apiPathPrefix: apiPathPrefix || '',
+            pathConstants: pathConstants || ''
           })
         });
         const r = await res.json().catch(() => ({}));
@@ -2530,9 +2702,9 @@
     try {
       const rawPath = String(relPath || '').trim();
       if (!rawPath) { showToast('파일 경로가 비어 있습니다.', 'error'); return; }
-      const ctx = resolveDebugParseRepoContext(explicitRepoName);
+      const ctx = resolveSingleDebugPathContext(rawPath, explicitRepoName);
       if (ctx.error) { showToast(ctx.error, 'error'); return; }
-      const normRel = normalizeRelPathForRoot(rawPath, ctx.rootPath);
+      const normRel = ctx.fromInfer ? ctx.relPathFromInfer : normalizeRelPathForRoot(rawPath, ctx.rootPath);
       if (!normRel) {
         showToast('유효한 파일 경로를 입력하세요. (레포 ROOT 기준 상대경로 또는 ROOT를 포함한 절대경로)', 'error');
         return;
@@ -2563,7 +2735,54 @@
     }
   }
 
+  function onSingleDebugFileChosen(ev) {
+    const input = ev && ev.target ? ev.target : document.getElementById('singleDebugFileInput');
+    const f = input && input.files && input.files[0];
+    if (!f) return;
+    const nameIn = document.getElementById('singleDebugRelPath');
+    if (nameIn) nameIn.value = f.name;
+  }
+
+  async function runSingleDebugUploadParse() {
+    const input = document.getElementById('singleDebugFileInput');
+    const f = input && input.files && input.files[0];
+    if (!f) {
+      showToast('파일을 선택하세요.', 'error');
+      return;
+    }
+    try {
+      const ctx = resolveDebugUploadParseContext();
+      const fd = new FormData();
+      fd.append('file', f, f.name);
+      fd.append('apiPathPrefix', ctx.apiPathPrefix || '');
+      fd.append('pathConstants', ctx.pathConstants || '');
+      const res = await adminFetchForm('/api/extract/debug-parse-upload', fd);
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(d.error || ('서버 오류 (' + res.status + ')'));
+      const nameIn = document.getElementById('singleDebugRelPath');
+      if (nameIn) nameIn.value = f.name;
+      showDebugParseResult(d, {
+        repoName: ctx.repoName,
+        rootPath: '(업로드)',
+        relPath: f.name,
+        mode: 'upload',
+        uploadFile: f,
+        apiPathPrefix: ctx.apiPathPrefix,
+        pathConstants: ctx.pathConstants
+      });
+    } catch (e) {
+      showToast(`업로드 파싱 실패: ${e.message}`, 'error');
+    }
+    if (input) input.value = '';
+  }
+
   function runToolbarSingleDebugParse() {
+    const fileInp = document.getElementById('singleDebugFileInput');
+    const staged = fileInp && fileInp.files && fileInp.files[0];
+    if (staged) {
+      void runSingleDebugUploadParse();
+      return;
+    }
     const inp = document.getElementById('singleDebugRelPath');
     debugParseOneFile(inp ? inp.value : '', null);
   }
@@ -2674,37 +2893,6 @@
       }
     }
     return res;
-  }
-
-  async function onSingleDebugFilePicked(ev) {
-    const input = ev && ev.target ? ev.target : document.getElementById('singleDebugFileInput');
-    const f = input && input.files && input.files[0];
-    if (!f) return;
-    try {
-      const ctx = resolveDebugParseRepoContext(null);
-      if (ctx.error) { showToast(ctx.error, 'error'); if (input) input.value = ''; return; }
-      const fd = new FormData();
-      fd.append('file', f, f.name);
-      fd.append('apiPathPrefix', ctx.apiPathPrefix || '');
-      fd.append('pathConstants', ctx.pathConstants || '');
-      const res = await adminFetchForm('/api/extract/debug-parse-upload', fd);
-      const d = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(d.error || ('서버 오류 (' + res.status + ')'));
-      const nameIn = document.getElementById('singleDebugRelPath');
-      if (nameIn) nameIn.value = f.name;
-      showDebugParseResult(d, {
-        repoName: ctx.repoName,
-        rootPath: '(업로드)',
-        relPath: f.name,
-        mode: 'upload',
-        uploadFile: f,
-        apiPathPrefix: ctx.apiPathPrefix,
-        pathConstants: ctx.pathConstants
-      });
-    } catch (e) {
-      showToast(`업로드 파싱 실패: ${e.message}`, 'error');
-    }
-    if (input) input.value = '';
   }
 
   // ── 관리자 인증 fetch 래퍼 (Mock 생성/삭제용) ────────────────

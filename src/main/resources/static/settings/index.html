@@ -4159,6 +4159,13 @@ function updateAdminBadge(valid) {
         });
       }
       // 본문 카드만 추출 (.main 안의 내용)
+      // 단건 파싱 모달·작업 오버레이는 .main 밖에 있어 임베드 시 함께 주입하지 않으면 버튼 클릭 후 응답 없음
+      const parent = wrap.parentNode;
+      ['debugParseOverlay', 'delOverlay'].forEach((id) => {
+        if (document.getElementById(id)) return;
+        const node = doc.getElementById(id);
+        if (node && parent) parent.insertBefore(node.cloneNode(true), wrap);
+      });
       const main = doc.querySelector('.main');
       if (main) {
         wrap.innerHTML = main.innerHTML;
