@@ -670,6 +670,9 @@ public class ApiExtractorService {
                                                    List<Map<String, Object>> debugSteps, String traceId) {
         boolean debug = debugMode;
         List<ApiInfo> apis = new ArrayList<>();
+        // 가장 확실한 방어: 클래스 선언 이전에 등장한 모든 매핑(@RequestMapping 등)은 "클래스 레벨"로 간주하고
+        // 메서드 시그니처와 절대 묶지 않는다. (중간에 @Slf4j, @RequiredArgsConstructor 등 애노테이션이 있어도 동일)
+        final int classDeclStart = rxIndexOfClassDeclarationStart(raw);
         String classPath = rxExtractClassLevelRequestMappingPath(raw, pathConstantsMap);
         if (debugSteps != null) {
             addRegexTrace(debugSteps, traceId, "INFO",
@@ -677,7 +680,8 @@ public class ApiExtractorService {
                             + " relPath=" + (relPath == null ? "" : relPath)
                             + " classPath=" + (classPath == null || classPath.isBlank() ? "(없음)" : classPath)
                             + " apiPathPrefix=" + (apiPathPrefix == null ? "" : apiPathPrefix)
-                            + " scanChars=" + RX_AFTER_MAPPING_SCAN_CHARS);
+                            + " scanChars=" + RX_AFTER_MAPPING_SCAN_CHARS
+                            + " classDeclStart=" + classDeclStart);
         }
         if (debug) {
             String fn = logFileForDebug != null && logFileForDebug.getFileName() != null
@@ -702,6 +706,15 @@ public class ApiExtractorService {
                                 + " type=" + slice.mappingType
                                 + " range=[" + slice.start + "," + slice.endExclusive + ")"
                                 + " paramsRaw=\"" + rxDbgPreview(slice.paramsRaw, 400) + "\"");
+            }
+            if (classDeclStart >= 0 && slice.start < classDeclStart) {
+                if (debugSteps != null) {
+                    addRegexTrace(debugSteps, traceId, "WARN",
+                            "[RX] mapping#" + mappingIndex + " SKIP_BEFORE_CLASS_DECL"
+                                    + " classDeclStart=" + classDeclStart);
+                }
+                mappingIndex++;
+                continue;
             }
             if (rxMappingSliceFollowedByClassDecl(raw, slice.endExclusive)) {
                 if (debugSteps != null) {
