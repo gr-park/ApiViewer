@@ -124,6 +124,22 @@ public class ApiExtractorService {
         }
     }
 
+    /**
+     * devtools/리로드/외부 코드 영향으로 StaticJavaParser configuration 이 바뀌는 케이스가 있어,
+     * parse 직전에 매번 language level 을 강제한다. (성능 영향은 미미)
+     */
+    private static void forceJava17BeforeParse(String relPathForLog) {
+        try {
+            ParserConfiguration cfg = StaticJavaParser.getConfiguration();
+            cfg.setLanguageLevel(ParserConfiguration.LanguageLevel.JAVA_17);
+            ParserConfiguration.LanguageLevel lvl = cfg.getLanguageLevel();
+            log.info(purpleBanner("[JP-CONFIG] languageLevel=" + lvl + " cfg@" + System.identityHashCode(cfg)
+                    + " relPath=" + (relPathForLog == null ? "" : relPathForLog)));
+        } catch (Exception e) {
+            log.warn("[JP-CONFIG] 설정/출력 실패 relPath={}", relPathForLog, e);
+        }
+    }
+
     @Value("${api.viewer.git-bin-path:git}")
     private String defaultGitBinPath;
 
@@ -426,6 +442,7 @@ public class ApiExtractorService {
             // 디버그 모드에서는 미적용도 확인 가능
             log.debug("[파싱-JP] in-memory normalization not applied: relPath={}", relPath);
         }
+        forceJava17BeforeParse(relPath);
         CompilationUnit cu = StaticJavaParser.parse(nr.source());
 
         String classPath = "";
