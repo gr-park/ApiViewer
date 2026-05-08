@@ -1103,6 +1103,7 @@ public class ApiExtractorService {
             List<ApiInfo> apis = extractWithJavaParser(file, relPath, git, apiPathPrefix == null ? "" : apiPathPrefix, constants);
 
             out.put("ok", true);
+            out.put("mode", "path");
             out.put("apiCount", apis.size());
             // payload 크기 방지: 상위 50개만
             List<Map<String, Object>> rows = new ArrayList<>();
@@ -1213,6 +1214,92 @@ public class ApiExtractorService {
             out.put("errorType", e.getClass().getName());
             out.put("message", e.getMessage());
             out.put("stackTrace", stackTraceString(e));
+            return out;
+        }
+    }
+
+    /**
+     * 단건 파싱 결과를 레포 DB에 부분 반영(다른 URL 삭제 표시 없음). 서버에서 파일을 다시 파싱한다.
+     */
+    public Map<String, Object> savePartialFromRepoPath(String repositoryName, String rootPath, String relPath,
+                                                       String apiPathPrefix, String pathConstantsRaw,
+                                                       String domain, String clientIp) {
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("ok", false);
+        try {
+            if (repositoryName == null || repositoryName.isBlank()) {
+                throw new IllegalArgumentException("repositoryName required");
+            }
+            ensureJavaParserConfigured();
+            if (rootPath == null || rootPath.isBlank()) throw new IllegalArgumentException("rootPath is required");
+            if (relPath == null || relPath.isBlank()) throw new IllegalArgumentException("relPath is required");
+            Path root = Paths.get(rootPath);
+            Path file = root.resolve(relPath);
+            if (!Files.exists(file)) throw new IllegalArgumentException("file not found: " + file);
+            if (!Files.isRegularFile(file)) throw new IllegalArgumentException("not a file: " + file);
+            Map<String, String> constants = parsePathConstants(pathConstantsRaw);
+            List<String[]> git = List.of(new String[]{"", "", ""}, new String[]{"", "", ""}, new String[]{"", "", ""}, new String[]{"", "", ""}, new String[]{"", "", ""});
+            List<ApiInfo> apis = extractWithJavaParser(file, relPath, git, apiPathPrefix == null ? "" : apiPathPrefix, constants);
+            String dom = domain != null ? domain : "";
+            for (ApiInfo a : apis) {
+                String p = a.getApiPath() != null ? a.getApiPath() : "";
+                a.setFullUrl(dom + p);
+            }
+            int[] r = storageService.savePartial(repositoryName, apis, clientIp);
+            out.put("ok", true);
+            out.put("savedTouches", r[0]);
+            out.put("statusRevertedCount", r[1]);
+            out.put("apiCount", apis.size());
+            log.info("[단건 부분저장] repo={} relPath={} apis={}", repositoryName, relPath, apis.size());
+            return out;
+        } catch (Exception e) {
+            log.warn("[단건 부분저장 실패] {}", e.getMessage());
+            out.put("error", e.getMessage());
+            out.put("errorType", e.getClass().getName());
+            return out;
+        }
+    }
+
+    /** 업로드 소스를 다시 파싱한 뒤 부분 저장. */
+    public Map<String, Object> savePartialFromUploadSource(String repositoryName, String javaSource, String fileLabel,
+                                                           String apiPathPrefix, String pathConstantsRaw,
+                                                           String domain, String clientIp) {
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("ok", false);
+        try {
+            if (repositoryName == null || repositoryName.isBlank()) {
+                throw new IllegalArgumentException("repositoryName required");
+            }
+            ensureJavaParserConfigured();
+            if (javaSource == null || javaSource.isBlank()) throw new IllegalArgumentException("source is required");
+            if (javaSource.length() > DEBUG_PARSE_SOURCE_MAX_CHARS) {
+                throw new IllegalArgumentException("소스가 너무 큽니다 (문자 수 최대 " + DEBUG_PARSE_SOURCE_MAX_CHARS + ").");
+            }
+            String rel = (fileLabel == null || fileLabel.isBlank())
+                    ? "__upload__/Snippet.java"
+                    : fileLabel.trim().replace('\\', '/');
+            if (rel.contains("..")) throw new IllegalArgumentException("unsafe file name");
+            Map<String, String> constants = parsePathConstants(pathConstantsRaw);
+            List<String[]> git = List.of(new String[]{"", "", ""}, new String[]{"", "", ""}, new String[]{"", "", ""}, new String[]{"", "", ""}, new String[]{"", "", ""});
+            Path pseudo = Paths.get(rel);
+            List<ApiInfo> apis = extractWithJavaParserFromSource(javaSource, pseudo, rel, git,
+                    apiPathPrefix == null ? "" : apiPathPrefix, constants);
+            String dom = domain != null ? domain : "";
+            for (ApiInfo a : apis) {
+                String p = a.getApiPath() != null ? a.getApiPath() : "";
+                a.setFullUrl(dom + p);
+            }
+            int[] r = storageService.savePartial(repositoryName, apis, clientIp);
+            out.put("ok", true);
+            out.put("savedTouches", r[0]);
+            out.put("statusRevertedCount", r[1]);
+            out.put("apiCount", apis.size());
+            log.info("[단건 부분저장 업로드] repo={} label={} apis={}", repositoryName, rel, apis.size());
+            return out;
+        } catch (Exception e) {
+            log.warn("[단건 부분저장 업로드 실패] {}", e.getMessage());
+            out.put("error", e.getMessage());
+            out.put("errorType", e.getClass().getName());
             return out;
         }
     }

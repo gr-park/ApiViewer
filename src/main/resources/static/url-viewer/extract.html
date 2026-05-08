@@ -191,6 +191,8 @@
       padding: 16px;
     }
     .debug-parse-overlay.show { display: flex; }
+    /* extract.html 단건 파싱 결과(z-index 12000) 위에 customConfirm(dialog.js) 표시 */
+    .cdlg-overlay { z-index: 13000 !important; }
     .debug-parse-sheet {
       background: var(--card);
       border: 1px solid var(--border);
@@ -235,6 +237,9 @@
       background: #020617;
       color: #e2e8f0;
     }
+    .dps-foot { background: #f8fafc !important; }
+    [data-theme="dark"] .dps-foot { background: #0b1220 !important; border-color: var(--border) !important; }
+
     .single-debug-box {
       margin-top: 12px;
       padding: 12px 14px;
@@ -395,6 +400,10 @@
 
       <div id="debugParseStackHdr" style="font-size:11px;font-weight:700;margin:8px 0 4px;color:var(--text-muted);display:none;">스택 트레이스</div>
       <pre id="debugParseStack" class="dps-pre" style="display:none;max-height:42vh;"></pre>
+    </div>
+    <div class="dps-foot" id="debugParseFoot" style="flex-shrink:0;padding:10px 16px;border-top:1px solid var(--border);display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:flex-end;background:#f8fafc;">
+      <span id="debugParseFootHint" style="font-size:10px;color:var(--text-muted);flex:1;min-width:200px;line-height:1.45;"></span>
+      <button type="button" class="btn btn-blue" id="debugParseBtnSave" style="display:none;height:32px;font-size:12px;">레포 DB에 반영…</button>
     </div>
   </div>
 </div>
@@ -2290,6 +2299,8 @@
     };
   }
 
+  let debugPartialSavePrompted = false;
+
   function closeDebugParseModal() {
     const o = document.getElementById('debugParseOverlay');
     if (!o) return;
@@ -2305,6 +2316,13 @@
   }
 
   function showDebugParseResult(d, meta) {
+    debugPartialSavePrompted = false;
+    const enriched = Object.assign({}, meta || {}, { lastResult: d });
+    if (meta && meta.mode === 'upload' && meta.uploadFile) {
+      enriched.uploadFile = meta.uploadFile;
+    }
+    window.lastDebugParseContext = enriched;
+
     const title = document.getElementById('debugParseTitle');
     const metaEl = document.getElementById('debugParseMeta');
     const stat = document.getElementById('debugParseStatus');
@@ -2315,7 +2333,11 @@
     const apisEl = document.getElementById('debugParseApis');
     const sh = document.getElementById('debugParseStackHdr');
     const stack = document.getElementById('debugParseStack');
-    if (title) title.textContent = d && d.ok ? 'JavaParser 단건 파싱 — 성공' : 'JavaParser 단건 파싱 — 오류';
+
+    if (title) {
+      if (!d) title.textContent = 'JavaParser 단건 파싱 — 결과 없음';
+      else title.textContent = d.ok ? 'JavaParser 단건 파싱 — 성공' : 'JavaParser 단건 파싱 — 오류';
+    }
 
     const repo = meta && meta.repoName ? meta.repoName : '-';
     const root = meta && meta.rootPath ? meta.rootPath : '';
@@ -2325,60 +2347,183 @@
         `레포: ${repo}\nROOT: ${root}\n상대경로(relPath): ${rel}`;
     }
 
-    const hideBlock = () => {
-      if (absW) { absW.style.display = 'none'; absW.textContent = ''; }
-      if (ph) ph.style.display = 'none';
-      if (probs) { probs.style.display = 'none'; probs.textContent = ''; }
-      if (ah) ah.style.display = 'none';
-      if (apisEl) { apisEl.style.display = 'none'; apisEl.textContent = ''; }
-      if (sh) sh.style.display = 'none';
-      if (stack) { stack.style.display = 'none'; stack.textContent = ''; }
-    };
-    hideBlock();
-
-    if (d.ok) {
-      if (stat) {
-        stat.textContent = `OK — JavaParser로 ${Number(d.apiCount) || 0}개 URL/API 항목을 추출했습니다.`;
-        stat.style.color = '#166534';
-      }
-      if (d.absolutePath && absW) {
+    if (absW) {
+      if (d && d.absolutePath) {
         absW.style.display = 'block';
         absW.innerHTML =
-          `<span style="font-weight:700;color:var(--text);">실제 파일</span> · <span style="word-break:break-all;">${esc(String(d.absolutePath))}</span>`;
-      }
-      const lines = (d.apis || []).map(a =>
-        `${String(a.httpMethod || '')} ${String(a.apiPath || '')} │ ${String(a.methodName || '')} │ op=${String(a.apiOperationValue || '-')} │ desc=${String(a.descriptionTag || '-')}`);
-      if (apisEl && lines.length) {
-        if (ah) ah.style.display = 'block';
-        apisEl.style.display = 'block';
-        apisEl.textContent = lines.join('\n');
-      }
-    } else {
-      if (stat) {
-        const et = esc(String(d.errorType || 'Exception'));
-        const msg = esc(String(d.message != null ? d.message : ''));
-        stat.innerHTML =
-          `<span style="color:#991b1b;">FAIL — ${et}</span><br>${msg}`;
-      }
-      const pArr = Array.isArray(d.problems) ? d.problems : [];
-      const ptxt = pArr.map(pr => {
-        const pos = (pr && pr.begin) ? `[${String(pr.begin)}]` : '[?]';
-        return `${pos} ${String(pr.message || '').trim()}`.trim();
-      }).join('\n');
-      if (probs && ptxt) {
-        if (ph) ph.style.display = 'block';
-        probs.style.display = 'block';
-        probs.textContent = ptxt;
-      }
-      const st = d.stackTrace && String(d.stackTrace).trim();
-      if (stack && st) {
-        if (sh) sh.style.display = 'block';
-        stack.style.display = 'block';
-        stack.textContent = st;
+          `<span style="font-weight:700;color:var(--text);">대상</span> · <span style="word-break:break-all;">${esc(String(d.absolutePath))}</span>`;
+      } else {
+        absW.style.display = 'none';
+        absW.innerHTML = '';
       }
     }
 
+    if (stat) {
+      stat.style.color = '';
+      if (d && d.ok) {
+        const tag = d.mode === 'upload' ? '업로드' : '경로';
+        stat.textContent =
+          `요약 — ${tag} 파싱 성공 · 추출 ${Number(d.apiCount) || 0}건 (미리보기 최대 50건)`;
+        stat.style.color = '#166534';
+      } else if (d) {
+        const et = esc(String(d.errorType || 'Exception'));
+        const msg = esc(String(d.message != null ? d.message : ''));
+        stat.innerHTML =
+          `<span style="color:#991b1b;">요약 — 실패 (${et})</span><br>${msg}`;
+      } else {
+        stat.textContent = '요약 — 응답을 표시할 수 없습니다.';
+      }
+    }
+
+    if (ph) {
+      ph.style.display = 'block';
+      ph.textContent = 'JavaParser 문제 (위치별)';
+    }
+    if (probs) {
+      probs.style.display = 'block';
+      if (d && d.ok) {
+        probs.textContent = '(파싱 성공 — JavaParser 문제 목록 없음)';
+      } else if (d) {
+        const pArr = Array.isArray(d.problems) ? d.problems : [];
+        const ptxt = pArr.map(pr => {
+          const pos = (pr && pr.begin) ? `[${String(pr.begin)}]` : '[?]';
+          return `${pos} ${String(pr.message || '').trim()}`.trim();
+        }).join('\n');
+        probs.textContent = ptxt || '(목록 없음 — 위 요약·아래 스택 참고)';
+      } else {
+        probs.textContent = '(표시할 데이터 없음)';
+      }
+    }
+
+    if (ah) {
+      ah.style.display = 'block';
+      ah.textContent = '추출된 API (미리보기 · 최대 50건)';
+    }
+    if (apisEl) {
+      apisEl.style.display = 'block';
+      if (d && d.ok) {
+        const lines = (d.apis || []).map(a =>
+          `${String(a.httpMethod || '')} ${String(a.apiPath || '')} │ ${String(a.methodName || '')} │ op=${String(a.apiOperationValue || '-')} │ desc=${String(a.descriptionTag || '-')}`);
+        apisEl.textContent = lines.length
+          ? lines.join('\n')
+          : '(이 파일에서 매핑 0건 — 컨트롤러 매핑 애노테이션 없음)';
+      } else {
+        apisEl.textContent = '(파싱 실패로 추출 목록을 만들 수 없음)';
+      }
+    }
+
+    if (sh) {
+      sh.style.display = 'block';
+      sh.textContent = '스택 트레이스 / 예외';
+    }
+    if (stack) {
+      stack.style.display = 'block';
+      if (d && !d.ok && d.stackTrace) {
+        stack.textContent = String(d.stackTrace);
+      } else if (d && d.ok) {
+        stack.textContent = '(예외 없이 파싱 완료 — 스택 없음)';
+      } else {
+        stack.textContent = '(없음)';
+      }
+    }
+
+    const canSave = !!(d && d.ok && Number(d.apiCount) > 0 && meta && meta.repoName);
+    const btn = document.getElementById('debugParseBtnSave');
+    const hint = document.getElementById('debugParseFootHint');
+    if (hint) {
+      if (canSave) {
+        hint.textContent =
+          'DB 부분 반영: 이 파일에서만 추출된 URL을 저장·갱신합니다. 레포의 다른 URL은 삭제 표시되지 않습니다.';
+      } else if (d && d.ok && Number(d.apiCount) === 0) {
+        hint.textContent = '저장할 매핑이 없습니다.';
+      } else if (d && !d.ok) {
+        hint.textContent = '파싱 오류 시 DB 반영은 하지 마세요. 소스·프리픽스·설정을 확인하세요.';
+      } else {
+        hint.textContent = '레포 1개를 선택한 상태에서 파싱해야 DB 반영을 할 수 있습니다.';
+      }
+    }
+    if (btn) {
+      btn.style.display = canSave ? 'inline-block' : 'none';
+      btn.onclick = () => { promptAndRunDebugPartialSave(); };
+    }
+
     openDebugParseModal();
+
+    if (canSave) {
+      setTimeout(() => { offerAutoDebugPartialSave(); }, 500);
+    }
+  }
+
+  async function offerAutoDebugPartialSave() {
+    const ctx = window.lastDebugParseContext;
+    const d = ctx && ctx.lastResult;
+    if (!ctx || !d || !d.ok || Number(d.apiCount) <= 0 || !ctx.repoName) return;
+    if (debugPartialSavePrompted) return;
+    debugPartialSavePrompted = true;
+    const yes = await customConfirm(
+      `레포 "${ctx.repoName}" DB에 이 파일에서 추출한 ${d.apiCount}건만 반영할까요?\n\n` +
+      `· 다른 등록 URL은 삭제 표시되지 않습니다(부분 반영).\n` +
+      `· 서버가 동일 소스로 한 번 더 파싱해 검증한 뒤 저장합니다.`,
+      { title: 'DB 부분 반영', okLabel: '반영', cancelLabel: '나중에' }
+    );
+    if (yes) await executeDebugPartialSave();
+  }
+
+  async function promptAndRunDebugPartialSave() {
+    const ctx = window.lastDebugParseContext;
+    const d = ctx && ctx.lastResult;
+    if (!ctx || !d || !d.ok || Number(d.apiCount) <= 0 || !ctx.repoName) {
+      showToast('반영할 파싱 결과가 없습니다.', 'info');
+      return;
+    }
+    const yes = await customConfirm(
+      `레포 "${ctx.repoName}" DB에 이 파일에서 추출한 ${d.apiCount}건만 반영할까요?\n\n` +
+      `· 다른 등록 URL은 삭제 표시되지 않습니다.\n` +
+      `· 서버가 동일 소스로 재파싱한 뒤 저장합니다.`,
+      { title: 'DB 부분 반영', okLabel: '반영', cancelLabel: '취소' }
+    );
+    if (yes) await executeDebugPartialSave();
+  }
+
+  async function executeDebugPartialSave() {
+    const ctx = window.lastDebugParseContext;
+    if (!ctx || !ctx.repoName) { showToast('레포 정보가 없습니다.', 'error'); return; }
+    try {
+      if (ctx.mode === 'upload') {
+        if (!ctx.uploadFile) {
+          showToast('업로드 파일이 없습니다. 파일 선택으로 다시 시도하세요.', 'error');
+          return;
+        }
+        const fd = new FormData();
+        fd.append('file', ctx.uploadFile, ctx.uploadFile.name);
+        fd.append('repositoryName', ctx.repoName);
+        fd.append('apiPathPrefix', ctx.apiPathPrefix || '');
+        fd.append('pathConstants', ctx.pathConstants || '');
+        const res = await adminFetchForm('/api/extract/debug-save-partial-upload', fd);
+        const r = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(r.error || ('HTTP ' + res.status));
+        if (!r.ok) throw new Error(r.error || '저장 실패');
+        showToast(`반영 완료 — insert/update ${r.savedTouches ?? 0}건`, 'success');
+      } else {
+        const res = await adminFetch('/api/extract/debug-save-partial-repo', {
+          method: 'POST',
+          body: JSON.stringify({
+            repositoryName: ctx.repoName,
+            rootPath: ctx.rootPath,
+            relPath: ctx.relPath,
+            apiPathPrefix: ctx.apiPathPrefix || '',
+            pathConstants: ctx.pathConstants || ''
+          })
+        });
+        const r = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(r.error || ('HTTP ' + res.status));
+        if (!r.ok) throw new Error(r.error || '저장 실패');
+        showToast(`반영 완료 — insert/update ${r.savedTouches ?? 0}건`, 'success');
+      }
+      closeDebugParseModal();
+    } catch (e) {
+      showToast(`반영 실패: ${e.message}`, 'error');
+    }
   }
 
   async function debugParseOneFile(relPath, explicitRepoName) {
@@ -2408,7 +2553,10 @@
       showDebugParseResult(d, {
         repoName: ctx.repoName,
         rootPath: ctx.rootPath,
-        relPath: normRel
+        relPath: normRel,
+        mode: 'repo',
+        apiPathPrefix: ctx.apiPathPrefix,
+        pathConstants: ctx.pathConstants
       });
     } catch (e) {
       showToast(`단건 파싱 실패: ${e.message}`, 'error');
@@ -2547,7 +2695,11 @@
       showDebugParseResult(d, {
         repoName: ctx.repoName,
         rootPath: '(업로드)',
-        relPath: f.name
+        relPath: f.name,
+        mode: 'upload',
+        uploadFile: f,
+        apiPathPrefix: ctx.apiPathPrefix,
+        pathConstants: ctx.pathConstants
       });
     } catch (e) {
       showToast(`업로드 파싱 실패: ${e.message}`, 'error');

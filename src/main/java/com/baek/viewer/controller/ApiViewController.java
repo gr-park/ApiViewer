@@ -206,6 +206,63 @@ public class ApiViewController {
         }
     }
 
+    /**
+     * 단건 디버그 파싱 결과를 레포 DB에 부분 반영. 서버에서 동일 파일을 재파싱 후 저장(다른 URL 삭제 처리 없음).
+     */
+    @PostMapping("/extract/debug-save-partial-repo")
+    public ResponseEntity<?> debugSavePartialRepo(@RequestBody Map<String, String> body, HttpServletRequest httpReq) {
+        String repositoryName = body != null ? body.get("repositoryName") : null;
+        String rootPath = body != null ? body.get("rootPath") : null;
+        String relPath = body != null ? body.get("relPath") : null;
+        String apiPathPrefix = body != null ? body.get("apiPathPrefix") : null;
+        String pathConstants = body != null ? body.get("pathConstants") : null;
+        if (repositoryName == null || repositoryName.isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "repositoryName이 필요합니다."));
+        }
+        String domain = repoConfigRepository.findByRepoName(repositoryName.trim())
+                .map(RepoConfig::getDomain).orElse("");
+        if (domain == null) domain = "";
+        String ip = getClientIp(httpReq);
+        Map<String, Object> result = extractorService.savePartialFromRepoPath(
+                repositoryName.trim(), rootPath, relPath, apiPathPrefix, pathConstants, domain, ip);
+        if (Boolean.TRUE.equals(result.get("ok"))) {
+            return ResponseEntity.ok(result);
+        }
+        return ResponseEntity.badRequest().body(result);
+    }
+
+    @PostMapping(value = "/extract/debug-save-partial-upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<?> debugSavePartialUpload(
+            @RequestPart("file") MultipartFile file,
+            @RequestParam(value = "repositoryName", required = false) String repositoryName,
+            @RequestParam(value = "apiPathPrefix", required = false) String apiPathPrefix,
+            @RequestParam(value = "pathConstants", required = false) String pathConstants,
+            HttpServletRequest httpReq) {
+        if (repositoryName == null || repositoryName.isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "repositoryName이 필요합니다."));
+        }
+        if (file == null || file.isEmpty()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "파일이 비어 있습니다."));
+        }
+        try {
+            String name = file.getOriginalFilename();
+            if (name == null || name.isBlank()) name = "Uploaded.java";
+            String src = new String(file.getBytes(), StandardCharsets.UTF_8);
+            String domain = repoConfigRepository.findByRepoName(repositoryName.trim())
+                    .map(RepoConfig::getDomain).orElse("");
+            if (domain == null) domain = "";
+            String ip = getClientIp(httpReq);
+            Map<String, Object> result = extractorService.savePartialFromUploadSource(
+                    repositoryName.trim(), src, name, apiPathPrefix, pathConstants, domain, ip);
+            if (Boolean.TRUE.equals(result.get("ok"))) {
+                return ResponseEntity.ok(result);
+            }
+            return ResponseEntity.badRequest().body(result);
+        } catch (IOException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
     /** 캐시된 결과 조회 */
     @GetMapping("/list")
     public ResponseEntity<?> list() {

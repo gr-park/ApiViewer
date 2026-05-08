@@ -97,6 +97,7 @@ public class ApiStorageService {
      * ① 신규: 전체 필드 세팅
      * ② 기존 + 차단완료: SKIP (건드리지 않음)
      * ③ 기존 + 차단완료 아님: 추출 필드만 업데이트, 수동 설정 필드 보호
+     * ④ 재추출에 없는 기존 행 → 삭제 표시 (전체 추출 시)
      *
      * 대용량 최적화:
      *  - 레포 전체를 한 번만 로드 후 키(apiPath|httpMethod) → ApiRecord Map 구성 (findByRepoAndPathAndMethod N+1 제거)
@@ -105,7 +106,22 @@ public class ApiStorageService {
     @Transactional
     /** @return [saved, revertedToUsed] — revertedToUsed: "차단대상→사용(차단대상 제외)" 전환 건수 */
     public int[] save(String repositoryName, List<ApiInfo> apis, String clientIp) {
-        log.info("[DB 저장 시작] repo={}, 건수={}, ip={}", repositoryName, apis.size(), clientIp);
+        return saveInternal(repositoryName, apis, clientIp, true);
+    }
+
+    /**
+     * 단건 파일 등 일부 추출 결과만 반영. 레포의 다른 URL은 삭제 표시하지 않음(전체 재추출과 차이).
+     */
+    @Transactional
+    public int[] savePartial(String repositoryName, List<ApiInfo> apis, String clientIp) {
+        return saveInternal(repositoryName, apis, clientIp, false);
+    }
+
+    /** @return [saved, revertedToUsed] */
+    private int[] saveInternal(String repositoryName, List<ApiInfo> apis, String clientIp,
+                               boolean markMissingAsDeleted) {
+        log.info("[DB 저장 시작] repo={}, 건수={}, ip={}, partial={}", repositoryName, apis.size(), clientIp,
+                !markMissingAsDeleted);
         java.time.LocalDateTime now = java.time.LocalDateTime.now();
         int reviewThreshold = getReviewThreshold();
 
@@ -184,20 +200,22 @@ public class ApiStorageService {
             }
         }
 
-        // ④ DB에 있지만 추출 결과에 없는 건 → "삭제" 처리 (차단완료 제외)
+        // ④ DB에 있지만 추출 결과에 없는 건 → "삭제" 처리 (차단완료 제외) — 전체 추출 때만
         Set<String> extractedKeys = new HashSet<>(apis.size() * 2);
         for (ApiInfo a : apis) extractedKeys.add(a.getApiPath() + "|" + a.getHttpMethod());
         List<ApiRecord> toMarkDeleted = new ArrayList<>();
-        for (ApiRecord r : allInRepo) {
-            if (STATUS_DONE.equals(r.getStatus()) || "삭제".equals(r.getStatus())) continue;
-            String key = r.getApiPath() + "|" + r.getHttpMethod();
-            if (!extractedKeys.contains(key)) {
-                String oldStatus = r.getStatus();
-                r.setStatus("삭제");
-                r.setStatusOverridden(true);
-                r.setStatusChanged(true);
-                appendChangeLog(r, oldStatus + "→삭제: 재추출 시 소스에서 미발견");
-                toMarkDeleted.add(r);
+        if (markMissingAsDeleted) {
+            for (ApiRecord r : allInRepo) {
+                if (STATUS_DONE.equals(r.getStatus()) || "삭제".equals(r.getStatus())) continue;
+                String key = r.getApiPath() + "|" + r.getHttpMethod();
+                if (!extractedKeys.contains(key)) {
+                    String oldStatus = r.getStatus();
+                    r.setStatus("삭제");
+                    r.setStatusOverridden(true);
+                    r.setStatusChanged(true);
+                    appendChangeLog(r, oldStatus + "→삭제: 재추출 시 소스에서 미발견");
+                    toMarkDeleted.add(r);
+                }
             }
         }
 
@@ -207,8 +225,8 @@ public class ApiStorageService {
         if (!toMarkDeleted.isEmpty()) repository.saveAll(toMarkDeleted);
 
         int saved = toInsert.size() + toUpdate.size();
-        log.info("[DB 저장 완료] repo={}, 신규={}, 갱신={}, 삭제표시={}, 차단→사용전환={}", repositoryName,
-                toInsert.size(), toUpdate.size(), toMarkDeleted.size(), revertedToUsed);
+        log.info("[DB 저장 완료] repo={}, 신규={}, 갱신={}, 삭제표시={}, 차단→사용전환={}, partial={}", repositoryName,
+                toInsert.size(), toUpdate.size(), toMarkDeleted.size(), revertedToUsed, !markMissingAsDeleted);
         return new int[]{saved, revertedToUsed};
     }
 
