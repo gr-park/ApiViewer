@@ -2190,19 +2190,26 @@ public class ApiExtractorService {
 
     private static NormalizationResult normalizeForJavaParser(String source) {
         if (source == null || source.isEmpty()) return new NormalizationResult("", false, List.of());
+        // 일부 레거시 소스는 파일 인코딩/복붙 문제로 C1 control(0x80~0x9F) 같은 비표준 문자가 섞여
+        // JavaParser가 Lexical error(<92> 등)로 실패할 수 있다. 원본 파일은 건드리지 않고 입력만 최소 정리한다.
+        String cleaned = sanitizeParserInputControls(source);
         // allowlist 어노테이션 인자 영역에서만 "'...'" → "\"...\"" 로 보정한다.
         // - Java 문법상 단일따옴표는 char 리터럴이므로 "/v1/common/" 같은 다문자 리터럴은 파싱 자체가 깨진다.
         // - 원본 파일은 수정하지 않고, 파서 입력 문자열만 보정한다.
-        StringBuilder out = new StringBuilder(source.length());
+        StringBuilder out = new StringBuilder(cleaned.length());
         List<String> notes = new ArrayList<>();
         Set<String> touchedAnns = new LinkedHashSet<>();
 
-        int n = source.length();
+        boolean changed = !cleaned.equals(source);
+        if (changed) {
+            notes.add("sanitize control chars (C0/C1) for JavaParser");
+        }
+
+        int n = cleaned.length();
         int i = 0;
-        boolean changed = false;
 
         while (i < n) {
-            char c = source.charAt(i);
+            char c = cleaned.charAt(i);
             if (c != '@') {
                 out.append(c);
                 i++;
@@ -2212,7 +2219,7 @@ public class ApiExtractorService {
             int nameStart = i + 1;
             int j = nameStart;
             while (j < n) {
-                char cj = source.charAt(j);
+                char cj = cleaned.charAt(j);
                 if (Character.isJavaIdentifierPart(cj)) j++;
                 else break;
             }
@@ -2222,23 +2229,23 @@ public class ApiExtractorService {
                 continue;
             }
 
-            String ann = source.substring(nameStart, j);
+            String ann = cleaned.substring(nameStart, j);
             if (!NORMALIZE_ANN_NAMES.contains(ann)) {
-                out.append(source, i, j);
+                out.append(cleaned, i, j);
                 i = j;
                 continue;
             }
 
             // 복사: @AnnotationName
-            out.append(source, i, j);
+            out.append(cleaned, i, j);
             i = j;
 
             // 공백 스킵
-            while (i < n && Character.isWhitespace(source.charAt(i))) {
-                out.append(source.charAt(i));
+            while (i < n && Character.isWhitespace(cleaned.charAt(i))) {
+                out.append(cleaned.charAt(i));
                 i++;
             }
-            if (i >= n || source.charAt(i) != '(') continue;
+            if (i >= n || cleaned.charAt(i) != '(') continue;
 
             // 애노테이션 인자 영역: 괄호 균형으로 끝까지 스캔하며 단일따옴표 리터럴을 제한적으로 변환
             int parenDepth = 0;
@@ -2251,7 +2258,7 @@ public class ApiExtractorService {
             boolean annChanged = false;
 
             while (i < n) {
-                char ch = source.charAt(i);
+                char ch = cleaned.charAt(i);
 
                 if (inSq) {
                     if (escaping) {
@@ -2312,7 +2319,7 @@ public class ApiExtractorService {
                 if (inTextBlock) {
                     out.append(ch);
                     // text block end: """ (not escaped in Java text blocks)
-                    if (ch == '"' && i + 2 < n && source.charAt(i + 1) == '"' && source.charAt(i + 2) == '"') {
+                    if (ch == '"' && i + 2 < n && cleaned.charAt(i + 1) == '"' && cleaned.charAt(i + 2) == '"') {
                         out.append('"').append('"');
                         i += 3;
                         inTextBlock = false;
@@ -2325,7 +2332,7 @@ public class ApiExtractorService {
                 // 문자열/문자 리터럴 밖
                 if (ch == '"') {
                     // Java 15+ text block: """ ... """
-                    if (i + 2 < n && source.charAt(i + 1) == '"' && source.charAt(i + 2) == '"') {
+                    if (i + 2 < n && cleaned.charAt(i + 1) == '"' && cleaned.charAt(i + 2) == '"') {
                         out.append('"').append('"').append('"');
                         i += 3;
                         inTextBlock = true;
@@ -2371,6 +2378,41 @@ public class ApiExtractorService {
             }
         }
         return new NormalizationResult(out.toString(), changed, List.copyOf(notes));
+    }
+
+    private static String sanitizeParserInputControls(String s) {
+        if (s == null || s.isEmpty()) return s == null ? "" : s;
+        StringBuilder b = null;
+        for (int i = 0; i < s.length(); i++) {
+            char ch = s.charAt(i);
+            char repl = 0;
+
+            // allow common whitespace
+            if (ch == '\n' || ch == '\r' || ch == '\t') continue;
+
+            // C0 control
+            if (ch < 0x20) repl = ' ';
+            // C1 control (often appears as 0x92 etc from cp1252/encoding issues)
+            else if (ch >= 0x80 && ch <= 0x9F) {
+                repl = switch (ch) {
+                    case 0x91, 0x92 -> '\''; // ‘ ’
+                    case 0x93, 0x94 -> '"';  // “ ”
+                    case 0x96, 0x97 -> '-';  // – —
+                    default -> ' ';
+                };
+            }
+
+            if (repl != 0) {
+                if (b == null) {
+                    b = new StringBuilder(s.length());
+                    b.append(s, 0, i);
+                }
+                b.append(repl);
+            } else if (b != null) {
+                b.append(ch);
+            }
+        }
+        return b == null ? s : b.toString();
     }
 
     /**

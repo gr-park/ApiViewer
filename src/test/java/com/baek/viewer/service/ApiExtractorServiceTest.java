@@ -296,6 +296,42 @@ class ApiExtractorServiceTest {
     }
 
     @Test
+    @DisplayName("extract — @Operation(description 텍스트블록 내부에 C1 control(예: 0x92) 문자가 섞여도 in-memory sanitize로 JavaParser 파싱")
+    void extract_textBlockContainsC1Control_sanitized_noFallback(@TempDir Path tmp) throws Exception {
+        when(globalConfigRepository.findById(1L)).thenReturn(Optional.empty());
+        Path javaFile = tmp.resolve("ControlCharController.java");
+        // 0x92 (C1 control) — 일부 인코딩/복붙에서 ‘/’ 등으로 보일 수 있는 문제 문자
+        char bad = (char) 0x92;
+        Files.writeString(javaFile, """
+                package test;
+                import org.springframework.web.bind.annotation.*;
+                import io.swagger.v3.oas.annotations.Operation;
+                @RestController
+                public class ControlCharController {
+                    @Operation(summary = "컨트롤문자 테스트",
+                               description = \"\"\"
+                               line1
+                               line2 %s here
+                               \"\"\")
+                    @GetMapping("/cc")
+                    public String cc() { return "ok"; }
+                }
+                """.formatted(String.valueOf(bad)));
+
+        ExtractRequest req = new ExtractRequest();
+        req.setRootPath(tmp.toString());
+        req.setDomain("http://example.com");
+
+        List<ApiInfo> result = service.extract(req);
+
+        assertThat(result).anyMatch(a -> "/cc".equals(a.getApiPath()) && "GET".equals(a.getHttpMethod())
+                && "컨트롤문자 테스트".equals(a.getApiOperationValue()));
+        @SuppressWarnings("unchecked")
+        List<String> logs = (List<String>) service.getProgress().get("logs");
+        assertThat(logs).noneMatch(s -> s.contains("JavaParser 실패"));
+    }
+
+    @Test
     @DisplayName("extract — 추출 중에 다시 호출하면 IllegalStateException — 호출 후엔 다시 가능")
     void extract_subsequentCallOk(@TempDir Path tmp) {
         when(globalConfigRepository.findById(1L)).thenReturn(Optional.empty());
