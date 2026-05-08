@@ -130,6 +130,31 @@
 
     /* ── 테이블 공통 ── */
     .tbl-wrap{overflow-x:auto;}
+    /* URL 현황: 카드 폭 안에서만 가로 스크롤 */
+    .ov-url-scroll {
+      max-width: 100%;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    /* 지표 열(합계~사용으로 변경): 동일 최소 폭 — 표가 넓어지면 ov-url-scroll에서 스크롤 */
+    #overviewTeamTable thead tr:first-child > th:nth-child(2),
+    #overviewTeamTable thead tr:first-child > th:nth-child(3),
+    #overviewTeamTable thead tr:last-child > th,
+    #overviewTeamTable tbody td:nth-child(n+2) {
+      min-width: 5.25rem;
+    }
+    #overviewRepoTable thead tr:first-child > th:nth-child(4),
+    #overviewRepoTable thead tr:first-child > th:nth-child(5),
+    #overviewRepoTable thead tr:last-child > th,
+    #overviewRepoTable tbody td:nth-child(n+4) {
+      min-width: 5.25rem;
+    }
+    #overviewManagerTable thead tr:first-child > th:nth-child(5),
+    #overviewManagerTable thead tr:first-child > th:nth-child(6),
+    #overviewManagerTable thead tr:last-child > th,
+    #overviewManagerTable tbody td:nth-child(n+5) {
+      min-width: 5.25rem;
+    }
     table{width:100%;border-collapse:collapse;font-size:12px;}
     thead th{background:#f8fafc;padding:8px 12px;text-align:left;font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em;border-bottom:2px solid var(--border);white-space:nowrap;}
     tbody tr{border-bottom:1px solid var(--border);transition:background .1s;}
@@ -782,8 +807,8 @@
       </div>
 
       <div class="tab-panel active" id="panel-overview-team">
-        <div class="tbl-wrap" style="overflow:auto;">
-          <table id="overviewTeamTable" style="min-width:100%;font-size:11px;">
+        <div class="tbl-wrap ov-url-scroll">
+          <table id="overviewTeamTable" style="min-width:100%;width:max-content;font-size:11px;">
             <thead id="overviewTeamThead"></thead>
             <tbody id="overviewTeamTbody"></tbody>
           </table>
@@ -791,8 +816,8 @@
       </div>
 
       <div class="tab-panel" id="panel-overview-repo">
-        <div class="tbl-wrap" style="overflow:auto;">
-          <table id="overviewRepoTable" style="min-width:100%;font-size:11px;">
+        <div class="tbl-wrap ov-url-scroll">
+          <table id="overviewRepoTable" style="min-width:100%;width:max-content;font-size:11px;">
             <thead id="overviewRepoThead"></thead>
             <tbody id="overviewRepoTbody"></tbody>
           </table>
@@ -803,8 +828,8 @@
         <div style="margin:10px 2px 8px;font-size:10px;color:var(--text-muted);font-weight:500;">
           ℹ️ 배포담당자 기준, 없을경우 담당자 기준으로 집계합니다.
         </div>
-        <div class="tbl-wrap" style="overflow:auto;">
-          <table id="overviewManagerTable" style="min-width:100%;font-size:11px;">
+        <div class="tbl-wrap ov-url-scroll">
+          <table id="overviewManagerTable" style="min-width:100%;width:max-content;font-size:11px;">
             <thead id="overviewManagerThead"></thead>
             <tbody id="overviewManagerTbody"></tbody>
           </table>
@@ -1316,7 +1341,7 @@
       const btRev = (cd.review != null) ? cd.review : ((sd['②-① 호출0건+변경있음']||0) + (sd['②-② 호출 3건 이하+변경없음']||0) + (sd['②-③ 사용으로 변경']||0));
       const qp = key === 'team' ? `team=${encodeURIComponent(row[key]||'')}` : `manager=${encodeURIComponent(row[key]||'')}`;
       return `<tr>
-        <td><b>${esc(row[key])}</b></td>
+        <td>${esc(row[key])}</td>
         <td style="text-align:right;font-weight:700;">${cnt.toLocaleString()}</td>
         <td style="text-align:right;">${vp(use,cnt)}</td>
         <td style="text-align:right;">${vp(done,cnt)}</td>
@@ -1345,7 +1370,7 @@
       const btRev = (cd.review != null) ? cd.review : ((sd['②-① 호출0건+변경있음']||0) + (sd['②-② 호출 3건 이하+변경없음']||0) + (sd['②-③ 사용으로 변경']||0));
       return `<tr>
         <td style="color:var(--text-muted);">${esc(row.team || '-')}</td>
-        <td><b>${esc(row.manager)}</b></td>
+        <td>${esc(row.manager)}</td>
         <td style="text-align:right;font-weight:700;">${cnt.toLocaleString()}</td>
         <td style="text-align:right;">${vp(use,cnt)}</td>
         <td style="text-align:right;">${vp(done,cnt)}</td>
@@ -1374,7 +1399,7 @@
       const btRev = (cd.review != null) ? cd.review : ((sd['②-① 호출0건+변경있음']||0) + (sd['②-② 호출 3건 이하+변경없음']||0) + (sd['②-③ 사용으로 변경']||0));
       return `<tr>
         <td style="color:var(--text-muted);">${esc(row.team)}</td>
-        <td><b>${esc(row.repo)}</b></td>
+        <td>${esc(row.repo)}</td>
         <td style="color:var(--text-muted);">${esc(row.businessName || '-')}</td>
         <td style="text-align:right;font-weight:700;">${cnt.toLocaleString()}</td>
         <td style="text-align:right;">${vp(use,cnt)}</td>
@@ -1502,20 +1527,19 @@
     const border = 'border-right:1px solid #cbd5e1;';
     const borderEnd = 'border-right:2px solid #999;';
     if (mode === 'team') {
-      return `<td style="text-align:left;${borderEnd}"><b>${esc(r.t0)}</b></td>`;
+      return `<td style="text-align:left;${borderEnd}">${esc(r.t0)}</td>`;
     }
     const rs = overviewLabelRowspans(rows, i, mode);
     let html = '';
     if (rs[0] > 0) {
-      html += `<td rowspan="${rs[0]}" style="text-align:left;vertical-align:middle;${border}"><b>${esc(r.t0)}</b></td>`;
+      html += `<td rowspan="${rs[0]}" style="text-align:left;vertical-align:middle;${border}">${esc(r.t0)}</td>`;
     }
     if (rs[1] > 0) {
-      const bizWeight = mode === 'repo' ? 'font-weight:800;' : '';
-      html += `<td rowspan="${rs[1]}" style="text-align:left;vertical-align:middle;${border}${bizWeight}">${esc(r.t1)}</td>`;
+      html += `<td rowspan="${rs[1]}" style="text-align:left;vertical-align:middle;${border}">${esc(r.t1)}</td>`;
     }
     if (rs[2] > 0) {
       const repoEnd = mode === 'repo' ? borderEnd : border;
-      html += `<td rowspan="${rs[2]}" style="text-align:left;vertical-align:middle;${repoEnd};font-family:Consolas,monospace;font-size:10px;">${esc(r.t2)}</td>`;
+      html += `<td rowspan="${rs[2]}" style="text-align:left;vertical-align:middle;${repoEnd}">${esc(r.t2)}</td>`;
     }
     if (mode === 'manager') {
       // 담당자도 동일 값 연속이면 rowspan 병합 (레포가 달라도 담당자가 같으면 병합)
@@ -1531,7 +1555,7 @@
           else break;
         }
         const rsMgr = j - i;
-        html += `<td rowspan="${rsMgr}" style="text-align:left;vertical-align:middle;${borderEnd};font-weight:800;">${esc(r.t3)}</td>`;
+        html += `<td rowspan="${rsMgr}" style="text-align:left;vertical-align:middle;${borderEnd}">${esc(r.t3)}</td>`;
       }
     }
     return html;
@@ -1716,33 +1740,33 @@
     const row = labelRows[i];
     if (mode === 'team') {
       ws.getCell(r, 1).value = row.t0;
-      ws.getCell(r, 1).font = { bold: true };
+      ws.getCell(r, 1).font = {};
       ws.getCell(r, 1).alignment = { vertical: 'middle', horizontal: 'left', wrapText: true };
       return;
     }
     const rs = overviewLabelRowspans(labelRows, i, mode);
     if (rs[0] > 0) {
       ws.getCell(r, 1).value = row.t0;
-      ws.getCell(r, 1).font = { bold: true };
+      ws.getCell(r, 1).font = {};
       ws.getCell(r, 1).alignment = { vertical: 'middle', horizontal: 'left', wrapText: true };
       if (rs[0] > 1) ws.mergeCells(r, 1, r + rs[0] - 1, 1);
     }
     if (rs[1] > 0) {
       ws.getCell(r, 2).value = row.t1;
-      if (mode === 'repo') ws.getCell(r, 2).font = { bold: true };
+      ws.getCell(r, 2).font = {};
       ws.getCell(r, 2).alignment = { vertical: 'middle', horizontal: 'left', wrapText: true };
       if (rs[1] > 1) ws.mergeCells(r, 2, r + rs[1] - 1, 2);
     }
     if (rs[2] > 0) {
       ws.getCell(r, 3).value = row.t2;
-      ws.getCell(r, 3).font = { name: 'Consolas', size: 10 };
+      ws.getCell(r, 3).font = {};
       ws.getCell(r, 3).alignment = { vertical: 'middle', horizontal: 'left', wrapText: true };
       if (rs[2] > 1) ws.mergeCells(r, 3, r + rs[2] - 1, 3);
     }
     if (mode === 'manager') {
       ws.getCell(r, 4).value = row.t3;
       ws.getCell(r, 4).alignment = { vertical: 'middle', horizontal: 'left', wrapText: true };
-      ws.getCell(r, 4).font = { bold: true };
+      ws.getCell(r, 4).font = {};
     }
   }
   function addBlockOverviewExcelSheet(wb, title, mode, labelRows, threshold, labelCols) {
@@ -1933,7 +1957,8 @@
       const sp = scope || '';
       const total = row.grandTotal || 0;
       const trCls = o.isTotal ? ' class="ov-grand-total-row"' : '';
-      const totalCell = `<td class="ov-total-col" style="text-align:right;">${total.toLocaleString()}</td>`;
+      const baseHref = sp ? `/url-viewer/viewer.html?${sp}` : `/url-viewer/viewer.html`;
+      const totalCell = cellLink(total, baseHref, { className: 'ov-total-col' });
       const useCell   = cellLink(row.use||0, `/url-viewer/viewer.html?${sp}&status=${encodeURIComponent('사용')}`, {className:'ov-total-col'});
       const blockTotal      = row.blockTotal != null ? row.blockTotal
                              : ((row.blockDone||0) + (row.blockResidual||0) + (row.blockExManager||0) + (row.blockExReview||0) + (row.blockExManUse||0));
@@ -1982,7 +2007,7 @@
       const body = labelRows.map((lr, i) => rowOf(
         overviewLabelCellsHtml(labelRows, i, 'team'), lr.data, lr.scope)).join('');
       const totalRow = arr.length
-        ? rowOf(`<td style="text-align:left;border-right:2px solid #999;"><b>총합계</b></td>`, blockOverviewSumRows(arr), ``, { isTotal: true })
+        ? rowOf(`<td style="text-align:left;border-right:2px solid #999;">총합계</td>`, blockOverviewSumRows(arr), ``, { isTotal: true })
         : '';
       document.getElementById('overviewTeamTbody').innerHTML = (body + totalRow) || empty;
     }
@@ -2001,7 +2026,7 @@
       const body = labelRows.map((lr, i) => rowOf(
         overviewLabelCellsHtml(labelRows, i, 'repo'), lr.data, lr.scope)).join('');
       const totalRow = arr.length
-        ? rowOf(`<td colspan="3" style="text-align:left;border-right:2px solid #999;"><b>총합계</b></td>`, blockOverviewSumRows(arr), ``, { isTotal: true })
+        ? rowOf(`<td colspan="3" style="text-align:left;border-right:2px solid #999;">총합계</td>`, blockOverviewSumRows(arr), ``, { isTotal: true })
         : '';
       document.getElementById('overviewRepoTbody').innerHTML = (body + totalRow) || empty;
     }
@@ -2020,7 +2045,7 @@
       const body = labelRows.map((lr, i) => rowOf(
         overviewLabelCellsHtml(labelRows, i, 'manager'), lr.data, lr.scope)).join('');
       const totalRow = arr.length
-        ? rowOf(`<td colspan="4" style="text-align:left;border-right:2px solid #999;"><b>총합계</b></td>`, blockOverviewSumRows(arr), ``, { isTotal: true })
+        ? rowOf(`<td colspan="4" style="text-align:left;border-right:2px solid #999;">총합계</td>`, blockOverviewSumRows(arr), ``, { isTotal: true })
         : '';
       document.getElementById('overviewManagerTbody').innerHTML = (body + totalRow) || empty;
     }
@@ -2196,7 +2221,7 @@
     const r = labelRows[i];
     const borderEnd = 'border-right:2px solid #999;';
     if (mode === 'team') {
-      return `<td style="text-align:left;${borderEnd}"><b>${esc(r.t0)}</b></td>`;
+      return `<td style="text-align:left;${borderEnd}">${esc(r.t0)}</td>`;
     }
     if (mode === 'repo') {
       return overviewLabelCellsHtml(labelRows, i, 'repo');
@@ -2321,7 +2346,7 @@
       }));
       const body = labelRows.map((lr, i) => renderRow(
         deployLabelCellsHtml(labelRows, i, 'team'), lr.data, lr.scopeQs)).join('');
-      const footer = rows.length ? renderFooter(`<td style="text-align:left;border-right:2px solid #999;"><b>총합계</b></td>`, deploySumAggRows(rows), ``) : '';
+      const footer = rows.length ? renderFooter(`<td style="text-align:left;border-right:2px solid #999;">총합계</td>`, deploySumAggRows(rows), ``) : '';
       document.getElementById('deployTeamTbody').innerHTML = (body + footer) || empty;
     }
 
@@ -2340,7 +2365,7 @@
       const body = labelRows.map((lr, i) => renderRow(
         deployLabelCellsHtml(labelRows, i, 'repo'), lr.data, lr.scopeQs)).join('');
       const footer = rows.length ? renderFooter(
-        `<td colspan="3" style="text-align:left;border-right:2px solid #999;"><b>총합계</b></td>`, deploySumAggRows(rows), ``) : '';
+        `<td colspan="3" style="text-align:left;border-right:2px solid #999;">총합계</td>`, deploySumAggRows(rows), ``) : '';
       document.getElementById('deployRepoTbody').innerHTML = (body + footer) || empty;
     }
 
@@ -2359,7 +2384,7 @@
       const body = labelRows.map((lr, i) => renderRow(
         deployLabelCellsHtml(labelRows, i, 'manager'), lr.data, lr.scopeQs)).join('');
       const footer = rows.length ? renderFooter(
-        `<td colspan="4" style="text-align:left;border-right:2px solid #999;"><b>총합계</b></td>`, deploySumAggRows(rows), ``) : '';
+        `<td colspan="4" style="text-align:left;border-right:2px solid #999;">총합계</td>`, deploySumAggRows(rows), ``) : '';
       document.getElementById('deployManagerTbody').innerHTML = (body + footer) || empty;
     }
 
