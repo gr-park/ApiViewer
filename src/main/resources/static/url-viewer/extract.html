@@ -524,6 +524,37 @@
         <b>파일 선택</b>은 PC의 <code style="font-size:10px;">.java</code>를 지정만 하고, <b>파싱 실행</b>을 눌렀을 때 서버로 전송·파싱합니다(레포 미선택 시 프리픽스는 비우고 미리보기).
       </p>
     </div>
+
+    <!-- TS(NestJS) 정규식 파싱 (디버그 목적) -->
+    <div class="single-debug-box" data-admin-only style="margin-top:10px;">
+      <div style="font-size:11px;font-weight:800;color:var(--text-muted);margin-bottom:8px;text-transform:none;letter-spacing:.04em;">
+        TS(NestJS) 정규식 파싱 (디버그 · 폴더 스캔)
+      </div>
+      <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;">
+        <label class="field" style="flex:1;min-width:280px;text-transform:none;letter-spacing:0;">
+          rootPath (레포 ROOT)
+          <input type="text" id="tsDebugRootPath"
+                 placeholder="예: D:\\LP_DEV\\apiviewer_repo\\LCCMC\\..."
+                 style="width:100%;">
+        </label>
+        <label class="field" style="min-width:220px;text-transform:none;letter-spacing:0;">
+          include(glob)
+          <input type="text" id="tsDebugInclude" value="**/*.ts" style="width:100%;">
+        </label>
+        <label class="field" style="min-width:260px;text-transform:none;letter-spacing:0;">
+          exclude(glob, CSV)
+          <input type="text" id="tsDebugExclude"
+                 value="**/node_modules/**,**/dist/**,**/build/**,**/*.spec.ts,**/*.test.ts,**/*.d.ts"
+                 style="width:100%;">
+        </label>
+        <button type="button" class="btn btn-purple" style="height:34px;" onclick="runTsRegexDebugParse()">TS 파싱 실행</button>
+      </div>
+      <p style="font-size:10px;color:var(--text-muted);margin-top:8px;line-height:1.55;">
+        NestJS 데코레이터(<code style="font-size:10px;">@Controller</code> + <code style="font-size:10px;">@Get/@Post...</code>) 패턴을 정규식으로 스캔해 URL 개수를 빠르게 점검합니다.
+        동적 경로(상수 import, concat, template 등)는 <b>UNRESOLVED</b>로 표시되고 스킵될 수 있습니다.
+        결과 모달에서 레포를 선택해 <b>DB 부분 반영</b>도 가능합니다.
+      </p>
+    </div>
   </div>
 
   <!-- ─── APM 호출건수 수집 ─── -->
@@ -2488,7 +2519,9 @@
     const stack = document.getElementById('debugParseStack');
 
     if (title) {
-      if (!d) title.textContent = 'JavaParser 단건 파싱 — 결과 없음';
+      const pm = d && d.parseMethod ? String(d.parseMethod) : '';
+      if (!d) title.textContent = '단건 파싱 — 결과 없음';
+      else if (pm === 'ts-regex') title.textContent = d.ok ? 'TS(NestJS) 정규식 파싱 — 성공' : 'TS(NestJS) 정규식 파싱 — 오류';
       else title.textContent = d.ok ? 'JavaParser 단건 파싱 — 성공' : 'JavaParser 단건 파싱 — 오류';
     }
 
@@ -2514,10 +2547,10 @@
     if (stat) {
       stat.style.color = '';
       if (d && d.ok) {
-        const tag = d.mode === 'upload' ? '업로드' : '경로';
+        const tag = d.mode === 'upload' ? '업로드' : (d.mode === 'ts' ? 'TS' : '경로');
         const methodTag = d.parseMethod === 'regex'
           ? 'Regex 폴백'
-          : (d.parseMethod === 'javaparser' ? 'JavaParser' : '알수없음');
+          : (d.parseMethod === 'javaparser' ? 'JavaParser' : (d.parseMethod === 'ts-regex' ? 'TS Regex' : '알수없음'));
         stat.textContent =
           `요약 — ${tag} 파싱 성공 · ${methodTag} · 추출 ${Number(d.apiCount) || 0}건 (미리보기 최대 50건)`;
         stat.style.color = '#166534';
@@ -2609,7 +2642,7 @@
       }
     }
 
-    const canSave = !!(d && d.ok && d.javaParserOk && Number(d.apiCount) > 0);
+    const canSave = !!(d && d.ok && Number(d.apiCount) > 0 && (d.javaParserOk || String(d.parseMethod) === 'ts-regex'));
     const saveRow = document.getElementById('debugParseSaveRepoRow');
     if (saveRow) saveRow.style.display = canSave ? 'flex' : 'none';
 
@@ -2622,6 +2655,8 @@
           'DB 부분 반영: 위에서 저장할 레포를 선택한 뒤 반영합니다. 다른 등록 URL은 삭제 표시되지 않습니다.';
       } else if (d && d.ok && d.parseMethod === 'regex') {
         hint.textContent = 'JavaParser 실패로 Regex 폴백 결과입니다. 미리보기 목적이며 DB 반영은 지원하지 않습니다.';
+      } else if (d && d.ok && d.parseMethod === 'ts-regex') {
+        hint.textContent = 'TS 정규식 파싱 결과입니다. 미리보기 목적이며, 필요 시 선택한 레포에 부분 반영할 수 있습니다.';
       } else if (d && d.ok && Number(d.apiCount) === 0) {
         hint.textContent = '저장할 매핑이 없습니다.';
       } else if (d && !d.ok) {
@@ -2712,6 +2747,21 @@
         fd.append('apiPathPrefix', apiPathPrefix || '');
         fd.append('pathConstants', pathConstants || '');
         const res = await adminFetchForm('/api/extract/debug-save-partial-upload', fd);
+        const r = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(r.error || ('HTTP ' + res.status));
+        if (!r.ok) throw new Error(r.error || '저장 실패');
+        showToast(`반영 완료 — insert/update ${r.savedTouches ?? 0}건`, 'success');
+      } else if (ctx.mode === 'ts') {
+        const res = await adminFetch('/api/extract/debug-save-partial-ts', {
+          method: 'POST',
+          body: JSON.stringify({
+            repositoryName: saveName,
+            rootPath: ctx.rootPath,
+            apiPathPrefix: apiPathPrefix || '',
+            include: ctx.include || '',
+            exclude: ctx.exclude || ''
+          })
+        });
         const r = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(r.error || ('HTTP ' + res.status));
         if (!r.ok) throw new Error(r.error || '저장 실패');
@@ -2845,6 +2895,43 @@
     }
     const inp = document.getElementById('singleDebugRelPath');
     debugParseOneFile(inp ? inp.value : '', null);
+  }
+
+  async function runTsRegexDebugParse() {
+    const rootEl = document.getElementById('tsDebugRootPath');
+    const incEl = document.getElementById('tsDebugInclude');
+    const excEl = document.getElementById('tsDebugExclude');
+    const rootPath = rootEl ? String(rootEl.value || '').trim() : '';
+    if (!rootPath) {
+      showToast('TS 파싱 rootPath를 입력하세요.', 'error');
+      return;
+    }
+    const include = incEl ? String(incEl.value || '').trim() : '**/*.ts';
+    const exclude = excEl ? String(excEl.value || '').trim() : '';
+    try {
+      const ctx = {
+        repoName: '(TS)',
+        rootPath,
+        relPath: '(scan *.ts)',
+        mode: 'ts',
+        include,
+        exclude
+      };
+      const res = await adminFetch('/api/extract/debug-parse-ts', {
+        method: 'POST',
+        body: JSON.stringify({
+          rootPath,
+          apiPathPrefix: '',
+          include,
+          exclude
+        })
+      });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(d.error || ('서버 오류 (' + res.status + ')'));
+      showDebugParseResult(d, ctx);
+    } catch (e) {
+      showToast(`TS 파싱 실패: ${e.message}`, 'error');
+    }
   }
 
   (function bindDebugParseOverlay() {

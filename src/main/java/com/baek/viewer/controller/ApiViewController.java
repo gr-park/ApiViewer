@@ -207,6 +207,46 @@ public class ApiViewController {
     }
 
     /**
+     * 디버그: TypeScript(NestJS) 컨트롤러 정규식 파싱(레포 하위 *.ts 스캔).
+     * - 관리자 전용 (AdminInterceptor 보호)
+     */
+    @PostMapping("/extract/debug-parse-ts")
+    public ResponseEntity<?> debugParseTs(@RequestBody Map<String, String> body) {
+        String rootPath = body != null ? body.get("rootPath") : null;
+        String apiPathPrefix = body != null ? body.get("apiPathPrefix") : null;
+        String include = body != null ? body.get("include") : null;
+        String exclude = body != null ? body.get("exclude") : null;
+        log.info("[DEBUG TS 파싱] rootPath={}", rootPath);
+        return ResponseEntity.ok(extractorService.debugParseTsRoutes(rootPath, apiPathPrefix, include, exclude));
+    }
+
+    /**
+     * 디버그: TypeScript(NestJS) 정규식 파싱 결과를 레포 DB에 부분 반영(다른 URL 삭제 표시 없음).
+     * - 관리자 전용 (AdminInterceptor 보호)
+     */
+    @PostMapping("/extract/debug-save-partial-ts")
+    public ResponseEntity<?> debugSavePartialTs(@RequestBody Map<String, String> body, HttpServletRequest httpReq) {
+        String repositoryName = body != null ? body.get("repositoryName") : null;
+        String rootPath = body != null ? body.get("rootPath") : null;
+        String apiPathPrefix = body != null ? body.get("apiPathPrefix") : null;
+        String include = body != null ? body.get("include") : null;
+        String exclude = body != null ? body.get("exclude") : null;
+        if (repositoryName == null || repositoryName.isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "repositoryName이 필요합니다."));
+        }
+        String domain = repoConfigRepository.findByRepoName(repositoryName.trim())
+                .map(RepoConfig::getDomain).orElse("");
+        if (domain == null) domain = "";
+        String ip = getClientIp(httpReq);
+        Map<String, Object> result = extractorService.savePartialFromTsRegexRepo(
+                repositoryName.trim(), rootPath, apiPathPrefix, include, exclude, domain, ip);
+        if (Boolean.TRUE.equals(result.get("ok"))) {
+            return ResponseEntity.ok(result);
+        }
+        return ResponseEntity.badRequest().body(result);
+    }
+
+    /**
      * 단건 디버그 파싱 결과를 레포 DB에 부분 반영. 서버에서 동일 파일을 재파싱 후 저장(다른 URL 삭제 처리 없음).
      */
     @PostMapping("/extract/debug-save-partial-repo")

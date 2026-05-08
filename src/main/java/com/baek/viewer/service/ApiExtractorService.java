@@ -1507,6 +1507,337 @@ public class ApiExtractorService {
         else log.debug("{}{}", tag, message);
     }
 
+    // ======================================================
+    // TypeScript(NestJS) 정규식 디버그 파서
+    // ======================================================
+
+    private static final int TS_DEBUG_PREVIEW_MAX = 260;
+
+    private static final List<String> TS_DEFAULT_EXCLUDES = List.of(
+            "**/node_modules/**",
+            "**/dist/**",
+            "**/build/**",
+            "**/*.spec.ts",
+            "**/*.test.ts",
+            "**/*.d.ts"
+    );
+
+    private static List<PathMatcher> compileGlobMatchers(String rawCsv, List<String> defaults) {
+        List<String> pats = new ArrayList<>();
+        if (rawCsv != null && !rawCsv.isBlank()) {
+            for (String p : rawCsv.split(",")) {
+                String t = p == null ? "" : p.trim();
+                if (!t.isEmpty()) pats.add(t);
+            }
+        } else if (defaults != null) {
+            pats.addAll(defaults);
+        }
+        List<PathMatcher> out = new ArrayList<>();
+        for (String p : pats) {
+            try {
+                out.add(FileSystems.getDefault().getPathMatcher("glob:" + p));
+            } catch (Exception ignored) {
+                // invalid glob: ignore
+            }
+        }
+        return out;
+    }
+
+    private static boolean anyMatch(List<PathMatcher> ms, Path rel) {
+        if (ms == null || ms.isEmpty()) return false;
+        for (PathMatcher m : ms) {
+            try {
+                if (m.matches(rel)) return true;
+            } catch (Exception ignored) {
+            }
+        }
+        return false;
+    }
+
+    private static String tsFirstQuotedLiteral(String s) {
+        if (s == null) return null;
+        Matcher m = Pattern.compile("['\"`]([^'\"`]+)['\"`]").matcher(s);
+        return m.find() ? m.group(1) : null;
+    }
+
+    private static List<String> tsExtractPathsFromDecoratorArgs(String inner) {
+        if (inner == null) return Collections.emptyList();
+        String t = inner.trim();
+        if (t.isEmpty()) return List.of("");
+
+        // object arg: { path: '...' }
+        Matcher pm = Pattern.compile("\\bpath\\s*:\\s*(['\"`])([^'\"`]+)\\1").matcher(t);
+        if (pm.find()) return List.of(pm.group(2));
+
+        // array: ['a','b']
+        if (t.startsWith("[")) {
+            List<String> out = new ArrayList<>();
+            Matcher qm = Pattern.compile("['\"`]([^'\"`]+)['\"`]").matcher(t);
+            while (qm.find()) out.add(qm.group(1));
+            return out;
+        }
+
+        // pure literal only (concat/template/identifier는 UNRESOLVED 처리)
+        // e.g. OK: '/x'  | NOT OK: BASE + '/x' , `${BASE}/x`
+        Matcher lm = Pattern.compile("^\\s*(['\"`])([^'\"`]+)\\1\\s*$").matcher(t);
+        if (lm.find()) return List.of(lm.group(2));
+
+        return Collections.emptyList();
+    }
+
+    private static int tsIndexOfClassDecl(String src) {
+        if (src == null) return -1;
+        Matcher m = Pattern.compile("(?m)^\\s*(?:export\\s+)?class\\s+\\w+\\b").matcher(src);
+        if (m.find()) return m.start();
+        m = Pattern.compile("\\bclass\\s+\\w+\\b").matcher(src);
+        return m.find() ? m.start() : -1;
+    }
+
+    private static String tsFindControllerPrefix(String src, int classDeclStart) {
+        if (src == null) return "";
+        int headEnd = classDeclStart >= 0 ? classDeclStart : Math.min(src.length(), 6000);
+        String head = src.substring(0, Math.min(headEnd, src.length()));
+
+        int idx = head.lastIndexOf("@Controller");
+        if (idx < 0) return "";
+        int paren = head.indexOf('(', idx);
+        if (paren < 0) return "";
+        int close = rxIndexOfClosingParenBalanced(head, paren);
+        if (close < 0) return "";
+        String inner = head.substring(paren + 1, close);
+        String lit = tsFirstQuotedLiteral(inner);
+        if (lit != null) return lit.trim();
+        Matcher pm = Pattern.compile("\\bpath\\s*:\\s*(['\"`])([^'\"`]+)\\1").matcher(inner);
+        return pm.find() ? pm.group(2).trim() : "";
+    }
+
+    private static String tsFindMethodNameAfter(String srcAfterDecorator) {
+        if (srcAfterDecorator == null) return null;
+        String chunk = rxStripCommentsChunk(srcAfterDecorator);
+        // common NestJS handler: async name(...)
+        Matcher m = Pattern.compile("(?m)^\\s*(?:public|private|protected)?\\s*(?:async\\s+)?(\\w+)\\s*\\(").matcher(chunk);
+        while (m.find()) {
+            String name = m.group(1);
+            if (name == null) continue;
+            if (RX_METHOD_NAME_BLACKLIST.contains(name)) continue;
+            if (RX_METHOD_TYPEISH_BLACKLIST.contains(name)) continue;
+            return name;
+        }
+        return null;
+    }
+
+    private List<ApiInfo> extractWithTsRegexDebug(Path root, String apiPathPrefix, String includeCsv, String excludeCsv,
+                                                  List<Map<String, Object>> steps, String traceId,
+                                                  Map<String, Object> countsOut) throws IOException {
+        if (root == null) throw new IllegalArgumentException("rootPath is required");
+        if (!Files.exists(root)) throw new IllegalArgumentException("rootPath not found: " + root);
+        if (!Files.isDirectory(root)) throw new IllegalArgumentException("rootPath is not a directory: " + root);
+
+        List<PathMatcher> includes = compileGlobMatchers(
+                (includeCsv == null || includeCsv.isBlank()) ? "**/*.ts" : includeCsv,
+                List.of("**/*.ts"));
+        List<PathMatcher> excludes = compileGlobMatchers(excludeCsv, TS_DEFAULT_EXCLUDES);
+
+        int fileCount = 0;
+        int mappingCount = 0;
+        List<ApiInfo> apis = new ArrayList<>();
+
+        addRegexTrace(steps, traceId, "INFO", "[TS] scan 시작 root=" + root.toString());
+
+        try (var walk = Files.walk(root)) {
+            for (Path p : (Iterable<Path>) walk::iterator) {
+                if (!Files.isRegularFile(p)) continue;
+                Path rel = root.relativize(p);
+                if (!anyMatch(includes, rel)) continue;
+                if (anyMatch(excludes, rel)) {
+                    addRegexTrace(steps, traceId, "DEBUG", "[TS] FILE_SKIP " + rel.toString().replace('\\', '/'));
+                    continue;
+                }
+                fileCount++;
+                String relStr = rel.toString().replace('\\', '/');
+                addRegexTrace(steps, traceId, "DEBUG", "[TS] FILE_SCAN " + relStr);
+
+                String src;
+                try {
+                    src = Files.readString(p, StandardCharsets.UTF_8);
+                } catch (Exception e) {
+                    addRegexTrace(steps, traceId, "WARN", "[TS] FILE_PARSE_FAIL " + relStr + " msg=" + e.getMessage());
+                    continue;
+                }
+
+                int classDecl = tsIndexOfClassDecl(src);
+                String ctrlPrefix = tsFindControllerPrefix(src, classDecl);
+                addRegexTrace(steps, traceId, "DEBUG",
+                        "[TS] CONTROLLER_PREFIX_DETECT file=" + p.getFileName()
+                                + " prefix=\"" + rxDbgPreview(ctrlPrefix, TS_DEBUG_PREVIEW_MAX) + "\"");
+
+                Matcher dm = Pattern.compile("@(Get|Post|Put|Delete|Patch|Options|Head|All)\\s*").matcher(src);
+                while (dm.find()) {
+                    String deco = dm.group(1);
+                    int at = dm.start();
+                    int decoEnd = dm.end();
+                    int paren = (decoEnd < src.length() && src.charAt(decoEnd) == '(') ? decoEnd : src.indexOf('(', decoEnd);
+                    String inner = "";
+                    int afterDeco = decoEnd;
+                    boolean hasParen = false;
+                    if (paren == decoEnd) {
+                        hasParen = true;
+                        int close = rxIndexOfClosingParenBalanced(src, paren);
+                        if (close > paren) {
+                            inner = src.substring(paren + 1, close);
+                            afterDeco = close + 1;
+                        }
+                    } else if (paren > 0 && paren - decoEnd <= 1 && paren < src.length() && src.charAt(paren) == '(') {
+                        hasParen = true;
+                        int close = rxIndexOfClosingParenBalanced(src, paren);
+                        if (close > paren) {
+                            inner = src.substring(paren + 1, close);
+                            afterDeco = close + 1;
+                        }
+                    }
+
+                    List<String> paths = hasParen ? tsExtractPathsFromDecoratorArgs(inner) : List.of("");
+                    if (paths.isEmpty()) {
+                        mappingCount++;
+                        addRegexTrace(steps, traceId, "WARN",
+                                "[TS] ROUTE_DETECT SKIP_UNRESOLVED_PATH deco=" + deco
+                                        + " args=\"" + rxDbgPreview(inner, TS_DEBUG_PREVIEW_MAX) + "\"");
+                        continue;
+                    }
+
+                    String after = src.substring(afterDeco, Math.min(afterDeco + 2000, src.length()));
+                    String methodName = tsFindMethodNameAfter(after);
+                    if (methodName == null) {
+                        mappingCount++;
+                        addRegexTrace(steps, traceId, "WARN",
+                                "[TS] ROUTE_DETECT SKIP_NO_METHOD_NAME deco=" + deco
+                                        + " args=\"" + rxDbgPreview(inner, TS_DEBUG_PREVIEW_MAX) + "\""
+                                        + " afterPreview=\"" + rxDbgPreview(after, TS_DEBUG_PREVIEW_MAX) + "\"");
+                        continue;
+                    }
+
+                    boolean isDeprecated = src.substring(Math.max(0, at - 400), at).contains("@Deprecated");
+                    String headArea = src.substring(Math.max(0, at - 800), at);
+                    String op = "-";
+                    Matcher opM = Pattern.compile("@ApiOperation\\s*\\((.*?)\\)", Pattern.DOTALL).matcher(headArea);
+                    if (opM.find()) {
+                        String lit = tsFirstQuotedLiteral(opM.group(1));
+                        if (lit != null) op = lit;
+                    }
+
+                    for (String mp : paths) {
+                        mappingCount++;
+                        String finalPath = normalizePath((apiPathPrefix == null ? "" : apiPathPrefix) + "/" + ctrlPrefix + "/" + (mp == null ? "" : mp));
+                        ApiInfo info = new ApiInfo();
+                        info.setApiPath(finalPath);
+                        info.setHttpMethod(deco.toUpperCase());
+                        info.setMethodName(methodName);
+                        info.setControllerName(p.getFileName().toString());
+                        info.setRepoPath(relStr);
+                        info.setIsDeprecated(isDeprecated ? "Y" : "N");
+                        info.setHasUrlBlock("N");
+                        info.setProgramId(autoExtractProgramId(finalPath));
+                        info.setControllerComment("-");
+                        info.setFullComment("-");
+                        info.setDescriptionTag("-");
+                        info.setApiOperationValue(op);
+                        info.setRequestPropertyValue("-");
+                        info.setControllerRequestPropertyValue("-");
+                        info.setBlockMarkingIncomplete(false);
+                        // git history는 디버그에서 생략
+                        info.setGit1(new String[]{"", "", ""});
+                        info.setGit2(new String[]{"", "", ""});
+                        info.setGit3(new String[]{"", "", ""});
+                        info.setGit4(new String[]{"", "", ""});
+                        info.setGit5(new String[]{"", "", ""});
+                        apis.add(info);
+                        addRegexTrace(steps, traceId, "OK",
+                                "[TS] ADD " + info.getHttpMethod() + " " + info.getApiPath()
+                                        + " methodName=" + methodName
+                                        + " file=" + relStr);
+                    }
+                }
+            }
+        }
+
+        if (countsOut != null) {
+            countsOut.put("fileCount", fileCount);
+            countsOut.put("mappingCount", mappingCount);
+        }
+        addRegexTrace(steps, traceId, "INFO", "[TS] scan 종료 files=" + fileCount + " mappings=" + mappingCount + " apis=" + apis.size());
+        return apis;
+    }
+
+    public Map<String, Object> debugParseTsRoutes(String rootPath, String apiPathPrefix, String include, String exclude) {
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("ok", false);
+        out.put("parseMethod", "ts-regex");
+        out.put("mode", "ts");
+        out.put("rootPath", rootPath);
+        out.put("apiPathPrefix", apiPathPrefix == null ? "" : apiPathPrefix);
+        out.put("include", include);
+        out.put("exclude", exclude);
+        List<Map<String, Object>> steps = new ArrayList<>();
+        out.put("steps", steps);
+        try {
+            String traceId = rxNewTraceId();
+            out.put("tsTraceId", traceId);
+            addRegexTrace(steps, traceId, "INFO", "TS regex trace 시작");
+            Path root = (rootPath == null || rootPath.isBlank()) ? null : Paths.get(rootPath.trim());
+            Map<String, Object> counts = new LinkedHashMap<>();
+            List<ApiInfo> apis = extractWithTsRegexDebug(root, apiPathPrefix == null ? "" : apiPathPrefix, include, exclude, steps, traceId, counts);
+            out.putAll(counts);
+            out.put("ok", true);
+            out.put("apiCount", apis.size());
+            out.put("apis", previewApis(apis));
+            addRegexTrace(steps, traceId, "OK", "TS regex 완료: apis=" + apis.size());
+            return out;
+        } catch (Exception e) {
+            out.put("errorType", e.getClass().getName());
+            out.put("message", e.getMessage());
+            out.put("stackTrace", stackTraceString(e));
+            addDebugStep(steps, "ERROR", "중단: " + e.getMessage());
+            return out;
+        }
+    }
+
+    public Map<String, Object> savePartialFromTsRegexRepo(String repositoryName, String rootPath,
+                                                          String apiPathPrefix, String include, String exclude,
+                                                          String domain, String clientIp) {
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("ok", false);
+        out.put("parseMethod", "ts-regex");
+        try {
+            if (repositoryName == null || repositoryName.isBlank()) throw new IllegalArgumentException("repositoryName required");
+            if (rootPath == null || rootPath.isBlank()) throw new IllegalArgumentException("rootPath is required");
+            Path root = Paths.get(rootPath.trim());
+            String traceId = rxNewTraceId();
+            List<Map<String, Object>> steps = new ArrayList<>();
+            out.put("steps", steps);
+            out.put("tsTraceId", traceId);
+            Map<String, Object> counts = new LinkedHashMap<>();
+            List<ApiInfo> apis = extractWithTsRegexDebug(root, apiPathPrefix == null ? "" : apiPathPrefix, include, exclude, steps, traceId, counts);
+            String dom = domain != null ? domain : "";
+            for (ApiInfo a : apis) {
+                String p = a.getApiPath() != null ? a.getApiPath() : "";
+                a.setFullUrl(dom + p);
+            }
+            int[] r = storageService.savePartial(repositoryName.trim(), apis, clientIp);
+            out.putAll(counts);
+            out.put("ok", true);
+            out.put("savedTouches", r[0]);
+            out.put("statusRevertedCount", r[1]);
+            out.put("apiCount", apis.size());
+            log.info("[TS 부분저장] repo={} rootPath={} apis={}", repositoryName, rootPath, apis.size());
+            return out;
+        } catch (Exception e) {
+            log.warn("[TS 부분저장 실패] {}", e.getMessage());
+            out.put("error", e.getMessage());
+            out.put("errorType", e.getClass().getName());
+            return out;
+        }
+    }
+
     private static String sanitizeDebugRelPath(String raw) {
         if (raw == null) return "";
         String v = raw;

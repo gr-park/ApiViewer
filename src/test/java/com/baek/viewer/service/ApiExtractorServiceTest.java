@@ -16,6 +16,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -569,5 +570,78 @@ class ApiExtractorServiceTest {
         assertThat(joined).contains("[RX] 시작");
         assertThat(joined).contains("mapping#0");
         assertThat(joined).contains("ADD");
+    }
+
+    @Test
+    @DisplayName("TS 디버그 파싱 — NestJS @Controller + @Get/@Post 2건 추출")
+    void debugParseTsRoutes_basicTwoRoutes(@TempDir Path tmp) throws Exception {
+        Path root = tmp.resolve("repo");
+        Files.createDirectories(root.resolve("src/controllers"));
+        Path ts = root.resolve("src/controllers/SearchController.ts");
+        Files.writeString(ts, """
+                import { Controller, Get, Post, Query, Body } from '@nestjs/common';
+                @Controller('/v1/common')
+                export class SearchController {
+                  @Get('/goods-search')
+                  async searchGoods(@Query() query: any) { return null; }
+
+                  @Post('/goods-aggregation')
+                  async searchGoodsAgg(@Body() body: any) { return null; }
+                }
+                """, StandardCharsets.UTF_8);
+
+        Map<String, Object> out = service.debugParseTsRoutes(root.toString(), "", "**/*.ts",
+                "**/node_modules/**,**/*.spec.ts,**/*.test.ts,**/*.d.ts");
+        assertThat(out).containsEntry("ok", true);
+        assertThat(out.get("apiCount")).isEqualTo(2);
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> apis = (List<Map<String, Object>>) out.get("apis");
+        assertThat(apis).anyMatch(a -> "/v1/common/goods-search".equals(a.get("apiPath")) && "GET".equals(a.get("httpMethod")));
+        assertThat(apis).anyMatch(a -> "/v1/common/goods-aggregation".equals(a.get("apiPath")) && "POST".equals(a.get("httpMethod")));
+    }
+
+    @Test
+    @DisplayName("TS 디버그 파싱 — 배열 경로는 다건으로 확장")
+    void debugParseTsRoutes_arrayPaths(@TempDir Path tmp) throws Exception {
+        Path root = tmp.resolve("repo");
+        Files.createDirectories(root.resolve("src/controllers"));
+        Path ts = root.resolve("src/controllers/AController.ts");
+        Files.writeString(ts, """
+                import { Controller, Get } from '@nestjs/common';
+                @Controller('a')
+                export class AController {
+                  @Get(['x','y'])
+                  list() { return null; }
+                }
+                """, StandardCharsets.UTF_8);
+
+        Map<String, Object> out = service.debugParseTsRoutes(root.toString(), "", "**/*.ts", "");
+        assertThat(out).containsEntry("ok", true);
+        assertThat(out.get("apiCount")).isEqualTo(2);
+    }
+
+    @Test
+    @DisplayName("TS 디버그 파싱 — 동적 경로는 UNRESOLVED로 스킵되며 steps에 남는다")
+    void debugParseTsRoutes_dynamicPathSkipped(@TempDir Path tmp) throws Exception {
+        Path root = tmp.resolve("repo");
+        Files.createDirectories(root.resolve("src/controllers"));
+        Path ts = root.resolve("src/controllers/DynController.ts");
+        Files.writeString(ts, """
+                import { Controller, Get } from '@nestjs/common';
+                const BASE = '/dyn';
+                @Controller(BASE)
+                export class DynController {
+                  @Get(BASE + '/x')
+                  x() { return null; }
+                }
+                """, StandardCharsets.UTF_8);
+
+        Map<String, Object> out = service.debugParseTsRoutes(root.toString(), "", "**/*.ts", "");
+        assertThat(out).containsEntry("ok", true);
+        assertThat(out.get("apiCount")).isEqualTo(0);
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> steps = (List<Map<String, Object>>) out.get("steps");
+        String joined = steps.stream().map(m -> String.valueOf(m.get("message"))).reduce("", (a, b) -> a + "\n" + b);
+        assertThat(joined).contains("SKIP_UNRESOLVED_PATH");
     }
 }
