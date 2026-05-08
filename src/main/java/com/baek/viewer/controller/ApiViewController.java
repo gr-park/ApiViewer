@@ -1767,24 +1767,25 @@ public class ApiViewController {
     }
 
     /**
-     * 차단대상 진행사항 대시보드 — 사용 / ① 차단대상 / ② 추가검토대상 3-tier × 13컬럼 그룹별 집계.
-     * 모든 분류는 leaf status 직접 매칭 (보조 플래그 분기 없음).
+     * URL 현황(대시보드) 집계 — 9 leaf v2 기반.
+     * 모든 분류는 api_record.status(leaf 문자열) 직접 매칭 (보조 플래그 분기 없음).
      *
-     * 컬럼:
-     *   사용: status='사용'
-     *   ① 차단대상:
-     *     ①-① 차단완료
-     *     ①-② 호출0건+변경없음
-     *     ①-③ 호출0건+변경있음(로그)
-     *     ①-④ 업무종료
-     *     ①-⑤ 현업요청 차단제외
-     *     ①-⑥ "①-⑥ 사용으로 변경" (수동, 라벨 그대로)
-     *   ② 추가검토대상:
-     *     ②-① 호출0건+로그건
-     *     ②-② 호출0건+변경있음
-     *     ②-③ 호출 1~reviewThreshold건
-     *     ②-④ 호출 reviewThreshold+1건↑
-     *     ②-⑤ "②-⑤ 사용으로 변경" (수동, 라벨 그대로)
+     * leaf:
+     *   - 사용
+     *   - 차단완료
+     *   - ①-① 차단대상
+     *   - ①-② 담당자 판단
+     *   - ①-③ 현업요청 제외대상
+     *   - ①-④ 사용으로 변경
+     *   - ②-① 호출0건+변경있음
+     *   - ②-② 호출 3건 이하+변경없음 (reviewThreshold 반영)
+     *   - ②-③ 사용으로 변경
+     *
+     * 대시보드 응답 필드(요약):
+     *   - blockTotal = 차단완료 + ①-* leaf 4종
+     *   - blockResidualSum = ①-① + ①-②
+     *   - blockExcludedSum = ①-③ + ①-④
+     *   - reviewTotal = ②-* leaf 3종
      */
     @GetMapping("/db/stats/block-overview")
     public ResponseEntity<?> dbBlockOverview() {

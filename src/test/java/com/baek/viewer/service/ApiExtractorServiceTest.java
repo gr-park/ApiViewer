@@ -222,6 +222,80 @@ class ApiExtractorServiceTest {
     }
 
     @Test
+    @DisplayName("extract — 클래스 @RequestMapping에 단일따옴표('/x')가 있어도 in-memory normalization 후 JavaParser로 정상 파싱")
+    void extract_singleQuoteRequestMapping_normalized_noFallback(@TempDir Path tmp) throws Exception {
+        when(globalConfigRepository.findById(1L)).thenReturn(Optional.empty());
+        Path javaFile = tmp.resolve("BadQuoteController.java");
+        Files.writeString(javaFile, """
+                package test;
+                import org.springframework.web.bind.annotation.*;
+                import io.swagger.v3.oas.annotations.Operation;
+                @RestController
+                @RequestMapping('/v1/common/')
+                public class BadQuoteController {
+                    @Operation(summary = "단일따옴표 테스트",
+                               description = \"\"\"
+                               ## desc
+                               - text block
+                               \"\"\")
+                    @GetMapping("/ping")
+                    public String ping() { return "ok"; }
+                }
+                """);
+
+        ExtractRequest req = new ExtractRequest();
+        req.setRootPath(tmp.toString());
+        req.setDomain("http://example.com");
+
+        List<ApiInfo> result = service.extract(req);
+
+        assertThat(result).anyMatch(a -> "/v1/common/ping".equals(a.getApiPath()) && "GET".equals(a.getHttpMethod())
+                && "단일따옴표 테스트".equals(a.getApiOperationValue()));
+        @SuppressWarnings("unchecked")
+        List<String> logs = (List<String>) service.getProgress().get("logs");
+        assertThat(logs).noneMatch(s -> s.contains("JavaParser 실패"));
+    }
+
+    @Test
+    @DisplayName("extract — Swagger(@Operation/@Parameter) + Security(@Secured) 단일따옴표 인자도 in-memory normalization 후 JavaParser로 정상 파싱")
+    void extract_singleQuoteSwaggerAndSecured_normalized_noFallback(@TempDir Path tmp) throws Exception {
+        when(globalConfigRepository.findById(1L)).thenReturn(Optional.empty());
+        Path javaFile = tmp.resolve("SwaggerSecuredController.java");
+        Files.writeString(javaFile, """
+                package test;
+                import org.springframework.web.bind.annotation.*;
+                import org.springframework.security.access.annotation.Secured;
+                import io.swagger.v3.oas.annotations.Operation;
+                import io.swagger.v3.oas.annotations.Parameter;
+                @RestController
+                public class SwaggerSecuredController {
+                    @Secured('ROLE_SERVICE')
+                    @Operation(summary = '요약-단일따옴표',
+                               description = \"\"\"
+                               ## desc
+                               - text block ok
+                               \"\"\")
+                    @GetMapping("/hello")
+                    public String hello(@Parameter(name='q', description='검색어') @RequestParam String q) {
+                        return q;
+                    }
+                }
+                """);
+
+        ExtractRequest req = new ExtractRequest();
+        req.setRootPath(tmp.toString());
+        req.setDomain("http://example.com");
+
+        List<ApiInfo> result = service.extract(req);
+
+        assertThat(result).anyMatch(a -> "/hello".equals(a.getApiPath()) && "GET".equals(a.getHttpMethod())
+                && "요약-단일따옴표".equals(a.getApiOperationValue()));
+        @SuppressWarnings("unchecked")
+        List<String> logs = (List<String>) service.getProgress().get("logs");
+        assertThat(logs).noneMatch(s -> s.contains("JavaParser 실패"));
+    }
+
+    @Test
     @DisplayName("extract — 추출 중에 다시 호출하면 IllegalStateException — 호출 후엔 다시 가능")
     void extract_subsequentCallOk(@TempDir Path tmp) {
         when(globalConfigRepository.findById(1L)).thenReturn(Optional.empty());

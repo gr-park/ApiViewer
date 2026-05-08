@@ -437,6 +437,164 @@
     /* 소계/잔여만 붉은색 + 볼드 */
     .ov-block-sum { color:#9f1239 !important; font-weight:800 !important; }
 
+    /* 합계 / 사용: 동일 — 헤더 회색 음영, 데이터 행 음영 없음 */
+    #overviewTeamTable thead .ov-total-h,
+    #overviewRepoTable thead .ov-total-h,
+    #overviewManagerTable thead .ov-total-h {
+      background: #f8fafc !important;
+      color: #475569 !important;
+      font-weight: 800 !important;
+    }
+    #overviewTeamTable .ov-total-col,
+    #overviewRepoTable .ov-total-col,
+    #overviewManagerTable .ov-total-col {
+      background: transparent !important;
+      color: var(--text) !important;
+      font-weight: 600 !important;
+    }
+    #overviewTeamTable .ov-total-col a,
+    #overviewRepoTable .ov-total-col a,
+    #overviewManagerTable .ov-total-col a {
+      color: inherit !important;
+      font-weight: 600 !important;
+    }
+
+    /* 차단대상: 헤더는 차단완료 제외 붉은 음영 통일 */
+    #overviewTeamTable thead .ov-block-red-h,
+    #overviewRepoTable thead .ov-block-red-h,
+    #overviewManagerTable thead .ov-block-red-h {
+      background: #fff1f2 !important;
+      color: #9f1239 !important;
+      font-weight: 700 !important;
+    }
+    /* 제외~①-④: 차단 대상이 아니므로 더 연한 톤 + 검정 폰트 */
+    #overviewTeamTable thead .ov-block-ex-h,
+    #overviewRepoTable thead .ov-block-ex-h,
+    #overviewManagerTable thead .ov-block-ex-h {
+      background: #fff7f8 !important;
+      color: var(--text) !important;
+      font-weight: 700 !important;
+    }
+    /* 차단완료: 연두 헤더 + 데이터 행 */
+    #overviewTeamTable thead .ov-done-h,
+    #overviewRepoTable thead .ov-done-h,
+    #overviewManagerTable thead .ov-done-h {
+      background: #f0fdf4 !important;
+      color: #166534 !important;
+      font-weight: 800 !important;
+    }
+    #overviewTeamTable .ov-done-col,
+    #overviewRepoTable .ov-done-col,
+    #overviewManagerTable .ov-done-col {
+      background: #f0fdf4 !important;
+      color: #166534 !important;
+      font-weight: 600 !important;
+    }
+    #overviewTeamTable .ov-done-col a,
+    #overviewRepoTable .ov-done-col a,
+    #overviewManagerTable .ov-done-col a { color: inherit !important; font-weight: 600 !important; }
+
+    /* 잔여·①-①·①-② 데이터: 붉은 글자, 행 배경 없음 */
+    #overviewTeamTable .ov-detail-red,
+    #overviewRepoTable .ov-detail-red,
+    #overviewManagerTable .ov-detail-red {
+      color: #9f1239 !important;
+      font-weight: 600 !important;
+      background: transparent !important;
+    }
+    #overviewTeamTable .ov-detail-red a,
+    #overviewRepoTable .ov-detail-red a,
+    #overviewManagerTable .ov-detail-red a { color: inherit !important; }
+
+    /* 보류(검토대상): 헤더 노랑 음영, 데이터 음영 없음·비볼드 */
+    #overviewTeamTable thead .ov-review-h,
+    #overviewRepoTable thead .ov-review-h,
+    #overviewManagerTable thead .ov-review-h {
+      background: #fffbeb !important;
+      color: #92400e !important;
+      font-weight: 700 !important;
+    }
+    #overviewTeamTable .ov-review-col,
+    #overviewRepoTable .ov-review-col,
+    #overviewManagerTable .ov-review-col {
+      background: transparent !important;
+      color: var(--text) !important;
+      font-weight: 400 !important;
+    }
+    #overviewTeamTable .ov-review-col a,
+    #overviewRepoTable .ov-review-col a,
+    #overviewManagerTable .ov-review-col a {
+      color: inherit !important;
+      font-weight: 400 !important;
+    }
+
+    #overviewTeamTable thead .ov-detail-red-h,
+    #overviewRepoTable thead .ov-detail-red-h,
+    #overviewManagerTable thead .ov-detail-red-h {
+      color: #9f1239 !important;
+      font-weight: 700 !important;
+    }
+
+    /* 총합계 행: 전체 셀 회색 음영 + 볼드(열 색 클래스보다 우선) */
+    #overviewTeamTable tbody tr.ov-grand-total-row > td,
+    #overviewRepoTable tbody tr.ov-grand-total-row > td,
+    #overviewManagerTable tbody tr.ov-grand-total-row > td {
+      background: #f1f5f9 !important;
+      font-weight: 700 !important;
+      color: var(--text) !important;
+    }
+    #overviewTeamTable tbody tr.ov-grand-total-row > td a,
+    #overviewRepoTable tbody tr.ov-grand-total-row > td a,
+    #overviewManagerTable tbody tr.ov-grand-total-row > td a {
+      font-weight: 700 !important;
+      color: inherit !important;
+    }
+
+    [data-theme="dark"] #overviewTeamTable thead .ov-total-h,
+    [data-theme="dark"] #overviewRepoTable thead .ov-total-h,
+    [data-theme="dark"] #overviewManagerTable thead .ov-total-h {
+      background: #1e293b !important;
+      color: #cbd5e1 !important;
+    }
+    [data-theme="dark"] #overviewTeamTable thead .ov-block-red-h,
+    [data-theme="dark"] #overviewRepoTable thead .ov-block-red-h,
+    [data-theme="dark"] #overviewManagerTable thead .ov-block-red-h {
+      background: #3d2528 !important;
+      color: #fda4af !important;
+    }
+    [data-theme="dark"] #overviewTeamTable thead .ov-block-ex-h,
+    [data-theme="dark"] #overviewRepoTable thead .ov-block-ex-h,
+    [data-theme="dark"] #overviewManagerTable thead .ov-block-ex-h {
+      background: rgba(61, 37, 40, .22) !important;
+      color: #e2e8f0 !important;
+    }
+    [data-theme="dark"] #overviewTeamTable thead .ov-done-h,
+    [data-theme="dark"] #overviewRepoTable thead .ov-done-h,
+    [data-theme="dark"] #overviewManagerTable thead .ov-done-h,
+    [data-theme="dark"] #overviewTeamTable .ov-done-col,
+    [data-theme="dark"] #overviewRepoTable .ov-done-col,
+    [data-theme="dark"] #overviewManagerTable .ov-done-col {
+      background: #052e16 !important;
+      color: #86efac !important;
+    }
+    [data-theme="dark"] #overviewTeamTable thead .ov-review-h,
+    [data-theme="dark"] #overviewRepoTable thead .ov-review-h,
+    [data-theme="dark"] #overviewManagerTable thead .ov-review-h {
+      background: #1c1408 !important;
+      color: #fcd34d !important;
+    }
+    [data-theme="dark"] #overviewTeamTable tbody tr.ov-grand-total-row > td,
+    [data-theme="dark"] #overviewRepoTable tbody tr.ov-grand-total-row > td,
+    [data-theme="dark"] #overviewManagerTable tbody tr.ov-grand-total-row > td {
+      background: #334155 !important;
+      color: #f1f5f9 !important;
+    }
+    [data-theme="dark"] #overviewTeamTable .ov-review-col,
+    [data-theme="dark"] #overviewRepoTable .ov-review-col,
+    [data-theme="dark"] #overviewManagerTable .ov-review-col {
+      color: #e2e8f0 !important;
+    }
+
     /* 대시보드 섹션 구분 */
     .section-header {
       display:flex; align-items:baseline; gap:10px;
@@ -1268,6 +1426,7 @@
 
   // Excel number formats
   const EXCEL_FMT_ACCOUNTING_INT = '_-* #,##0_-;-* #,##0_-;_-* "-"_-;_-@_-';
+  const EXCEL_FMT_PERCENT_1 = '0.0%';
   const EXCEL_BORDER_GREY = { argb: 'FFCBD5E1' }; // #cbd5e1
 
   function applyExcelThinGrid(ws, r1, c1, r2, c2) {
@@ -1405,39 +1564,45 @@
     const m0 = lc + 1;
     merge2(1, m0, 2, m0, '합계', 'FFF8FAFC', 'center');
     merge2(1, m0 + 1, 2, m0 + 1, '사용', 'FFF8FAFC', 'center');
+
     ws.mergeCells(1, m0 + 2, 1, m0 + 10);
-    ws.getCell(1, m0 + 2).value = '① 차단대상';
-    hdrFill(ws.getCell(1, m0 + 2), 'FFFFF1F2', 'center');
+    const cBlockTop = ws.getCell(1, m0 + 2);
+    cBlockTop.value = '차단대상';
+    hdrFill(cBlockTop, 'FFFFF1F2', 'center');
     ws.mergeCells(1, m0 + 11, 1, m0 + 15);
-    ws.getCell(1, m0 + 11).value = '② 검토대상';
-    hdrFill(ws.getCell(1, m0 + 11), 'FFEFF6FF', 'center');
+    const cRevTop = ws.getCell(1, m0 + 11);
+    cRevTop.value = '보류(검토대상)';
+    hdrFill(cRevTop, 'FFFFFBEB', 'center');
+
     const r2g = 'FFFFF1F2';
-    const r2e = 'FFFFFBEB';
-    const setSub = (col, txt, fill) => {
-      const c = ws.getCell(2, col);
+    const yRev = 'FFFFFBEB';
+
+    const leafHdr = (row, col, txt, fill, fontPatch) => {
+      const c = ws.getCell(row, col);
       c.value = txt;
       hdrFill(c, fill, 'center');
+      if (fontPatch) c.font = { ...(c.font || {}), ...fontPatch };
     };
-    setSub(m0 + 2, '소계', r2g);
-    setSub(m0 + 3, '비율', r2g);
-    setSub(m0 + 4, '차단완료', 'FFF8FAFC');
-    setSub(m0 + 5, '잔여', r2g);
-    setSub(m0 + 6, '①-①\n차단대상', r2g);
-    setSub(m0 + 7, '①-②\n담당자\n판단', r2g);
-    setSub(m0 + 8, '제외', r2e);
-    setSub(m0 + 9, '①-③\n현업요청\n제외', r2e);
-    setSub(m0 + 10, '①-④\n사용으로\n변경', r2e);
-    const b2 = 'FFEFF6FF';
-    const bM = 'FFFAFBFC';
-    const limeM = 'FFECFCCB';
-    setSub(m0 + 11, '소계', b2);
-    setSub(m0 + 12, '비율', b2);
-    setSub(m0 + 13, '②-①\n호출0건\n+변경있음', bM);
-    setSub(m0 + 14, `②-②\n호출 1~${threshold}건\n+변경없음`, bM);
-    setSub(m0 + 15, '②-③\n사용으로\n변경', limeM);
-    ws.getRow(1).height = 28;
+
+    // Row2 leaf headers
+    leafHdr(2, m0 + 2, '소계', r2g, null);
+    leafHdr(2, m0 + 3, '비율', r2g, { color: { argb: 'FF64748B' } });
+    leafHdr(2, m0 + 4, '차단완료', 'FFF0FDF4', { color: { argb: 'FF166534' } });
+    leafHdr(2, m0 + 5, '잔여', r2g, null);
+    leafHdr(2, m0 + 6, '①-①\n호출0건\n+변경없음(로그)', r2g, { color: { argb: 'FF9F1239' } });
+    leafHdr(2, m0 + 7, '①-②\n업무종료\n(담당자판단)', r2g, { color: { argb: 'FF9F1239' } });
+    leafHdr(2, m0 + 8, '제외', r2g, null);
+    leafHdr(2, m0 + 9, '①-③\n현업요청\n차단제외', r2g, null);
+    leafHdr(2, m0 + 10, '①-④\n사용으로\n변경', r2g, null);
+
+    leafHdr(2, m0 + 11, '소계', yRev, { color: { argb: 'FF92400E' } });
+    leafHdr(2, m0 + 12, '비율', yRev, { color: { argb: 'FF92400E' } });
+    leafHdr(2, m0 + 13, '⑤\n호출0건\n+변경있음', yRev, { color: { argb: 'FF92400E' } });
+    leafHdr(2, m0 + 14, `⑥\n호출 1~${threshold}건\n+변경없음`, yRev, { color: { argb: 'FF92400E' } });
+    leafHdr(2, m0 + 15, '사용으로\n변경', yRev, { color: { argb: 'FF92400E' } });
+
+    ws.getRow(1).height = 26;
     ws.getRow(2).height = 52;
-    // 틀고정: 2행 헤더 + 라벨 컬럼(총합계 앞까지)
     ws.views = [{ state: 'frozen', xSplit: lc, ySplit: 2 }];
   }
 
@@ -1445,7 +1610,7 @@
     // "잔여(①-①~①-②)" 컬럼 구간을 붉은 외곽선으로 강조 (이미지와 동일 UX)
     const m0 = lc + 1;
     const cStart = m0 + 5; // 잔여
-    const cEnd = m0 + 7;   // ①-② 담당자 판단
+    const cEnd = m0 + 7;   // ①-② 업무종료(담당자판단)
     const red = { argb: 'FF9F1239' }; // #9f1239
     const medium = { style: 'medium', color: red };
     const black = { argb: 'FF000000' };
@@ -1455,7 +1620,7 @@
       cell.border = { ...(cell.border || {}), ...patch };
     };
 
-    // Top outline (header rows)
+    // Top outline (헤더 2행)
     [1, 2].forEach(r => {
       for (let c = cStart; c <= cEnd; c++) {
         setBorder(r, c, { top: medium });
@@ -1475,7 +1640,7 @@
     // Excel 테두리 우선순위 때문에 붉은 강조선과 섞여 보일 수 있어 여기서 명시적으로 강제한다.
     const colUse = m0 + 1;     // 사용
     const colBlockSubtotal = m0 + 2; // ① 소계
-    const colBlockEnd = m0 + 10;     // ①-④ 사용으로 변경
+    const colBlockEnd = m0 + 10;      // ①-④ 사용으로 변경
     const colReviewStart = m0 + 11;  // ② 소계
     for (let r = 1; r <= lastRow; r++) {
       setBorder(r, colUse, { right: thinBlack });
@@ -1502,11 +1667,28 @@
       if (typeof v === 'number') c.numFmt = EXCEL_FMT_ACCOUNTING_INT;
       if (font && Object.keys(font).length) c.font = { ...(c.font || {}), ...font };
     };
+    const setPct = (col, a, b, font) => {
+      const c = ws.getCell(rowIdx, col);
+      if (!b) {
+        c.value = null;
+        c.numFmt = EXCEL_FMT_PERCENT_1;
+        c.alignment = { horizontal: 'right', vertical: 'middle' };
+        c.font = { ...(c.font || {}), color: { argb: 'FF94A3B8' } };
+        return;
+      }
+      c.value = a / b;
+      c.numFmt = EXCEL_FMT_PERCENT_1;
+      c.alignment = { horizontal: 'right', vertical: 'middle' };
+      if (font && Object.keys(font).length) c.font = { ...(c.font || {}), ...font };
+    };
     setN(m0, total, { bold: true });
     setN(m0 + 1, row.use || 0, {});
     setN(m0 + 2, blockTotal, {});
-    setN(m0 + 3, overviewPct(blockTotal, total), {});
-    setN(m0 + 4, row.blockDone || 0, {});
+    setPct(m0 + 3, blockTotal, total, { color: { argb: 'FF64748B' } });
+    setN(m0 + 4, row.blockDone || 0, isTotal ? {} : { color: { argb: 'FF166534' } });
+    if (!isTotal) {
+      ws.getCell(rowIdx, m0 + 4).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF0FDF4' } };
+    }
     const red = { color: { argb: 'FF9F1239' } }; // #9f1239
     const resFont = (!isTotal && blockResidualSum > 0) ? { bold: true, ...red } : { ...red };
     setN(m0 + 5, blockResidualSum, resFont);
@@ -1515,17 +1697,18 @@
     setN(m0 + 8, blockExcludedSum, {});
     setN(m0 + 9, row.blockExReview || 0, {});
     setN(m0 + 10, row.blockExManUse || 0, {});
-    setN(m0 + 11, reviewTotal, {});
-    setN(m0 + 12, overviewPct(reviewTotal, total), {});
-    setN(m0 + 13, row.review0Chg || 0, {});
-    setN(m0 + 14, row.reviewLow || 0, {});
-    setN(m0 + 15, row.reviewManUse || 0, {});
+    const revPlain = isTotal ? {} : { bold: false };
+    setN(m0 + 11, reviewTotal, { ...revPlain });
+    setPct(m0 + 12, reviewTotal, total, { ...revPlain });
+    setN(m0 + 13, row.review0Chg || 0, { ...revPlain });
+    setN(m0 + 14, row.reviewLow || 0, { ...revPlain });
+    setN(m0 + 15, row.reviewManUse || 0, { ...revPlain });
 
-    // 총합계 행: 지표 셀 전체 bold
+    // 총합계 행: 지표 셀 전체 bold + 동일 글자색(회색 행 위 가독)
     if (isTotal) {
       for (let c = m0; c <= m0 + 15; c++) {
         const cell = ws.getCell(rowIdx, c);
-        cell.font = { ...(cell.font || {}), bold: true };
+        cell.font = { bold: true, color: { argb: 'FF0F172A' } };
       }
     }
   }
@@ -1568,11 +1751,12 @@
     const lastCol = lc + 16;
     const ws = wb.addWorksheet(title, { properties: { defaultRowHeight: 18 } });
     applyBlockOverviewSheetHeader(ws, threshold, lc);
+    // 지표(B~Q): 동일 폭 + 넉넉하게
     const metricWidths = [
-      { width: 11 }, { width: 9 }, { width: 9 }, { width: 8 },
-      { width: 10 }, { width: 9 }, { width: 9 }, { width: 9 },
-      { width: 9 }, { width: 11 }, { width: 11 },
-      { width: 9 }, { width: 8 }, { width: 11 }, { width: 14 }, { width: 12 }
+      { width: 16 }, { width: 16 }, { width: 16 }, { width: 16 },
+      { width: 16 }, { width: 16 }, { width: 16 }, { width: 16 },
+      { width: 16 }, { width: 16 }, { width: 16 }, { width: 16 },
+      { width: 16 }, { width: 16 }, { width: 16 }, { width: 16 }
     ];
     const labelWidths = lc === 1
       ? [{ width: 40 }]
@@ -1661,10 +1845,10 @@
     }
   }
 
-  // ── URL 현황(차단대상·검토대상) 렌더 (9 leaf v2 — 팀·업무·레포·담당 4열 + 2단 헤더) ──
+  // ── URL 현황(차단대상·보류) 렌더 (2행 헤더) ──
   function renderBlockOverview(d) {
     window.lastBlockOverview = null;
-    const empty = '<tr><td colspan="120" class="empty" style="padding:18px;text-align:center;color:var(--text-muted);">데이터 없음</td></tr>';
+    const empty = '<tr><td colspan="60" class="empty" style="padding:18px;text-align:center;color:var(--text-muted);">데이터 없음</td></tr>';
     if (!d) {
       ['overviewTeamThead', 'overviewRepoThead', 'overviewManagerThead'].forEach(id => { document.getElementById(id).innerHTML = ''; });
       ['overviewTeamTbody', 'overviewRepoTbody', 'overviewManagerTbody'].forEach(id => { document.getElementById(id).innerHTML = empty; });
@@ -1675,15 +1859,7 @@
 
     const headerHtml = (labelCols) => {
       const lc = labelCols;
-      const rGrp = 'background:#fff1f2;';
       const rBg2 = 'background:#fff1f2;';
-      const greyDone = 'background:#f8fafc;color:#64748b;';
-      const eBg = 'background:#fffbeb;';
-      const bL = 'background:#f0f9ff;color:#1d4ed8;';
-      const bBg2 = 'background:#f0f9ff;color:#1d4ed8;';
-      const bM = 'background:#fafbfc;color:#1d4ed8;';
-      const limeM = 'background:#ecfccb;color:#3f6212;';
-      const greenLight = 'background:#f0fdf4;color:#166534;';
       const bsep = 'border-right:1px solid #cbd5e1;';
       const bend = 'border-right:2px solid #999;';
       const labelThs = lc === 1
@@ -1696,28 +1872,29 @@
         <th rowspan="2" style="text-align:left;${bsep}">업무명</th>
         <th rowspan="2" style="text-align:left;${bsep}">레포명</th>
         <th rowspan="2" style="text-align:left;${bend}">담당자</th>`;
+      const mutedSmall = 'color:var(--text-muted);font-weight:700;font-size:10px;';
       const tier1 = `<tr>
         ${labelThs}
-        <th rowspan="2" style="text-align:right;font-weight:800;">합계</th>
-        <th rowspan="2" style="${greenLight}text-align:right;">사용</th>
-        <th colspan="9" style="${rGrp}text-align:center;">① 차단대상</th>
-        <th colspan="5" style="${bL}text-align:center;">② 검토대상</th>
+        <th rowspan="2" class="ov-total-h" style="text-align:right;">합계</th>
+        <th rowspan="2" class="ov-total-h" style="text-align:right;">사용</th>
+        <th colspan="9" class="ov-block-red-h" style="text-align:center;">차단대상</th>
+        <th colspan="5" class="ov-review-h" style="text-align:center;">보류(검토대상)</th>
       </tr>`;
       const tier2 = `<tr>
-        <th class="ov-block ov-block-start ov-block-sum" style="${rBg2}text-align:right;">소계</th>
-        <th class="ov-block" style="${rBg2}text-align:right;color:var(--text-muted);font-weight:600;">비율</th>
-        <th class="ov-block" style="${greyDone}text-align:right;">차단완료</th>
-        <th class="ov-block ov-res ov-res-start ov-block-sum" style="${rBg2}text-align:right;">잔여</th>
-        <th class="ov-block ov-res" style="${rBg2}text-align:right;color:var(--text-muted);">①-①<br>차단대상</th>
-        <th class="ov-block ov-res ov-res-end" style="${rBg2}text-align:right;color:var(--text-muted);">①-②<br>담당자<br>판단</th>
-        <th class="ov-block" style="${eBg}text-align:right;color:var(--text-muted);">제외</th>
-        <th class="ov-block" style="${eBg}text-align:right;color:var(--text-muted);">①-③<br>현업요청<br>제외</th>
-        <th class="ov-block ov-block-end" style="${eBg}text-align:right;color:var(--text-muted);">①-④<br>사용으로<br>변경</th>
-        <th style="${bBg2}text-align:right;">소계</th>
-        <th style="${bBg2}text-align:right;">비율</th>
-        <th style="${bM}text-align:right;">②-①<br>호출0건<br>+변경있음</th>
-        <th style="${bM}text-align:right;">②-②<br>호출 1~${threshold}건<br>+변경없음</th>
-        <th style="${limeM}text-align:right;">②-③<br>사용으로<br>변경</th>
+        <th class="ov-block ov-block-start ov-block-sum ov-block-red-h" style="${rBg2}text-align:right;">소계</th>
+        <th class="ov-block ov-block-red-h" style="${rBg2}text-align:right;${mutedSmall}">비율</th>
+        <th class="ov-block ov-done-h" style="text-align:right;">차단완료</th>
+        <th class="ov-block ov-res ov-res-start ov-block-sum ov-block-red-h" style="${rBg2}text-align:right;">잔여</th>
+        <th class="ov-block ov-res ov-detail-red-h ov-block-red-h" style="${rBg2}text-align:right;">①-①<br>호출0건<br>+변경없음(로그)</th>
+        <th class="ov-block ov-res ov-res-end ov-detail-red-h ov-block-red-h" style="${rBg2}text-align:right;">①-②<br>업무종료<br>(담당자판단)</th>
+        <th class="ov-block ov-ex ov-ex-start ov-block-ex-h" style="${rBg2}text-align:right;${mutedSmall}">제외</th>
+        <th class="ov-block ov-ex ov-block-ex-h" style="${rBg2}text-align:right;${mutedSmall}">①-③<br>현업요청<br>차단제외</th>
+        <th class="ov-block ov-ex ov-ex-end ov-block-end ov-block-ex-h" style="${rBg2}text-align:right;${mutedSmall}">①-④<br>사용으로<br>변경</th>
+        <th class="ov-review-h" style="text-align:right;">소계</th>
+        <th class="ov-review-h" style="text-align:right;">비율</th>
+        <th class="ov-review-h" style="text-align:right;">⑤<br>호출0건<br>+변경있음</th>
+        <th class="ov-review-h" style="text-align:right;">⑥<br>호출 1~${threshold}건<br>+변경없음</th>
+        <th class="ov-review-h" style="text-align:right;">사용으로<br>변경</th>
       </tr>`;
       return tier1 + tier2;
     };
@@ -1737,7 +1914,9 @@
       const cls = (o.className || '');
       const styleColor = o.color ? `color:${o.color};` : '';
       const bg = o.bg ? `background:${o.bg};` : '';
-      const fontWeight = v > 0 ? (o.bold ? 'font-weight:700;' : 'font-weight:600;') : 'color:#cbd5e1;';
+      const fontWeight = o.plain
+        ? (v > 0 ? 'font-weight:400;' : 'color:#cbd5e1;')
+        : (v > 0 ? (o.bold ? 'font-weight:700;' : 'font-weight:600;') : 'color:#cbd5e1;');
       const content = v
         ? `<a href="${href}" style="color:inherit;text-decoration:underline;text-underline-offset:2px;">${v.toLocaleString()}</a>`
         : '·';
@@ -1748,14 +1927,14 @@
       return ((a / b) * 100).toFixed(1) + '%';
     };
 
-    // 라벨 1·3·4열 + 총합계 + 사용 + 차단대상[9] + 검토대상[5]
+    // 라벨 1·3·4열 + 총합계 + 사용 + 차단대상[9] + 보류(검토대상)[5]
     const rowOf = (firstCells, row, scope, opts) => {
       const o = opts || {};
       const sp = scope || '';
       const total = row.grandTotal || 0;
-      const trStyle = o.isTotal ? 'background:#f1f5f9;font-weight:700;' : '';
-      const totalCell = `<td style="text-align:right;font-weight:800;">${total.toLocaleString()}</td>`;
-      const useCell   = cellLink(row.use||0, `/url-viewer/viewer.html?${sp}&status=${encodeURIComponent('사용')}`, {className:'', color:'#166534'});
+      const trCls = o.isTotal ? ' class="ov-grand-total-row"' : '';
+      const totalCell = `<td class="ov-total-col" style="text-align:right;">${total.toLocaleString()}</td>`;
+      const useCell   = cellLink(row.use||0, `/url-viewer/viewer.html?${sp}&status=${encodeURIComponent('사용')}`, {className:'ov-total-col'});
       const blockTotal      = row.blockTotal != null ? row.blockTotal
                              : ((row.blockDone||0) + (row.blockResidual||0) + (row.blockExManager||0) + (row.blockExReview||0) + (row.blockExManUse||0));
       const blockResidualSum= row.blockResidualSum != null ? row.blockResidualSum
@@ -1764,23 +1943,23 @@
                              : ((row.blockExReview||0) + (row.blockExManUse||0));
       const reviewTotal     = row.reviewTotal != null ? row.reviewTotal
                              : ((row.review0Chg||0) + (row.reviewLow||0) + (row.reviewManUse||0));
-      return `<tr style="${trStyle}">${firstCells}
+      return `<tr${trCls}>${firstCells}
         ${totalCell}
         ${useCell}
         ${cellLink(blockTotal, `/url-viewer/viewer.html?${sp}&statusGroup=blockWithDone`, {className:'ov-block ov-block-start ov-block-sum'})}
         <td class="ov-block" style="text-align:right;color:var(--text-muted);font-weight:600;">${pctF(blockTotal, total)}</td>
-        ${cellLink(row.blockDone||0, `/url-viewer/viewer.html?${sp}&status=${encodeURIComponent('차단완료')}`, {className:'ov-block', color:'#64748b'})}
+        ${cellLink(row.blockDone||0, `/url-viewer/viewer.html?${sp}&status=${encodeURIComponent('차단완료')}`, {className:'ov-block ov-done-col'})}
         ${cellLink(blockResidualSum, `/url-viewer/viewer.html?${sp}&statusGroup=blockResidual`, {className:'ov-block ov-res ov-res-start ov-block-sum', bold:true})}
-        ${cellLink(row.blockResidual||0, `/url-viewer/viewer.html?${sp}&status=${encodeURIComponent('①-① 차단대상')}`, {className:'ov-block ov-res'})}
-        ${cellLink(row.blockExManager||0, `/url-viewer/viewer.html?${sp}&status=${encodeURIComponent('①-② 담당자 판단')}`, {className:'ov-block ov-res ov-res-end'})}
-        ${cellLink(blockExcludedSum, `/url-viewer/viewer.html?${sp}&statusGroup=blockExcluded`, {className:'ov-block'})}
-        ${cellLink(row.blockExReview||0, `/url-viewer/viewer.html?${sp}&status=${encodeURIComponent('①-③ 현업요청 제외대상')}`, {className:'ov-block'})}
-        ${cellLink(row.blockExManUse||0, `/url-viewer/viewer.html?${sp}&status=${encodeURIComponent('①-④ 사용으로 변경')}`, {className:'ov-block ov-block-end'})}
-        ${cellLink(reviewTotal, `/url-viewer/viewer.html?${sp}&statusGroup=review`, {color:'#1d4ed8'})}
-        <td style="text-align:right;color:#1d4ed8;">${pctF(reviewTotal, total)}</td>
-        ${cellLink(row.review0Chg||0, `/url-viewer/viewer.html?${sp}&status=${encodeURIComponent('②-① 호출0건+변경있음')}`, {color:'#d97706'})}
-        ${cellLink(row.reviewLow||0,  `/url-viewer/viewer.html?${sp}&status=${encodeURIComponent('②-② 호출 3건 이하+변경없음')}`, {color:'#d97706'})}
-        ${cellLink(row.reviewManUse||0, `/url-viewer/viewer.html?${sp}&status=${encodeURIComponent('②-③ 사용으로 변경')}`, {color:'#3f6212'})}
+        ${cellLink(row.blockResidual||0, `/url-viewer/viewer.html?${sp}&status=${encodeURIComponent('①-① 차단대상')}`, {className:'ov-block ov-res ov-detail-red'})}
+        ${cellLink(row.blockExManager||0, `/url-viewer/viewer.html?${sp}&status=${encodeURIComponent('①-② 담당자 판단')}`, {className:'ov-block ov-res ov-res-end ov-detail-red'})}
+        ${cellLink(blockExcludedSum, `/url-viewer/viewer.html?${sp}&statusGroup=blockExcluded`, {className:'ov-block ov-ex ov-ex-start'})}
+        ${cellLink(row.blockExReview||0, `/url-viewer/viewer.html?${sp}&status=${encodeURIComponent('①-③ 현업요청 제외대상')}`, {className:'ov-block ov-ex'})}
+        ${cellLink(row.blockExManUse||0, `/url-viewer/viewer.html?${sp}&status=${encodeURIComponent('①-④ 사용으로 변경')}`, {className:'ov-block ov-ex ov-ex-end ov-block-end'})}
+        ${cellLink(reviewTotal, `/url-viewer/viewer.html?${sp}&statusGroup=review`, {className:'ov-review-col', plain: true})}
+        <td class="ov-review-col" style="text-align:right;font-weight:400;">${pctF(reviewTotal, total)}</td>
+        ${cellLink(row.review0Chg||0, `/url-viewer/viewer.html?${sp}&status=${encodeURIComponent('②-① 호출0건+변경있음')}`, {className:'ov-review-col', plain: true})}
+        ${cellLink(row.reviewLow||0,  `/url-viewer/viewer.html?${sp}&status=${encodeURIComponent('②-② 호출 3건 이하+변경없음')}`, {className:'ov-review-col', plain: true})}
+        ${cellLink(row.reviewManUse||0, `/url-viewer/viewer.html?${sp}&status=${encodeURIComponent('②-③ 사용으로 변경')}`, {className:'ov-review-col', plain: true})}
       </tr>`;
     };
 

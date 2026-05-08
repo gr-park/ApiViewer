@@ -31,6 +31,51 @@ public class ApiExtractorService {
             "RequestMapping", "GetMapping", "PostMapping", "PutMapping", "DeleteMapping", "PatchMapping");
 
     /**
+     * JavaParser 파싱 전 단일따옴표 리터럴을 보정할 어노테이션 allowlist.
+     * - 매핑 어노테이션: 경로 문자열에서 자주 발생
+     * - Swagger v3: summary/name 등에서 잘못된 단일따옴표가 종종 섞임
+     * - Security: @Secured('ROLE_...') 스타일 실수
+     *
+     * 원칙: "어노테이션 괄호 내부"에서만 최소 변환 (일반 코드 영역은 손대지 않음).
+     */
+    private static final Set<String> NORMALIZE_ANN_NAMES;
+
+    static {
+        Set<String> s = new HashSet<>(MAPPING_ANNS);
+        // Spring Security
+        s.add("Secured");
+        // Security 기타(문법 실수로 단일따옴표를 쓰는 케이스 방어)
+        // - @PreAuthorize('...'), @PostAuthorize('...'), @RolesAllowed('ROLE_X')
+        // - PermitAll/DenyAll 은 파라미터가 없어 영향 없음(추가해도 무해)
+        s.addAll(List.of("PreAuthorize", "PostAuthorize", "RolesAllowed", "PermitAll", "DenyAll"));
+        // Swagger/OpenAPI v3 (io.swagger.v3.oas.annotations.*)
+        s.addAll(List.of(
+                "Operation", "Parameter",
+                "ApiResponse", "ApiResponses",
+                "Schema", "Content",
+                "Tag", "Tags",
+                "Hidden",
+                "RequestBody",
+                "Header", "Headers",
+                "Link", "Links",
+                "Server", "Servers",
+                "Callback", "Callbacks",
+                "ExternalDocumentation",
+                "Extension", "Extensions",
+                "ExampleObject",
+                "SecurityRequirement", "SecurityRequirements"
+        ));
+        NORMALIZE_ANN_NAMES = Collections.unmodifiableSet(s);
+    }
+
+    /**
+     * JavaParser는 문법 오류가 있는 소스(예: 매핑 애노테이션에서 {@code '/path'} 단일따옴표 사용)를 그대로는 파싱할 수 없다.
+     * 원본 파일은 손대지 않고, 파싱 직전에 메모리 문자열만 최소 보정해 성공률을 올린다.
+     */
+    private record NormalizationResult(String source, boolean changed, List<String> notes) {
+    }
+
+    /**
      * Regex 폴백: 매핑 애노테이션 직후 ~ 메서드 시그니처 사이에 {@code @Secured}, 긴 {@code @Operation}+{@code @ApiResponses} 등이
      * 연속될 수 있어 기존 1k 윈도우는 누락을 유발했다. JavaParser와 동일 구간을 더 넓게 본다.
      */
@@ -341,7 +386,12 @@ public class ApiExtractorService {
         ensureJavaParserConfigured();
         boolean debug = debugMode;
         List<ApiInfo> apis = new ArrayList<>();
-        CompilationUnit cu = StaticJavaParser.parse(source);
+        String src0 = source == null ? "" : source;
+        NormalizationResult nr = normalizeForJavaParser(src0);
+        if (nr.changed() && debug) {
+            log.debug("[파싱-JP] in-memory normalization applied: relPath={} notes={}", relPath, nr.notes());
+        }
+        CompilationUnit cu = StaticJavaParser.parse(nr.source());
 
         String classPath = "";
         String controllerComment = "-";
@@ -1932,7 +1982,13 @@ public class ApiExtractorService {
             addDebugStep(steps, "INFO", "JavaParser 파싱 시작");
             try {
                 ensureJavaParserConfigured();
-                List<ApiInfo> apis = extractWithJavaParser(file, effectiveRelPath, git, apiPathPrefix == null ? "" : apiPathPrefix, constants);
+                String raw = new String(Files.readAllBytes(file), StandardCharsets.UTF_8);
+                NormalizationResult nr = normalizeForJavaParser(raw);
+                if (nr.changed()) {
+                    addDebugStep(steps, "INFO", "in-memory normalization 적용: " + String.join(" | ", nr.notes()));
+                }
+                List<ApiInfo> apis = extractWithJavaParserFromSource(nr.source(), file, effectiveRelPath, git,
+                        apiPathPrefix == null ? "" : apiPathPrefix, constants);
                 out.put("ok", true);
                 out.put("javaParserOk", true);
                 out.put("parseMethod", "javaparser");
@@ -1971,8 +2027,8 @@ public class ApiExtractorService {
             String traceId = rxNewTraceId();
             out.put("regexTraceId", traceId);
             addRegexTrace(steps, traceId, "INFO", "Regex trace 시작");
-            String raw = new String(Files.readAllBytes(file), StandardCharsets.UTF_8);
-            List<ApiInfo> rxApis = extractApisWithRegexCore(raw, effectiveRelPath, file.getFileName().toString(), git,
+            String raw2 = new String(Files.readAllBytes(file), StandardCharsets.UTF_8);
+            List<ApiInfo> rxApis = extractApisWithRegexCore(raw2, effectiveRelPath, file.getFileName().toString(), git,
                     apiPathPrefix == null ? "" : apiPathPrefix, constants, file, steps, traceId);
             out.put("ok", true);
             out.put("parseMethod", "regex");
@@ -2025,7 +2081,11 @@ public class ApiExtractorService {
             addDebugStep(steps, "INFO", "JavaParser 파싱 시작");
             try {
                 ensureJavaParserConfigured();
-                List<ApiInfo> apis = extractWithJavaParserFromSource(javaSource, pseudo, rel, git,
+                NormalizationResult nr = normalizeForJavaParser(javaSource);
+                if (nr.changed()) {
+                    addDebugStep(steps, "INFO", "in-memory normalization 적용: " + String.join(" | ", nr.notes()));
+                }
+                List<ApiInfo> apis = extractWithJavaParserFromSource(nr.source(), pseudo, rel, git,
                         apiPathPrefix == null ? "" : apiPathPrefix, constants);
                 out.put("ok", true);
                 out.put("javaParserOk", true);
@@ -2081,6 +2141,191 @@ public class ApiExtractorService {
             addDebugStep(steps, "ERROR", "중단: " + e.getMessage());
             return out;
         }
+    }
+
+    private static NormalizationResult normalizeForJavaParser(String source) {
+        if (source == null || source.isEmpty()) return new NormalizationResult("", false, List.of());
+        // allowlist 어노테이션 인자 영역에서만 "'...'" → "\"...\"" 로 보정한다.
+        // - Java 문법상 단일따옴표는 char 리터럴이므로 "/v1/common/" 같은 다문자 리터럴은 파싱 자체가 깨진다.
+        // - 원본 파일은 수정하지 않고, 파서 입력 문자열만 보정한다.
+        StringBuilder out = new StringBuilder(source.length());
+        List<String> notes = new ArrayList<>();
+        Set<String> touchedAnns = new LinkedHashSet<>();
+
+        int n = source.length();
+        int i = 0;
+        boolean changed = false;
+
+        while (i < n) {
+            char c = source.charAt(i);
+            if (c != '@') {
+                out.append(c);
+                i++;
+                continue;
+            }
+
+            int nameStart = i + 1;
+            int j = nameStart;
+            while (j < n) {
+                char cj = source.charAt(j);
+                if (Character.isJavaIdentifierPart(cj)) j++;
+                else break;
+            }
+            if (j == nameStart) {
+                out.append(c);
+                i++;
+                continue;
+            }
+
+            String ann = source.substring(nameStart, j);
+            if (!NORMALIZE_ANN_NAMES.contains(ann)) {
+                out.append(source, i, j);
+                i = j;
+                continue;
+            }
+
+            // 복사: @AnnotationName
+            out.append(source, i, j);
+            i = j;
+
+            // 공백 스킵
+            while (i < n && Character.isWhitespace(source.charAt(i))) {
+                out.append(source.charAt(i));
+                i++;
+            }
+            if (i >= n || source.charAt(i) != '(') continue;
+
+            // 애노테이션 인자 영역: 괄호 균형으로 끝까지 스캔하며 단일따옴표 리터럴을 제한적으로 변환
+            int parenDepth = 0;
+            boolean inDq = false;
+            boolean inTextBlock = false;
+            boolean inSq = false;
+            boolean escaping = false;
+            int sqStart = -1;
+            StringBuilder sqBuf = null;
+            boolean annChanged = false;
+
+            while (i < n) {
+                char ch = source.charAt(i);
+
+                if (inSq) {
+                    if (escaping) {
+                        // \' 같은 이스케이프는 그대로 버퍼에 포함
+                        sqBuf.append(ch);
+                        escaping = false;
+                        i++;
+                        continue;
+                    }
+                    if (ch == '\\') {
+                        sqBuf.append(ch);
+                        escaping = true;
+                        i++;
+                        continue;
+                    }
+                    if (ch == '\'') {
+                        // 단일따옴표 닫힘
+                        String inner = sqBuf.toString();
+                        // 안전 규칙: 1글자 char은 유지, 그 외/문자열스러운 기호 포함이면 문자열로 보정
+                        boolean looksLikeStringLiteral = inner.length() != 1
+                                || inner.contains("/")
+                                || inner.contains(".")
+                                || inner.contains("-")
+                                || inner.contains("_")
+                                || inner.contains(" ");
+                        if (looksLikeStringLiteral) {
+                            out.append('\"').append(inner.replace("\"", "\\\"")).append('\"');
+                            changed = true;
+                            annChanged = true;
+                        } else {
+                            // 1글자 char 리터럴은 유지
+                            out.append('\'').append(inner).append('\'');
+                        }
+                        inSq = false;
+                        sqStart = -1;
+                        sqBuf = null;
+                        i++; // 닫는 ' 소비
+                        continue;
+                    }
+                    sqBuf.append(ch);
+                    i++;
+                    continue;
+                }
+
+                if (inDq) {
+                    out.append(ch);
+                    if (escaping) {
+                        escaping = false;
+                    } else if (ch == '\\') {
+                        escaping = true;
+                    } else if (ch == '"') {
+                        inDq = false;
+                    }
+                    i++;
+                    continue;
+                }
+
+                if (inTextBlock) {
+                    out.append(ch);
+                    // text block end: """ (not escaped in Java text blocks)
+                    if (ch == '"' && i + 2 < n && source.charAt(i + 1) == '"' && source.charAt(i + 2) == '"') {
+                        out.append('"').append('"');
+                        i += 3;
+                        inTextBlock = false;
+                        continue;
+                    }
+                    i++;
+                    continue;
+                }
+
+                // 문자열/문자 리터럴 밖
+                if (ch == '"') {
+                    // Java 15+ text block: """ ... """
+                    if (i + 2 < n && source.charAt(i + 1) == '"' && source.charAt(i + 2) == '"') {
+                        out.append('"').append('"').append('"');
+                        i += 3;
+                        inTextBlock = true;
+                        continue;
+                    } else {
+                        inDq = true;
+                        out.append(ch);
+                        i++;
+                        continue;
+                    }
+                }
+                if (ch == '\'') {
+                    inSq = true;
+                    sqStart = i;
+                    sqBuf = new StringBuilder();
+                    i++; // 시작 '는 출력하지 않고 버퍼로 축적
+                    continue;
+                }
+
+                out.append(ch);
+
+                if (ch == '(') parenDepth++;
+                else if (ch == ')') {
+                    parenDepth--;
+                    if (parenDepth <= 0) {
+                        i++;
+                        break;
+                    }
+                }
+                i++;
+            }
+
+            if (annChanged) {
+                touchedAnns.add(ann);
+            }
+        }
+
+        if (changed) {
+            if (!touchedAnns.isEmpty()) {
+                notes.add("single-quote literal → double-quote in @" + String.join(", @", touchedAnns));
+            } else {
+                notes.add("single-quote literal → double-quote");
+            }
+        }
+        return new NormalizationResult(out.toString(), changed, List.copyOf(notes));
     }
 
     /**
