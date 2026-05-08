@@ -303,10 +303,18 @@ public class ApiExtractorService {
                                                  List<String[]> git,
                                                  String apiPathPrefix,
                                                  Map<String, String> pathConstantsMap) throws Exception {
+        String source = new String(Files.readAllBytes(filePath), StandardCharsets.UTF_8);
+        return extractWithJavaParserFromSource(source, filePath, relPath, git, apiPathPrefix, pathConstantsMap);
+    }
+
+    /** 메모리에 있는 소스 문자열로 JavaParser 경로 추출 (디버그 업로드 등). */
+    private List<ApiInfo> extractWithJavaParserFromSource(String source, Path filePath, String relPath,
+                                                          List<String[]> git,
+                                                          String apiPathPrefix,
+                                                          Map<String, String> pathConstantsMap) throws Exception {
         ensureJavaParserConfigured();
         boolean debug = debugMode;
         List<ApiInfo> apis = new ArrayList<>();
-        String source = new String(Files.readAllBytes(filePath), StandardCharsets.UTF_8);
         CompilationUnit cu = StaticJavaParser.parse(source);
 
         String classPath = "";
@@ -346,7 +354,7 @@ public class ApiExtractorService {
                 for (String sub : subPaths) {
                     String finalPath = normalizePath(apiPathPrefix + classPath + "/" + sub.trim());
                     ApiInfo info = buildApiInfo(filePath, relPath, method, git,
-                            finalPath, httpMethod, controllerComment, controllerRequestProperty);
+                            finalPath, httpMethod, controllerComment, controllerRequestProperty, source);
                     apis.add(info);
 
                     if (debug) {
@@ -562,7 +570,8 @@ public class ApiExtractorService {
 
     private ApiInfo buildApiInfo(Path filePath, String relPath, MethodDeclaration method,
                                   List<String[]> git, String finalPath, String httpMethod,
-                                  String controllerComment, String controllerRequestProperty) {
+                                  String controllerComment, String controllerRequestProperty,
+                                  String entireFileSource) {
         ApiInfo info = new ApiInfo();
         info.setApiPath(finalPath.isEmpty() ? "/" : finalPath);
         info.setHttpMethod(httpMethod);
@@ -589,7 +598,7 @@ public class ApiExtractorService {
         // @Deprecated 라인에서 [URL…차단…] 태그 정보 보충
         if ("Y".equals(info.getIsDeprecated()) && (info.getFullComment().equals("-") || !ApiStorageService.containsUrlBlockTag(info.getFullComment()))) {
             try {
-                String src = Files.readString(filePath, StandardCharsets.UTF_8);
+                String src = entireFileSource != null ? entireFileSource : Files.readString(filePath, StandardCharsets.UTF_8);
                 String depLine = extractDeprecatedLine(src);
                 if (depLine != null && ApiStorageService.containsUrlBlockTag(depLine)) {
                     info.setFullComment(depLine);
@@ -1121,6 +1130,77 @@ public class ApiExtractorService {
                 m.put("message", pr.getMessage());
                 pr.getLocation().ifPresent(loc -> {
                     // JavaParser 버전별 API 차이: Position 접근자가 다를 수 있어 toString()으로 안전하게 반환
+                    try {
+                        m.put("begin", String.valueOf(loc.getBegin()));
+                        m.put("end", String.valueOf(loc.getEnd()));
+                    } catch (Exception ignored) {}
+                });
+                return m;
+            }).toList());
+            return out;
+        } catch (Exception e) {
+            out.put("errorType", e.getClass().getName());
+            out.put("message", e.getMessage());
+            out.put("stackTrace", stackTraceString(e));
+            return out;
+        }
+    }
+
+    private static final int DEBUG_PARSE_SOURCE_MAX_CHARS = 3_000_000;
+
+    /**
+     * 브라우저에서 업로드한 .java 소스 문자열을 메모리에서만 파싱한다 (서버 디스크의 레포 경로 불필요).
+     */
+    public Map<String, Object> debugParseJavaSource(String javaSource, String fileLabel, String apiPathPrefix, String pathConstantsRaw) {
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("ok", false);
+        out.put("mode", "upload");
+        out.put("rootPath", "(업로드)");
+        String rel = (fileLabel == null || fileLabel.isBlank())
+                ? "__upload__/Snippet.java"
+                : fileLabel.trim().replace('\\', '/');
+        out.put("relPath", rel);
+        out.put("apiPathPrefix", apiPathPrefix == null ? "" : apiPathPrefix);
+        try {
+            ensureJavaParserConfigured();
+            if (javaSource == null) throw new IllegalArgumentException("source is required");
+            if (javaSource.length() > DEBUG_PARSE_SOURCE_MAX_CHARS) {
+                throw new IllegalArgumentException("소스가 너무 큽니다 (문자 수 최대 " + DEBUG_PARSE_SOURCE_MAX_CHARS + ").");
+            }
+            if (rel.contains("..")) throw new IllegalArgumentException("unsafe file name");
+
+            Map<String, String> constants = parsePathConstants(pathConstantsRaw);
+            List<String[]> git = List.of(new String[]{"", "", ""}, new String[]{"", "", ""}, new String[]{"", "", ""}, new String[]{"", "", ""}, new String[]{"", "", ""});
+            Path pseudo = Paths.get(rel);
+            List<ApiInfo> apis = extractWithJavaParserFromSource(javaSource, pseudo, rel, git,
+                    apiPathPrefix == null ? "" : apiPathPrefix, constants);
+
+            out.put("ok", true);
+            out.put("apiCount", apis.size());
+            List<Map<String, Object>> rows = new ArrayList<>();
+            for (int i = 0; i < Math.min(apis.size(), 50); i++) {
+                ApiInfo a = apis.get(i);
+                rows.add(Map.of(
+                        "apiPath", a.getApiPath(),
+                        "httpMethod", a.getHttpMethod(),
+                        "methodName", a.getMethodName(),
+                        "apiOperationValue", a.getApiOperationValue(),
+                        "descriptionTag", a.getDescriptionTag(),
+                        "isDeprecated", a.getIsDeprecated(),
+                        "hasUrlBlock", a.getHasUrlBlock()
+                ));
+            }
+            out.put("apis", rows);
+            out.put("absolutePath", "(업로드 — 서버 로컬 파일 아님)");
+            return out;
+        } catch (ParseProblemException ppe) {
+            out.put("errorType", ParseProblemException.class.getName());
+            out.put("message", ppe.getMessage());
+            out.put("stackTrace", stackTraceString(ppe));
+            out.put("problems", ppe.getProblems().stream().map(pr -> {
+                Map<String, Object> m = new LinkedHashMap<>();
+                m.put("message", pr.getMessage());
+                pr.getLocation().ifPresent(loc -> {
                     try {
                         m.put("begin", String.valueOf(loc.getBegin()));
                         m.put("end", String.valueOf(loc.getEnd()));

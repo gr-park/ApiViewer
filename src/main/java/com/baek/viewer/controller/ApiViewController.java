@@ -27,14 +27,17 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Expression;
 import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.JoinType;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -178,6 +181,29 @@ public class ApiViewController {
         String pathConstants = body != null ? body.get("pathConstants") : null;
         log.info("[DEBUG 단건파싱] relPath={}", relPath);
         return ResponseEntity.ok(extractorService.debugParseSingleFile(rootPath, relPath, apiPathPrefix, pathConstants));
+    }
+
+    /**
+     * 디버그: 로컬 파일 선택(업로드) → JavaParser만 수행. 레포의 프리픽스·상수치환은 폼 필드로 전달.
+     */
+    @PostMapping(value = "/extract/debug-parse-upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<?> debugParseUpload(
+            @RequestPart("file") MultipartFile file,
+            @RequestParam(value = "apiPathPrefix", required = false) String apiPathPrefix,
+            @RequestParam(value = "pathConstants", required = false) String pathConstants) {
+        String orig = file != null ? file.getOriginalFilename() : null;
+        log.info("[DEBUG 단건파싱 업로드] name={} bytes={}", orig, file != null ? file.getSize() : -1);
+        if (file == null || file.isEmpty()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "파일이 비어 있습니다."));
+        }
+        try {
+            String name = (orig != null && !orig.isBlank()) ? orig : "Uploaded.java";
+            String src = new String(file.getBytes(), StandardCharsets.UTF_8);
+            return ResponseEntity.ok(extractorService.debugParseJavaSource(src, name, apiPathPrefix, pathConstants));
+        } catch (IOException e) {
+            log.warn("[DEBUG 단건파싱 업로드] 읽기 실패: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
     }
 
     /** 캐시된 결과 조회 */

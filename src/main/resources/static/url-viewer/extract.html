@@ -493,10 +493,16 @@
                  style="width:100%;"
                  onkeydown="if(event.key==='Enter'){event.preventDefault();runToolbarSingleDebugParse();}">
         </label>
+        <input type="file" id="singleDebugFileInput" style="display:none"
+               accept=".java,text/plain,text/x-java-source,application/octet-stream"
+               onchange="onSingleDebugFilePicked(event)">
+        <button type="button" class="btn btn-ghost" style="height:34px;"
+                onclick="document.getElementById('singleDebugFileInput').click()">파일 선택</button>
         <button type="button" class="btn btn-purple" style="height:34px;" onclick="runToolbarSingleDebugParse()">파싱 실행</button>
       </div>
       <p style="font-size:10px;color:var(--text-muted);margin-top:8px;line-height:1.55;">
         레포는 위에서 <b>정확히 1개</b>만 선택해야 합니다. 프리픽스·상수 치환은 해당 레포 설정(및 고급 오버라이드)을 따릅니다.
+        <b>파일 선택</b>은 PC에서 <code style="font-size:10px;">.java</code>를 골라 서버로 보낸 뒤 같은 규칙으로 파싱합니다(레포 클론 경로와 다를 수 있음).
         결과는 파싱 예외 메시지, JavaParser 문제 위치, 필요 시 스택 트레이스까지 포함합니다.
       </p>
     </div>
@@ -2499,6 +2505,54 @@
   function esc(s) {
     if (!s) return '';
     return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  async function adminFetchForm(url, formData) {
+    const token = sessionStorage.getItem('adminToken') || '';
+    const opts = { method: 'POST', body: formData, headers: { 'X-Admin-Token': token } };
+    let res = await fetch(url, opts);
+    if (res.status === 401) {
+      const pw = await customPrompt('관리자 비밀번호를 다시 입력하세요:', { type: 'password', title: '🔑 인증 만료' });
+      if (pw) {
+        const r = await fetch('/api/verify-password', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password: pw })
+        });
+        const d = await r.json();
+        if (d.valid) {
+          sessionStorage.setItem('adminToken', d.token);
+          opts.headers['X-Admin-Token'] = d.token;
+          res = await fetch(url, opts);
+        }
+      }
+    }
+    return res;
+  }
+
+  async function onSingleDebugFilePicked(ev) {
+    const input = ev && ev.target ? ev.target : document.getElementById('singleDebugFileInput');
+    const f = input && input.files && input.files[0];
+    if (!f) return;
+    try {
+      const ctx = resolveDebugParseRepoContext(null);
+      if (ctx.error) { showToast(ctx.error, 'error'); if (input) input.value = ''; return; }
+      const fd = new FormData();
+      fd.append('file', f, f.name);
+      fd.append('apiPathPrefix', ctx.apiPathPrefix || '');
+      fd.append('pathConstants', ctx.pathConstants || '');
+      const res = await adminFetchForm('/api/extract/debug-parse-upload', fd);
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(d.error || ('서버 오류 (' + res.status + ')'));
+      const nameIn = document.getElementById('singleDebugRelPath');
+      if (nameIn) nameIn.value = f.name;
+      showDebugParseResult(d, {
+        repoName: ctx.repoName,
+        rootPath: '(업로드)',
+        relPath: f.name
+      });
+    } catch (e) {
+      showToast(`업로드 파싱 실패: ${e.message}`, 'error');
+    }
+    if (input) input.value = '';
   }
 
   // ── 관리자 인증 fetch 래퍼 (Mock 생성/삭제용) ────────────────
