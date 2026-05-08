@@ -27,6 +27,15 @@ public class ApiExtractorService {
 
     private static final Logger log = LoggerFactory.getLogger(ApiExtractorService.class);
 
+    // ANSI 컬러(콘솔) — logback 색상 컨버터가 있어도, "정말 눈에 띄게" 하고 싶을 때 쓰는 직접 코드.
+    // (화면 로그(extractLogs)에는 ANSI를 넣지 않고 텍스트 태그로만 표시)
+    private static final String ANSI_PURPLE = "\u001B[35m";
+    private static final String ANSI_BOLD = "\u001B[1m";
+    private static final String ANSI_RESET = "\u001B[0m";
+    private static String purpleBanner(String msg) {
+        return ANSI_PURPLE + ANSI_BOLD + msg + ANSI_RESET;
+    }
+
     private static final List<String> MAPPING_ANNS = Arrays.asList(
             "RequestMapping", "GetMapping", "PostMapping", "PutMapping", "DeleteMapping", "PatchMapping");
 
@@ -408,8 +417,14 @@ public class ApiExtractorService {
         List<ApiInfo> apis = new ArrayList<>();
         String src0 = source == null ? "" : source;
         NormalizationResult nr = normalizeForJavaParser(src0);
-        if (nr.changed() && debug) {
-            log.debug("[파싱-JP] in-memory normalization applied: relPath={} notes={}", relPath, nr.notes());
+        if (nr.changed()) {
+            // 화면 진행 로그(Extract Progress)에서 확실히 구분되도록 태그를 남김
+            addLog("INFO", "[JP-NORM] in-memory normalization 적용: " + relPath + " — " + String.join(" | ", nr.notes()));
+            // 콘솔도 "색"으로 강하게 표시
+            log.info(purpleBanner("[JP-NORM] in-memory normalization 적용: " + relPath + " — " + String.join(" | ", nr.notes())));
+        } else if (debug) {
+            // 디버그 모드에서는 미적용도 확인 가능
+            log.debug("[파싱-JP] in-memory normalization not applied: relPath={}", relPath);
         }
         CompilationUnit cu = StaticJavaParser.parse(nr.source());
 
@@ -2026,6 +2041,7 @@ public class ApiExtractorService {
                 NormalizationResult nr = normalizeForJavaParser(raw);
                 if (nr.changed()) {
                     addDebugStep(steps, "INFO", "in-memory normalization 적용: " + String.join(" | ", nr.notes()));
+                    log.info(purpleBanner("[JP-NORM] (debug-parse-one) " + effectiveRelPath + " — " + String.join(" | ", nr.notes())));
                 }
                 List<ApiInfo> apis = extractWithJavaParserFromSource(nr.source(), file, effectiveRelPath, git,
                         apiPathPrefix == null ? "" : apiPathPrefix, constants);
@@ -2127,6 +2143,7 @@ public class ApiExtractorService {
                 NormalizationResult nr = normalizeForJavaParser(javaSource);
                 if (nr.changed()) {
                     addDebugStep(steps, "INFO", "in-memory normalization 적용: " + String.join(" | ", nr.notes()));
+                    log.info(purpleBanner("[JP-NORM] (debug-parse-upload) " + rel + " — " + String.join(" | ", nr.notes())));
                 }
                 List<ApiInfo> apis = extractWithJavaParserFromSource(nr.source(), pseudo, rel, git,
                         apiPathPrefix == null ? "" : apiPathPrefix, constants);
