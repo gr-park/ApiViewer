@@ -1727,6 +1727,27 @@
     // 레포 선택을 변경하면 단건 파싱의 "파일 선택"은 해제한다 (레포/프리픽스 혼동 방지)
     const fileInp = document.getElementById('singleDebugFileInput');
     if (fileInp && fileInp.value) fileInp.value = '';
+
+    // TS(NestJS) 정규식 파싱: 레포 선택에 따라 ROOT_PATH 자동 채움
+    // - 1개 선택: 해당 레포 ROOT_PATH
+    // - 다건 선택: 선택된 것 중 "가장 마지막 레포" ROOT_PATH
+    // 단, 사용자가 직접 입력한 값은 덮어쓰지 않도록 "마지막 자동 채움 값"일 때만 갱신한다.
+    try {
+      const tsRootEl = document.getElementById('tsDebugRootPath');
+      if (tsRootEl) {
+        const curVal = String(tsRootEl.value || '').trim();
+        const canOverwrite = (!curVal) || (window._lastAutoTsRootPath && curVal === window._lastAutoTsRootPath);
+        if (canOverwrite && normalized && normalized.length) {
+          const lastId = normalized[normalized.length - 1];
+          const r = allRepos.find(x => String(x.id) === String(lastId));
+          const rp = r && r.rootPath ? String(r.rootPath).trim() : '';
+          if (rp) {
+            tsRootEl.value = rp;
+            window._lastAutoTsRootPath = rp;
+          }
+        }
+      }
+    } catch (e) {}
   }
 
 

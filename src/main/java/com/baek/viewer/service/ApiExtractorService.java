@@ -1892,6 +1892,26 @@ public class ApiExtractorService {
                 String p = a.getApiPath() != null ? a.getApiPath() : "";
                 a.setFullUrl(dom + p);
             }
+
+            // 저장 시점: 파일 단위로 git history 1회 조회 후 동일 파일의 API에 재사용
+            // (디버그 파싱 자체는 빠르게 유지하고, 저장 시점에만 최소 비용으로 보강한다.)
+            Map<String, List<String[]>> gitByRel = new HashMap<>();
+            for (ApiInfo a : apis) {
+                String rel = a != null ? a.getRepoPath() : null;
+                if (rel == null || rel.isBlank()) continue;
+                if (!gitByRel.containsKey(rel)) {
+                    gitByRel.put(rel, getRecentGitHistories(rel, rootPath.trim(), defaultGitBinPath, 5));
+                }
+                List<String[]> g = gitByRel.get(rel);
+                if (g != null && g.size() >= 5) {
+                    a.setGit1(g.get(0));
+                    a.setGit2(g.get(1));
+                    a.setGit3(g.get(2));
+                    a.setGit4(g.get(3));
+                    a.setGit5(g.get(4));
+                }
+            }
+
             int[] r = storageService.savePartial(repositoryName.trim(), apis, clientIp);
             out.putAll(counts);
             out.put("ok", true);
