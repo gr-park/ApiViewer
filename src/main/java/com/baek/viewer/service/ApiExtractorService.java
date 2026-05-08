@@ -1076,73 +1076,217 @@ public class ApiExtractorService {
         return map;
     }
 
+    private static List<Map<String, Object>> previewApis(List<ApiInfo> apis) {
+        List<Map<String, Object>> rows = new ArrayList<>();
+        for (int i = 0; i < Math.min(apis.size(), 50); i++) {
+            ApiInfo a = apis.get(i);
+            rows.add(Map.of(
+                    "apiPath", a.getApiPath(),
+                    "httpMethod", a.getHttpMethod(),
+                    "methodName", a.getMethodName(),
+                    "apiOperationValue", a.getApiOperationValue(),
+                    "descriptionTag", a.getDescriptionTag(),
+                    "isDeprecated", a.getIsDeprecated(),
+                    "hasUrlBlock", a.getHasUrlBlock()
+            ));
+        }
+        return rows;
+    }
+
+    private static void addDebugStep(List<Map<String, Object>> steps, String level, String message) {
+        if (steps == null) return;
+        steps.add(new LinkedHashMap<>(Map.of(
+                "level", level == null ? "INFO" : level,
+                "message", message == null ? "" : message
+        )));
+    }
+
     /**
-     * 디버그 용도: 특정 단일 파일을 JavaParser 경로로만 파싱해 결과/예외를 반환한다.
-     * - DB 저장/깃 실행/정규식 폴백 없음
-     * - JavaParser 에러의 원인(문법/위치)을 재현하는 목적
+     * Regex 폴백 추출 (업로드 소스 문자열 기반).
+     * - {@link #extractWithRegex(Path, String, List, String, Map)} 의 로직을 최대한 동일하게 유지한다.
+     */
+    private List<ApiInfo> extractWithRegexFromSource(String rawSource, Path pseudoPath, String relPath,
+                                                     List<String[]> git,
+                                                     String apiPathPrefix,
+                                                     Map<String, String> pathConstantsMap) {
+        boolean debug = debugMode;
+        List<ApiInfo> apis = new ArrayList<>();
+        String raw = rawSource == null ? "" : rawSource;
+        String clean = raw.replaceAll("(?s)/\\*.*?\\*/", " ").replaceAll("//.*", " ");
+
+        String controllerComment = "-";
+        Matcher cM = Pattern.compile("/\\*\\*(.*?)\\*/", Pattern.DOTALL).matcher(raw);
+        if (cM.find()) controllerComment = cM.group(1).replaceAll("[\\r\\n*]", " ").trim();
+
+        String classPath = "";
+        String classHead = clean.substring(0, Math.min(clean.length(), 3000));
+        Matcher cm = Pattern.compile("@RequestMapping\\s*\\((.*?)\\)", Pattern.DOTALL).matcher(classHead);
+        if (cm.find()) {
+            String cParams = substituteConstants(cm.group(1), pathConstantsMap)
+                    .replaceAll("\"\\s*\\+\\s*\"", "");
+            Matcher cp = Pattern.compile("\"([^\"]+)\"").matcher(cParams);
+            if (cp.find()) classPath = cp.group(1).trim();
+        }
+        if (debug) {
+            log.debug("[파싱-RX] (업로드) file={}, @RequestMapping={}",
+                    pseudoPath != null ? pseudoPath.getFileName() : "(unknown)",
+                    classPath.isEmpty() ? "(없음)" : classPath);
+        }
+
+        Matcher mMatcher = Pattern.compile(
+                "@(GetMapping|PostMapping|RequestMapping|PutMapping|DeleteMapping|PatchMapping)(\\s*\\((.*?)\\))?",
+                Pattern.DOTALL).matcher(raw);
+
+        while (mMatcher.find()) {
+            String mappingType = mMatcher.group(1);
+            String paramsRaw = mMatcher.group(3);
+            String params = paramsRaw == null ? "" :
+                    substituteConstants(paramsRaw, pathConstantsMap).replaceAll("\"\\s*\\+\\s*\"", "");
+            String httpMethod = resolveHttpMethodFromName(mappingType, params);
+
+            String afterMapping = clean.substring(mMatcher.end(), Math.min(mMatcher.end() + 1000, clean.length()));
+            Matcher mName = Pattern.compile("(?:public|private|protected)\\s+[\\w<>,\\s]+\\s+(\\w+)\\s*\\(")
+                    .matcher(afterMapping);
+            if (!mName.find()) continue;
+
+            String methodName = mName.group(1);
+            boolean isDeprecated = clean.substring(Math.max(0, mMatcher.start() - 300), mMatcher.start())
+                    .contains("@Deprecated");
+
+            List<String> paths = extractMappingPathsFromParams(params);
+            for (String s : paths) {
+                if (s == null) continue;
+                s = s.trim();
+                if (s.isEmpty()) continue;
+
+                String finalPath = normalizePath(apiPathPrefix + classPath + "/" + s);
+                String headArea = raw.substring(Math.max(0, mMatcher.start() - 1000), mMatcher.start());
+
+                ApiInfo info = new ApiInfo();
+                info.setApiPath(finalPath);
+                info.setHttpMethod(httpMethod);
+                info.setMethodName(methodName);
+                info.setControllerName(pseudoPath != null && pseudoPath.getFileName() != null
+                        ? pseudoPath.getFileName().toString()
+                        : "Uploaded.java");
+                info.setRepoPath(relPath.replace("\\", "/"));
+                info.setIsDeprecated(isDeprecated ? "Y" : "N");
+                String mBody = afterMapping.substring(mName.end(), Math.min(mName.end() + 500, afterMapping.length()));
+                info.setHasUrlBlock(detectUrlBlockRegex(mBody) ? "Y" : "N");
+                info.setProgramId(autoExtractProgramId(finalPath));
+                info.setControllerComment(controllerComment);
+                info.setGit1(git.get(0));
+                info.setGit2(git.get(1));
+                info.setGit3(git.get(2));
+                info.setGit4(git.get(3));
+                info.setGit5(git.get(4));
+
+                Matcher docM = Pattern.compile("/\\*\\*(.*?)\\*/", Pattern.DOTALL).matcher(headArea);
+                if (docM.find()) {
+                    String doc = docM.group(1);
+                    info.setFullComment(doc.replaceAll("[\\r\\n*]", " ").trim());
+                    Matcher dM = Pattern.compile("@?(description|deprecation)[\\s:]*([^@\\n\\r*]+)",
+                                    Pattern.CASE_INSENSITIVE)
+                            .matcher(doc);
+                    info.setDescriptionTag(dM.find() ? dM.group(2).trim() : "-");
+                } else {
+                    info.setFullComment("-");
+                    info.setDescriptionTag("-");
+                }
+
+                apis.add(info);
+            }
+        }
+        if (debug) {
+            log.debug("[파싱-RX] (업로드) 완료 — {}개 API 추출", apis.size());
+        }
+        return apis;
+    }
+
+    /**
+     * 디버그 용도: 특정 단일 파일을 파싱해 결과/예외를 반환한다.
+     * - JavaParser 우선
+     * - 실패 시 Regex 폴백
+     * - DB 저장/깃 실행 없음
      */
     public Map<String, Object> debugParseSingleFile(String rootPath, String relPath, String apiPathPrefix, String pathConstantsRaw) {
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("ok", false);
+        out.put("javaParserOk", false);
+        out.put("regexFallbackUsed", false);
         out.put("rootPath", rootPath);
         out.put("relPath", relPath);
         out.put("apiPathPrefix", apiPathPrefix == null ? "" : apiPathPrefix);
+        List<Map<String, Object>> steps = new ArrayList<>();
+        out.put("steps", steps);
         try {
-            ensureJavaParserConfigured();
+            addDebugStep(steps, "INFO", "입력값 확인");
             if (rootPath == null || rootPath.isBlank()) throw new IllegalArgumentException("rootPath is required");
             if (relPath == null || relPath.isBlank()) throw new IllegalArgumentException("relPath is required");
 
             Path root = Paths.get(rootPath);
             Path file = root.resolve(relPath);
+            addDebugStep(steps, "INFO", "파일 경로 계산: " + file.toAbsolutePath().normalize());
             if (!Files.exists(file)) throw new IllegalArgumentException("file not found: " + file);
             if (!Files.isRegularFile(file)) throw new IllegalArgumentException("not a file: " + file);
 
             Map<String, String> constants = parsePathConstants(pathConstantsRaw);
             // git history는 debug에서 생략
             List<String[]> git = List.of(new String[]{"", "", ""}, new String[]{"", "", ""}, new String[]{"", "", ""}, new String[]{"", "", ""}, new String[]{"", "", ""});
-            List<ApiInfo> apis = extractWithJavaParser(file, relPath, git, apiPathPrefix == null ? "" : apiPathPrefix, constants);
 
-            out.put("ok", true);
-            out.put("mode", "path");
-            out.put("apiCount", apis.size());
-            // payload 크기 방지: 상위 50개만
-            List<Map<String, Object>> rows = new ArrayList<>();
-            for (int i = 0; i < Math.min(apis.size(), 50); i++) {
-                ApiInfo a = apis.get(i);
-                rows.add(Map.of(
-                        "apiPath", a.getApiPath(),
-                        "httpMethod", a.getHttpMethod(),
-                        "methodName", a.getMethodName(),
-                        "apiOperationValue", a.getApiOperationValue(),
-                        "descriptionTag", a.getDescriptionTag(),
-                        "isDeprecated", a.getIsDeprecated(),
-                        "hasUrlBlock", a.getHasUrlBlock()
-                ));
+            addDebugStep(steps, "INFO", "JavaParser 파싱 시작");
+            try {
+                ensureJavaParserConfigured();
+                List<ApiInfo> apis = extractWithJavaParser(file, relPath, git, apiPathPrefix == null ? "" : apiPathPrefix, constants);
+                out.put("ok", true);
+                out.put("javaParserOk", true);
+                out.put("parseMethod", "javaparser");
+                out.put("mode", "path");
+                out.put("apiCount", apis.size());
+                out.put("apis", previewApis(apis));
+                out.put("absolutePath", file.toAbsolutePath().normalize().toString());
+                addDebugStep(steps, "OK", "JavaParser 추출 완료: " + apis.size() + "건");
+                return out;
+            } catch (ParseProblemException ppe) {
+                out.put("errorType", ParseProblemException.class.getName());
+                out.put("message", ppe.getMessage());
+                out.put("stackTrace", stackTraceString(ppe));
+                out.put("problems", ppe.getProblems().stream().map(pr -> {
+                    Map<String, Object> m = new LinkedHashMap<>();
+                    m.put("message", pr.getMessage());
+                    pr.getLocation().ifPresent(loc -> {
+                        try {
+                            m.put("begin", String.valueOf(loc.getBegin()));
+                            m.put("end", String.valueOf(loc.getEnd()));
+                        } catch (Exception ignored) {
+                        }
+                    });
+                    return m;
+                }).toList());
+                addDebugStep(steps, "WARN", "JavaParser 실패 (ParseProblemException) → Regex 폴백 시도");
+            } catch (Exception jpEx) {
+                out.put("errorType", jpEx.getClass().getName());
+                out.put("message", jpEx.getMessage());
+                out.put("stackTrace", stackTraceString(jpEx));
+                addDebugStep(steps, "WARN", "JavaParser 실패 (" + jpEx.getClass().getSimpleName() + ") → Regex 폴백 시도");
             }
-            out.put("apis", rows);
+
+            out.put("regexFallbackUsed", true);
+            addDebugStep(steps, "INFO", "Regex 폴백 추출 시작");
+            List<ApiInfo> rxApis = extractWithRegex(file, relPath, git, apiPathPrefix == null ? "" : apiPathPrefix, constants);
+            out.put("ok", true);
+            out.put("parseMethod", "regex");
+            out.put("mode", "path");
+            out.put("apiCount", rxApis.size());
+            out.put("apis", previewApis(rxApis));
             out.put("absolutePath", file.toAbsolutePath().normalize().toString());
-            return out;
-        } catch (ParseProblemException ppe) {
-            out.put("errorType", ParseProblemException.class.getName());
-            out.put("message", ppe.getMessage());
-            out.put("stackTrace", stackTraceString(ppe));
-            out.put("problems", ppe.getProblems().stream().map(pr -> {
-                Map<String, Object> m = new LinkedHashMap<>();
-                m.put("message", pr.getMessage());
-                pr.getLocation().ifPresent(loc -> {
-                    // JavaParser 버전별 API 차이: Position 접근자가 다를 수 있어 toString()으로 안전하게 반환
-                    try {
-                        m.put("begin", String.valueOf(loc.getBegin()));
-                        m.put("end", String.valueOf(loc.getEnd()));
-                    } catch (Exception ignored) {}
-                });
-                return m;
-            }).toList());
+            addDebugStep(steps, "OK", "Regex 폴백 추출 완료: " + rxApis.size() + "건");
             return out;
         } catch (Exception e) {
             out.put("errorType", e.getClass().getName());
             out.put("message", e.getMessage());
             out.put("stackTrace", stackTraceString(e));
+            addDebugStep(steps, "ERROR", "중단: " + e.getMessage());
             return out;
         }
     }
@@ -1155,6 +1299,8 @@ public class ApiExtractorService {
     public Map<String, Object> debugParseJavaSource(String javaSource, String fileLabel, String apiPathPrefix, String pathConstantsRaw) {
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("ok", false);
+        out.put("javaParserOk", false);
+        out.put("regexFallbackUsed", false);
         out.put("mode", "upload");
         out.put("rootPath", "(업로드)");
         String rel = (fileLabel == null || fileLabel.isBlank())
@@ -1162,8 +1308,10 @@ public class ApiExtractorService {
                 : fileLabel.trim().replace('\\', '/');
         out.put("relPath", rel);
         out.put("apiPathPrefix", apiPathPrefix == null ? "" : apiPathPrefix);
+        List<Map<String, Object>> steps = new ArrayList<>();
+        out.put("steps", steps);
         try {
-            ensureJavaParserConfigured();
+            addDebugStep(steps, "INFO", "입력값 확인");
             if (javaSource == null) throw new IllegalArgumentException("source is required");
             if (javaSource.length() > DEBUG_PARSE_SOURCE_MAX_CHARS) {
                 throw new IllegalArgumentException("소스가 너무 큽니다 (문자 수 최대 " + DEBUG_PARSE_SOURCE_MAX_CHARS + ").");
@@ -1173,47 +1321,60 @@ public class ApiExtractorService {
             Map<String, String> constants = parsePathConstants(pathConstantsRaw);
             List<String[]> git = List.of(new String[]{"", "", ""}, new String[]{"", "", ""}, new String[]{"", "", ""}, new String[]{"", "", ""}, new String[]{"", "", ""});
             Path pseudo = Paths.get(rel);
-            List<ApiInfo> apis = extractWithJavaParserFromSource(javaSource, pseudo, rel, git,
-                    apiPathPrefix == null ? "" : apiPathPrefix, constants);
 
-            out.put("ok", true);
-            out.put("apiCount", apis.size());
-            List<Map<String, Object>> rows = new ArrayList<>();
-            for (int i = 0; i < Math.min(apis.size(), 50); i++) {
-                ApiInfo a = apis.get(i);
-                rows.add(Map.of(
-                        "apiPath", a.getApiPath(),
-                        "httpMethod", a.getHttpMethod(),
-                        "methodName", a.getMethodName(),
-                        "apiOperationValue", a.getApiOperationValue(),
-                        "descriptionTag", a.getDescriptionTag(),
-                        "isDeprecated", a.getIsDeprecated(),
-                        "hasUrlBlock", a.getHasUrlBlock()
-                ));
+            addDebugStep(steps, "INFO", "JavaParser 파싱 시작");
+            try {
+                ensureJavaParserConfigured();
+                List<ApiInfo> apis = extractWithJavaParserFromSource(javaSource, pseudo, rel, git,
+                        apiPathPrefix == null ? "" : apiPathPrefix, constants);
+                out.put("ok", true);
+                out.put("javaParserOk", true);
+                out.put("parseMethod", "javaparser");
+                out.put("apiCount", apis.size());
+                out.put("apis", previewApis(apis));
+                out.put("absolutePath", "(업로드 — 서버 로컬 파일 아님)");
+                addDebugStep(steps, "OK", "JavaParser 추출 완료: " + apis.size() + "건");
+                return out;
+            } catch (ParseProblemException ppe) {
+                out.put("errorType", ParseProblemException.class.getName());
+                out.put("message", ppe.getMessage());
+                out.put("stackTrace", stackTraceString(ppe));
+                out.put("problems", ppe.getProblems().stream().map(pr -> {
+                    Map<String, Object> m = new LinkedHashMap<>();
+                    m.put("message", pr.getMessage());
+                    pr.getLocation().ifPresent(loc -> {
+                        try {
+                            m.put("begin", String.valueOf(loc.getBegin()));
+                            m.put("end", String.valueOf(loc.getEnd()));
+                        } catch (Exception ignored) {
+                        }
+                    });
+                    return m;
+                }).toList());
+                addDebugStep(steps, "WARN", "JavaParser 실패 (ParseProblemException) → Regex 폴백 시도");
+            } catch (Exception jpEx) {
+                out.put("errorType", jpEx.getClass().getName());
+                out.put("message", jpEx.getMessage());
+                out.put("stackTrace", stackTraceString(jpEx));
+                addDebugStep(steps, "WARN", "JavaParser 실패 (" + jpEx.getClass().getSimpleName() + ") → Regex 폴백 시도");
             }
-            out.put("apis", rows);
+
+            out.put("regexFallbackUsed", true);
+            addDebugStep(steps, "INFO", "Regex 폴백 추출 시작");
+            List<ApiInfo> rxApis = extractWithRegexFromSource(javaSource, pseudo, rel, git,
+                    apiPathPrefix == null ? "" : apiPathPrefix, constants);
+            out.put("ok", true);
+            out.put("parseMethod", "regex");
+            out.put("apiCount", rxApis.size());
+            out.put("apis", previewApis(rxApis));
             out.put("absolutePath", "(업로드 — 서버 로컬 파일 아님)");
-            return out;
-        } catch (ParseProblemException ppe) {
-            out.put("errorType", ParseProblemException.class.getName());
-            out.put("message", ppe.getMessage());
-            out.put("stackTrace", stackTraceString(ppe));
-            out.put("problems", ppe.getProblems().stream().map(pr -> {
-                Map<String, Object> m = new LinkedHashMap<>();
-                m.put("message", pr.getMessage());
-                pr.getLocation().ifPresent(loc -> {
-                    try {
-                        m.put("begin", String.valueOf(loc.getBegin()));
-                        m.put("end", String.valueOf(loc.getEnd()));
-                    } catch (Exception ignored) {}
-                });
-                return m;
-            }).toList());
+            addDebugStep(steps, "OK", "Regex 폴백 추출 완료: " + rxApis.size() + "건");
             return out;
         } catch (Exception e) {
             out.put("errorType", e.getClass().getName());
             out.put("message", e.getMessage());
             out.put("stackTrace", stackTraceString(e));
+            addDebugStep(steps, "ERROR", "중단: " + e.getMessage());
             return out;
         }
     }

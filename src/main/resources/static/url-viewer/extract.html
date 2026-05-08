@@ -392,6 +392,9 @@
       <div id="debugParseStatus" style="margin-bottom:10px;font-weight:700;line-height:1.45;"></div>
       <div id="debugParseAbsWrap" style="display:none;margin-bottom:10px;font-size:11px;line-height:1.45;color:var(--text-muted);"></div>
 
+      <div id="debugParseStepsHdr" style="font-size:11px;font-weight:700;margin:8px 0 4px;color:var(--text-muted);display:none;">처리 과정</div>
+      <pre id="debugParseSteps" class="dps-pre" style="display:none;"></pre>
+
       <div id="debugParseProblemsHdr" style="font-size:11px;font-weight:700;margin:8px 0 4px;color:var(--text-muted);display:none;">JavaParser 문제 (위치별)</div>
       <pre id="debugParseProblems" class="dps-pre" style="display:none;"></pre>
 
@@ -1689,6 +1692,10 @@
     }
     // UI 렌더
     renderSelectedReposUI(normalized);
+
+    // 레포 선택을 변경하면 단건 파싱의 "파일 선택"은 해제한다 (레포/프리픽스 혼동 방지)
+    const fileInp = document.getElementById('singleDebugFileInput');
+    if (fileInp && fileInp.value) fileInp.value = '';
   }
 
 
@@ -2471,6 +2478,8 @@
     const metaEl = document.getElementById('debugParseMeta');
     const stat = document.getElementById('debugParseStatus');
     const absW = document.getElementById('debugParseAbsWrap');
+    const sth = document.getElementById('debugParseStepsHdr');
+    const stepsEl = document.getElementById('debugParseSteps');
     const ph = document.getElementById('debugParseProblemsHdr');
     const probs = document.getElementById('debugParseProblems');
     const ah = document.getElementById('debugParseApisHdr');
@@ -2506,8 +2515,11 @@
       stat.style.color = '';
       if (d && d.ok) {
         const tag = d.mode === 'upload' ? '업로드' : '경로';
+        const methodTag = d.parseMethod === 'regex'
+          ? 'Regex 폴백'
+          : (d.parseMethod === 'javaparser' ? 'JavaParser' : '알수없음');
         stat.textContent =
-          `요약 — ${tag} 파싱 성공 · 추출 ${Number(d.apiCount) || 0}건 (미리보기 최대 50건)`;
+          `요약 — ${tag} 파싱 성공 · ${methodTag} · 추출 ${Number(d.apiCount) || 0}건 (미리보기 최대 50건)`;
         stat.style.color = '#166534';
       } else if (d) {
         const et = esc(String(d.errorType || 'Exception'));
@@ -2519,14 +2531,34 @@
       }
     }
 
+    if (sth) {
+      sth.style.display = 'block';
+      sth.textContent = '처리 과정';
+    }
+    if (stepsEl) {
+      stepsEl.style.display = 'block';
+      const steps = (d && Array.isArray(d.steps)) ? d.steps : [];
+      if (!steps.length) {
+        stepsEl.textContent = '(표시할 처리 과정 없음)';
+      } else {
+        stepsEl.textContent = steps.map((s, idx) => {
+          const lv = (s && s.level) ? String(s.level) : 'INFO';
+          const msg = (s && s.message) ? String(s.message) : '';
+          return `${String(idx + 1).padStart(2, '0')}. [${lv}] ${msg}`.trim();
+        }).join('\n');
+      }
+    }
+
     if (ph) {
       ph.style.display = 'block';
       ph.textContent = 'JavaParser 문제 (위치별)';
     }
     if (probs) {
       probs.style.display = 'block';
-      if (d && d.ok) {
-        probs.textContent = '(파싱 성공 — JavaParser 문제 목록 없음)';
+      if (d && d.ok && d.javaParserOk) {
+        probs.textContent = '(JavaParser 성공 — 문제 목록 없음)';
+      } else if (d && d.ok && d.parseMethod === 'regex') {
+        probs.textContent = '(Regex 폴백 결과 — JavaParser 문제는 위 요약/스택 참고)';
       } else if (d) {
         const pArr = Array.isArray(d.problems) ? d.problems : [];
         const ptxt = pArr.map(pr => {
@@ -2571,7 +2603,7 @@
       }
     }
 
-    const canSave = !!(d && d.ok && Number(d.apiCount) > 0);
+    const canSave = !!(d && d.ok && d.javaParserOk && Number(d.apiCount) > 0);
     const saveRow = document.getElementById('debugParseSaveRepoRow');
     if (saveRow) saveRow.style.display = canSave ? 'flex' : 'none';
 
@@ -2582,6 +2614,8 @@
       if (canSave) {
         hint.textContent =
           'DB 부분 반영: 위에서 저장할 레포를 선택한 뒤 반영합니다. 다른 등록 URL은 삭제 표시되지 않습니다.';
+      } else if (d && d.ok && d.parseMethod === 'regex') {
+        hint.textContent = 'JavaParser 실패로 Regex 폴백 결과입니다. 미리보기 목적이며 DB 반영은 지원하지 않습니다.';
       } else if (d && d.ok && Number(d.apiCount) === 0) {
         hint.textContent = '저장할 매핑이 없습니다.';
       } else if (d && !d.ok) {
