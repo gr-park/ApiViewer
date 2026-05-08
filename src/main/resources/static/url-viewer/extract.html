@@ -498,10 +498,10 @@
       <button class="btn btn-blue" id="extractBtn" onclick="doExtract()">추출 시작</button>
     </div>
 
-    <!-- 단건 JavaParser (레포 ROOT 기준, 정규식 폴백 없음) -->
+    <!-- 단건 JavaParser (주로 디버그 목적) -->
     <div class="single-debug-box">
       <div style="font-size:11px;font-weight:800;color:var(--text-muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:.04em;">
-        단건 JavaParser 파싱 (디버그)
+        단건 JavaParser 파싱 (주로 디버그 목적)
       </div>
       <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;">
         <label class="field" style="flex:1;min-width:240px;text-transform:none;letter-spacing:0;">
@@ -840,10 +840,10 @@
       // 표기: 영문 repoName 소문자 통일 (식별자는 원본 유지)
       const extractItems = [
         ...allRepos.map(r => {
-          const lower = (r.repoName || '').toLowerCase();
+          const rn = (r.repoName || '');
           return {
             value: String(r.id),
-            label: r.businessName ? `${r.businessName} | ${lower}` : lower
+            label: r.businessName ? `${r.businessName} | ${rn}` : rn
           };
         })
       ];
@@ -992,8 +992,8 @@
 
     if (rows) {
       rows.innerHTML = picked.map(r => {
-        const lower = (r.repoName || '').toLowerCase();
-        const title = r.businessName ? `${r.businessName} | ${lower}` : lower;
+        const rn = (r.repoName || '');
+        const title = r.businessName ? `${r.businessName} | ${rn}` : rn;
         return `
           <div style="display:flex;gap:10px;align-items:center;justify-content:space-between;border:1px solid var(--border);border-radius:10px;padding:8px 10px;background:var(--card);">
             <div style="display:flex;flex-direction:column;gap:3px;min-width:0;">
