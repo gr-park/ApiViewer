@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>URL Viewer — 현업 검토</title>
+  <link rel="stylesheet" href="/css/common.css">
   <style>
     :root {
       --bg:#f4f6f9; --card:#fff; --primary:#3b82f6; --primary-hover:#2563eb;
@@ -25,10 +26,65 @@
     .nav-active{color:var(--primary)!important;border-color:var(--primary)!important;}
     .main{max-width:1700px;margin:0 auto;padding:20px 24px;}
     .card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:18px 20px;margin-bottom:14px;box-shadow:var(--shadow);}
-    .btn{padding:8px 20px;border:none;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;transition:background .15s;white-space:nowrap;height:34px;}
-    .btn:disabled{opacity:.5;cursor:not-allowed;}
-    .btn-blue{background:var(--primary);color:#fff;} .btn-blue:not(:disabled):hover{background:var(--primary-hover);}
-    .btn-green{background:#16a34a;color:#fff;} .btn-green:not(:disabled):hover{background:#15803d;}
+    /* 접기/펼치기 — URL분석현황(viewer)과 동일(details + collapser pill) */
+    details.card { padding: 0; }
+    details.card > summary.section-heading {
+      padding: 14px 18px;
+      margin: 0;
+      cursor: default;
+      list-style: none;
+      user-select: none;
+      border-radius: 10px;
+    }
+    details.card > summary.section-heading::-webkit-details-marker { display: none; }
+    .collapser {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: none;
+      letter-spacing: 0;
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 3px 10px;
+      cursor: pointer;
+      white-space: nowrap;
+      flex-shrink: 0;
+      user-select: none;
+      transition: background .12s, color .12s, border-color .12s, transform .08s ease;
+    }
+    .collapser.inline { margin-left: 6px; }
+    .collapser:hover {
+      background: #eff6ff;
+      border-color: #bfdbfe;
+      color: #1d4ed8;
+    }
+    .collapser:active { transform: translateY(1px); }
+    [data-theme="dark"] .collapser {
+      background: #293548;
+      border-color: var(--border);
+      color: var(--text-muted);
+    }
+    [data-theme="dark"] .collapser:hover {
+      background: #1e3a5f;
+      border-color: #1d4ed8;
+      color: #93c5fd;
+    }
+    .heading-toggle-wrap {
+      display: inline-flex;
+      align-items: center;
+      flex-wrap: nowrap;
+      white-space: nowrap;
+    }
+    details[open] .collapser .c-label::after { content: "접기"; }
+    details:not([open]) .collapser .c-label::after { content: "펼치기"; }
+    details[open] .collapser .c-arrow { transform: rotate(180deg); }
+    .collapser .c-arrow { display: inline-block; transition: transform .12s ease; }
+    details.card .card-body { padding: 14px 18px 16px; }
+    .main .btn{height:34px;padding:8px 20px;font-size:13px;}
     .stats-bar{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;align-items:center;}
     .stat-pill{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:6px 14px;font-size:12px;display:flex;align-items:center;gap:6px;box-shadow:var(--shadow);}
     .stat-pill strong{font-size:15px;font-weight:700;}
@@ -109,18 +165,13 @@
     .edit-select:focus{border-color:var(--primary);}
     .edit-input{padding:3px 6px;border:1px solid var(--border);border-radius:4px;font-size:11px;outline:none;width:120px;}
     .edit-input:focus{border-color:var(--primary);}
-    .guide-box{background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:12px 16px;font-size:12px;color:#1e40af;margin-bottom:14px;line-height:1.7;}
-    .guide-box strong{display:block;font-size:13px;margin-bottom:4px;}
     .bulk-bar{display:none;position:sticky;bottom:0;background:#1e293b;color:#fff;padding:10px 16px;border-radius:10px;margin-bottom:10px;align-items:center;gap:10px;box-shadow:0 4px 16px rgba(0,0,0,.25);z-index:10;flex-wrap:wrap;}
     .bulk-bar.visible{display:flex;}
     .bulk-bar .bulk-count{font-size:13px;font-weight:600;}
     .bulk-bar select,.bulk-bar input[type=text]{padding:5px 8px;border-radius:6px;font-size:12px;border:none;outline:none;}
     .bulk-bar input[type=text]{width:120px;}
     .bulk-bar label{font-size:11px;color:#94a3b8;font-weight:600;}
-    .btn-apply{background:var(--primary);color:#fff;border:none;border-radius:6px;padding:6px 16px;font-size:12px;font-weight:600;cursor:pointer;}
-    .btn-apply:hover{background:var(--primary-hover);}
-    .btn-cancel{background:#475569;color:#fff;border:none;border-radius:6px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer;}
-    .btn-cancel:hover{background:#334155;}
+    .bulk-bar .btn{height:auto;min-height:28px;}
 
     /* ─── 다크모드 오버라이드 ─── */
     :root[data-theme="dark"]{
@@ -176,7 +227,6 @@
     [data-theme="dark"] span[style*="background:#fef3c7"] { background:#1c1408 !important; color:#fcd34d !important; }
     [data-theme="dark"] span[style*="background:#ffedd5"] { background:#431407 !important; color:#fb923c !important; }
     /* CSS 클래스 다크모드 오버라이드 */
-    [data-theme="dark"] .guide-box { background:#1e3a5f !important; border-color:#3b82f6 !important; color:#93c5fd !important; }
     [data-theme="dark"] .rv-exclude { background:#1e3a5f !important; color:#93c5fd !important; }
     [data-theme="dark"] .call-link { color:#93c5fd !important; background:#1e3a5f !important; border-color:#3b82f6 !important; }
     [data-theme="dark"] .call-link.zero { color:#94a3b8 !important; background:#293548 !important; border-color:#334155 !important; }
@@ -206,6 +256,7 @@
   <meta name="nav-segment" content="url-viewer">
   <meta name="nav-page" content="review">
   <link rel="stylesheet" href="/common/nav.css">
+  <script src="/common/status-guide.js"></script>
   <script src="/exceljs.min.js"></script>
   <script src="/js/dialog.js"></script>
   <script src="/js/darkmode.js"></script>
@@ -213,21 +264,35 @@
 <body>
 <div id="nav-container"></div>
 <div class="main">
-  <!-- 가이드 (접기/펼치기) -->
-  <div class="guide-box" style="cursor:pointer;" onclick="this.querySelector('.guide-body').style.display=this.querySelector('.guide-body').style.display==='none'?'block':'none';">
-    <strong>차단대상 URL 현업 검토 <span style="font-weight:400;font-size:11px;color:#60a5fa;">▼ 클릭하여 접기/펼치기</span></strong>
-    <div class="guide-body">
+  <!-- 차단대상 URL 현업 검토 (설명만, 상태 구분 안내는 아래 카드) -->
+  <div class="card card--tint-info" style="margin-bottom:14px;">
+    <div class="section-heading section-heading--query" style="margin-bottom:10px;">
+      <span class="dot"></span>차단대상 URL 현업 검토
+    </div>
+    <div style="font-size:12px;color:#1e40af;line-height:1.75;">
       차단대상으로 분류된 URL 목록입니다. 검토 후 <b>현업검토결과</b>와 <b>현업검토의견</b>을 입력해 주세요.<br>
       차단이 부적절한 경우 "차단대상 제외"를 선택하고 사유를 기입해 주세요. 체크박스로 여러 건을 선택하여 일괄 변경할 수도 있습니다.
-      <div style="margin-top:8px;padding-top:8px;border-top:1px dashed #bfdbfe;font-size:11px;line-height:1.8;">
-        <b>상태 구분 안내 (9 leaf v2)</b><br>
-        <span style="background:#fee2e2;padding:1px 6px;border-radius:3px;color:#991b1b;">①-① 차단대상</span> 호출 0건 + 소스변경 1년 경과 &nbsp;|&nbsp;
-        <span style="background:#ffedd5;padding:1px 6px;border-radius:3px;color:#ea580c;">①-② 담당자 판단</span> IT담당자 검토결과 미사용/업무종료 인지 &nbsp;|&nbsp;
-        <span style="background:#f3e8ff;padding:1px 6px;border-radius:3px;color:#7c3aed;">①-③ 현업요청 제외대상</span> 현업요청 차단 제외<br>
-        <span style="background:#fef3c7;padding:1px 6px;border-radius:3px;color:#92400e;">②-①/②-② 추가검토대상</span> 호출 0건 + 1년 미만 변경, 호출 1~<span id="guideReviewThreshold">3</span>건 + 1년 경과
-      </div>
     </div>
   </div>
+
+  <!-- 상태 구분 안내 — URL분석현황과 동일(details + 접기/펼치기, 공통 status-guide.js) -->
+  <details class="card card--tint-info" id="reviewStatusGuideCard" style="margin-bottom:14px;">
+    <summary class="section-heading section-heading--neutral" style="margin-bottom:0;">
+      <span class="dot"></span>
+      <span class="heading-toggle-wrap">
+        상태 구분 안내
+        <span class="collapser inline" aria-hidden="true">
+          <span class="c-label"></span>
+          <span class="c-arrow">▾</span>
+        </span>
+      </span>
+    </summary>
+    <div class="card-body" style="padding-top:10px;">
+      <div id="reviewStatusGuideDetailBox"
+           style="border:1px solid #bae6fd;border-radius:10px;padding:10px 12px;font-size:11px;color:#0c4a6e;line-height:1.75;background:#f0f9ff;">
+      </div>
+    </div>
+  </details>
 
   <div class="card" style="padding:12px 20px;">
     <!-- 1줄: 업무명 + 조회 + 엑셀 -->
@@ -239,7 +304,7 @@
       </label>
       <button class="btn btn-blue" onclick="loadReviewData()">조회</button>
       <button class="btn btn-green" id="excelBtn" onclick="downloadExcel()" style="display:none;">⬇ 엑셀 다운로드</button>
-      <button class="btn" style="background:#7c3aed;color:#fff;border:none;" onclick="document.getElementById('uploadInput').click();">⬆ 엑셀 업로드</button>
+      <button type="button" class="btn btn-green" onclick="document.getElementById('uploadInput').click();">⬆ 엑셀 업로드</button>
       <input type="file" id="uploadInput" accept=".xlsx,.xls" style="display:none;" onchange="handleUpload(this)">
     </div>
   </div>
@@ -254,8 +319,8 @@
         <div id="uploadUnmatchedList" style="max-height:200px;overflow:auto;border:1px solid #fca5a5;border-radius:6px;padding:8px;font-size:11px;font-family:monospace;background:#fff7f7;"></div>
       </div>
       <div style="display:flex;gap:10px;justify-content:flex-end;">
-        <button class="btn" style="background:#f1f5f9;color:#374151;border:1px solid #e2e8f0;" onclick="closeUploadModal()">취소</button>
-        <button class="btn" id="uploadConfirmBtn" style="background:#7c3aed;color:#fff;border:none;" onclick="confirmUpload()">저장</button>
+        <button type="button" class="btn btn-gray" onclick="closeUploadModal()">취소</button>
+        <button type="button" class="btn btn-blue" id="uploadConfirmBtn" onclick="confirmUpload()">저장</button>
       </div>
     </div>
   </div>
@@ -314,8 +379,8 @@
     <datalist id="teamsDatalist"></datalist>
     <label>현업 담당자</label>
     <input type="text" id="bulkReviewManager" placeholder="담당자">
-    <button class="btn-apply" onclick="applyBulk()">적용</button>
-    <button class="btn-cancel" onclick="clearSelection()">취소</button>
+    <button type="button" class="btn btn-blue" onclick="applyBulk()">적용</button>
+    <button type="button" class="btn btn-cancel" onclick="clearSelection()">취소</button>
   </div>
 
   <div class="table-wrap">
@@ -918,6 +983,30 @@
     const dowNames = ['일','월','화','수','목','금','토'];
     return { year: `${m[1].slice(2)}년`, md: `${parseInt(m[2])}월${parseInt(m[3])}일`, dow: `(${dowNames[dowIdx]})`, dowIdx };
   }
+
+  function initDetailsState(id, storageKey, defaultOpen) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const saved = localStorage.getItem(storageKey);
+    if (saved === 'open') el.open = true;
+    else if (saved === 'closed') el.open = false;
+    else el.open = !!defaultOpen;
+    el.addEventListener('toggle', () => {
+      localStorage.setItem(storageKey, el.open ? 'open' : 'closed');
+    });
+  }
+  initDetailsState('reviewStatusGuideCard', 'review.ui.statusGuideCard', false);
+  document.querySelectorAll('details.card').forEach(function (details) {
+    const sum = details.querySelector(':scope > summary.section-heading');
+    if (!sum) return;
+    sum.addEventListener('click', function (e) {
+      if (e.type !== 'click' || e.button !== 0) return;
+      if (e.target.closest('button.summary-btn')) return;
+      if (e.target.closest('a')) return;
+      if (e.target.closest('input, select, textarea, label')) return;
+      if (!e.target.closest('.collapser')) e.preventDefault();
+    });
+  });
 </script>
 
 <!-- 호출건수 차트 모달 -->
@@ -932,6 +1021,17 @@
   </div>
 </div>
 
+<script>
+  (function mountReviewStatusGuide() {
+    function run() {
+      try {
+        if (window.StatusGuide) StatusGuide.mountDetailInto('#reviewStatusGuideDetailBox');
+      } catch (e) {}
+    }
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', run);
+    else run();
+  })();
+</script>
 <script src="/common/auth.js"></script>
 <script src="/common/nav.js"></script>
 </body>

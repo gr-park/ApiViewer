@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>URL Viewer — URL 분석</title>
+  <link rel="stylesheet" href="/css/common.css">
   <style>
     :root {
       --bg: #f4f6f9; --card: #ffffff; --primary: #3b82f6; --primary-hover: #2563eb;
@@ -25,12 +26,7 @@
     .main { max-width: 1200px; margin: 0 auto; padding: 20px 24px; }
 
     .card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 18px 20px; margin-bottom: 14px; box-shadow: var(--shadow); }
-    .card-title { font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
-    .card-title .dot { width: 8px; height: 8px; border-radius: 50%; }
-    .dot-blue { background: var(--primary); }
-    .dot-purple { background: var(--purple); }
-    .dot-green { background: var(--success); }
-    .dot-red { background: var(--danger); }
+    .main .btn { height: 34px; }
 
     .config-grid { display: grid; grid-template-columns: 2fr 1fr 1.2fr 0.8fr 0.8fr; gap: 10px; }
     .config-grid-w { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 1.5fr; gap: 10px; }
@@ -46,14 +42,6 @@
     .toggle-arrow { font-size: 12px; color: var(--text-muted); transition: transform .2s; }
     .toggle-arrow.open { transform: rotate(180deg); }
 
-    .btn { padding: 8px 20px; border: none; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; transition: background .15s, opacity .15s; white-space: nowrap; height: 34px; }
-    .btn:disabled { opacity: .5; cursor: not-allowed; }
-    .btn-blue { background: var(--primary); color: #fff; }
-    .btn-blue:not(:disabled):hover { background: var(--primary-hover); }
-    .btn-purple { background: var(--purple); color: #fff; }
-    .btn-purple:not(:disabled):hover { background: #7c3aed; }
-    .btn-ghost { background: #f1f5f9; color: var(--text-muted); border: 1px solid var(--border); }
-    .btn-ghost:not(:disabled):hover { background: #e2e8f0; }
     .nav-link { font-size:12px; color:var(--text-muted); font-weight:600; text-decoration:none; padding:6px 12px; border:1px solid var(--border); border-radius:6px; }
     .nav-link:hover { background:#f1f5f9; }
     .nav-active { color:var(--primary) !important; border-color:var(--primary) !important; }
@@ -98,7 +86,7 @@
 
     /* ── 로그 패널 ── */
     .log-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
-    .log-header .card-title { margin-bottom: 0; }
+    .log-header .section-heading { margin-bottom: 0; }
     .log-counts { display: flex; gap: 10px; font-size: 11px; font-weight: 600; }
     .log-counts .cnt-ok { color: var(--success); }
     .log-counts .cnt-warn { color: #d97706; }
@@ -250,6 +238,21 @@
     [data-theme="dark"] .single-debug-box {
       background: var(--bg) !important;
     }
+    .single-debug-fold-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 0;
+    }
+    .single-debug-fold-head .single-debug-fold-title {
+      font-size: 11px;
+      font-weight: 800;
+      color: var(--text-muted);
+      text-transform: none;
+      letter-spacing: 0.04em;
+      min-width: 0;
+    }
 
     /* ─── 다크모드 오버라이드 ─── */
     :root[data-theme="dark"]{
@@ -386,7 +389,7 @@
         <strong id="debugParseTitle">JavaParser 단건 파싱</strong>
         <div id="debugParseMeta" style="font-size:11px;color:var(--text-muted);margin-top:4px;line-height:1.45;word-break:break-all;"></div>
       </div>
-      <button type="button" class="btn btn-ghost" style="flex-shrink:0;height:34px;" onclick="closeDebugParseModal()">닫기</button>
+      <button type="button" class="btn btn-gray" style="flex-shrink:0;height:34px;" onclick="closeDebugParseModal()">닫기</button>
     </div>
     <div class="dps-body">
       <div id="debugParseStatus" style="margin-bottom:10px;font-weight:700;line-height:1.45;"></div>
@@ -419,51 +422,18 @@
 
 <div class="main">
 
-  <!-- ─── 테스트용 의심 키워드 (최상단 — 분석 시 매칭에 사용) ─── -->
-  <div class="card" data-admin-only>
-    <div class="card-title">
-      <span class="dot dot-purple"></span>🧪 테스트용 의심 키워드 (분석 시 매칭)
-    </div>
-    <p style="font-size:12px;color:var(--text-muted);margin-bottom:8px;line-height:1.6;">
-      URL 경로 / 메소드명 / 컨트롤러명 / 파일경로 / 메소드주석 / 컨트롤러주석 / @ApiOperation / @Description 에서
-      대소문자 무시 매칭. 영문·숫자만 2~3글자 키워드는 단어 경계(+ 메소드/컨트롤러 camelCase 토큰 일치), 그 외는 부분일치.
-      fullUrl 은 도메인 false positive 방지로 제외.
-      매칭 결과는 분석현황의 "테스트용 의심" 컬럼에 자동 표시됩니다.
-    </p>
-    <label class="field" style="display:block;">
-      <div id="testSuspectKwList" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px;min-height:28px;"></div>
-      <div style="display:flex;gap:6px;align-items:center;">
-        <input type="text" id="newTestKwInput" placeholder="키워드 입력 후 Enter"
-               style="flex:1;max-width:320px;padding:5px 8px;border:1px solid var(--border);border-radius:4px;font-size:12px;"
-               onkeydown="if(event.key==='Enter'){event.preventDefault();addTestKeyword();}">
-        <button type="button" class="btn btn-ghost" onclick="addTestKeyword()">+ 추가</button>
-        <button type="button" class="btn btn-primary" onclick="saveTestKeywordsAndRecalc()"
-                style="margin-left:auto;">💾 저장 + 전체 재평가</button>
-      </div>
-    </label>
+  <!-- 대분류 헤더(id 유지) — 설정 탭 loadExtractContent 가 함께 마운트 -->
+  <div id="extractHeadingUrl" class="section-header">
+    <h3>🔍 URL 분석</h3>
+    <span class="section-sub">레포 URL 추출 · 키워드 · 경로변수 · 작업 로그</span>
   </div>
 
-  <!-- ─── 경로변수 패턴 (api_path의 {name} 요약) ─── -->
-  <div class="card" data-admin-only>
-    <div class="card-title">
-      <span class="dot dot-purple"></span>🔗 경로변수 패턴 일괄 재계산
-    </div>
-    <p style="font-size:12px;color:var(--text-muted);margin-bottom:8px;line-height:1.6;">
-      <code>api_path</code>에 포함된 Spring 스타일 경로 변수(<code>{version}</code> 등)를 추출해
-      <b>파라미터URL 패턴</b> 컬럼에 저장합니다. 추출 시 자동 반영되며, 기존 DB 일괄 보정 시 아래 버튼을 사용하세요.
-      (호출 이력 URL과 표시 경로가 다를 수 있음을 구분하는 용도)
-    </p>
-    <div style="display:flex;justify-content:flex-end;">
-      <button type="button" class="btn btn-primary" onclick="recalculatePathParamPattern(event)">
-        🔄 전체 재계산
-      </button>
-    </div>
-  </div>
-
+  <!-- 설정 임베드: URL(#extractSectionUrl)·키워드·경로변수·작업카드 / APM(#extractSectionApm) / MOCK(#extractSectionMock) 로 분리 마운트 -->
+  <div id="extractSectionUrl">
   <!-- ─── API 추출 설정 ─── -->
   <div class="card">
-    <div class="card-title">
-      <span class="dot dot-blue"></span>URL 분석 추출
+    <div class="section-heading section-heading--analyze">
+      <span class="dot"></span>URL 분석 추출
       <div style="margin-left:auto;display:flex;align-items:center;gap:8px;">
         <span style="font-size:11px;color:var(--text-muted);font-weight:400;">레포지토리 선택</span>
         <div id="repoConfigSelect" style="min-width:200px;"></div>
@@ -495,72 +465,133 @@
 
     <!-- 공용 액션: 선택 개수와 무관하게 항상 노출 -->
     <div style="margin-top:12px;display:flex;justify-content:flex-end;">
-      <button class="btn btn-blue" id="extractBtn" onclick="doExtract()">추출 시작</button>
+      <button type="button" class="btn btn-purple" id="extractBtn" onclick="doExtract()">추출 시작</button>
     </div>
 
-    <!-- 단건 JavaParser (주로 디버그 목적) -->
+    <!-- 단건 JavaParser (주로 디버그 목적) — 기본 접힘 -->
     <div class="single-debug-box">
-      <div style="font-size:11px;font-weight:800;color:var(--text-muted);margin-bottom:8px;text-transform:none;letter-spacing:.04em;">
-        단건 JavaParser 파싱 (주로 디버그 목적)
+      <div class="single-debug-fold-head">
+        <div class="single-debug-fold-title">🔧 단건 JavaParser 파싱 (주로 디버그 목적)</div>
+        <button type="button" class="btn btn-ghost" id="singleDebugJavaToggleBtn"
+                style="height:28px;padding:4px 12px;font-size:11px;flex-shrink:0;"
+                onclick="toggleSingleDebugJavaSection()">펼치기</button>
       </div>
-      <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;">
-        <label class="field" style="flex:1;min-width:240px;text-transform:none;letter-spacing:0;">
-          파일명 / 경로
-          <input type="text" id="singleDebugRelPath"
-                 placeholder="ROOT 기준 상대경로 또는 절대경로 전체 붙여넣기 (예: src/main/java/.../XxxController.java)"
-                 style="width:100%;"
-                 onkeydown="if(event.key==='Enter'){event.preventDefault();runToolbarSingleDebugParse();}">
-        </label>
-        <input type="file" id="singleDebugFileInput" style="display:none"
-               accept=".java,text/plain,text/x-java-source,application/octet-stream"
-               onchange="onSingleDebugFileChosen(event)">
-        <button type="button" class="btn btn-ghost" style="height:34px;"
-                onclick="document.getElementById('singleDebugFileInput').click()">파일 선택</button>
-        <button type="button" class="btn btn-purple" style="height:34px;" onclick="runToolbarSingleDebugParse()">파싱 실행</button>
+      <div id="singleDebugJavaBody" style="display:none;margin-top:10px;">
+        <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;">
+          <label class="field" style="flex:1;min-width:240px;text-transform:none;letter-spacing:0;">
+            파일명 / 경로
+            <input type="text" id="singleDebugRelPath"
+                   placeholder="ROOT 기준 상대경로 또는 절대경로 전체 붙여넣기 (예: src/main/java/.../XxxController.java)"
+                   style="width:100%;"
+                   onkeydown="if(event.key==='Enter'){event.preventDefault();runToolbarSingleDebugParse();}">
+          </label>
+          <input type="file" id="singleDebugFileInput" style="display:none"
+                 accept=".java,text/plain,text/x-java-source,application/octet-stream"
+                 onchange="onSingleDebugFileChosen(event)">
+          <button type="button" class="btn btn-ghost" style="height:34px;"
+                  onclick="document.getElementById('singleDebugFileInput').click()">파일 선택</button>
+          <button type="button" class="btn btn-purple" style="height:34px;" onclick="runToolbarSingleDebugParse()">파싱 실행</button>
+        </div>
+        <p style="font-size:10px;color:var(--text-muted);margin-top:8px;line-height:1.55;">
+          레포를 고르지 않아도 됩니다. 상대경로만 쓸 때는 상단에서 레포 <b>1개</b>를 선택하거나, 등록된 레포 <code style="font-size:10px;">ROOT_PATH</code>가 포함된 <b>전체 절대경로</b>를 붙여넣으세요.
+          DB 반영은 결과 모달에서 <b>저장할 레포</b>를 골라 실행합니다. 프리픽스·상수 치환은 저장 시 선택한 레포(및 고급 오버라이드)를 따릅니다.
+          <b>파일 선택</b>은 PC의 <code style="font-size:10px;">.java</code>를 지정만 하고, <b>파싱 실행</b>을 눌렀을 때 서버로 전송·파싱합니다(레포 미선택 시 프리픽스는 비우고 미리보기).
+        </p>
       </div>
-      <p style="font-size:10px;color:var(--text-muted);margin-top:8px;line-height:1.55;">
-        레포를 고르지 않아도 됩니다. 상대경로만 쓸 때는 상단에서 레포 <b>1개</b>를 선택하거나, 등록된 레포 <code style="font-size:10px;">ROOT_PATH</code>가 포함된 <b>전체 절대경로</b>를 붙여넣으세요.
-        DB 반영은 결과 모달에서 <b>저장할 레포</b>를 골라 실행합니다. 프리픽스·상수 치환은 저장 시 선택한 레포(및 고급 오버라이드)를 따릅니다.
-        <b>파일 선택</b>은 PC의 <code style="font-size:10px;">.java</code>를 지정만 하고, <b>파싱 실행</b>을 눌렀을 때 서버로 전송·파싱합니다(레포 미선택 시 프리픽스는 비우고 미리보기).
-      </p>
     </div>
 
-    <!-- TS(NestJS) 정규식 파싱 (디버그 목적) -->
+    <!-- TS(NestJS) 정규식 파싱 (디버그 목적) — 기본 접힘 -->
     <div class="single-debug-box" data-admin-only style="margin-top:10px;">
-      <div style="font-size:11px;font-weight:800;color:var(--text-muted);margin-bottom:8px;text-transform:none;letter-spacing:.04em;">
-        TS(NestJS) 정규식 파싱 (디버그 · 폴더 스캔)
+      <div class="single-debug-fold-head">
+        <div class="single-debug-fold-title">📘 TS(NestJS) 정규식 파싱 (디버그 · 폴더 스캔)</div>
+        <button type="button" class="btn btn-ghost" id="singleDebugTsToggleBtn"
+                style="height:28px;padding:4px 12px;font-size:11px;flex-shrink:0;"
+                onclick="toggleSingleDebugTsSection()">펼치기</button>
       </div>
-      <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;">
-        <label class="field" style="flex:1;min-width:280px;text-transform:none;letter-spacing:0;">
-          rootPath (레포 ROOT)
-          <input type="text" id="tsDebugRootPath"
-                 placeholder="예: D:\\LP_DEV\\apiviewer_repo\\LCCMC\\..."
-                 style="width:100%;">
-        </label>
-        <label class="field" style="min-width:220px;text-transform:none;letter-spacing:0;">
-          include(glob)
-          <input type="text" id="tsDebugInclude" value="**/*.ts" style="width:100%;">
-        </label>
-        <label class="field" style="min-width:260px;text-transform:none;letter-spacing:0;">
-          exclude(glob, CSV)
-          <input type="text" id="tsDebugExclude"
-                 value="**/node_modules/**,**/dist/**,**/build/**,**/*.spec.ts,**/*.test.ts,**/*.d.ts"
-                 style="width:100%;">
-        </label>
-        <button type="button" class="btn btn-purple" style="height:34px;" onclick="runTsRegexDebugParse()">TS 파싱 실행</button>
+      <div id="singleDebugTsBody" style="display:none;margin-top:10px;">
+        <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;">
+          <label class="field" style="flex:1;min-width:280px;text-transform:none;letter-spacing:0;">
+            rootPath (레포 ROOT)
+            <input type="text" id="tsDebugRootPath"
+                   placeholder="예: D:\\LP_DEV\\apiviewer_repo\\LCCMC\\..."
+                   style="width:100%;">
+          </label>
+          <label class="field" style="min-width:220px;text-transform:none;letter-spacing:0;">
+            include(glob)
+            <input type="text" id="tsDebugInclude" value="**/*.ts" style="width:100%;">
+          </label>
+          <label class="field" style="min-width:260px;text-transform:none;letter-spacing:0;">
+            exclude(glob, CSV)
+            <input type="text" id="tsDebugExclude"
+                   value="**/node_modules/**,**/dist/**,**/build/**,**/*.spec.ts,**/*.test.ts,**/*.d.ts"
+                   style="width:100%;">
+          </label>
+          <button type="button" class="btn btn-purple" style="height:34px;" onclick="runTsRegexDebugParse()">TS 파싱 실행</button>
+        </div>
+        <p style="font-size:10px;color:var(--text-muted);margin-top:8px;line-height:1.55;">
+          NestJS 데코레이터(<code style="font-size:10px;">@Controller</code> + <code style="font-size:10px;">@Get/@Post...</code>) 패턴을 정규식으로 스캔해 URL 개수를 빠르게 점검합니다.
+          동적 경로(상수 import, concat, template 등)는 <b>UNRESOLVED</b>로 표시되고 스킵될 수 있습니다.
+          결과 모달에서 레포를 선택해 <b>DB 부분 반영</b>도 가능합니다.
+        </p>
       </div>
-      <p style="font-size:10px;color:var(--text-muted);margin-top:8px;line-height:1.55;">
-        NestJS 데코레이터(<code style="font-size:10px;">@Controller</code> + <code style="font-size:10px;">@Get/@Post...</code>) 패턴을 정규식으로 스캔해 URL 개수를 빠르게 점검합니다.
-        동적 경로(상수 import, concat, template 등)는 <b>UNRESOLVED</b>로 표시되고 스킵될 수 있습니다.
-        결과 모달에서 레포를 선택해 <b>DB 부분 반영</b>도 가능합니다.
-      </p>
     </div>
   </div>
+  </div><!-- /#extractSectionUrl -->
 
+  <!-- ─── 테스트용 의심 키워드 (분석 시 매칭에 사용) ─── -->
+  <div id="extractSectionKeywords">
+  <div class="card" data-admin-only>
+    <div class="section-heading section-heading--analyze">
+      <span class="dot"></span>테스트용 의심 키워드 (분석 시 매칭)
+    </div>
+    <p style="font-size:12px;color:var(--text-muted);margin-bottom:8px;line-height:1.6;">
+      URL 경로 / 메소드명 / 컨트롤러명 / 파일경로 / 메소드주석 / 컨트롤러주석 / @ApiOperation / @Description 에서
+      대소문자 무시 매칭. 영문·숫자만 2~3글자 키워드는 단어 경계(+ 메소드/컨트롤러 camelCase 토큰 일치), 그 외는 부분일치.
+      fullUrl 은 도메인 false positive 방지로 제외.
+      매칭 결과는 분석현황의 "테스트용 의심" 컬럼에 자동 표시됩니다.
+    </p>
+    <label class="field" style="display:block;">
+      <div id="testSuspectKwList" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px;min-height:28px;"></div>
+      <div style="display:flex;gap:6px;align-items:center;">
+        <input type="text" id="newTestKwInput" placeholder="키워드 입력 후 Enter"
+               style="flex:1;max-width:320px;padding:5px 8px;border:1px solid var(--border);border-radius:4px;font-size:12px;"
+               onkeydown="if(event.key==='Enter'){event.preventDefault();addTestKeyword();}">
+        <button type="button" class="btn btn-ghost" onclick="addTestKeyword()">+ 추가</button>
+        <button type="button" class="btn btn-blue" onclick="saveTestKeywordsAndRecalc()"
+                style="margin-left:auto;">💾 저장 + 전체 재평가</button>
+      </div>
+    </label>
+  </div>
+  </div><!-- /#extractSectionKeywords -->
+
+  <!-- ─── 경로변수 패턴 (api_path의 {name} 요약) ─── -->
+  <div id="extractSectionPathParams">
+  <div class="card" data-admin-only>
+    <div class="section-heading section-heading--save">
+      <span class="dot"></span>경로변수 패턴 일괄 재계산
+    </div>
+    <p style="font-size:12px;color:var(--text-muted);margin-bottom:8px;line-height:1.6;">
+      <code>api_path</code>에 포함된 Spring 스타일 경로 변수(<code>{version}</code> 등)를 추출해
+      <b>파라미터URL 패턴</b> 컬럼에 저장합니다. 추출 시 자동 반영되며, 기존 DB 일괄 보정 시 아래 버튼을 사용하세요.
+      (호출 이력 URL과 표시 경로가 다를 수 있음을 구분하는 용도)
+    </p>
+    <div style="display:flex;justify-content:flex-end;">
+      <button type="button" class="btn btn-blue" onclick="recalculatePathParamPattern(event)">
+        🔄 전체 재계산
+      </button>
+    </div>
+  </div>
+  </div><!-- /#extractSectionPathParams -->
+
+  <div id="extractHeadingApm" class="section-header">
+    <h3>📈 APM 추출</h3>
+    <span class="section-sub">와탭·제니퍼 호출건수 수집 및 집계</span>
+  </div>
+  <div id="extractSectionApm">
   <!-- ─── APM 호출건수 수집 ─── -->
   <div class="card">
-    <div class="card-title">
-      <span class="dot" style="background:#0ea5e9;"></span>APM 호출건수 수집
+    <div class="section-heading section-heading--analyze">
+      <span class="dot"></span>APM 호출건수 수집
       <span style="font-size:10px;font-weight:400;color:var(--text-muted);">와탭/제니퍼/Mock에서 일자별 호출건수를 수집합니다.</span>
     </div>
 
@@ -572,8 +603,8 @@
         <span style="font-size:10px;color:#0369a1;">모든 레포를 순차적으로 수집 + 집계 자동 반영</span>
       </div>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-        <button class="btn" style="background:#3b82f6;color:#fff;height:36px;font-size:13px;padding:0 20px;" onclick="collectAllApm(false)">⚡ 전체 자동수집 (레포설정 기준)</button>
-        <button class="btn" style="background:#0ea5e9;color:#fff;height:36px;font-size:13px;padding:0 20px;" onclick="aggregateAll()">📊 전체 집계반영</button>
+        <button type="button" class="btn btn-purple" style="height:36px;font-size:13px;padding:0 20px;" onclick="collectAllApm(false)">⚡ 전체 자동수집 (레포설정 기준)</button>
+        <button type="button" class="btn btn-blue" style="height:36px;font-size:13px;padding:0 20px;" onclick="aggregateAll()">📊 전체 집계반영</button>
       </div>
       <div style="font-size:10px;color:#0369a1;margin-top:6px;">
         레포 설정의 APM 활성화 상태에 따라 자동 판단 · WHATAP 최대 365일 / JENNIFER 최대 30일 · 수집 후 집계까지 자동 반영
@@ -620,20 +651,26 @@
       </div>
       <!-- 4줄: 실행 버튼 -->
       <div style="display:flex;gap:8px;">
-        <button class="btn" id="apmCollectBtn" style="background:#0ea5e9;color:#fff;height:34px;" onclick="collectApm()">수집 실행</button>
-        <button class="btn btn-blue" style="height:34px;" onclick="aggregateAfterCollect()">집계 반영</button>
+        <button type="button" class="btn btn-purple" id="apmCollectBtn" style="height:34px;" onclick="collectApm()">수집 실행</button>
+        <button type="button" class="btn btn-blue" style="height:34px;" onclick="aggregateAfterCollect()">집계 반영</button>
       </div>
     </div>
 
     <!-- 결과 메시지 -->
     <div id="apmCollectResult" style="margin-bottom:10px;font-size:12px;color:var(--text-muted);"></div>
   </div>
+  </div><!-- /#extractSectionApm -->
 
+  <div id="extractHeadingMock" class="section-header">
+    <h3>🎲 MOCK</h3>
+    <span class="section-sub">테스트·데모용 Mock 데이터 생성·수집</span>
+  </div>
+  <div id="extractSectionMock">
   <!-- ─── Mock 데이터 생성 (기본 접힘) ─── -->
   <div class="card" id="mockCard">
-    <div class="card-title" style="justify-content:space-between;">
+    <div class="section-heading section-heading--neutral" style="justify-content:space-between;">
       <div style="display:flex;align-items:center;gap:8px;min-width:0;">
-        <span class="dot" style="background:#6366f1;"></span>
+        <span class="dot"></span>
         <span>Mock 데이터 생성</span>
         <span style="font-size:10px;font-weight:400;color:var(--text-muted);">테스트/데모용 더미 데이터를 생성합니다.</span>
       </div>
@@ -665,8 +702,8 @@
                  title="레포당 생성 시 이 값 이하 (최소~최대 사이 균등 랜덤)"
                  style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;">
         </label>
-        <button class="btn" style="background:#6366f1;color:#fff;height:34px;" onclick="generateMockAnalysis()">🎲 생성</button>
-        <button class="btn" style="background:#f59e0b;color:#fff;height:34px;" onclick="deleteMockAnalysis('selected')">🗑 선택 레포 /mock-test/* 삭제</button>
+        <button type="button" class="btn btn-purple" style="height:34px;" onclick="generateMockAnalysis()">🎲 생성</button>
+        <button type="button" class="btn btn-danger" style="height:34px;" onclick="deleteMockAnalysis('selected')">선택 레포 /mock-test/* 삭제</button>
         <button class="btn btn-ghost" style="height:34px;" onclick="deleteMockAnalysis('all')">🧹 전체 /mock-test/* 삭제</button>
       </div>
       <div style="font-size:10px;color:#3730a3;">
@@ -683,12 +720,12 @@
         <span style="font-size:10px;color:#92400e;">실제 APM 연동 전까지 랜덤 호출데이터로 테스트합니다.</span>
       </div>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px;">
-        <button class="btn" style="background:#8b5cf6;color:#fff;height:32px;font-size:12px;" onclick="collectAllApm(true)">🧪 전체 MOCK 수집</button>
+        <button type="button" class="btn btn-purple" style="height:32px;font-size:12px;" onclick="collectAllApm(true)">전체 MOCK 수집</button>
         <span style="border-left:2px solid #fcd34d;height:20px;margin:0 4px;"></span>
         <div id="mockRepoSelect" style="min-width:200px;"></div>
-        <button class="btn" style="background:#8b5cf6;color:#fff;height:32px;font-size:12px;" onclick="collectOneMock()">🧪 선택 레포 수집</button>
-        <button class="btn" style="background:#f59e0b;color:#fff;height:32px;font-size:12px;" onclick="deleteMockData('repo')">🗑 선택 레포 삭제</button>
-        <button class="btn" style="background:#d97706;color:#fff;height:32px;font-size:12px;" onclick="deleteMockData('all')">🗑 전체 MOCK 삭제</button>
+        <button type="button" class="btn btn-purple" style="height:32px;font-size:12px;" onclick="collectOneMock()">선택 레포 수집</button>
+        <button type="button" class="btn btn-danger" style="height:32px;font-size:12px;" onclick="deleteMockData('repo')">선택 레포 삭제</button>
+        <button type="button" class="btn btn-danger" style="height:32px;font-size:12px;" onclick="deleteMockData('all')">전체 MOCK 삭제</button>
       </div>
       <div style="font-size:10px;color:#92400e;">
         전체 수집: 모든 레포에 365일치 MOCK 데이터 생성 &nbsp;·&nbsp; 선택 수집/삭제: 레포 선택 후 실행 &nbsp;·&nbsp; 삭제: WHATAP/JENNIFER 데이터는 유지
@@ -717,7 +754,7 @@
             <input id="seedClean" type="checkbox" checked> 실행 전 기존 test-repo-* 삭제
           </label>
         </label>
-        <button class="btn" style="background:#f59e0b;color:#fff;height:34px;" onclick="seedTestData()">⚡ 시드 데이터 생성</button>
+        <button type="button" class="btn btn-warning" style="height:34px;" onclick="seedTestData()">⚡ 시드 데이터 생성</button>
         <button class="btn btn-ghost" style="height:34px;" onclick="cleanTestData()">🧹 test-repo-* 정리</button>
       </div>
       <div style="font-size:10px;color:#92400e;">
@@ -727,8 +764,10 @@
     </div>
     </div> <!-- /#mockBody -->
   </div>
+  </div><!-- /#extractSectionMock -->
 
   <!-- ─── 작업 진행상황 + 로그 (통합 카드) ─── -->
+  <div id="extractSectionWorkCard">
   <div class="card work-card" id="workCard" style="display:none;">
     <!-- 진행상황 헤더 -->
     <div class="prog-header">
@@ -757,8 +796,8 @@
     <!-- 작업 로그 (카드 내부 섹션) -->
     <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border);">
       <div class="log-header">
-        <div class="card-title" style="margin-bottom:0;font-size:11px;">
-          <span class="dot dot-green"></span>작업 로그
+        <div class="section-heading section-heading--neutral" style="margin-bottom:0;font-size:13px;">
+          <span class="dot"></span>작업 로그
         </div>
         <div class="log-counts" id="logCounts"></div>
       </div>
@@ -774,6 +813,7 @@
       </div>
     </div>
   </div>
+  </div><!-- /#extractSectionWorkCard -->
 
 </div>
 
@@ -944,6 +984,42 @@
   (function initMockFold() {
     const collapsed = localStorage.getItem(MOCK_FOLD_KEY) !== 'false';
     applyMockFoldState(collapsed);
+  })();
+
+  // ── 단건 JavaParser / TS 디버그 블록 접기 (기본: 접힘, localStorage 유지) ──
+  const DEBUG_JAVA_FOLD_KEY = 'extract.debugJavaSectionCollapsed';
+  const DEBUG_TS_FOLD_KEY = 'extract.debugTsSectionCollapsed';
+  function applySingleDebugJavaFoldState(collapsed) {
+    const body = document.getElementById('singleDebugJavaBody');
+    const btn = document.getElementById('singleDebugJavaToggleBtn');
+    if (!body || !btn) return;
+    body.style.display = collapsed ? 'none' : 'block';
+    btn.textContent = collapsed ? '펼치기' : '접기';
+  }
+  function applySingleDebugTsFoldState(collapsed) {
+    const body = document.getElementById('singleDebugTsBody');
+    const btn = document.getElementById('singleDebugTsToggleBtn');
+    if (!body || !btn) return;
+    body.style.display = collapsed ? 'none' : 'block';
+    btn.textContent = collapsed ? '펼치기' : '접기';
+  }
+  function toggleSingleDebugJavaSection() {
+    const collapsed = localStorage.getItem(DEBUG_JAVA_FOLD_KEY) !== 'false';
+    const next = !collapsed;
+    localStorage.setItem(DEBUG_JAVA_FOLD_KEY, String(next));
+    applySingleDebugJavaFoldState(next);
+  }
+  function toggleSingleDebugTsSection() {
+    const collapsed = localStorage.getItem(DEBUG_TS_FOLD_KEY) !== 'false';
+    const next = !collapsed;
+    localStorage.setItem(DEBUG_TS_FOLD_KEY, String(next));
+    applySingleDebugTsFoldState(next);
+  }
+  (function initDebugFoldSections() {
+    const javaCollapsed = localStorage.getItem(DEBUG_JAVA_FOLD_KEY) !== 'false';
+    const tsCollapsed = localStorage.getItem(DEBUG_TS_FOLD_KEY) !== 'false';
+    applySingleDebugJavaFoldState(javaCollapsed);
+    applySingleDebugTsFoldState(tsCollapsed);
   })();
 
   // RepoSelect 기반 헬퍼 — 다중 선택 시 [선택된 repoName 배열] 반환.
@@ -2189,7 +2265,7 @@
     }
 
     badges.innerHTML = [
-      errItems.length ? `<span class="badge err">파싱/추출 에러 ${errItems.length}</span><button type="button" class="badge btn-excel" onclick="downloadIssueExcel('err')">엑셀다운로드</button>` : '',
+      errItems.length ? `<span class="badge err">파싱/추출 에러 ${errItems.length}</span><button type="button" class="badge btn-excel" onclick="downloadIssueExcel('err')">⬇ 엑셀다운로드</button>` : '',
       zeroItems.length ? `<span class="badge zero">0개 추출 ${zeroItems.length}</span>` : '',
       warnItems.length ? `<span class="badge warn">WARN ${warnItems.length}</span>` : ''
     ].filter(Boolean).join('');

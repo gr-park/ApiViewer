@@ -223,6 +223,8 @@ public class ReposYamlConfig {
         private String gitPullEnabled = "Y";
         private String analysisBatchEnabled = "Y";
         private String apmBatchEnabled = "Y";
+        /** NestJS/TS 라우트 스캔 (Y/N, 기본 N) */
+        private String tsAnalysisEnabled = "N";
         private String teamName;
         private String managerName;
         private String businessName;
@@ -248,6 +250,8 @@ public class ReposYamlConfig {
         public void setAnalysisBatchEnabled(String v) { this.analysisBatchEnabled = v; }
         public String getApmBatchEnabled() { return apmBatchEnabled; }
         public void setApmBatchEnabled(String v) { this.apmBatchEnabled = v; }
+        public String getTsAnalysisEnabled() { return tsAnalysisEnabled; }
+        public void setTsAnalysisEnabled(String v) { this.tsAnalysisEnabled = v; }
         public String getTeamName() { return teamName; }
         public void setTeamName(String teamName) { this.teamName = teamName; }
         public String getManagerName() { return managerName; }

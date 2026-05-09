@@ -222,6 +222,9 @@ public class YamlConfigService {
                 rc.setGitPullEnabled(entry.getGitPullEnabled() != null ? entry.getGitPullEnabled() : "Y");
                 rc.setAnalysisBatchEnabled(entry.getAnalysisBatchEnabled() != null ? entry.getAnalysisBatchEnabled() : "Y");
                 rc.setApmBatchEnabled(entry.getApmBatchEnabled() != null ? entry.getApmBatchEnabled() : "Y");
+                rc.setTsAnalysisEnabled(entry.getTsAnalysisEnabled() == null
+                        ? "N"
+                        : normalizeYN(String.valueOf(entry.getTsAnalysisEnabled())));
                 rc.setTeamName(entry.getTeamName());
                 rc.setManagerName(entry.getManagerName());
                 rc.setBusinessName(entry.getBusinessName());

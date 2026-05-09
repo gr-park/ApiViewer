@@ -12,7 +12,7 @@
  * ═══════════════════════════════════════════════════════════════ */
 (function () {
   // UI 버전 표기 (캐시/반영 여부 확인용) — 변경 시 이 값만 갱신
-  const APP_UI_VERSION = 'ver2.1.09';
+  const APP_UI_VERSION = 'ver6.2.15';
 
   const SEGMENTS = [
     {
@@ -32,8 +32,8 @@
         { id: 'call-stats',    label: '📈 URL호출현황',     href: '/url-viewer/call-stats.html' },
         { id: 'block-monitor', label: '🚧 차단 모니터링',   href: '/url-viewer/url-block-monitor.html' },
         { id: 'review',        label: '📝 현업 검토',        href: '/url-viewer/review.html' },
-        { id: 'extract',       label: '🔍 URL 분석',         href: '/url-viewer/extract.html', adminOnly: true },
-        { id: 'workflow',      label: '🗺️ 업무 흐름',       href: '/url-viewer/workflow.html' }
+        { id: 'workflow',      label: '🗺️ 업무 흐름',       href: '/url-viewer/workflow.html' },
+        { id: 'extract',       label: '🔍 URL 분석',         href: '/url-viewer/extract.html', adminOnly: true }
       ]
     },
     {
@@ -110,6 +110,7 @@
         <span class="brand-sub">${esc(brandSub)}</span>
         <div class="utils">
           <button class="dark-toggle" onclick="toggleDarkMode && toggleDarkMode()">🌙 다크모드</button>
+          <span id="nav-assignee-slot"></span>
           <span id="nav-admin-slot"></span>
         </div>
       </div>`;
@@ -144,6 +145,7 @@
     `;
 
     renderAdminSlot();
+    renderAssigneeSlot();
   }
 
   // ─── 배치 Git 동기화 실패 경고 배너 ──────────────────────
@@ -425,6 +427,43 @@
       .catch(() => {});
   }
 
+  // ─── URL분석현황(viewer): 일반사용자(IT담당자) 로그인 슬롯 ─────────────────────────
+  function renderAssigneeSlot() {
+    const slot = document.getElementById('nav-assignee-slot');
+    if (!slot) return;
+    const { segId, pageId } = resolveCurrent();
+    if (segId !== 'url-viewer' || pageId !== 'viewer') {
+      slot.innerHTML = '';
+      return;
+    }
+    if (window.AuthState && window.AuthState.loggedIn) {
+      slot.innerHTML = '';
+      return;
+    }
+    let ed = false;
+    try { ed = window.isEditorLoggedIn && window.isEditorLoggedIn(); } catch (e) {}
+    if (ed) {
+      slot.innerHTML = `
+        <span class="nav-assignee-indicator" id="navAssigneeLabel" title="일반 사용자 세션 — 변경은 제안으로 저장">👤 …</span>
+        <button type="button" class="nav-btn" onclick="window.assigneeLogout && window.assigneeLogout()">일반 로그아웃</button>`;
+      const tok = window.getEditorToken ? window.getEditorToken() : '';
+      if (tok) {
+        fetch('/api/assignee/auth/check', { headers: { 'X-Editor-Token': tok } })
+          .then(r => (r.ok ? r.json() : null))
+          .then(d => {
+            const el = document.getElementById('navAssigneeLabel');
+            if (el && d && d.valid && (d.teamName || d.assigneeName)) {
+              el.textContent = '👤 ' + esc(d.teamName || '') + ' / ' + esc(d.assigneeName || '');
+            }
+          })
+          .catch(() => {});
+      }
+    } else {
+      slot.innerHTML =
+        '<button type="button" class="nav-btn" onclick="window.openAssigneeLoginModal && window.openAssigneeLoginModal()">👤 일반사용자 로그인</button>';
+    }
+  }
+
   // ─── 관리자 인디케이터/버튼 렌더 ─────────────────────────
   function renderAdminSlot() {
     const slot = document.getElementById('nav-admin-slot');
@@ -460,9 +499,13 @@
     loadExtractIssueBanner();
     window.addEventListener('auth:change', () => {
       renderAdminSlot();
+      renderAssigneeSlot();
       applyAdminVisibility();
       loadApmMatchBanner();
       loadExtractIssueBanner();
+    });
+    window.addEventListener('editor-auth:change', () => {
+      renderAssigneeSlot();
     });
   }
   if (document.readyState === 'loading') {
@@ -472,5 +515,5 @@
   }
 
   // 전역 노출 (필요 시 페이지가 재렌더 호출 가능)
-  window.AppNav = { SEGMENTS, render, renderAdminSlot, loadSyncWarnings, renderSyncWarnings, loadOpsDigestBanner, renderOpsDigestBanner };
+  window.AppNav = { SEGMENTS, render, renderAdminSlot, renderAssigneeSlot, loadSyncWarnings, renderSyncWarnings, loadOpsDigestBanner, renderOpsDigestBanner };
 })();

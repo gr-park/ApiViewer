@@ -34,8 +34,12 @@ public class LoggingFilter implements Filter {
                 if ("0:0:0:0:0:0:0:1".equals(ip) || "::1".equals(ip)) ip = "127.0.0.1";
                 MDC.put("clientIp", ip);
 
-                String token = httpReq.getHeader("X-Admin-Token");
-                MDC.put("role", authService.isValid(token) ? "ADMIN" : "USER");
+                String adminTok = httpReq.getHeader("X-Admin-Token");
+                String editorTok = httpReq.getHeader("X-Editor-Token");
+                String role = "USER";
+                if (authService.isAdmin(adminTok)) role = "ADMIN";
+                else if (authService.isEditor(editorTok)) role = "EDITOR";
+                MDC.put("role", role);
             }
             chain.doFilter(request, response);
         } finally {

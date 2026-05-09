@@ -1,7 +1,7 @@
 (function () {
   /**
    * Status Guide (공통)
-   * - viewer.html: "상태 구분 안내"를 파란 박스 내에서 접기/펼치기
+   * - viewer.html: "상태 구분 안내" 본문은 details summary(바깥 pill)로만 접기
    * - dashboard/index.html: "상태 구분(요약)"을 설명형 문구로 + "상세 보기" 모달
    */
   const GUIDE_ID_THRESHOLD = 'guideReviewThreshold';
@@ -46,12 +46,8 @@
 
   function detailInnerHtml() {
     // NOTE: viewer/dashboard 공통으로 쓰기 위해 색상은 inline 유지(다크모드 오버라이드가 이미 프로젝트 전역에 있음)
+    // viewer.html 은 카드 summary(details)의 접기만 사용 — 박스 내부 중복 접기 버튼 없음
     return `
-      <div class="sg-detail-head">
-        <div class="sg-detail-title">상태 구분 안내</div>
-        <button type="button" class="sg-detail-toggle" data-sg-detail-toggle="1" aria-expanded="true">접기</button>
-      </div>
-      <div class="sg-detail-body" data-sg-detail-body="1">
       <div>
         <span style="background:#dcfce7;padding:1px 6px;border-radius:3px;">사용</span> 실제 또는 현업검토 결과 사용중인 URL &nbsp;|&nbsp;
         <span style="background:#f1f5f9;padding:1px 6px;border-radius:3px;color:#64748b;">차단완료</span> @Deprecated + javadoc표기 + UnsupportedOperationException
@@ -74,7 +70,6 @@
         <span style="background:#fef3c7;padding:1px 6px;border-radius:3px;color:#92400e;">②-① 호출0건+변경있음</span> 호출 0건 + 소스변경 1년 미만 &nbsp;|&nbsp;
         <span style="background:#ffedd5;padding:1px 6px;border-radius:3px;color:#9a3412;">②-② 호출 N건 이하+변경없음</span> 호출 1~<span id="${GUIDE_ID_THRESHOLD}">${DEFAULT_THRESHOLD}</span>건 + 1년 경과 (N=설정 reviewThreshold) &nbsp;|&nbsp;
         <span style="background:#ecfccb;padding:1px 6px;border-radius:3px;color:#3f6212;">②-③ 사용으로 변경</span> 추가검토대상에서 담당자 판단으로 사용 유지
-      </div>
       </div>
     `;
   }
@@ -107,24 +102,6 @@
     st.textContent = `
       .sg-compact-head{display:flex;align-items:center;gap:8px;justify-content:flex-start;flex-wrap:wrap;}
       .sg-compact-title{font-weight:900;color:var(--text,#1e293b);}
-      .sg-detail-head{display:flex;align-items:center;gap:10px;justify-content:space-between;margin-bottom:8px;}
-      .sg-detail-title{font-weight:900;font-size:13px;color:#075985;letter-spacing:-0.01em;}
-      .sg-detail-toggle{
-        border:1px solid var(--border,#e2e8f0);
-        background:#f8fafc;
-        color:var(--text-muted,#64748b);
-        border-radius:999px;
-        padding:3px 10px;
-        font-size:11px;
-        font-weight:800;
-        cursor:pointer;
-        white-space:nowrap;
-        user-select:none;
-      }
-      .sg-detail-toggle:hover{background:#eff6ff;border-color:#bfdbfe;color:#1d4ed8;}
-      [data-theme="dark"] .sg-detail-title{color:#7dd3fc;}
-      [data-theme="dark"] .sg-detail-toggle{background:#293548;border-color:var(--border,#334155);color:var(--text-muted,#94a3b8);}
-      [data-theme="dark"] .sg-detail-toggle:hover{background:#1e3a5f;border-color:#1d4ed8;color:#93c5fd;}
       .sg-modal-overlay{position:fixed;inset:0;background:rgba(15,23,42,.55);z-index:9999;display:none;align-items:center;justify-content:center;padding:16px;}
       .sg-modal-overlay.show{display:flex;}
       .sg-modal{width:min(860px, 96vw);max-height:min(82vh, 720px);overflow:auto;background:var(--card,#fff);border:1px solid var(--border,#e2e8f0);border-radius:12px;box-shadow:0 12px 40px rgba(0,0,0,.22);}
@@ -240,29 +217,6 @@
     ensureModalStyle();
     el.innerHTML = detailInnerHtml();
     loadThreshold().then(n => applyThreshold(el, n));
-
-    // 접기/펼치기 (viewer.html 상태 구분 상세 박스용)
-    try {
-      const STORAGE_KEY = 'statusGuide.detail.collapsed';
-      const btn = el.querySelector('[data-sg-detail-toggle="1"]');
-      const body = el.querySelector('[data-sg-detail-body="1"]');
-      if (btn && body) {
-        const apply = (collapsed) => {
-          body.style.display = collapsed ? 'none' : '';
-          btn.textContent = collapsed ? '펼치기' : '접기';
-          btn.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
-        };
-        const initialCollapsed = localStorage.getItem(STORAGE_KEY) === '1';
-        apply(initialCollapsed);
-        btn.addEventListener('click', () => {
-          const collapsed = body.style.display === 'none';
-          const next = !collapsed;
-          // next=true means expanded
-          apply(!next);
-          try { localStorage.setItem(STORAGE_KEY, next ? '0' : '1'); } catch(e) {}
-        });
-      }
-    } catch(e) {}
   }
 
   // expose

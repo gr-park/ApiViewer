@@ -47,6 +47,10 @@ public class RepoConfig {
     @Column(name = "apm_batch_enabled", length = 1)
     private String apmBatchEnabled = "Y";
 
+    /** NestJS/TS 라우트 정규식 스캔 포함 여부 (Y/N, 기본 N) — 전체 추출 시 Java 결과에 병합 */
+    @Column(name = "ts_analysis_enabled", length = 1)
+    private String tsAnalysisEnabled = "N";
+
     @Column(name = "team_name")
     private String teamName;
 
@@ -153,6 +157,8 @@ public class RepoConfig {
     public void setAnalysisBatchEnabled(String v) { this.analysisBatchEnabled = v; }
     public String getApmBatchEnabled() { return apmBatchEnabled != null ? apmBatchEnabled : "Y"; }
     public void setApmBatchEnabled(String v) { this.apmBatchEnabled = v; }
+    public String getTsAnalysisEnabled() { return tsAnalysisEnabled != null ? tsAnalysisEnabled : "N"; }
+    public void setTsAnalysisEnabled(String v) { this.tsAnalysisEnabled = v; }
     public String getTeamName() { return teamName; }
     public void setTeamName(String teamName) { this.teamName = teamName; }
     public String getManagerName() { return managerName; }

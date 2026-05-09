@@ -22,8 +22,8 @@
     .cdlg-input:focus { border-color:#3b82f6; box-shadow:0 0 0 2px rgba(59,130,246,.15); }
     .cdlg-footer { padding:12px 20px; display:flex; justify-content:flex-end; gap:8px; border-top:1px solid #e2e8f0; }
     .cdlg-btn { padding:8px 20px; border:none; border-radius:6px; font-size:13px; font-weight:600; cursor:pointer; font-family:inherit; transition:background .12s; }
-    .cdlg-btn-cancel { background:#f1f5f9; color:#64748b; }
-    .cdlg-btn-cancel:hover { background:#e2e8f0; }
+    .cdlg-btn-cancel { background:#475569; color:#fff; }
+    .cdlg-btn-cancel:hover { background:#334155; }
     .cdlg-btn-ok { background:#3b82f6; color:#fff; }
     .cdlg-btn-ok:hover { background:#2563eb; }
     .cdlg-btn-danger { background:#ef4444; color:#fff; }
@@ -42,10 +42,16 @@
       const inputType = options.type || 'text';
       const defaultValue = options.defaultValue || '';
       const danger = options.danger || false;
+      const multiline = !!options.multiline;
 
       let inputHtml = '';
       if (type === 'prompt') {
-        inputHtml = `<input class="cdlg-input" id="cdlgInput" type="${inputType}" value="${defaultValue}" placeholder="${options.placeholder || ''}" autocomplete="off">`;
+        if (multiline) {
+          const esc = (s) => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
+          inputHtml = `<textarea class="cdlg-input" id="cdlgInput" rows="4" placeholder="${esc(options.placeholder || '')}" autocomplete="off" style="resize:vertical;min-height:88px;">${esc(defaultValue)}</textarea>`;
+        } else {
+          inputHtml = `<input class="cdlg-input" id="cdlgInput" type="${inputType}" value="${defaultValue}" placeholder="${options.placeholder || ''}" autocomplete="off">`;
+        }
       }
 
       let footerHtml = '';
@@ -78,7 +84,7 @@
       }
 
       okBtn.addEventListener('click', () => {
-        if (type === 'prompt') close(input.value);
+        if (type === 'prompt') close(input ? input.value : '');
         else if (type === 'confirm') close(true);
         else close(true);
       });
@@ -90,8 +96,9 @@
         });
       }
 
-      // Enter/Escape 키 처리
+      // Enter/Escape 키 처리 (multiline prompt: Enter는 줄바꿈)
       overlay.addEventListener('keydown', e => {
+        if (e.key === 'Enter' && type === 'prompt' && multiline && e.target === input) return;
         if (e.key === 'Enter') { e.preventDefault(); okBtn.click(); }
         if (e.key === 'Escape') { e.preventDefault(); if (cancelBtn) cancelBtn.click(); else okBtn.click(); }
       });

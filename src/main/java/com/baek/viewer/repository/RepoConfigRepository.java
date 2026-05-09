@@ -14,4 +14,7 @@ public interface RepoConfigRepository extends JpaRepository<RepoConfig, Long> {
     List<RepoConfig> findAllForDisplay();
 
     Optional<RepoConfig> findByRepoName(String repoName);
+
+    @Query("SELECT DISTINCT r.teamName FROM RepoConfig r WHERE r.teamName IS NOT NULL AND TRIM(r.teamName) <> '' ORDER BY r.teamName")
+    List<String> findDistinctTeamNames();
 }

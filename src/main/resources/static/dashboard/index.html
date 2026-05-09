@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>URL Viewer — 대시보드</title>
+  <link rel="stylesheet" href="/css/common.css">
   <style>
     :root {
       --bg:#f4f6f9; --card:#fff; --primary:#3b82f6; --primary-hover:#2563eb;
@@ -34,7 +35,7 @@
     .top-bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;}
     .top-bar h2{font-size:16px;font-weight:700;color:var(--text);}
     .top-bar .last-updated{font-size:11px;color:var(--text-muted);}
-    .btn-refresh{padding:6px 16px;background:var(--primary);color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;}
+    .btn-refresh{padding:6px 16px;background:var(--primary);color:#fff;border:none;border-radius:10px;font-size:12px;font-weight:600;cursor:pointer;}
     .btn-refresh:hover{background:var(--primary-hover);}
 
     /* ── 요약 카드 ── */
@@ -63,11 +64,6 @@
 
     /* ── 카드 공통 ── */
     .card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:20px;margin-bottom:16px;box-shadow:var(--shadow);}
-    .card-title{font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:16px;display:flex;align-items:center;gap:8px;}
-    .card-title .dot{width:8px;height:8px;border-radius:50%;}
-    .dot-blue{background:var(--primary);} .dot-green{background:var(--success);}
-    .dot-orange{background:var(--target);} .dot-purple{background:var(--purple);}
-    .dot-gray{background:var(--text-muted);}
 
     /* ── 2단 그리드 ── */
     .two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
@@ -198,7 +194,7 @@
     /* ── 탭 ── */
     .tabs{display:flex;flex-wrap:wrap;align-items:center;gap:2px;border-bottom:2px solid var(--border);margin-bottom:16px;}
     .tab-excel-btn{
-      margin-left:auto;font-size:11px;font-weight:700;padding:6px 12px;border-radius:6px;border:1px solid var(--border);
+      margin-left:auto;font-size:11px;font-weight:700;padding:6px 12px;border-radius:10px;border:1px solid var(--border);
       background:#f0fdf4;color:#166534;cursor:pointer;font-family:inherit;white-space:nowrap;
     }
     .tab-excel-btn:hover{background:#dcfce7;border-color:#86efac;}
@@ -439,7 +435,7 @@
       display: none !important;
     }
 
-    /* 상태 구분 안내(상세)는 URL분석현황 화면으로 이동 */
+    /* 상태 구분 안내 상세는 URL분석현황 화면으로 이동 */
 
     /* URL 현황: "잔여 ~ ①-② 담당자판단" 컬럼만 외곽 강조 */
     :root { --ov-block-outline: rgba(159,18,57,.45); } /* #9f1239 약하게 */
@@ -620,28 +616,13 @@
       color: #e2e8f0 !important;
     }
 
-    /* 대시보드 섹션 구분 */
-    .section-header {
-      display:flex; align-items:baseline; gap:10px;
-      margin:22px 0 12px; padding:8px 0 6px;
-      border-bottom:2px solid var(--border);
-    }
-    .section-header:first-of-type { margin-top:10px; }
-    .section-header h3 {
-      margin:0; font-size:15px; font-weight:800; color:var(--text);
-      display:inline-flex; align-items:center; gap:6px;
-    }
-    .section-header .section-sub {
-      font-size:11px; color:var(--text-muted); font-weight:500;
-    }
+    /* 대시보드 섹션 구분: common.css의 .section-header 사용 (section-badge만 로컬 유지) */
     .section-header .section-badge {
       margin-left:auto; padding:2px 10px; border-radius:10px;
       background:#fef3c7; color:#92400e;
       font-size:10px; font-weight:700; letter-spacing:.04em;
     }
-    [data-theme="dark"] .section-header .section-badge {
-      background:#1c1408; color:#fcd34d;
-    }
+    [data-theme="dark"] .section-header .section-badge { background:#1c1408; color:#fcd34d; }
 
     /* 차후 오픈 예정 플레이스홀더 */
     .coming-soon {
@@ -652,17 +633,8 @@
     .coming-soon .icon { font-size:36px; margin-bottom:8px; opacity:.75; }
     .coming-soon .title { font-size:13px; font-weight:700; color:var(--text); margin-bottom:4px; }
 
-    /* URL 차단 배포일자: 기간 버튼 */
-    .range-btns { margin-left:auto; display:flex; align-items:center; gap:6px; }
-    .range-btn {
-      border:1px solid var(--border); background:#f8fafc; color:var(--text-muted);
-      border-radius:999px; padding:4px 10px; font-size:11px; font-weight:700;
-      cursor:pointer; user-select:none;
-    }
-    .range-btn:hover { background:#eff6ff; border-color:#bfdbfe; color:#1d4ed8; }
-    .range-btn.active { background:#dbeafe; border-color:#93c5fd; color:#1d4ed8; }
-    [data-theme="dark"] .range-btn { background:#293548; }
-    [data-theme="dark"] .range-btn.active { background:#1e3a5f; border-color:#1d4ed8; color:#93c5fd; }
+    /* URL 차단 배포일자: 기간 버튼 — 스타일은 common.css `.date-quick-seg` */
+    .range-btns { margin-left:auto; display:flex; align-items:center; flex-shrink:0; }
     .range-check {
       display:inline-flex; align-items:center; gap:6px;
       font-size:11px; font-weight:700; color:var(--text-muted);
@@ -752,7 +724,7 @@
     <!-- ── 상태 분포 + 당일 배치 요약 ── -->
     <div class="two-col two-col-equal-height" id="dashDistBatchRow">
       <div class="card dash-dist-card">
-        <div class="card-title"><span class="dot dot-blue"></span>전체 상태 분포</div>
+        <div class="section-heading section-heading--query"><span class="dot"></span>전체 상태 분포</div>
         <div class="status-dist" id="distBar"></div>
         <div class="status-legend">
           <div class="legend-item"><div class="legend-dot seg-use"></div>사용</div>
@@ -765,8 +737,8 @@
         <div class="dist-guide-compact" id="dashStatusGuideCompact" style="margin-top:14px;"></div>
       </div>
       <div class="card dash-batch-card">
-        <div class="card-title" style="display:flex;align-items:center;flex-wrap:wrap;gap:8px;">
-          <span class="dot" style="background:#0ea5e9;"></span>시스템 배치 수행 결과
+        <div class="section-heading section-heading--query" style="display:flex;align-items:center;flex-wrap:wrap;gap:8px;">
+          <span class="dot"></span>시스템 배치 수행 결과
           <span id="batchDashTitleDate" style="font-size:10px;font-weight:600;color:var(--text-muted);text-transform:none;letter-spacing:0;"></span>
         </div>
         <div id="batchBlockAlertBanner" class="batch-block-alert-banner" hidden></div>
@@ -803,7 +775,7 @@
         <div class="tab active" onclick="switchOverviewTab('team',this)">팀</div>
         <div class="tab" onclick="switchOverviewTab('repo',this)">업무</div>
         <div class="tab" onclick="switchOverviewTab('manager',this)">담당자</div>
-        <button type="button" class="tab-excel-btn" onclick="downloadBlockOverviewExcel()">엑셀 다운로드</button>
+        <button type="button" class="tab-excel-btn" onclick="downloadBlockOverviewExcel()">⬇ 엑셀 다운로드</button>
       </div>
 
       <div class="tab-panel active" id="panel-overview-team">
@@ -844,10 +816,12 @@
       <h3>📅 URL 차단 배포일자</h3>
       <span class="section-sub">차단대상 잔여(①-①/①-②)만 배포 예정일 분포를 표시합니다. 일자 미정은 "일정수립필요"로 집계됩니다.</span>
       <div class="range-btns" id="deployRangeBtns">
-        <button class="range-btn" data-range="1w"  onclick="setDeployRange('1w', this)">1주</button>
-        <button class="range-btn" data-range="2w"  onclick="setDeployRange('2w', this)">2주</button>
-        <button class="range-btn" data-range="1m"  onclick="setDeployRange('1m', this)">1달</button>
-        <button class="range-btn" data-range="all" onclick="setDeployRange('all', this)">전체</button>
+        <span class="date-quick-seg" role="group" aria-label="배포일자 표시 기간 빠른 선택">
+          <button type="button" class="date-quick-seg__btn" data-range="1w"  onclick="setDeployRange('1w', this)">1주</button>
+          <button type="button" class="date-quick-seg__btn" data-range="2w"  onclick="setDeployRange('2w', this)">2주</button>
+          <button type="button" class="date-quick-seg__btn" data-range="1m"  onclick="setDeployRange('1m', this)">1달</button>
+          <button type="button" class="date-quick-seg__btn" data-range="all" onclick="setDeployRange('all', this)">전체</button>
+        </span>
       </div>
     </div>
     <div class="card">
@@ -855,7 +829,7 @@
         <div class="tab active" onclick="switchDeployTab('team',this)">팀</div>
         <div class="tab" onclick="switchDeployTab('repo',this)">업무</div>
         <div class="tab" onclick="switchDeployTab('manager',this)">담당자</div>
-        <button type="button" class="tab-excel-btn" onclick="downloadDeployScheduleExcel()">엑셀 다운로드</button>
+        <button type="button" class="tab-excel-btn" onclick="downloadDeployScheduleExcel()">⬇ 엑셀 다운로드</button>
       </div>
 
       <div class="tab-panel active" id="panel-deploy-team">
@@ -897,14 +871,14 @@
     <!-- ── URL 호출건수 TOP 10 (대시보드 하단) ── -->
     <div class="two-col" style="margin-top:14px;">
       <div class="card">
-        <div class="card-title"><span class="dot" style="background:#f59e0b;"></span>전체 URL 호출건수 TOP 10 <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text-muted);margin-left:6px;">(최근 1년, 집계 기준)</span></div>
+        <div class="section-heading section-heading--query"><span class="dot"></span>전체 URL 호출건수 TOP 10 <span style="font-weight:400;color:var(--text-muted);margin-left:6px;">(최근 1년, 집계 기준)</span></div>
         <div id="dashTopApisWrap" style="max-height:360px;overflow:auto;">
           <div style="text-align:center;padding:20px;color:var(--text-muted);font-size:12px;">로딩 중...</div>
         </div>
       </div>
       <div class="card">
-        <div class="card-title" style="display:flex;align-items:center;gap:8px;">
-          <span class="dot" style="background:#8b5cf6;"></span>레포별 TOP 10 호출건수 <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text-muted);font-size:10px;">(최근 1년, 집계 기준)</span>
+        <div class="section-heading section-heading--analyze" style="display:flex;align-items:center;gap:8px;">
+          <span class="dot"></span>레포별 TOP 10 호출건수 <span style="font-weight:400;color:var(--text-muted);font-size:10px;">(최근 1년, 집계 기준)</span>
           <div id="dashTopRepoSelect" style="margin-left:auto;min-width:200px;"></div>
         </div>
         <div id="dashTopRepoApisWrap" style="max-height:360px;overflow:auto;">
@@ -1069,8 +1043,7 @@
     // 버튼 active 처리
     try {
       const wrap = document.getElementById('deployRangeBtns');
-      if (wrap) wrap.querySelectorAll('.range-btn').forEach(b => b.classList.toggle('active', b.dataset.range === deployRangeMode));
-      if (btnEl) btnEl.classList.add('active');
+      if (wrap) wrap.querySelectorAll('.date-quick-seg__btn').forEach(b => b.classList.toggle('active', b.dataset.range === deployRangeMode));
     } catch(e) {}
     // 데이터가 있으면 즉시 재렌더
     if (deployScheduleData) renderDeploySchedule(deployScheduleData);
@@ -2269,7 +2242,7 @@
     }
     try {
       const wrap = document.getElementById('deployRangeBtns');
-      if (wrap) wrap.querySelectorAll('.range-btn').forEach(b => b.classList.toggle('active', b.dataset.range === deployRangeMode));
+      if (wrap) wrap.querySelectorAll('.date-quick-seg__btn').forEach(b => b.classList.toggle('active', b.dataset.range === deployRangeMode));
     } catch(e) {}
 
     const allDates = d.dates || [];

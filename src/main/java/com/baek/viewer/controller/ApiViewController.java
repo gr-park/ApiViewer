@@ -2,6 +2,7 @@ package com.baek.viewer.controller;
 
 import com.baek.viewer.model.ApiInfo;
 import com.baek.viewer.model.ApiRecord;
+import com.baek.viewer.model.ApiRecordProposal;
 import com.baek.viewer.model.ApiRecordStatsDto;
 import com.baek.viewer.model.ApiRecordSummary;
 import com.baek.viewer.model.BlockOverviewDto;
@@ -12,6 +13,7 @@ import com.baek.viewer.model.RepoConfig;
 import com.baek.viewer.model.WhatapRequest;
 import com.baek.viewer.model.WhatapResult;
 import com.baek.viewer.repository.ApiRecordRepository;
+import com.baek.viewer.repository.ApiRecordProposalRepository;
 import com.baek.viewer.util.PathParamPatternUtil;
 import com.baek.viewer.repository.GlobalConfigRepository;
 import com.baek.viewer.repository.RepoConfigRepository;
@@ -35,6 +37,8 @@ import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Expression;
 import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.JoinType;
+import jakarta.persistence.criteria.Root;
+import jakarta.persistence.criteria.Subquery;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -60,6 +64,7 @@ public class ApiViewController {
     private final com.baek.viewer.service.AuthService authService;
     private final com.baek.viewer.service.TestSuspectMatcher testSuspectMatcher;
     private final com.baek.viewer.service.YamlConfigService yamlConfigService;
+    private final ApiRecordProposalRepository proposalRepository;
 
     public ApiViewController(ApiExtractorService extractorService,
                              WhatapService whatapService,
@@ -69,7 +74,8 @@ public class ApiViewController {
                              ApiStorageService storageService,
                              com.baek.viewer.service.AuthService authService,
                              com.baek.viewer.service.TestSuspectMatcher testSuspectMatcher,
-                             com.baek.viewer.service.YamlConfigService yamlConfigService) {
+                             com.baek.viewer.service.YamlConfigService yamlConfigService,
+                             ApiRecordProposalRepository proposalRepository) {
         this.extractorService = extractorService;
         this.whatapService = whatapService;
         this.recordRepository = recordRepository;
@@ -79,14 +85,31 @@ public class ApiViewController {
         this.authService = authService;
         this.testSuspectMatcher = testSuspectMatcher;
         this.yamlConfigService = yamlConfigService;
+        this.proposalRepository = proposalRepository;
     }
 
     /** 토큰 유효성 확인 (페이지 로드 시 자동 검증용) + 남은 수명 반환 */
     @GetMapping("/auth/check")
-    public ResponseEntity<?> checkAuth(@RequestHeader(value = "X-Admin-Token", required = false) String token) {
-        boolean valid = token != null && authService.isValid(token);
-        long remainingMs = valid ? authService.remainingMs(token) : 0L;
-        return ResponseEntity.ok(Map.of("valid", valid, "remainingMs", remainingMs));
+    public ResponseEntity<?> checkAuth(@RequestHeader(value = "X-Admin-Token", required = false) String adminToken,
+                                       @RequestHeader(value = "X-Editor-Token", required = false) String editorToken) {
+        Map<String, Object> m = new LinkedHashMap<>();
+        if (authService.isAdmin(adminToken)) {
+            m.put("valid", true);
+            m.put("remainingMs", authService.remainingMs(adminToken));
+            m.put("role", "ADMIN");
+            return ResponseEntity.ok(m);
+        }
+        if (authService.isEditor(editorToken)) {
+            m.put("valid", true);
+            m.put("remainingMs", authService.remainingMs(editorToken));
+            m.put("role", "EDITOR");
+            m.put("assigneeId", authService.getEditorAssigneeId(editorToken));
+            return ResponseEntity.ok(m);
+        }
+        m.put("valid", false);
+        m.put("remainingMs", 0L);
+        m.put("role", null);
+        return ResponseEntity.ok(m);
     }
 
     /** 비밀번호 확인 → 토큰 발급 + 쿠키 설정 */
@@ -120,7 +143,12 @@ public class ApiViewController {
             String cookieValue = String.format("adminToken=%s; Path=/; SameSite=Lax", token);
             response.addHeader("Set-Cookie", cookieValue);
             long remainingMs = authService.remainingMs(token);
-            return ResponseEntity.ok(Map.of("valid", true, "token", token, "remainingMs", remainingMs));
+            Map<String, Object> bodyOut = new LinkedHashMap<>();
+            bodyOut.put("valid", true);
+            bodyOut.put("token", token);
+            bodyOut.put("remainingMs", remainingMs);
+            bodyOut.put("role", "ADMIN");
+            return ResponseEntity.ok(bodyOut);
         }
         log.warn("[인증 실패] 비밀번호 불일치");
         return ResponseEntity.ok(Map.of("valid", false));
@@ -409,6 +437,7 @@ public class ApiViewController {
                                      @RequestParam(required = false) String deployTo,
                                      @RequestParam(required = false) String deployManager,
                                      @RequestParam(required = false) Boolean deployUnscheduled,
+                                     @RequestParam(required = false) Boolean hasPendingProposal,
                                      @RequestParam(required = false) Integer page,
                                      @RequestParam(required = false) Integer size,
                                      @RequestParam(required = false) String sort) {
@@ -444,7 +473,9 @@ public class ApiViewController {
                 || (deployFrom != null && !deployFrom.isBlank())
                 || (deployTo != null && !deployTo.isBlank())
                 || (deployManager != null && !deployManager.isBlank())
-                || (deployUnscheduled != null);
+                || (deployUnscheduled != null)
+                || Boolean.TRUE.equals(hasPendingProposal)
+                || "pendingProposal".equals(alert);
 
         if (paged || hasDynamicFilter) {
             int pageIdx  = paged ? Math.max(0, page) : 0;
@@ -458,12 +489,17 @@ public class ApiViewController {
             Specification<ApiRecord> spec = buildSpec(repository, repoList, blockTargetOnly,
                     status, statusGroup, testSuspect, pathParams, logWorkExcluded, recentLogOnly, httpMethod, isDeprecated, q, alert, ids,
                     modifiedFrom, modifiedTo, cboFrom, cboTo, deployFrom, deployTo, deployManager, deployUnscheduled,
-                    useRepoDisplayOrderSort);
+                    useRepoDisplayOrderSort, hasPendingProposal);
 
             Page<ApiRecord> entityPage = recordRepository.findAll(spec, pageable);
-            // 엔티티 → 경량 summary Map 변환 (TEXT 필드 강제 제외)
+            List<Long> pageIds = entityPage.getContent().stream().map(ApiRecord::getId).toList();
+            java.util.Set<Long> pendingIds = pageIds.isEmpty()
+                    ? java.util.Set.of()
+                    : new java.util.HashSet<>(proposalRepository.findRecordIdsHavingProposal(pageIds));
+            java.util.Map<Long, String> proposalSummaries = proposalSummariesByRecordIds(pageIds);
             List<Map<String, Object>> summaryList = entityPage.getContent().stream()
-                    .map(ApiViewController::toSummaryMap)
+                    .map(r -> toSummaryMap(r, pendingIds.contains(r.getId()),
+                            proposalSummaries.getOrDefault(r.getId(), "")))
                     .collect(Collectors.toList());
 
             log.info("[목록 조회·필터] repo={}, status={}, method={}, q={}, alert={}, page={}/{}, size={}, total={}, 소요={}ms",
@@ -556,8 +592,14 @@ public class ApiViewController {
         };
         Page<ApiRecord> entityPage = recordRepository.findAll(spec, pageable);
 
+        List<Long> pageIds2 = entityPage.getContent().stream().map(ApiRecord::getId).toList();
+        java.util.Set<Long> pendingIds2 = pageIds2.isEmpty()
+                ? java.util.Set.of()
+                : new java.util.HashSet<>(proposalRepository.findRecordIdsHavingProposal(pageIds2));
+        java.util.Map<Long, String> proposalSummaries2 = proposalSummariesByRecordIds(pageIds2);
         List<Map<String, Object>> summaryList = entityPage.getContent().stream()
-                .map(ApiViewController::toSummaryMap)
+                .map(r -> toSummaryMap(r, pendingIds2.contains(r.getId()),
+                        proposalSummaries2.getOrDefault(r.getId(), "")))
                 .collect(Collectors.toList());
 
         Map<String, Object> response = new LinkedHashMap<>();
@@ -579,7 +621,8 @@ public class ApiViewController {
                                                 String cboFrom, String cboTo,
                                                 String deployFrom, String deployTo,
                                                 String deployManager, Boolean deployUnscheduled,
-                                                boolean useRepoDisplayOrderSort) {
+                                                boolean useRepoDisplayOrderSort,
+                                                Boolean hasPendingProposal) {
         return (root, query, cb) -> {
             List<Predicate> ps = new ArrayList<>();
 
@@ -703,8 +746,22 @@ public class ApiViewController {
                             cb.isNotNull(root.get("reviewResult")),
                             cb.notEqual(root.get("reviewResult"), "")));
                     case "deleted"  -> ps.add(cb.equal(root.get("status"), "삭제"));
+                    case "pendingProposal" -> {
+                        Subquery<Long> sq = query.subquery(Long.class);
+                        Root<ApiRecordProposal> pr = sq.from(ApiRecordProposal.class);
+                        sq.select(pr.get("recordId"));
+                        sq.where(cb.equal(pr.get("recordId"), root.get("id")));
+                        ps.add(cb.exists(sq));
+                    }
                     default -> {}
                 }
+            }
+            if (Boolean.TRUE.equals(hasPendingProposal)) {
+                Subquery<Long> sq = query.subquery(Long.class);
+                Root<ApiRecordProposal> pr = sq.from(ApiRecordProposal.class);
+                sq.select(pr.get("recordId"));
+                sq.where(cb.equal(pr.get("recordId"), root.get("id")));
+                ps.add(cb.exists(sq));
             }
             if (ids != null && !ids.isBlank()) {
                 List<Long> idList = Arrays.stream(ids.split(","))
@@ -764,8 +821,20 @@ public class ApiViewController {
         return PathParamPatternUtil.fromApiPath(r.getApiPath());
     }
 
+    private java.util.Map<Long, String> proposalSummariesByRecordIds(List<Long> recordIds) {
+        if (recordIds == null || recordIds.isEmpty()) {
+            return java.util.Map.of();
+        }
+        java.util.Map<Long, String> out = new java.util.HashMap<>();
+        for (ApiRecordProposal p : proposalRepository.findByRecordIdIn(recordIds)) {
+            String s = p.getSummaryText();
+            out.put(p.getRecordId(), s != null ? s : "");
+        }
+        return out;
+    }
+
     /** ApiRecord → 경량 summary Map — TEXT 컬럼(fullComment 등) 응답에서 제외 */
-    private static Map<String, Object> toSummaryMap(ApiRecord r) {
+    private Map<String, Object> toSummaryMap(ApiRecord r, boolean hasPendingProposal, String proposalRequestSummary) {
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("id",                 r.getId());
         m.put("repositoryName",     r.getRepositoryName());
@@ -826,6 +895,8 @@ public class ApiViewController {
         m.put("jiraIssueKey",       r.getJiraIssueKey());
         m.put("jiraIssueUrl",       r.getJiraIssueUrl());
         m.put("jiraSyncedAt",       r.getJiraSyncedAt());
+        m.put("hasPendingProposal", hasPendingProposal);
+        m.put("proposalRequestSummary", proposalRequestSummary != null ? proposalRequestSummary : "");
         return m;
     }
 
@@ -911,6 +982,9 @@ public class ApiViewController {
         long pathParamPatternCount = hasRepo
                 ? recordRepository.countPathParamPatternForRepos(repoFilter)
                 : recordRepository.countPathParamPattern();
+        long pendingProposalCount = hasRepo
+                ? proposalRepository.countDistinctPendingRecordsForRepos(repoFilter)
+                : proposalRepository.countDistinctPendingRecords();
         // ①-② 호출0건+변경없음 — 옛 "최우선 차단대상" + logWorkExcluded=false. 이제 status 자체가 leaf 이므로 단순 countByStatus.
         long priorityPureCount = byStatus.getOrDefault("①-① 차단대상", 0L);
 
@@ -941,6 +1015,7 @@ public class ApiViewController {
         response.put("markingIncompleteCount", markingIncompleteCount);
         response.put("testSuspectCount", testSuspectCount);
         response.put("pathParamPatternCount", pathParamPatternCount);
+        response.put("pendingProposalCount", pendingProposalCount);
         response.put("byStatus",     byStatus);
         response.put("byCategory",   byCategory);  // 7카드 통합
         response.put("byMethod",     byMethod);
@@ -989,7 +1064,11 @@ public class ApiViewController {
             return ResponseEntity.badRequest().body(Map.of("error", "repositoryName, apiPath 가 필요합니다."));
         }
         Optional<ApiRecord> found = resolveRecordByKeyForMonitor(repositoryName, apiPath, hmRaw);
-        return found.<ResponseEntity<?>>map(r -> ResponseEntity.ok(toSummaryMap(r)))
+        return found.<ResponseEntity<?>>map(r -> {
+                    Optional<ApiRecordProposal> pp = proposalRepository.findByRecordId(r.getId());
+                    String summ = pp.map(ApiRecordProposal::getSummaryText).orElse("");
+                    return ResponseEntity.ok(toSummaryMap(r, pp.isPresent(), summ != null ? summ : ""));
+                })
                 .orElseGet(() -> ResponseEntity.status(404).body(Map.of(
                         "error", "레코드를 찾을 수 없습니다.",
                         "repositoryName", repositoryName,
@@ -1069,6 +1148,9 @@ public class ApiViewController {
     @PatchMapping("/db/status")
     public ResponseEntity<?> updateStatus(@RequestBody Map<String, Object> body, HttpServletRequest httpReq) {
         try {
+            if (!authService.isAdmin(httpReq.getHeader("X-Admin-Token"))) {
+                return ResponseEntity.status(401).body(Map.of("error", "관리자 인증이 필요합니다."));
+            }
             @SuppressWarnings("unchecked")
             List<Integer> rawIds = (List<Integer>) body.get("ids");
             if (rawIds == null || rawIds.isEmpty()) {
@@ -1089,8 +1171,11 @@ public class ApiViewController {
     /** 알림 플래그 일괄 해제 — isNew + statusChanged 모두 (차단완료건 포함)
      *  대용량 최적화: findById 루프 제거, @Modifying 벌크 UPDATE 2건으로 처리. */
     @PatchMapping("/db/clear-alerts")
-    public ResponseEntity<?> clearAlerts(@RequestBody Map<String, Object> body) {
+    public ResponseEntity<?> clearAlerts(@RequestBody Map<String, Object> body, HttpServletRequest httpReq) {
         try {
+            if (!authService.isAdmin(httpReq.getHeader("X-Admin-Token"))) {
+                return ResponseEntity.status(401).body(Map.of("error", "관리자 인증이 필요합니다."));
+            }
             @SuppressWarnings("unchecked")
             List<Integer> rawIds = (List<Integer>) body.get("ids");
             if (rawIds == null || rawIds.isEmpty()) {
@@ -1116,8 +1201,11 @@ public class ApiViewController {
     /** 상태변경 플래그 해제 (IT 담당자 확인 후)
      *  대용량 최적화: @Modifying 벌크 UPDATE. */
     @PatchMapping("/db/clear-status-change")
-    public ResponseEntity<?> clearStatusChange(@RequestBody Map<String, Object> body) {
+    public ResponseEntity<?> clearStatusChange(@RequestBody Map<String, Object> body, HttpServletRequest httpReq) {
         try {
+            if (!authService.isAdmin(httpReq.getHeader("X-Admin-Token"))) {
+                return ResponseEntity.status(401).body(Map.of("error", "관리자 인증이 필요합니다."));
+            }
             @SuppressWarnings("unchecked")
             List<Integer> rawIds = (List<Integer>) body.get("ids");
             if (rawIds == null || rawIds.isEmpty()) {
@@ -1143,6 +1231,9 @@ public class ApiViewController {
     @PatchMapping("/db/record/{id}")
     public ResponseEntity<?> updateRecord(@PathVariable Long id, @RequestBody Map<String, Object> body, HttpServletRequest httpReq) {
         try {
+            if (!authService.isAdmin(httpReq.getHeader("X-Admin-Token"))) {
+                return ResponseEntity.status(401).body(Map.of("error", "관리자 인증이 필요합니다."));
+            }
             String ip = getClientIp(httpReq);
             ApiRecord r = recordRepository.findById(id)
                     .orElseThrow(() -> new IllegalArgumentException("레코드를 찾을 수 없습니다: " + id));
@@ -1207,6 +1298,10 @@ public class ApiViewController {
                 r.setDeployScheduledDate(ds.isEmpty() ? null : java.time.LocalDate.parse(ds)); anyChanged = true;
             }
             if (body.containsKey("deployCsr")) { r.setDeployCsr(body.get("deployCsr") != null ? body.get("deployCsr").toString() : null); anyChanged = true; }
+            if (body.containsKey("deployManager")) {
+                r.setDeployManager(body.get("deployManager") != null ? body.get("deployManager").toString() : null);
+                anyChanged = true;
+            }
             if (body.containsKey("reviewTeam"))      { r.setReviewTeam(body.get("reviewTeam") != null ? body.get("reviewTeam").toString() : null); anyChanged = true; reviewChanged = true; }
             if (body.containsKey("reviewManager"))   { r.setReviewManager(body.get("reviewManager") != null ? body.get("reviewManager").toString() : null); anyChanged = true; reviewChanged = true; }
 
@@ -1257,6 +1352,9 @@ public class ApiViewController {
     @PatchMapping("/db/record/{id}/path")
     public ResponseEntity<?> updateRecordApiPath(@PathVariable Long id, @RequestBody Map<String, Object> body, HttpServletRequest httpReq) {
         try {
+            if (!authService.isAdmin(httpReq.getHeader("X-Admin-Token"))) {
+                return ResponseEntity.status(401).body(Map.of("error", "관리자 인증이 필요합니다."));
+            }
             String ip = getClientIp(httpReq);
             Object v = body.get("apiPath");
             String newPath = v == null ? null : v.toString().trim();
@@ -1310,6 +1408,9 @@ public class ApiViewController {
      */
     @PatchMapping("/db/review/bulk")
     public ResponseEntity<?> bulkUploadReview(@RequestBody List<Map<String, String>> items, HttpServletRequest httpReq) {
+        if (!authService.isAdmin(httpReq.getHeader("X-Admin-Token"))) {
+            return ResponseEntity.status(401).body(Map.of("error", "관리자 인증이 필요합니다."));
+        }
         String ip = getClientIp(httpReq);
         java.time.LocalDateTime now = java.time.LocalDateTime.now();
         int matched = 0, skipped = 0;

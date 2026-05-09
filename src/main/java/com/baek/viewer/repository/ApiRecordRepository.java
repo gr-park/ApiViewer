@@ -225,4 +225,7 @@ public interface ApiRecordRepository extends JpaRepository<ApiRecord, Long>,
     @Query("UPDATE ApiRecord r SET r.statusChanged = false, r.statusChangeLog = null "
             + "WHERE r.id IN :ids AND r.statusChanged = true")
     int bulkClearStatusChanged(@Param("ids") Collection<Long> ids);
+
+    @Query("SELECT DISTINCT r.teamOverride FROM ApiRecord r WHERE r.teamOverride IS NOT NULL AND TRIM(r.teamOverride) <> '' ORDER BY r.teamOverride")
+    List<String> findDistinctTeamOverrides();
 }

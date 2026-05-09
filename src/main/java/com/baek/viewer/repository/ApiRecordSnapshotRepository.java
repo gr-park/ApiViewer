@@ -95,5 +95,20 @@ public interface ApiRecordSnapshotRepository extends JpaRepository<ApiRecordSnap
                                                       @Param("to") LocalDateTime to,
                                                       @Param("repos") List<String> repos,
                                                       Pageable pageable);
+
+    /**
+     * 기간 내 "전체(풀)" 스냅샷(source_repo 비어 있음)이 1건 이상 존재하는 날짜(로컬일) 목록.
+     * viewer 기준일자 달력 하이라이트용 — H2·PostgreSQL 공통 {@code CAST(... AS date)}.
+     */
+    @Query(value = """
+            SELECT DISTINCT CAST(s.snapshot_at AS date)
+            FROM api_record_snapshot s
+            WHERE (s.source_repo IS NULL OR TRIM(COALESCE(s.source_repo, '')) = '')
+              AND s.snapshot_at >= :from
+              AND s.snapshot_at <= :to
+            ORDER BY 1 ASC
+            """, nativeQuery = true)
+    List<Object> findDistinctGlobalSnapshotLocalDates(@Param("from") LocalDateTime from,
+                                                      @Param("to") LocalDateTime to);
 }
 

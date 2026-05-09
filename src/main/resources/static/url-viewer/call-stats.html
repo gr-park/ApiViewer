@@ -4,44 +4,19 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>URL Viewer — URL호출현황</title>
+  <link rel="stylesheet" href="/css/common.css">
   <style>
-    :root {
-      --bg:#f4f6f9; --card:#fff; --primary:#3b82f6; --primary-hover:#2563eb;
-      --danger:#ef4444; --success:#22c55e; --purple:#8b5cf6; --warning:#f59e0b;
-      --text:#1e293b; --text-muted:#64748b; --border:#e2e8f0;
-      --shadow:0 1px 4px rgba(0,0,0,.08);
-    }
-    *{box-sizing:border-box;margin:0;padding:0;}
-    body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);font-size:13px;}
-    .header{position:sticky;top:0;z-index:50;background:var(--card);border-bottom:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;gap:12px;box-shadow:var(--shadow);}
-    .header h1{font-size:18px;font-weight:700;color:var(--primary);}
-    .header a:has(h1){color:inherit;text-decoration:none;}
-    .header a:has(h1):hover h1{opacity:.75;}
-    .header a:has(h1) h1{transition:opacity .15s;}
-    .header-sub{font-size:12px;color:var(--text-muted);background:#f1f5f9;padding:3px 10px;border-radius:4px;font-weight:600;}
-    .header-right{margin-left:auto;display:flex;align-items:center;gap:6px;}
-    .nav-link{font-size:12px;color:var(--text-muted);font-weight:600;text-decoration:none;padding:6px 12px;border:1px solid var(--border);border-radius:6px;}
-    .nav-link:hover{background:#f1f5f9;}
-    .nav-active{color:var(--primary)!important;border-color:var(--primary)!important;}
-
-    .main{max-width:1400px;margin:0 auto;padding:20px 24px;}
-    .card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px 18px;margin-bottom:14px;box-shadow:var(--shadow);}
-    .card-title{font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px;display:flex;align-items:center;gap:8px;}
-    .dot{width:8px;height:8px;border-radius:50%;}
-    .dot-blue{background:var(--primary);} .dot-green{background:var(--success);} .dot-purple{background:var(--purple);} .dot-orange{background:var(--warning);}
-
-    /* 섹션 구분선 */
-    .section-divider{display:flex;align-items:center;gap:10px;margin:20px 0 14px;font-size:12px;font-weight:700;color:var(--text-muted);}
-    .section-divider::before,.section-divider::after{content:'';flex:1;height:1px;background:var(--border);}
+    .main{max-width:1700px;margin:0 auto;padding:20px 24px;}
+    /* common.css .section-header — 상단 여백만 로컬 조정 */
+    .main .section-header:first-of-type { margin-top: 4px; }
 
 /* 필터 바 */
     .filter-bar{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;}
+    /* URL 호출 집계: 레포(라벨+트리거)와 기간·조회 한 줄 하단 정렬 */
+    .dash-period-actions.filter-bar { align-items: center; }
     .field{display:flex;flex-direction:column;gap:3px;font-size:10px;color:var(--text-muted);font-weight:700;text-transform:uppercase;letter-spacing:.05em;}
     .field input, .field select{padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;outline:none;background:var(--card);}
     .field input:focus, .field select:focus{border-color:var(--primary);box-shadow:0 0 0 2px #3b82f620;}
-    .btn{padding:7px 16px;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;transition:background .15s;height:32px;}
-    .btn-blue{background:var(--primary);color:#fff;} .btn-blue:hover{background:var(--primary-hover);}
-    .btn-ghost{background:#f1f5f9;color:var(--text-muted);border:1px solid var(--border);} .btn-ghost:hover{background:#e2e8f0;}
 
     /* 요약 카드 */
     .summary-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px;}
@@ -213,23 +188,27 @@
   <!-- ═══════════════════════════════════════════
        상단: 대시보드 (집계 테이블 기반 — 빠름)
   ═══════════════════════════════════════════ -->
-  <div class="section-divider">📊 대시보드 (집계 기준)</div>
+  <div class="section-header">
+    <h3>URL 호출 집계</h3>
+    <span class="section-sub">apm_url_stat 기준 — 레포별 요약·TOP 10 (프로젝트 전반 호출 현황을 빠르게 확인)</span>
+  </div>
 
   <!-- 기간 선택 + 레포 필터 -->
   <div class="card" style="padding-bottom:10px;">
-    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+    <div class="dash-top-filter-row" style="display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap;">
       <label class="field" style="margin-top:0;">업무명 | 레포지토리
         <div id="dashRepoSelect"></div>
       </label>
-      <div class="filter-bar" style="margin:0;">
+      <div class="filter-bar dash-period-actions" style="margin:0;">
         <span style="font-size:10px;color:var(--text-muted);font-weight:600;">기간:</span>
-        <button class="btn btn-ghost" id="tab-yesterday" onclick="selectPeriod('yesterday')">전일</button>
-        <button class="btn btn-ghost" id="tab-week"      onclick="selectPeriod('week')">1주</button>
-        <button class="btn btn-blue"  id="tab-month"     onclick="selectPeriod('month')">1달</button>
-        <button class="btn btn-ghost" id="tab-3month"    onclick="selectPeriod('3month')">3달</button>
-        <button class="btn btn-ghost" id="tab-6month"    onclick="selectPeriod('6month')">6달</button>
-        <button class="btn btn-ghost" id="tab-year"      onclick="selectPeriod('year')">1년</button>
-        <div style="width:1px;height:20px;background:var(--border);margin:0 4px;"></div>
+        <span class="date-quick-seg" role="group" aria-label="집계 기간">
+          <button type="button" class="date-quick-seg__btn" id="tab-yesterday" onclick="selectPeriod('yesterday')">전일</button>
+          <button type="button" class="date-quick-seg__btn" id="tab-week" onclick="selectPeriod('week')">1주</button>
+          <button type="button" class="date-quick-seg__btn active" id="tab-month" onclick="selectPeriod('month')">1달</button>
+          <button type="button" class="date-quick-seg__btn" id="tab-3month" onclick="selectPeriod('3month')">3달</button>
+          <button type="button" class="date-quick-seg__btn" id="tab-6month" onclick="selectPeriod('6month')">6달</button>
+          <button type="button" class="date-quick-seg__btn" id="tab-year" onclick="selectPeriod('year')">1년</button>
+        </span>
         <button class="btn btn-blue" onclick="loadDashboard()">조회</button>
       </div>
       <span id="dashUpdatedAt" style="font-size:10px;color:var(--text-muted);margin-left:auto;"></span>
@@ -262,7 +241,7 @@
   <!-- 레포별 요약 + TOP 10 -->
   <div class="two-col">
     <div class="card">
-      <div class="card-title"><span class="dot dot-purple"></span>레포별 호출 요약</div>
+      <div class="section-heading section-heading--query"><span class="dot"></span>레포별 호출 요약</div>
       <div style="max-height:320px;overflow:auto;">
         <table>
           <thead><tr>
@@ -276,7 +255,7 @@
       </div>
     </div>
     <div class="card">
-      <div class="card-title"><span class="dot dot-orange"></span>TOP 10 호출 URL</div>
+      <div class="section-heading section-heading--query"><span class="dot"></span>TOP 10 호출 URL</div>
       <div style="max-height:320px;overflow:auto;">
         <table>
           <thead><tr>
@@ -294,7 +273,10 @@
   <!-- ═══════════════════════════════════════════
        하단: 실시간 조회 (apm_call_data 직접)
   ═══════════════════════════════════════════ -->
-  <div class="section-divider">🔍 URL 실시간 조회 (임의 기간)</div>
+  <div class="section-header">
+    <h3>URL 실시간 조회</h3>
+    <span class="section-sub">임의 기간·URL 검색 — apm_call_data 직접 조회 (상세·엑셀)</span>
+  </div>
 
   <!-- 조회 필터 -->
   <div class="card">
@@ -308,15 +290,16 @@
         <input id="searchInput" type="text" placeholder="URL 경로 검색..." style="min-width:220px;">
       </label>
     </div>
-    <div style="display:flex;gap:6px;align-items:center;">
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
       <span style="font-size:10px;color:var(--text-muted);font-weight:600;">기간:</span>
-      <button class="btn btn-ghost" onclick="setDateYesterday()">전일</button>
-      <button class="btn btn-ghost" onclick="setDate(7)">1주</button>
-      <button class="btn btn-ghost" onclick="setDate(30)">1달</button>
-      <button class="btn btn-ghost" onclick="setDate(90)">3달</button>
-      <button class="btn btn-ghost" onclick="setDate(180)">6달</button>
-      <button class="btn btn-ghost" onclick="setDate(365)">1년</button>
-      <div style="width:1px;height:20px;background:var(--border);margin:0 4px;"></div>
+      <span class="date-quick-seg" role="group" aria-label="실시간 조회 기간">
+        <button type="button" class="date-quick-seg__btn" onclick="setDateYesterday()">전일</button>
+        <button type="button" class="date-quick-seg__btn" onclick="setDate(7)">1주</button>
+        <button type="button" class="date-quick-seg__btn" onclick="setDate(30)">1달</button>
+        <button type="button" class="date-quick-seg__btn" onclick="setDate(90)">3달</button>
+        <button type="button" class="date-quick-seg__btn" onclick="setDate(180)">6달</button>
+        <button type="button" class="date-quick-seg__btn" onclick="setDate(365)">1년</button>
+      </span>
       <button class="btn btn-blue" onclick="querySearch()">조회</button>
     </div>
     <div style="margin-top:8px;font-size:10px;color:var(--text-muted);">
@@ -326,8 +309,8 @@
 
   <!-- URL별 집계 테이블 -->
   <div class="card" id="queryResultCard" style="display:none;">
-    <div class="card-title" style="display:flex;align-items:center;">
-      <span class="dot dot-blue"></span>URL별 집계
+    <div class="section-heading section-heading--query" style="display:flex;align-items:center;">
+      <span class="dot"></span>URL별 집계
       <span id="resultCount" style="margin-left:10px;font-size:11px;font-weight:400;color:var(--text-muted);text-transform:none;letter-spacing:0;"></span>
     </div>
     <table>
@@ -351,7 +334,7 @@
   <div class="modal">
     <div class="modal-header">
       <h3 id="detailTitle">URL 상세</h3>
-      <button class="btn btn-ghost" onclick="closeDetail()">닫기 ✕</button>
+      <button class="btn btn-gray" onclick="closeDetail()">닫기 ✕</button>
     </div>
     <div class="modal-body">
       <div class="tab-bar">
@@ -370,8 +353,8 @@
     <div class="viewer-detail-header">
       <h3>URL 기본정보</h3>
       <div style="display:flex;align-items:center;gap:6px;">
-        <button id="btnOpenViewerDetail" class="btn btn-ghost" onclick="openInViewerDetail()" style="height:30px;padding:6px 10px;background:#dcfce7;border-color:#86efac;color:#166534;font-weight:900;">URL분석현황 상세보기(새창)</button>
-        <button class="btn btn-ghost" onclick="closeViewerDetail()">닫기 ✕</button>
+        <button id="btnOpenViewerDetail" class="btn btn-green" onclick="openInViewerDetail()" style="height:30px;padding:6px 10px;font-weight:900;">URL분석현황 상세보기(새창)</button>
+        <button class="btn btn-gray" onclick="closeViewerDetail()">닫기 ✕</button>
       </div>
     </div>
     <div id="viewerDetailBody" class="viewer-detail-body"></div>
@@ -446,7 +429,7 @@
     ['yesterday','week','month','3month','6month','year'].forEach(key => {
       const el = document.getElementById(`tab-${key}`);
       if (!el) return;
-      el.className = key === p ? 'btn btn-blue' : 'btn btn-ghost';
+      el.className = key === p ? 'date-quick-seg__btn active' : 'date-quick-seg__btn';
     });
     // 대시보드는 조회 버튼으로 실행
   }
@@ -689,7 +672,7 @@
       let html = `<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
         <div style="flex:1;font-size:13px;font-weight:700;padding:10px 14px;background:#f0fdf4;border-left:4px solid #22c55e;border-radius:4px;color:#166534;font-family:monospace;word-break:break-all;">
           📍 ${esc(currentDetail.apiPath)}</div>
-        <button class="btn" style="background:#22c55e;color:#fff;height:34px;flex-shrink:0;" onclick="downloadDetailExcel()">⬇ 엑셀 다운로드</button>
+        <button class="btn btn-green" style="height:34px;flex-shrink:0;" onclick="downloadDetailExcel()">⬇ 엑셀 다운로드</button>
       </div>`;
 
       if (detailMonthRows.length) {

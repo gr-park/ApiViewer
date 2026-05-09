@@ -301,6 +301,27 @@ public class ApiExtractorService {
                 processedFiles++;
             });
 
+            if (repoName != null && !repoName.isBlank()) {
+                var rcTsOpt = repoConfigRepository.findByRepoName(repoName);
+                if (rcTsOpt.isPresent() && "Y".equals(rcTsOpt.get().getTsAnalysisEnabled())) {
+                    String tsGitBin = gitBin;
+                    String gbp = rcTsOpt.get().getGitBinPath();
+                    if (gbp != null && !gbp.isBlank()) tsGitBin = gbp;
+                    addLog("INFO", "TS(NestJS) 라우트 스캔 시작 (ts_analysis_enabled=Y)");
+                    currentFile = "TS(NestJS) 스캔 중...";
+                    try {
+                        List<ApiInfo> tsApis = extractWithTsRegexDebug(root, apiPathPrefix, null, null,
+                                null, "", null);
+                        applyGitHistoryPerRepoPath(tsApis, rootPath, tsGitBin);
+                        apis.addAll(tsApis);
+                        addLog("OK", "TS(NestJS) 스캔 완료 — " + tsApis.size() + "개 API (Java 결과에 병합)");
+                    } catch (Exception tsEx) {
+                        addLog("WARN", "TS(NestJS) 스캔 실패 (Java 결과만 이어서 처리): " + tsEx.getMessage());
+                        log.warn("[추출] TS 스캔 실패 repo={}", repoName, tsEx);
+                    }
+                }
+            }
+
         } catch (Exception e) {
             lastError = e.getMessage();
             addLog("ERROR", "추출 실패: " + e.getMessage());
@@ -1389,6 +1410,31 @@ public class ApiExtractorService {
     }
 
     /**
+     * TS 등 {@link ApiInfo#getRepoPath()}가 있는 항목에 대해, 파일(상대경로)당 1회 {@code git log}로 git1~5를 채운다.
+     */
+    private void applyGitHistoryPerRepoPath(List<ApiInfo> apis, String rootPath, String gitBin) {
+        if (apis == null || apis.isEmpty()) return;
+        String root = rootPath == null ? "" : rootPath.trim();
+        if (root.isEmpty()) return;
+        String bin = (gitBin != null && !gitBin.isBlank()) ? gitBin : defaultGitBinPath;
+        Map<String, List<String[]>> gitByRel = new HashMap<>();
+        for (ApiInfo a : apis) {
+            if (a == null) continue;
+            String rel = a.getRepoPath();
+            if (rel == null || rel.isBlank()) continue;
+            gitByRel.computeIfAbsent(rel, k -> getRecentGitHistories(k, root, bin, 5));
+            List<String[]> g = gitByRel.get(rel);
+            if (g != null && g.size() >= 5) {
+                a.setGit1(g.get(0));
+                a.setGit2(g.get(1));
+                a.setGit3(g.get(2));
+                a.setGit4(g.get(3));
+                a.setGit5(g.get(4));
+            }
+        }
+    }
+
+    /**
      * 대상 레포 working tree 를 origin/{branch} 기준으로 강제 정렬한다.
      * 로컬 변경·divergent history·detached HEAD·단일 브랜치 클론 어느 상태에서도 최신 원격 커밋으로 맞춘다.
      *
@@ -1925,24 +1971,11 @@ public class ApiExtractorService {
                 a.setFullUrl(dom + p);
             }
 
-            // 저장 시점: 파일 단위로 git history 1회 조회 후 동일 파일의 API에 재사용
-            // (디버그 파싱 자체는 빠르게 유지하고, 저장 시점에만 최소 비용으로 보강한다.)
-            Map<String, List<String[]>> gitByRel = new HashMap<>();
-            for (ApiInfo a : apis) {
-                String rel = a != null ? a.getRepoPath() : null;
-                if (rel == null || rel.isBlank()) continue;
-                if (!gitByRel.containsKey(rel)) {
-                    gitByRel.put(rel, getRecentGitHistories(rel, rootPath.trim(), defaultGitBinPath, 5));
-                }
-                List<String[]> g = gitByRel.get(rel);
-                if (g != null && g.size() >= 5) {
-                    a.setGit1(g.get(0));
-                    a.setGit2(g.get(1));
-                    a.setGit3(g.get(2));
-                    a.setGit4(g.get(3));
-                    a.setGit5(g.get(4));
-                }
-            }
+            String tsSaveGitBin = repoConfigRepository.findByRepoName(repositoryName.trim())
+                    .map(com.baek.viewer.model.RepoConfig::getGitBinPath)
+                    .filter(s -> s != null && !s.isBlank())
+                    .orElse(defaultGitBinPath);
+            applyGitHistoryPerRepoPath(apis, rootPath, tsSaveGitBin);
 
             int[] r = storageService.savePartial(repositoryName.trim(), apis, clientIp);
             out.putAll(counts);

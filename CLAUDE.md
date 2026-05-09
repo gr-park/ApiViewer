@@ -16,25 +16,28 @@ Spring Boot 기반 웹 애플리케이션. Controller 소스를 파싱하여 URL
 
 # 앱 버전 표기(`APP_UI_VERSION`, 캐시·배포 식별용)
 
-표시 위치는 상단 네비 브랜드 뒤(`nav.js`의 `APP_UI_VERSION`, 현재 예: `ver1.4.35`). **화면(`static/**`)만이 아니라 서버 로직·API·배치·DB 처리 등 배포 단위로 동작이 바뀌는 변경이 있으면 반드시 버전을 올린다** — 운영/반입 후 “같은 숫자인데 동작이 다름”을 줄이기 위함. `static/**` 캐시 이슈로 브라우저에서 숫자 확인이 특히 유효하다. 배포·반입 시마다 증가시키는 것을 원칙으로 한다. 로컬 재기동: `sh stop.sh` 후 `sh run.sh`(에이전트는 `run.sh`만 백그라운드 가능, CI·읽기 전용은 생략 가능). 형식 `ver<major>.<minor>.<patch>` — patch 기본 2자리 zero-pad, 100+는 자연 확장(강제 동일 자릿수 패딩 없음).
+표시 위치는 상단 네비 브랜드 뒤(`nav.js`의 `APP_UI_VERSION`, 실제 값은 해당 상수 기준). **화면(`static/**`) 수정뿐 아니라 프로세스·운영 흐름 변경**(배치·검토/승인 단계·업무 절차·정책 반영 등, 배포 후 사용자·운영자가 체감하는 처리 방식의 변화)이 있어도 동일하게 올린다. 여기에 더해 **서버 로직·API·배치·DB 처리 등 배포 단위로 동작이 바뀌는 변경**이 있으면 반드시 버전을 올린다 — 운영/반입 후 “같은 숫자인데 동작이 다름”을 줄이기 위함. `static/**` 캐시 이슈로 브라우저에서 숫자 확인이 특히 유효하다. 배포·반입 시마다 증가시키는 것을 원칙으로 한다. 로컬 재기동: `sh stop.sh` 후 `sh run.sh`(에이전트는 `run.sh`만 백그라운드 가능, CI·읽기 전용은 생략 가능). 형식 `ver<major>.<minor>.<patch>` — patch 기본 2자리 zero-pad, 100+는 자연 확장(강제 동일 자릿수 패딩 없음).
 
-- **버전 승격 기본 규칙**
-  - **patch**: 소규모 수정·버그픽스·내부 로직 조정·표시·문구 개선
-  - **minor**: 체감 기능 추가(오르면 patch `01`부터)
-  - **major**: 큰 개편·호환(오르면 minor/patch 초기화)
-  - 애매하면 patch→minor 보수적
+- **버전 승격 기본 규칙(의미 기반, 파일 수 규칙과 병행)**
+  - **patch(마지막 숫자)**: 소규모 수정·버그픽스·내부 로직 소규모 조정·표시·문구 개선 등, 아래 “변경 파일 수”가 5 미만일 때의 기본 증가.
+  - **minor**: 체감 기능 추가 등 — 아래 “변경 파일 수”가 **5개 이상 7개 미만**이면 **minor**를 올린다(관례적으로 patch는 `01` 등으로 리셋).
+  - **major**: 큰 개편·호환 파괴 등 — 아래 “변경 파일 수”가 **7개 이상**이면 **major**를 올린다(관례적으로 minor·patch는 `0.01` 등으로 리셋).
+  - 파일 수 규칙과 의미가 충돌하면 **더 높은 승격**을 택한다. 애매하면 보수적으로 한 단계 올린다.
 
-- **변경 범위(수정 영역 수) 기반 자동 승격 규칙 (운영 편의)**
-  - 이번 작업에서 **수정해야 하는 영역(파일/모듈/페이지 등)이 5개 이상**이면 **minor(중간 숫자)** 를 올린다.
-  - **10개 이상**이면 **major** 를 올린다.
-  - **신규 파일이 생성**되면(기능 추가/화면 추가 등) **minor(중간 숫자)** 도 올린다. (단순 정리/리네임/삭제가 아닌 “새 파일 추가” 기준)
-  - 단, 배포 단위 동작이 바뀌면(서버 로직/DB/배치/보호경로 등) **영역 수와 무관하게** 반드시 올린다.
+- **변경 파일 수 산정 (`APP_UI_VERSION` 승격 단계 결정)**
+  - **대상**: 이번 작업에서 **수정·추가·삭제**한 **프로젝트 소스 전부**(예: `src/**`, 루트 설정·스크립트·`pom.xml`, `CLAUDE.md` 등 **저장소에 포함되는 파일**). `target/`, `data/`, `logs/` 등 **빌드·런타임 산출물은 제외**.
+  - **7개 이상** → **major** 증가.
+  - **5개 이상 7개 미만** → **minor** 증가.
+  - **5개 미만** → **patch**(마지막 숫자)만 증가.
+  - 배포 단위 동작이 바뀌는 변경이면 **파일 수와 무관하게** 반드시 올리며, 위 단계 중 해당되는 최소 승격을 만족시킨다.
 
-- **이번 작업 버전 정책**
-  - 이번 작업은 **1.7 버전으로 올린다**(예: `ver1.7.01`부터).
-  - 기동 완료 로그: 동일 버전 문자열+주요 링크(`UiVersionStartupLogger`가 `nav.js`에서 파싱).
+- **기동 로그**: 동일 버전 문자열+주요 링크(`UiVersionStartupLogger`가 `nav.js`에서 파싱).
 
-- **에이전트 응답 규칙(운영 편의)**: 이번 작업에서 **`APP_UI_VERSION`을 올렸거나**, 정적 UI(`src/main/resources/static/**`)를 변경한 경우, 에이전트는 **응답 마지막 줄에 반드시 현재 `APP_UI_VERSION`을 표기**한다. 예) `현재 앱 버전: ver1.4.23`
+- **에이전트 응답 규칙(운영 편의)**: 이번 작업에서 **`APP_UI_VERSION`을 올렸거나**, 정적 UI(`src/main/resources/static/**`)를 변경했거나, **프로세스/배포 단위 동작 변경**으로 버전을 올린 경우, 에이전트는 **응답 마지막 줄에 반드시 현재 `APP_UI_VERSION`을 표기**한다. 예) `현재 앱 버전: ver4.1.01`
+
+# UI 스타일 가이드
+
+섹션 타이틀(`span.dot`), 의미별 색, 버튼·접기(pill) 규칙은 저장소 루트 **[UI-GUIDELINES.md](UI-GUIDELINES.md)** 를 따른다. 대규모 UI 개편 시 해당 문서와 `APP_UI_VERSION`을 함께 갱신한다.
 
 # 기술 스택 · 환경 제약 · DB
 
@@ -85,17 +88,17 @@ Spring Boot 기반 웹 애플리케이션. Controller 소스를 파싱하여 URL
 | URL | 접근 |
 |-----|------|
 | `/` → `/dashboard/`, `/dashboard/` | 공개 |
-| `/url-viewer/`, `/url-viewer/viewer.html`, `/url-viewer/call-stats.html`, `/url-viewer/url-block-monitor.html`, `/url-viewer/review.html`, `/url-viewer/workflow.html` | 공개 |
+| `/url-viewer/`, `/url-viewer/viewer.html`, `/url-viewer/call-stats.html`, `/url-viewer/url-block-monitor.html`, `/url-viewer/review.html`, `/url-viewer/workflow.html` | 공개 (`viewer.html`은 **관리자 또는 일반사용자(IT담당자) 로그인 전까지 조회 전용** — 네비 「일반사용자 로그인」모달) |
 | `/url-viewer/extract.html`, `/settings/`, `/h2-console` | 관리자 |
 
-`extract.html`(설정의 URL분석/검토 탭에 embed): **레포별 APM 수집**에서 **전체(레포설정)**(`ALL`) 선택 시 레포 셀렉터는 와탭·제니퍼 중 하나라도 **Y**인 레포만 표시하고, 수집 실행 시 선택 레포마다 `collectAllApm`과 동일하게(활성 와탭 최대 365일·활성 제니퍼 최대 30일 순차 수집 후 집계) 동작한다. WHATAP/JENNIFER 단일 선택 시에는 각각 `whatapEnabled`/`jenniferEnabled`가 **Y**인 레포만 표시한다. JENNIFER 선택 시 최대 30일 제한을 토스트·안내 문구로 알린다. MOCK(테스트) 선택 시에는 전체 레포 목록을 쓴다.
+`extract.html`(설정의 URL분석/검토 탭에 embed): 탭 본문은 **대분류 4구역**(현업검토 · URL 분석 · APM 추출 · MOCK)으로 나뉘며, `loadExtractContent()`가 `extractSectionUrl` / 키워드·경로변수·작업카드 / `extractSectionApm` / `extractSectionMock`을 각각 마운트한다. **레포별 APM 수집**에서 **전체(레포설정)**(`ALL`) 선택 시 레포 셀렉터는 와탭·제니퍼 중 하나라도 **Y**인 레포만 표시하고, 수집 실행 시 선택 레포마다 `collectAllApm`과 동일하게(활성 와탭 최대 365일·활성 제니퍼 최대 30일 순차 수집 후 집계) 동작한다. WHATAP/JENNIFER 단일 선택 시에는 각각 `whatapEnabled`/`jenniferEnabled`가 **Y**인 레포만 표시한다. JENNIFER 선택 시 최대 30일 제한을 토스트·안내 문구로 알린다. MOCK(테스트) 선택 시에는 전체 레포 목록을 쓴다.
 | `/encrypt-viewer/` | 공개(자리표시자) |
 
-`viewer.html` 세로 순서(대략): **조회 조건** → **검색 필터**(조회 전에도 표시·기본 펼침) → **상태 카드**(조회 성공 후 표시) → 안내·알림·일괄바 → **스냅샷 비교**(관리자, URL 테이블 직전) → 테이블. 카드형 `details`는 **「펼치기/접기」 pill(`.collapser`)** 클릭 시에만 접힘(summary 빈 영역 클릭으로 접히지 않음).
+`viewer.html` 세로 순서(대략): **조회**(레포·기준일 + 메타 줄 아래 검색·필터 한 카드, 조회 전에도 필터 입력 가능) — **기준일자**는 커스텀 달력(버튼+팝오버)으로 선택하며 `GET /api/snapshot-view/dates-with-snapshots?from=&to=`로 전체(풀) 스냅샷이 있는 날을 붉은 음영 표시 — 필터 영역에서 **변경일시(`modifiedFrom`/`modifiedTo`)는 관리자만 표시·쿼리 전송**(CBO·차단예정일 행 **아래**, 빠른 선택은 `UI-GUIDELINES.md` §2.1 `.date-quick-seg`) → **스냅샷 비교**(관리자) → **상태안내 및 빠른필터**(조회 성공 후 표시 — 상단에 상태 구분 안내 박스, 아래 집계·필터 배지) → 업로드 칩·안내·알림·**일괄바**(행 선택 시 — 관리자: **승인대기**(승인/반려), **일괄변경**+**요청 취소**, 상태확정·SmartWay 등 / **일괄변경** 모달에서 상태·값 지정, 담당자는 제안·관리자는 `PATCH`) → 테이블. 카드형 `details`는 **「펼치기/접기」 pill(`.collapser`)** 클릭 시에만 접힘(summary 빈 영역 클릭으로 접히지 않음).
 
 대시보드 `URL 현황` 탭은 `GET /api/db/stats/block-overview` 기반이며, **팀** 탭은 **팀명만**, **업무** 탭은 **팀·업무·레포 3열**(담당 열 없음), **담당** 탭은 **4열**·**헤더 3행**(대그룹·중그룹·리프)·라벨/합계/사용은 **rowspan 3**·연속 동일 값 **rowspan**이다. **엑셀** 시트도 동일(팀 1열·업무 3열·담당 4열)이며 헤더 **3행**·**행 높이**를 넉넉히 둔다. URL 현황(대시보드+엑셀)의 **차단대상 영역은 ‘제외’ 소계 열 없이** `소계/비율/차단완료/잔여/①-①(호출0+변경없음·로그 통합)/①-②(업무종료·담당자판단)/①-③/①-④`로 구성한다. **표 색·타이포**: 합계·사용 동일(회색 헤더·데이터 무음영); 차단대상 헤더는 차단완료 제외 붉은 음영·차단완료만 연두(헤더+데이터); 보류(검토대상)는 노랑 헤더·데이터 무음영·비볼드; 총합계 행은 전열 회색·볼드. `URL 차단 배포일자`(`GET /api/db/stats/deploy-schedule`) 카드도 탭 **팀·업무·담당자**·동일 라벨 규칙, 지표는 **합계·일정수립필요·배포일정**(날짜) 2행 헤더·**엑셀 3시트**·헤더 행 높이 동일 정책이다. **담당자** 탭 행은 **팀|레포|담당(배포담당자 D:/일반 M:)** 단위이며 `businessName`·`repo`·`managerParamKey`를 포함한다.
 
-**URL분석현황 목록 정렬·딥링크**: 기본 정렬은 **레포 설정 `display_order`(표시순서) → `repository_name` → `api_path` → `http_method` → `id`**(서버 `GET /api/db/apis` 등, `sort=__repoOrder__`). `?detailId=<id>`로 진입 시 해당 행을 **by-ids로 먼저 로드**한 뒤 상세 모달을 연다(닫기 후 빈 테이블 방지). 상태 구분 안내 문구는 공통 `common/status-guide.js`(타이틀 **상태 구분 안내**, 접기/펼치기).
+**URL분석현황 목록 정렬·딥링크**: 기본 정렬은 **레포 설정 `display_order`(표시순서) → `repository_name` → `api_path` → `http_method` → `id`**(서버 `GET /api/db/apis` 등, `sort=__repoOrder__`). `?detailId=<id>`로 진입 시 해당 행을 **by-ids로 먼저 로드**한 뒤 상세 모달을 연다(닫기 후 빈 테이블 방지). 상태 구분 안내 본문은 공통 `common/status-guide.js`로 **`#statusGuideDetailBox`**에 렌더되며, 화면에서는 **상태안내 및 빠른필터** 카드 본문 상단(타이틀 직하)에 둔다.
 
 `GET /api/db/record-by-key` — 차단 모니터링 등에서 사용. **동일 레포·`apiPath`에서 HTTP 메소드 대소문자 무시 일치**를 먼저 시도하고, 없으면 `REQUEST`/`ALL`/빈값 등은 **동일 경로 행만**으로 폴백(복수 시 GET→POST→첫 행). `httpMethod` 파라미터는 생략 가능.
 
@@ -178,11 +181,27 @@ DB `status` 컬럼은 leaf 값을 직접 저장한다. 화면 라벨 = DB 값 (�
 
 | 항목 | 내용 |
 |------|------|
-| 방식 | 서버 측 UUID 토큰 (AuthService, 8시간 TTL) |
-| 발급 | `POST /api/verify-password` → 토큰 반환 |
-| 전송 | `X-Admin-Token` 헤더에 토큰 포함 |
-| 검증 | AdminInterceptor가 보호 경로에서 토큰 검증 |
-| 보호 경로 | `/api/extract`, `/api/config/**`, `/api/logs/**`, `/api/schedule/**`, `/api/db/delete-all`, `/api/db/seed`, `/api/mock/**`, `/api/snapshots/**`, `/api/ai/**` |
+| 방식 | 서버 측 UUID 토큰 (AuthService, 8시간 TTL) — **ADMIN**(`X-Admin-Token`) / **EDITOR**(`X-Editor-Token`) 풀 분리 |
+| 발급(관리자) | `POST /api/verify-password` → 토큰 반환 (`role: ADMIN`) |
+| 발급(담당자) | `POST /api/assignee/register` 최초 비밀번호 설정 후 `POST /api/assignee/login` → `X-Editor-Token` |
+| 전송 | 관리자: `X-Admin-Token` · 편집자: `X-Editor-Token` (sessionStorage / `auth.js` 헬퍼) |
+| 검증 | `AdminInterceptor` — `/api/proposals/approve|reject`는 ADMIN만, 그 외 `/api/proposals/**`는 ADMIN 또는 EDITOR |
+| 보호 경로 | `/api/extract`, `/api/config/**`, `/api/logs/**`, `/api/schedule/**`, `/api/db/delete-all`, `/api/db/seed`, `/api/mock/**`, `/api/snapshots/**`, `/api/ai/**`, `/api/proposals/**`(역할별) |
+
+### IT 담당자 계정 · 제안(pending)
+
+| 항목 | 내용 |
+|------|------|
+| 저장소 | `it_assignee` — `(team_name, assignee_name)` 자연키, BCrypt `password_hash` |
+| 팀 자동완성(공개) | `GET /api/assignee/team-suggestions?q=` — 레포·레코드 팀명 DISTINCT |
+| 관리자 전용 | `GET /api/config/it-assignees?team=&name=&page=0&size=20&sortBy=id&sortDir=desc`(팀·담당자명 부분일치 필터, 정렬 허용: `id`·`teamName`·`assigneeName`·`createdAt`, 응답 `assignees`·`totalElements`·`totalPages`·`number`·`size`, 등록일 문자열 `yyyy-MM-dd HH:mm:ss`), `DELETE /api/config/it-assignees/{id}`, `POST /api/config/it-assignees/{id}/reset-password` — 설정 **IT담당자 계정관리** 탭 |
+| 제안 저장 | 테이블 `api_record_proposal` — `PUT /api/proposals/record/{id}` body `{ "patch": { … } }` (허용 키는 `ApiRecordPatchService.ALLOWED_PROPOSAL_KEYS`와 동일). 저장 시 `submitter_assignee_id`(EDITOR)·`summary_text`(패치 한글 요약) 설정. 동일 `record_id` 재제출 시 **마지막 내용만 유지** |
+| 철회 | `DELETE /api/proposals/record/{id}` — **ADMIN**: 임의 · **EDITOR**: 본인 제출(`submitter_assignee_id` 일치)만 |
+| 승인/반려 | `POST /api/proposals/approve` `{ "ids":[] }` / `reject` `{ "ids":[], "reason":"…" }` — **ADMIN만**. 반려 시 제출 담당자 `it_assignee.proposal_reject_notice`·`proposal_reject_notice_at`에 사유 저장(같은 담당자는 **덮어쓰기**). 화면에서 승인·반려 전 **관리자 비밀번호** 확인 권장 |
+| 반려 알림 | `GET /api/assignee/auth/check`에 `proposalRejectNotice` 포함 · 해제 `POST /api/assignee/auth/dismiss-proposal-notice` (`X-Editor-Token`) |
+| 목록 요약 | `GET /api/db/apis` 등 요약 map에 `proposalRequestSummary`, `hasPendingProposal` |
+| URL현황 | 담당자: 인라인·상세 저장 → 제안 API 경유. 관리자: `PATCH /api/db/record/{id}` 즉시 반영. **승인대기** stat·필터·행 ⏳ 배지·**승인요청 내용** 열. 일괄바: **승인대기**(승인/반려), **일괄변경**+**요청 취소**, 반려 사유는 담당자에게 노란 노티로 표시 |
+| 임원·집계 기준 | `GET /api/db/apis`, `counts`, 대시보드 블록 집계는 **승인된 공식 `api_record`**. 제안만 반영된 값은 `pendingProposalCount`·필터로 별도 확인 |
 
 ## 사내 AI (OpenAI 호환 chat)
 
@@ -217,7 +236,7 @@ DB `status` 컬럼은 leaf 값을 직접 저장한다. 화면 라벨 = DB 값 (�
 
 global_config(차단 모니터): `block_monitor_whatap_referer`(Referer 템플릿, `{pcode}`=`whatap_pcode`, 호스트=`whatap_url`), `bot_keywords`, `test_suspect_keywords`(기본 9종·경로 등 매칭·`fullUrl` 제외), `snapshot_retention_days`(null이면 yml/global 기본 365).
 
-repo_config: `whatap_okinds` / `whatap_okinds_name` — ID 리스트와 동일 인덱스 표시명(콤마).
+repo_config: `whatap_okinds` / `whatap_okinds_name` — ID 리스트와 동일 인덱스 표시명(콤마). `ts_analysis_enabled`(Y/N, 기본 N) — Y이면 전체 URL 추출 시 NestJS TS 정규식 스캔 결과를 Java 결과 뒤에 병합 저장; YAML 레포 항목 `tsAnalysisEnabled`.
 
 ## 스냅샷(Extract 히스토리) — `api_record_snapshot` / `api_record_snapshot_row`
 
@@ -265,7 +284,7 @@ SLF4J+Logback, 콘솔+파일, MDC `[ADMIN/USER/SYSTEM] [IP]`, `./logs/app.log`, 
 (repositoryName, apiPath, httpMethod) 3-tuple 로 기존 레코드를 매칭한다. 미매칭 건은 스킵(생성하지 않음).
 
 ## 업로드 반영 필드
-viewer.html 엑셀 업로드는 아래 사용자 편집 필드만 반영한다. 추출/APM 자동 채움 필드(호출건수·Deprecated·차단일자·차단근거·Git이력 등)는 엑셀에 값이 있어도 무시한다.
+viewer.html 엑셀 업로드는 아래 사용자 편집 필드만 반영한다. 추출/APM 자동 채움 필드(호출건수·Deprecated·차단일자(JAVADOC)·차단근거(JAVADOC)·Git이력 등)는 엑셀에 값이 있어도 무시한다.
 
 | 엑셀 헤더 | DB 필드 | 비고 |
 |-----------|--------|------|
@@ -276,7 +295,7 @@ viewer.html 엑셀 업로드는 아래 사용자 편집 필드만 반영한다. 
 | 차단기준 / 비고 | `blockCriteria` / `memo` | |
 | 현업검토결과 / 현업검토의견 | `reviewResult` / `reviewOpinion` | |
 | 검토단계 | `reviewStage` | Jira 역동기화 시 덮어써질 수 있음 |
-| CBO예정일자 / 배포예정일자 / 배포CSR | `cboScheduledDate` / `deployScheduledDate` / `deployCsr` | |
+| CBO예정일자 / 차단예정일자 / 차단작업CSR / 차단작업담당자 | `cboScheduledDate` / `deployScheduledDate` / `deployCsr` / `deployManager` | 다운로드 헤더명; 구 헤더(배포예정일자 등) 업로드 매핑은 viewer에서 폴백 |
 
 빈 셀은 해당 필드를 `null` 로 clear 처리한다.
 

@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>URL Viewer — 설정 관리</title>
+  <link rel="stylesheet" href="/css/common.css">
   <style>
     :root {
       --bg:#f4f6f9; --card:#fff; --primary:#3b82f6; --primary-hover:#2563eb;
@@ -28,9 +29,6 @@
     .main{max-width:1100px;margin:0 auto;padding:20px 24px;}
 
     .card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:20px;margin-bottom:16px;box-shadow:var(--shadow);}
-    .card-title{font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:16px;display:flex;align-items:center;gap:8px;}
-    .dot{width:8px;height:8px;border-radius:50%;}
-    .dot-blue{background:var(--primary);} .dot-green{background:var(--success);}
 
     /* 필드 */
     .field-row{display:grid;gap:10px;margin-bottom:10px;}
@@ -44,14 +42,6 @@
     input::placeholder, textarea::placeholder { color:#cbd5e1; opacity:1; font-style:italic; font-weight:400; }
     input:focus::placeholder { color:#e2e8f0; }
     .field-hint{font-size:10px;color:var(--text-muted);font-weight:400;margin-top:2px;}
-
-    /* 버튼 */
-    .btn{padding:7px 18px;border:none;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;transition:background .15s;height:32px;white-space:nowrap;}
-    .btn:disabled{opacity:.5;cursor:not-allowed;}
-    .btn-blue{background:var(--primary);color:#fff;} .btn-blue:not(:disabled):hover{background:var(--primary-hover);}
-    .btn-green{background:var(--success);color:#fff;} .btn-green:not(:disabled):hover{background:#16a34a;}
-    .btn-danger{background:var(--danger);color:#fff;} .btn-danger:not(:disabled):hover{background:#dc2626;}
-    .btn-ghost{background:#f1f5f9;color:var(--text-muted);border:1px solid var(--border);} .btn-ghost:not(:disabled):hover{background:#e2e8f0;}
 
     /* 레포 목록 */
     .repo-list{display:flex;flex-direction:column;gap:10px;}
@@ -392,6 +382,7 @@ function updateAdminBadge(valid) {
       <button class="settings-tab" data-tab="notify">📧 알림</button>
       <button class="settings-tab" data-tab="jira">🔗 SmartWay 연동</button>
       <button class="settings-tab" data-tab="ai">🤖 사내 AI</button>
+      <button class="settings-tab" data-tab="it-assignees">👤 IT담당자 계정관리</button>
       <div style="border-top:1px solid var(--border);margin:6px 0;"></div>
       <button class="settings-tab" data-tab="extract">🔍 URL분석/검토</button>
     </aside>
@@ -402,9 +393,13 @@ function updateAdminBadge(valid) {
 <!-- ═══ ⚙️ 설정 (공통설정 + 레포지토리) ═══ -->
 <section class="settings-section active" data-section="config">
 
+  <div class="section-header">
+    <h3>⚙️ 공통 정책·목록</h3>
+    <span class="section-sub">차단검토 호출 임계, 목록 페이지 크기·네비</span>
+  </div>
   <div class="card" style="border:1px solid #93c5fd;">
-    <div class="card-title" style="margin-bottom:12px;">
-      <span class="dot" style="background:#3b82f6;"></span>기본 설정
+    <div class="section-heading section-heading--save" style="margin-bottom:12px;">
+      <span class="dot"></span>기본 설정
       <span style="font-size:11px;font-weight:400;color:var(--text-muted);margin-left:6px;">차단검토 기준 · 목록 페이지 크기 (모든 레포 공통)</span>
     </div>
     <div class="field-row col3" style="margin-bottom:4px;">
@@ -423,9 +418,13 @@ function updateAdminBadge(valid) {
     </div>
   </div>
 
+  <div class="section-header">
+    <h3>📡 APM·수집</h3>
+    <span class="section-sub">와탭 페이징 상한 등 공통 APM 옵션</span>
+  </div>
   <div class="card" style="border:1px solid #7dd3fc;margin-top:12px;">
-    <div class="card-title" style="margin-bottom:12px;">
-      <span class="dot" style="background:#0ea5e9;"></span>APM 설정
+    <div class="section-heading section-heading--analyze" style="margin-bottom:12px;">
+      <span class="dot"></span>APM 설정
       <span style="font-size:11px;font-weight:400;color:var(--text-muted);margin-left:6px;">와탭 API 페이징 상한</span>
     </div>
     <div class="field-row col3" style="margin-bottom:4px;">
@@ -446,9 +445,13 @@ function updateAdminBadge(valid) {
     </div>
   </div>
 
+  <div class="section-header">
+    <h3>🚧 차단 모니터·시스템</h3>
+    <span class="section-sub">와탭 Referer·봇 제외·테스트 시간대, 로그 레벨</span>
+  </div>
   <div class="card" style="border:1px solid #c4b5fd;margin-top:12px;">
-    <div class="card-title" style="margin-bottom:12px;">
-      <span class="dot" style="background:#7c3aed;"></span>URL 차단 모니터링
+    <div class="section-heading section-heading--query" style="margin-bottom:12px;">
+      <span class="dot"></span>URL 차단 모니터링
       <span style="font-size:11px;font-weight:400;color:var(--text-muted);margin-left:6px;">와탭 /yard/api/flush · Referer · 봇 제외 · 테스트 시간대</span>
     </div>
     <div style="margin-bottom:4px;">
@@ -480,8 +483,8 @@ function updateAdminBadge(valid) {
   </div>
 
   <div class="card" style="border:1px solid #cbd5e1;margin-top:12px;">
-    <div class="card-title" style="margin-bottom:12px;">
-      <span class="dot" style="background:#475569;"></span>시스템 설정
+    <div class="section-heading section-heading--neutral" style="margin-bottom:12px;">
+      <span class="dot"></span>시스템 설정
       <span style="font-size:11px;font-weight:400;color:var(--text-muted);margin-left:6px;">로그 레벨 · Tail 줄수</span>
     </div>
     <div class="field-row col3" style="margin-bottom:4px;">
@@ -499,9 +502,13 @@ function updateAdminBadge(valid) {
     </div>
   </div>
 
+  <div class="section-header">
+    <h3>🔌 와탭·제니퍼 프로필</h3>
+    <span class="section-sub">레포에서 profileName으로 참조하는 공통 연결 정의</span>
+  </div>
   <div class="card" style="border:1px solid #93c5fd;margin-top:12px;">
-    <div class="card-title" style="margin-bottom:12px;">
-      <span class="dot" style="background:#2563eb;"></span>Whatap 공통 프로필
+    <div class="section-heading section-heading--analyze" style="margin-bottom:12px;">
+      <span class="dot"></span>Whatap 공통 프로필
       <span style="font-size:11px;font-weight:400;color:var(--text-muted);margin-left:6px;">레포에서 profileName으로 참조 · 쿠키/flush 세션 검증</span>
     </div>
     <div id="whatapProfileList" style="display:flex;flex-direction:column;gap:6px;margin-bottom:6px;"></div>
@@ -518,17 +525,21 @@ function updateAdminBadge(valid) {
   </div>
 
   <div class="card" style="border:1px solid #fcd34d;margin-top:12px;">
-    <div class="card-title" style="margin-bottom:12px;">
-      <span class="dot" style="background:#d97706;"></span>Jennifer 공통 프로필
+    <div class="section-heading section-heading--analyze" style="margin-bottom:12px;">
+      <span class="dot"></span>Jennifer 공통 프로필
       <span style="font-size:11px;font-weight:400;color:var(--text-muted);margin-left:6px;">레포에서 profileName으로 참조</span>
     </div>
     <div id="jenniferProfileList" style="display:flex;flex-direction:column;gap:6px;margin-bottom:6px;"></div>
     <button type="button" class="btn btn-ghost" style="font-size:11px;padding:4px 12px;height:auto;" onclick="addJenniferProfileRow()">+ 제니퍼 프로필 추가</button>
   </div>
 
+  <div class="section-header">
+    <h3>👥 팀 메타</h3>
+    <span class="section-sub">담당자·현업검토 입력 시 자동완성에 사용</span>
+  </div>
   <div class="card" style="border:1px solid #86efac;margin-top:12px;">
-    <div class="card-title" style="margin-bottom:12px;">
-      <span class="dot" style="background:#16a34a;"></span>팀 목록
+    <div class="section-heading section-heading--neutral" style="margin-bottom:12px;">
+      <span class="dot"></span>팀 목록
       <span style="font-size:11px;font-weight:400;color:var(--text-muted);margin-left:6px;">담당자·현업검토 입력 시 자동완성</span>
     </div>
     <div id="teamsList" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px;"></div>
@@ -548,9 +559,13 @@ function updateAdminBadge(valid) {
 
 <!-- ═══ 📦 레포지토리 ═══ -->
 <section class="settings-section" data-section="repos">
+  <div class="section-header">
+    <h3>📦 레포지토리</h3>
+    <span class="section-sub">등록·순서·YML 동기화, 카드별 상세 설정</span>
+  </div>
   <div class="card">
-    <div class="card-title" style="margin-bottom:12px;">
-      <span class="dot dot-green"></span>레포지토리별 설정
+    <div class="section-heading section-heading--save" style="margin-bottom:12px;">
+      <span class="dot"></span>레포지토리별 설정
       <div style="margin-left:auto;display:flex;gap:6px;">
         <button class="btn" style="height:28px;padding:4px 14px;font-size:12px;" onclick="syncFromYaml()" title="repos-config.yml 파일에서 레포지토리 설정을 동기화합니다">YML 동기화</button>
         <button class="btn btn-blue" style="height:28px;padding:4px 14px;font-size:12px;" onclick="openModal()">+ 레포 추가</button>
@@ -581,9 +596,13 @@ function updateAdminBadge(valid) {
   </div>
 
   <!-- ─── Bitbucket Clone ─── -->
+  <div class="section-header">
+    <h3>⛓️ Bitbucket 연계</h3>
+    <span class="section-sub">클론 경로·토큰·레포 조회 및 스크립트</span>
+  </div>
   <div class="card" style="margin-top:16px;">
-    <div class="card-title" style="margin-bottom:14px;">
-      <span class="dot" style="background:#f97316;"></span>Bitbucket 레포 클론
+    <div class="section-heading section-heading--neutral" style="margin-bottom:14px;">
+      <span class="dot"></span>Bitbucket 레포 클론
       <button class="btn btn-ghost" style="margin-left:auto;height:28px;padding:4px 14px;font-size:12px;" onclick="saveBitbucketConfig()">설정 저장</button>
     </div>
 
@@ -632,7 +651,7 @@ function updateAdminBadge(valid) {
           <button class="btn btn-ghost" style="height:28px;font-size:12px;" onclick="bbSelectAll()">전체 선택</button>
           <button class="btn btn-ghost" style="height:28px;font-size:12px;" onclick="bbClearAll()">선택 해제</button>
           <button class="btn btn-blue" style="height:28px;font-size:12px;" onclick="bbStartClone()">Clone (선택)</button>
-          <button class="btn" style="height:28px;font-size:12px;background:#8b5cf6;color:#fff;border:none;" onclick="bbShowScript()">스크립트 생성</button>
+          <button type="button" class="btn btn-purple" style="height:28px;font-size:12px;" onclick="bbShowScript()">스크립트 생성</button>
         </div>
       </div>
 
@@ -671,26 +690,34 @@ function updateAdminBadge(valid) {
 
 <!-- ═══ ⏱️ 배치/관리 (배치스케줄 + APM아카이브) ═══ -->
 <section class="settings-section" data-section="batch">
+  <div class="section-header">
+    <h3>⏰ 배치 스케줄</h3>
+    <span class="section-sub">Git Pull·APM·모니터링 등 주기 실행</span>
+  </div>
   <!-- 주기성 배치 스케줄 -->
   <div class="card">
-    <div class="card-title" style="margin-bottom:12px;">
-      <span class="dot" style="background:#8b5cf6;"></span>주기성 배치 스케줄
+    <div class="section-heading section-heading--save" style="margin-bottom:12px;">
+      <span class="dot"></span>주기성 배치 스케줄
       <span style="font-size:11px;font-weight:400;color:var(--text-muted);margin-left:6px;">Git Pull & 분석, APM 호출건수 수집 등 자동 실행 주기를 설정합니다.</span>
       <div style="margin-left:auto;display:flex;gap:6px;">
-        <button class="btn btn-ghost" style="height:28px;padding:4px 14px;font-size:12px;" onclick="loadSchedules()">🔄 새로고침</button>
+        <button class="btn btn-ghost" style="height:28px;padding:4px 14px;font-size:12px;" onclick="loadSchedules()">새로고침</button>
         <button class="btn btn-ghost" style="height:28px;padding:4px 14px;font-size:12px;" onclick="resetSchedules()">기본값 재생성</button>
       </div>
     </div>
     <div id="scheduleList" style="display:flex;flex-direction:column;gap:12px;">로딩 중...</div>
   </div>
 
+  <div class="section-header">
+    <h3>📜 배치 이력·조회</h3>
+    <span class="section-sub">수행 결과·기간 필터·로그 연계</span>
+  </div>
   <!-- 배치 수행 이력 조회 -->
   <div class="card" style="margin-top:16px;">
-    <div class="card-title" style="margin-bottom:12px;">
-      <span class="dot" style="background:#0ea5e9;"></span>배치 수행 이력
+    <div class="section-heading section-heading--query" style="margin-bottom:12px;">
+      <span class="dot"></span>배치 수행 이력
       <span style="font-size:11px;font-weight:400;color:var(--text-muted);margin-left:6px;">수행된 배치의 시작·종료 시간, 결과, 에러 메시지를 날짜별로 조회합니다.</span>
       <div style="margin-left:auto;display:flex;gap:6px;">
-        <button class="btn btn-ghost" style="height:28px;padding:4px 14px;font-size:12px;" onclick="loadBatchHistory()">🔄 새로고침</button>
+        <button class="btn btn-ghost" style="height:28px;padding:4px 14px;font-size:12px;" onclick="loadBatchHistory()">새로고침</button>
       </div>
     </div>
     <div style="margin-bottom:12px;">
@@ -707,11 +734,11 @@ function updateAdminBadge(valid) {
         </div>
       </div>
       <div class="field">빠른 선택
-        <div style="display:flex;gap:6px;" id="bhRangeBtns">
-          <button class="btn btn-ghost" onclick="setBhRange(0,this)">당일</button>
-          <button class="btn btn-ghost active" onclick="setBhRange(1,this)">전일</button>
-          <button class="btn btn-ghost" onclick="setBhRange(3,this)">3일</button>
-          <button class="btn btn-ghost" onclick="setBhRange(7,this)">7일</button>
+        <div class="date-quick-seg" role="group" aria-label="배치 이력 기간 빠른 선택" id="bhRangeBtns">
+          <button type="button" class="date-quick-seg__btn" onclick="setBhRange(0,this)">당일</button>
+          <button type="button" class="date-quick-seg__btn active" onclick="setBhRange(1,this)">전일</button>
+          <button type="button" class="date-quick-seg__btn" onclick="setBhRange(3,this)">3일</button>
+          <button type="button" class="date-quick-seg__btn" onclick="setBhRange(7,this)">7일</button>
         </div>
       </div>
       <button class="btn btn-blue" style="height:34px;" onclick="loadBatchHistory()">🔍 조회</button>
@@ -743,10 +770,14 @@ function updateAdminBadge(valid) {
 
 <!-- ═══ 📄 로그 ═══ -->
 <section class="settings-section" data-section="logs">
+  <div class="section-header">
+    <h3>📄 로그 조회</h3>
+    <span class="section-sub">일자·Tail·비즈니스/시스템 전환</span>
+  </div>
   <!-- 애플리케이션 로그 -->
   <div class="card">
-    <div class="card-title" style="margin-bottom:12px;">
-      <span class="dot" style="background:#f59e0b;"></span>애플리케이션 로그
+    <div class="section-heading section-heading--query" style="margin-bottom:12px;">
+      <span class="dot"></span>애플리케이션 로그
       <span style="font-size:11px;font-weight:400;color:var(--text-muted);margin-left:6px;">일자별 서버 로그를 확인합니다.</span>
     </div>
     <div style="display:flex;gap:12px;align-items:flex-end;margin-bottom:12px;">
@@ -775,13 +806,17 @@ function updateAdminBadge(valid) {
 
 <!-- ═══ 📊 데이터관리 (DB모니터링 + 데이터삭제) ═══ -->
 <section class="settings-section" data-section="data">
+  <div class="section-header">
+    <h3>💾 DB·용량</h3>
+    <span class="section-sub">파일 크기, 증가 추이, 스냅샷 기록</span>
+  </div>
   <!-- DB 파일 사이즈 모니터링 -->
   <div class="card">
-    <div class="card-title" style="margin-bottom:12px;">
-      <span class="dot" style="background:#0ea5e9;"></span>DB 모니터링
+    <div class="section-heading section-heading--query" style="margin-bottom:12px;">
+      <span class="dot"></span>DB 모니터링
       <span style="font-size:11px;font-weight:400;color:var(--text-muted);margin-left:6px;">파일 크기 · 디스크 사용량 · 일별 증가 추이</span>
       <div style="margin-left:auto;display:flex;gap:6px;">
-        <button class="btn btn-ghost" style="height:28px;padding:4px 14px;font-size:12px;" onclick="loadDbMonitor()">🔄 새로고침</button>
+        <button class="btn btn-ghost" style="height:28px;padding:4px 14px;font-size:12px;" onclick="loadDbMonitor()">새로고침</button>
         <button class="btn btn-ghost" style="height:28px;padding:4px 14px;font-size:12px;" onclick="dbMonitorSnapshot()">📸 지금 기록</button>
       </div>
     </div>
@@ -795,12 +830,15 @@ function updateAdminBadge(valid) {
     <div id="dbMonitorFooter" style="margin-top:10px;font-size:10px;color:var(--text-muted);font-family:monospace;"></div>
   </div>
 
-  <div style="border-top:2px solid var(--border);margin:20px 0;"></div>
+  <div class="section-header">
+    <h3>💿 백업·복구·스냅샷</h3>
+    <span class="section-sub">분석/호출 백업, 라이브 복구, 풀 스냅샷</span>
+  </div>
 
   <!-- 데이터 백업 -->
   <div class="card" style="border:1px solid #93c5fd;">
-    <div class="card-title" style="margin-bottom:12px;">
-      <span class="dot" style="background:#3b82f6;"></span>데이터 백업
+    <div class="section-heading section-heading--save" style="margin-bottom:12px;">
+      <span class="dot"></span>데이터 백업
       <span style="font-size:11px;font-weight:400;color:var(--text-muted);margin-left:6px;">현재 데이터를 백업 테이블에 백업본으로 저장 (단일 백업본, 덮어쓰기)</span>
     </div>
     <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:10px;">
@@ -819,17 +857,17 @@ function updateAdminBadge(valid) {
   </div>
 
   <!-- 데이터 복구 -->
-  <div class="card" style="border:1px solid #fcd34d;margin-top:12px;">
-    <div class="card-title" style="margin-bottom:12px;">
-      <span class="dot" style="background:#f59e0b;"></span>데이터 복구
+  <div class="card card--tint-warn" style="margin-top:12px;">
+    <div class="section-heading section-heading--save" style="margin-bottom:12px;">
+      <span class="dot"></span>데이터 복구
       <span style="font-size:11px;font-weight:400;color:#d97706;margin-left:6px;">백업본으로 현재 데이터를 덮어씁니다 — 되돌릴 수 없습니다.</span>
     </div>
     <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;">
       <label class="field" style="min-width:220px;">대상 레포지토리 <span style="font-size:10px;color:var(--text-muted);font-weight:400;">(선택 없음 = 전체)</span>
         <div id="restoreRepoSelect"></div>
       </label>
-      <button class="btn" style="background:#f59e0b;color:#fff;height:34px;" onclick="restoreAnalysisData()">♻️ 분석데이터 복구</button>
-      <button class="btn" style="background:#d97706;color:#fff;height:34px;" onclick="restoreCallHistoryData()">♻️ 호출이력 복구</button>
+      <button class="btn" style="background:#f59e0b;color:#fff;height:34px;" onclick="restoreAnalysisData()">분석데이터 복구</button>
+      <button class="btn" style="background:#d97706;color:#fff;height:34px;" onclick="restoreCallHistoryData()">호출이력 복구</button>
     </div>
     <div style="margin-top:8px;font-size:11px;color:var(--text-muted);">복구 시 현재 데이터가 백업본으로 교체됩니다. 백업 없이 복구하면 오류가 발생합니다.</div>
     <div id="restoreResult" style="margin-top:8px;font-size:12px;"></div>
@@ -837,13 +875,13 @@ function updateAdminBadge(valid) {
 
   <!-- URL 스냅샷 관리 -->
   <div class="card" style="border:1px solid #c4b5fd;margin-top:12px;">
-    <div class="card-title" style="margin-bottom:12px;">
-      <span class="dot" style="background:#7c3aed;"></span>URL 스냅샷 관리
+    <div class="section-heading section-heading--analyze" style="margin-bottom:12px;">
+      <span class="dot"></span>URL 스냅샷 관리
       <span style="font-size:11px;font-weight:400;color:var(--text-muted);margin-left:6px;">
       </span>
       <div style="margin-left:auto;display:flex;gap:6px;flex-wrap:wrap;">
         <button class="btn btn-ghost" style="height:28px;padding:4px 14px;font-size:12px;border-color:#c4b5fd;color:#6d28d9;" onclick="createManualSnapshot()" title="현재 DB 상태를 시점 기준 전체(풀) 스냅샷으로 1건 생성합니다.">📸 지금 스냅샷 생성</button>
-        <button class="btn btn-ghost" style="height:28px;padding:4px 14px;font-size:12px;" onclick="loadUrlSnapshots()">🔄 목록 새로고침</button>
+        <button class="btn btn-ghost" style="height:28px;padding:4px 14px;font-size:12px;" onclick="loadUrlSnapshots()">목록 새로고침</button>
       </div>
     </div>
 
@@ -854,8 +892,8 @@ function updateAdminBadge(valid) {
       </label>
       <div style="display:flex;gap:8px;align-items:end;flex-wrap:wrap;">
         <button class="btn" style="height:34px;background:#ea580c;color:#fff;" onclick="restoreLiveFromSelectedSnapshot()"
-                title="api_record 전체를 삭제한 뒤, 위에서 선택한 스냅샷 행으로 덮어씁니다. 호출이력(apm_call_data)은 유지됩니다.">♻️ 선택 스냅샷으로 라이브 복구</button>
-        <button class="btn btn-danger" style="height:34px;" onclick="deleteSelectedSnapshots()">🗑 선택 삭제</button>
+                title="api_record 전체를 삭제한 뒤, 위에서 선택한 스냅샷 행으로 덮어씁니다. 호출이력(apm_call_data)은 유지됩니다.">선택 스냅샷으로 라이브 복구</button>
+        <button class="btn btn-danger" style="height:34px;" onclick="deleteSelectedSnapshots()">선택 삭제</button>
       </div>
     </div>
 
@@ -875,20 +913,23 @@ function updateAdminBadge(valid) {
     <div id="snapList" style="margin-top:12px;"></div>
   </div>
 
-  <div style="border-top:2px solid var(--border);margin:20px 0;"></div>
+  <div class="section-header">
+    <h3>🗑️ 데이터 삭제</h3>
+    <span class="section-sub">되돌릴 수 없음 — 비밀번호 재확인</span>
+  </div>
 
   <!-- 데이터 삭제 -->
-  <div class="card" style="border:1px solid #fca5a5;">
-    <div class="card-title" style="margin-bottom:12px;">
-      <span class="dot" style="background:#ef4444;"></span>데이터 삭제
+  <div class="card card--tint-danger">
+    <div class="section-heading section-heading--delete" style="margin-bottom:12px;">
+      <span class="dot"></span>데이터 삭제
       <span style="font-size:11px;font-weight:400;color:#ef4444;margin-left:6px;">이 작업은 되돌릴 수 없습니다. 비밀번호 재확인 후 실행됩니다.</span>
     </div>
     <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;">
       <label class="field" style="min-width:220px;">대상 레포지토리 <span style="font-size:10px;color:var(--text-muted);font-weight:400;">(선택 없음 = 전체)</span>
         <div id="delRepoSelect"></div>
       </label>
-      <button class="btn" style="background:#ef4444;color:#fff;height:34px;" onclick="deleteAnalysisData()">🗑 분석데이터 삭제</button>
-      <button class="btn" style="background:#dc2626;color:#fff;height:34px;" onclick="deleteCallHistoryData()">🗑 호출이력 데이터 삭제 (MOCK 포함)</button>
+      <button class="btn" style="background:#ef4444;color:#fff;height:34px;" onclick="deleteAnalysisData()">분석데이터 삭제</button>
+      <button class="btn" style="background:#dc2626;color:#fff;height:34px;" onclick="deleteCallHistoryData()">호출이력 데이터 삭제 (MOCK 포함)</button>
     </div>
     <div style="margin-top:8px;font-size:11px;color:var(--text-muted);">
       <b>분석데이터</b>: URL 추출/분석 결과 (api_record) &nbsp; · &nbsp;
@@ -897,12 +938,15 @@ function updateAdminBadge(valid) {
     <div id="delResult" style="margin-top:8px;font-size:12px;"></div>
   </div>
 
-  <div style="border-top:2px solid var(--border);margin:20px 0;"></div>
+  <div class="section-header">
+    <h3>📥 APM 호출이력 아카이브</h3>
+    <span class="section-sub">장기 보존·CSV 백업 후 DB 정리</span>
+  </div>
 
   <!-- APM 호출이력 아카이브 -->
   <div class="card" style="border:1px solid #fcd34d;">
-    <div class="card-title" style="margin-bottom:12px;">
-      <span class="dot" style="background:#d97706;"></span>APM 호출이력 아카이브 (장기 보존)
+    <div class="section-heading section-heading--neutral" style="margin-bottom:12px;">
+      <span class="dot"></span>APM 호출이력 아카이브 (장기 보존)
       <span style="font-size:11px;font-weight:400;color:var(--text-muted);margin-left:6px;">지정 기간 이전 데이터를 CSV로 백업 후 DB에서 제거합니다.</span>
     </div>
     <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;">
@@ -911,7 +955,7 @@ function updateAdminBadge(valid) {
         <span class="field-hint">기본 365 (1년)</span>
       </label>
       <button class="btn btn-ghost" style="height:34px;" onclick="runArchive(true)">대상 건수 확인</button>
-      <button class="btn" style="background:#d97706;color:#fff;height:34px;" onclick="runArchive(false)">📦 CSV 백업 + 삭제</button>
+      <button class="btn" style="background:#d97706;color:#fff;height:34px;" onclick="runArchive(false)">CSV 백업 + 삭제</button>
       <button class="btn btn-ghost" style="height:34px;" onclick="loadArchiveList()">아카이브 목록</button>
     </div>
     <div id="archResult" style="margin-top:8px;font-size:12px;"></div>
@@ -938,9 +982,13 @@ function updateAdminBadge(valid) {
 
   <!-- 아래 카드 전체 비활성화 처리 -->
   <div id="notifyDisabledWrap" style="pointer-events:none;opacity:0.55;filter:grayscale(0.3);">
+  <div class="section-header">
+    <h3>✉️ 메일·서식·발송</h3>
+    <span class="section-sub">SMTP, 서식 관리, 수동 발송</span>
+  </div>
   <!-- SMTP 설정 (글로벌에서 로드) -->
   <div class="card">
-    <div class="card-title"><span class="dot" style="background:#0ea5e9;"></span>메일 서버 설정</div>
+    <div class="section-heading section-heading--save"><span class="dot"></span>메일 서버 설정</div>
     <div class="field-row col3" style="margin-bottom:10px;">
       <label class="field">SMTP 서버
         <input id="nSmtpHost" type="text" placeholder="smtp.company.com">
@@ -976,8 +1024,8 @@ function updateAdminBadge(valid) {
 
   <!-- 서식 관리 -->
   <div class="card">
-    <div class="card-title" style="margin-bottom:12px;">
-      <span class="dot dot-green"></span>메일 서식 관리
+    <div class="section-heading section-heading--save" style="margin-bottom:12px;">
+      <span class="dot"></span>메일 서식 관리
       <div style="margin-left:auto;">
         <button class="btn btn-blue" style="height:28px;padding:4px 14px;font-size:12px;" onclick="openTplModal()">+ 서식 추가</button>
       </div>
@@ -991,7 +1039,7 @@ function updateAdminBadge(valid) {
 
   <!-- 메일 발송 -->
   <div class="card">
-    <div class="card-title"><span class="dot" style="background:#f59e0b;"></span>메일 발송</div>
+    <div class="section-subheading section-subheading--neutral"><span class="dot"></span>메일 발송</div>
     <div class="field-row col2" style="margin-bottom:10px;">
       <label class="field">서식 선택
         <select id="sendTplSelect" onchange="onTplSelect()" style="min-width:200px;">
@@ -1022,10 +1070,14 @@ function updateAdminBadge(valid) {
 
 <!-- ═══ 🔗 Jira 연동 ═══ -->
 <section class="settings-section" data-section="jira">
+  <div class="section-header">
+    <h3>🔗 SmartWay 연동</h3>
+    <span class="section-sub">서버 설정, 수동 동기화, 담당자 매핑</span>
+  </div>
 
   <!-- Jira 서버 설정 -->
   <div class="card">
-    <div class="card-title"><span class="dot" style="background:var(--purple);"></span>SmartWay 서버 설정</div>
+    <div class="section-heading section-heading--save"><span class="dot"></span>SmartWay 서버 설정</div>
     <div class="field-row col2">
       <label class="field">SmartWay URL
         <input id="jiraBaseUrl" type="text" placeholder="https://jira.company.com">
@@ -1050,7 +1102,7 @@ function updateAdminBadge(valid) {
 
   <!-- 수동 동기화 -->
   <div class="card">
-    <div class="card-title"><span class="dot" style="background:var(--purple);"></span>수동 동기화</div>
+    <div class="section-heading section-heading--analyze"><span class="dot"></span>수동 동기화</div>
     <div style="font-size:11px;color:var(--text-muted);margin-bottom:10px;">
       자동 동기화 스케줄은 <b>배치관리 탭</b>의 <b>JIRA_SYNC</b> 배치에서 설정합니다.
     </div>
@@ -1059,14 +1111,14 @@ function updateAdminBadge(valid) {
         <div id="jiraSyncRepoSelect" style="min-width:200px;"></div>
       </label>
       <button class="btn" style="background:var(--purple);color:#fff;" onclick="syncToJira()">🔗 SmartWay 발행</button>
-      <button class="btn btn-ghost" onclick="pullFromJira()">🔄 역방향 동기화</button>
+      <button class="btn btn-ghost" onclick="pullFromJira()">역방향 동기화</button>
     </div>
     <div id="jiraSyncResult" style="margin-top:10px;font-size:12px;"></div>
   </div>
 
   <!-- 담당자 매핑 -->
   <div class="card">
-    <div class="card-title"><span class="dot" style="background:var(--purple);"></span>담당자 매핑 (URLViewer → SmartWay)</div>
+    <div class="section-heading section-heading--save"><span class="dot"></span>담당자 매핑 (URLViewer → SmartWay)</div>
     <div style="font-size:11px;color:var(--text-muted);margin-bottom:10px;">
       URLViewer 팀·담당자명과 SmartWay 계정을 매핑합니다. 동일 이름이 여러 팀에 있을 경우 팀으로 구분합니다. 매핑이 없는 담당자는 SmartWay 이슈 생성 시 담당자 미지정으로 발행됩니다.
     </div>
@@ -1094,9 +1146,13 @@ function updateAdminBadge(valid) {
 
 <!-- ═══ 🤖 사내 AI ═══ -->
 <section class="settings-section" data-section="ai">
+  <div class="section-header">
+    <h3>🤖 사내 AI</h3>
+    <span class="section-sub">연결, 요약, 프롬프트 템플릿</span>
+  </div>
   <div class="card" style="border:1px solid #a78bfa;">
-    <div class="card-title" style="margin-bottom:12px;">
-      <span class="dot" style="background:#7c3aed;"></span>API 연결
+    <div class="section-heading section-heading--save" style="margin-bottom:12px;">
+      <span class="dot"></span>API 연결
       <span style="font-size:11px;font-weight:400;color:var(--text-muted);margin-left:6px;">OpenAI 호환 chat completions — 토큰은 서버에만 저장됩니다</span>
       <button type="button" class="btn btn-blue" style="margin-left:auto;height:28px;padding:4px 14px;font-size:12px;" onclick="saveAiConnection()">연결 설정 저장</button>
     </div>
@@ -1126,14 +1182,14 @@ function updateAdminBadge(valid) {
   </div>
 
   <div class="card" style="margin-top:14px;border:1px solid #e2e8f0;">
-    <div class="card-title"><span class="dot" style="background:#64748b;"></span>최근 배치 요약 (ops_digest)</div>
+    <div class="section-heading section-heading--query"><span class="dot"></span>최근 배치 요약 (ops_digest)</div>
     <div style="font-size:11px;color:var(--text-muted);margin-bottom:8px;">선택 배치가 <b>성공</b> 종료된 뒤, 템플릿 <code>ops_digest</code>가 켜져 있으면 비동기로 갱신됩니다. 동일 내용이 <b>대시보드·모든 화면 상단</b> 노란 배너(운영·배치 요약)로도 표시됩니다.</div>
     <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">갱신 시각: <span id="aiLastDigestAt">-</span></div>
     <pre id="aiLastDigest" style="margin:0;padding:12px;background:#f8fafc;border:1px solid var(--border);border-radius:8px;font-size:12px;white-space:pre-wrap;max-height:200px;overflow-y:auto;">(없음)</pre>
   </div>
 
   <div class="card" style="margin-top:14px;border:1px solid #c4b5fd;">
-    <div class="card-title"><span class="dot" style="background:#6d28d9;"></span>프롬프트 템플릿</div>
+    <div class="section-heading section-heading--analyze"><span class="dot"></span>프롬프트 템플릿</div>
     <div style="font-size:11px;color:var(--text-muted);margin-bottom:12px;line-height:1.6;">
       본문에 <code>{{변수명}}</code> 을 사용합니다.
       <b>menu_inference</b>:
@@ -1147,11 +1203,68 @@ function updateAdminBadge(valid) {
   </div>
 </section>
 
+<!-- ═══ IT 담당자 (URL현황 제안) ═══ -->
+<section class="settings-section" data-section="it-assignees">
+  <div class="section-header">
+    <h3>👤 IT 담당자 계정</h3>
+    <span class="section-sub">URL현황 로그인 · 제안 저장 — 관리자가 승인 시 DB 반영</span>
+  </div>
+  <div class="card" style="border:1px solid #c4b5fd;">
+    <p style="font-size:12px;color:var(--text-muted);margin-bottom:12px;line-height:1.55;">
+      담당자는 <b>URL분석현황</b> 화면에서 팀·이름으로 최초 비밀번호를 등록한 뒤 로그인합니다. 변경 내용은 <b>제안</b>으로만 저장되며, 관리자가 URL현황에서 승인해야 공식 데이터에 반영됩니다.
+    </p>
+    <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;margin-bottom:12px;">
+      <label class="field" style="font-size:11px;font-weight:600;color:var(--text-muted);margin:0;">팀명
+        <input type="text" id="itAssigneeFilterTeam" placeholder="부분 일치" autocomplete="organization"
+               style="min-width:180px;height:32px;padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;box-sizing:border-box;"
+               onkeydown="if(event.key==='Enter'){event.preventDefault();itAssigneeSearch();}">
+      </label>
+      <label class="field" style="font-size:11px;font-weight:600;color:var(--text-muted);margin:0;">담당자명
+        <input type="text" id="itAssigneeFilterName" placeholder="부분 일치" autocomplete="name"
+               style="min-width:180px;height:32px;padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;box-sizing:border-box;"
+               onkeydown="if(event.key==='Enter'){event.preventDefault();itAssigneeSearch();}">
+      </label>
+      <button type="button" class="btn btn-blue" style="height:32px;" onclick="itAssigneeSearch()">조회</button>
+      <button type="button" class="btn btn-ghost" style="height:32px;padding:4px 12px;font-size:18px;line-height:1;" onclick="loadItAssignees()" title="목록 새로고침">🔄</button>
+    </div>
+    <div style="overflow-x:auto;">
+      <table style="width:100%;border-collapse:collapse;font-size:12px;">
+        <thead>
+          <tr style="background:#f8fafc;border-bottom:1px solid var(--border);">
+            <th style="text-align:left;padding:8px 10px;cursor:pointer;user-select:none;white-space:nowrap;" onclick="itAssigneeSortClick('id')" title="정렬">ID <span id="itSort-ind-id" style="font-size:10px;"></span></th>
+            <th style="text-align:left;padding:8px 10px;cursor:pointer;user-select:none;white-space:nowrap;" onclick="itAssigneeSortClick('teamName')" title="정렬">팀 <span id="itSort-ind-teamName" style="font-size:10px;"></span></th>
+            <th style="text-align:left;padding:8px 10px;cursor:pointer;user-select:none;white-space:nowrap;" onclick="itAssigneeSortClick('assigneeName')" title="정렬">담당자명 <span id="itSort-ind-assigneeName" style="font-size:10px;"></span></th>
+            <th style="text-align:left;padding:8px 10px;cursor:pointer;user-select:none;white-space:nowrap;" onclick="itAssigneeSortClick('createdAt')" title="정렬">등록일 <span id="itSort-ind-createdAt" style="font-size:10px;"></span></th>
+            <th style="text-align:left;padding:8px 10px;">작업</th>
+          </tr>
+        </thead>
+        <tbody id="itAssigneeTableBody">
+          <tr><td colspan="5" style="padding:12px;color:var(--text-muted);">탭을 열면 목록을 불러옵니다.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div id="itAssigneePager" style="display:none;align-items:center;gap:10px;margin-top:12px;font-size:12px;color:var(--text-muted);flex-wrap:wrap;">
+      <button type="button" class="btn btn-ghost btn-sm" id="itAssigneePrev" onclick="itAssigneeGoPage(-1)">이전</button>
+      <span id="itAssigneePageInfo"></span>
+      <button type="button" class="btn btn-ghost btn-sm" id="itAssigneeNext" onclick="itAssigneeGoPage(1)">다음</button>
+    </div>
+  </div>
+</section>
+
 <!-- ═══ 🔍 URL분석/검토 ═══ -->
 <section class="settings-section" data-section="extract">
+  <div class="section-header">
+    <h3>🔍 URL 분석·검토</h3>
+    <span class="section-sub">현업검토 · URL 분석 · APM 추출 · MOCK</span>
+  </div>
+
+  <div class="section-header" style="margin-top:0;">
+    <h3>📝 현업검토</h3>
+    <span class="section-sub">현업검토 화면에 노출할 상태(9 leaf)를 선택합니다.</span>
+  </div>
   <!-- 현업검토 화면 설정 (공통설정에서 이동) -->
   <div class="card" style="margin-bottom:14px;">
-    <div class="card-title"><span class="dot dot-blue"></span>현업검토 화면 설정</div>
+    <div class="section-heading section-heading--save"><span class="dot"></span>현업검토 화면 설정</div>
     <div style="font-size:11px;font-weight:700;color:var(--text-muted);margin-bottom:6px;letter-spacing:.05em;">현업검토 화면 표시 상태 (9 leaf v2)</div>
     <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px;">
       <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;">
@@ -1175,8 +1288,11 @@ function updateAdminBadge(valid) {
     <button class="btn btn-blue" style="height:32px;" onclick="saveReviewStatus()">저장</button>
   </div>
 
-  <div class="card" style="margin-bottom:14px;border:1px solid #bfdbfe;">
-    <div class="card-title"><span class="dot" style="background:#2563eb;"></span>최근 URL 분석 오류 요약</div>
+  <!-- 대분류(🔍 URL 분석 등)는 extract.html 의 #extractHeading* + loadExtractContent 에서 마운트 -->
+  <div id="extractMountUrl" style="margin-bottom:14px;"><div style="text-align:center;padding:40px;color:var(--text-muted);">탭을 클릭하면 로드됩니다.</div></div>
+
+  <div class="card card--tint-info" style="margin-bottom:14px;">
+    <div class="section-heading section-heading--analyze"><span class="dot"></span>최근 URL 분석 오류 요약</div>
     <div style="font-size:11px;color:var(--text-muted);margin-bottom:8px;line-height:1.6;">
       분석 수행 중 발생한 <b>파싱/추출 에러</b>, <b>0개 추출</b>, <b>WARN</b>를 마지막 1회 기준으로 저장해 둡니다.
       대시보드·모든 화면 상단의 <b>URL 분석 오류 요약</b> 배너와 동일한 데이터입니다.
@@ -1191,7 +1307,12 @@ function updateAdminBadge(valid) {
     <div id="extractIssueSummaryBox" style="font-size:12px;color:var(--text-muted);">(없음)</div>
   </div>
 
-  <div id="extractContent"><div style="text-align:center;padding:40px;color:var(--text-muted);">탭을 클릭하면 로드됩니다.</div></div>
+  <!-- extract.html: 키워드 · 경로변수 · 작업 카드 -->
+  <div id="extractMountUrlExtras" style="margin-bottom:14px;"></div>
+
+  <div id="extractMountApm" style="margin-bottom:14px;"></div>
+
+  <div id="extractMountMock"></div>
 </section>
 
     </div><!-- /settings-content -->
@@ -1300,6 +1421,15 @@ function updateAdminBadge(valid) {
         </label>
         <label class="field">URL 경로 프리픽스
           <input id="f_apiPathPrefix" type="text" placeholder="/APP">
+        </label>
+      </div>
+      <div class="field-row">
+        <label class="field">TS(NestJS) URL 분석 포함
+          <select id="f_tsAnalysisEnabled" title="Y면 전체 추출 시 NestJS TS 라우트를 Java 결과에 병합">
+            <option value="N">N</option>
+            <option value="Y">Y</option>
+          </select>
+          <span style="font-size:10px;color:var(--text-muted);display:block;margin-top:4px;line-height:1.45;">레포에 Nest/TS 컨트롤러가 있을 때만 Y 권장 · YAML 키 <code style="font-size:10px;">tsAnalysisEnabled</code></span>
         </label>
       </div>
       <div class="field-row">
@@ -2215,6 +2345,7 @@ function updateAdminBadge(valid) {
     document.getElementById('f_gitPullEnabled').value = 'Y';
     document.getElementById('f_analysisBatchEnabled').value = 'Y';
     document.getElementById('f_apmBatchEnabled').value = 'Y';
+    document.getElementById('f_tsAnalysisEnabled').value = 'N';
     document.getElementById('f_appType').value = 'APP';
     document.getElementById('f_apmType').value = 'NONE';
     document.getElementById('f_apmProfile').innerHTML = '<option value="">-- 선택 --</option>';
@@ -2232,6 +2363,7 @@ function updateAdminBadge(valid) {
     document.getElementById('f_gitPullEnabled').value   = r.gitPullEnabled   || 'Y';
     document.getElementById('f_analysisBatchEnabled').value = r.analysisBatchEnabled || 'Y';
     document.getElementById('f_apmBatchEnabled').value = r.apmBatchEnabled || 'Y';
+    document.getElementById('f_tsAnalysisEnabled').value = r.tsAnalysisEnabled || 'N';
     document.getElementById('f_appType').value          = r.appType || 'APP';
     document.getElementById('f_teamName').value         = r.teamName         || '';
     document.getElementById('f_managerName').value      = r.managerName      || '';
@@ -2282,6 +2414,7 @@ function updateAdminBadge(valid) {
       gitPullEnabled:   document.getElementById('f_gitPullEnabled').value,
       analysisBatchEnabled: document.getElementById('f_analysisBatchEnabled').value,
       apmBatchEnabled: document.getElementById('f_apmBatchEnabled').value,
+      tsAnalysisEnabled: document.getElementById('f_tsAnalysisEnabled').value,
       appType:          document.getElementById('f_appType').value,
       teamName:         document.getElementById('f_teamName').value.trim(),
       managerName:      document.getElementById('f_managerName').value.trim(),
@@ -2913,6 +3046,137 @@ function updateAdminBadge(valid) {
       res = await fetch(url, options);
     }
     return res;
+  }
+
+  const itAssigneeListState = { page: 0, size: 20, sortBy: 'id', sortDir: 'desc', totalPages: 0, totalElements: 0 };
+
+  function itAssigneeSearch() {
+    itAssigneeListState.page = 0;
+    loadItAssignees();
+  }
+
+  function itAssigneeSortClick(field) {
+    const allowed = ['id', 'teamName', 'assigneeName', 'createdAt'];
+    if (!allowed.includes(field)) return;
+    if (itAssigneeListState.sortBy === field) {
+      itAssigneeListState.sortDir = itAssigneeListState.sortDir === 'asc' ? 'desc' : 'asc';
+    } else {
+      itAssigneeListState.sortBy = field;
+      itAssigneeListState.sortDir = (field === 'teamName' || field === 'assigneeName') ? 'asc' : 'desc';
+    }
+    itAssigneeListState.page = 0;
+    loadItAssignees();
+  }
+
+  function renderItAssigneeSortIndicators() {
+    ['id', 'teamName', 'assigneeName', 'createdAt'].forEach((f) => {
+      const el = document.getElementById('itSort-ind-' + f);
+      if (!el) return;
+      if (itAssigneeListState.sortBy !== f) { el.textContent = ''; return; }
+      el.textContent = itAssigneeListState.sortDir === 'asc' ? '▲' : '▼';
+    });
+  }
+
+  function itAssigneeGoPage(delta) {
+    const next = itAssigneeListState.page + delta;
+    if (next < 0 || next >= itAssigneeListState.totalPages) return;
+    itAssigneeListState.page = next;
+    loadItAssignees();
+  }
+
+  function renderItAssigneePager() {
+    const wrap = document.getElementById('itAssigneePager');
+    const info = document.getElementById('itAssigneePageInfo');
+    const prev = document.getElementById('itAssigneePrev');
+    const next = document.getElementById('itAssigneeNext');
+    if (!wrap || !info) return;
+    const tp = itAssigneeListState.totalPages;
+    const te = itAssigneeListState.totalElements;
+    if (tp <= 1 && te === 0) {
+      wrap.style.display = 'none';
+      return;
+    }
+    wrap.style.display = 'flex';
+    const cur = itAssigneeListState.page + 1;
+    info.textContent = `페이지 ${cur} / ${Math.max(1, tp)} · 총 ${te.toLocaleString()}건`;
+    if (prev) prev.disabled = itAssigneeListState.page <= 0;
+    if (next) next.disabled = itAssigneeListState.page >= tp - 1 || tp === 0;
+  }
+
+  async function loadItAssignees() {
+    const tbody = document.getElementById('itAssigneeTableBody');
+    if (!tbody) return;
+    tbody.innerHTML = '<tr><td colspan="5" style="padding:12px;color:var(--text-muted);">불러오는 중…</td></tr>';
+    try {
+      const teamEl = document.getElementById('itAssigneeFilterTeam');
+      const nameEl = document.getElementById('itAssigneeFilterName');
+      const team = teamEl ? String(teamEl.value || '').trim() : '';
+      const name = nameEl ? String(nameEl.value || '').trim() : '';
+      const params = new URLSearchParams();
+      if (team) params.set('team', team);
+      if (name) params.set('name', name);
+      params.set('page', String(itAssigneeListState.page));
+      params.set('size', String(itAssigneeListState.size));
+      params.set('sortBy', itAssigneeListState.sortBy);
+      params.set('sortDir', itAssigneeListState.sortDir);
+      const res = await adminFetch('/api/config/it-assignees?' + params.toString());
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || '조회 실패');
+      itAssigneeListState.totalPages = Number(data.totalPages) || 0;
+      itAssigneeListState.totalElements = Number(data.totalElements) || 0;
+      const maxPage = Math.max(0, itAssigneeListState.totalPages - 1);
+      if (itAssigneeListState.page > maxPage) {
+        itAssigneeListState.page = maxPage;
+        return loadItAssignees();
+      }
+      const rows = data.assignees || [];
+      renderItAssigneeSortIndicators();
+      renderItAssigneePager();
+      if (!rows.length) {
+        tbody.innerHTML = '<tr><td colspan="5" style="padding:12px;color:var(--text-muted);">조건에 맞는 담당자가 없습니다.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = rows.map(a => `<tr style="border-bottom:1px solid var(--border);">
+        <td style="padding:8px 10px;">${a.id}</td>
+        <td style="padding:8px 10px;">${esc(a.teamName || '')}</td>
+        <td style="padding:8px 10px;">${esc(a.assigneeName || '')}</td>
+        <td style="padding:8px 10px;white-space:nowrap;">${esc(a.createdAt || '')}</td>
+        <td style="padding:8px 10px;white-space:nowrap;">
+          <button type="button" class="btn btn-ghost" style="font-size:11px;padding:2px 8px;height:auto;" onclick="resetItAssigneePwd(${a.id})">비밀번호 리셋</button>
+          <button type="button" class="btn btn-ghost" style="font-size:11px;padding:2px 8px;height:auto;color:#b91c1c;border-color:#fecaca;" onclick="deleteItAssignee(${a.id})">삭제</button>
+        </td>
+      </tr>`).join('');
+    } catch (e) {
+      itAssigneeListState.totalPages = 0;
+      itAssigneeListState.totalElements = 0;
+      renderItAssigneePager();
+      tbody.innerHTML = `<tr><td colspan="5" style="padding:12px;color:#dc2626;">${esc(e.message || '오류')}</td></tr>`;
+    }
+  }
+
+  async function deleteItAssignee(id) {
+    if (!await customConfirm('이 IT 담당자 계정을 삭제할까요?')) return;
+    try {
+      const res = await adminFetch(`/api/config/it-assignees/${id}`, { method: 'DELETE' });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(d.error || '삭제 실패');
+      showToast('삭제되었습니다.', 'success');
+      loadItAssignees();
+    } catch (e) { showToast(e.message || '삭제 실패', 'error'); }
+  }
+
+  async function resetItAssigneePwd(id) {
+    const pw = await customPrompt('새 비밀번호를 입력하세요:', { type: 'password', title: '비밀번호 리셋' });
+    if (!pw) return;
+    try {
+      const res = await adminFetch(`/api/config/it-assignees/${id}/reset-password`, {
+        method: 'POST',
+        body: JSON.stringify({ newPassword: pw })
+      });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(d.error || '리셋 실패');
+      showToast('비밀번호가 변경되었습니다.', 'success');
+    } catch (e) { showToast(e.message || '리셋 실패', 'error'); }
   }
 
   function showToast(msg, type='success') {
@@ -4128,6 +4392,7 @@ function updateAdminBadge(valid) {
       if (target === 'extract') { loadExtractIssueReport(); loadExtractContent(); }
       if (target === 'jira') loadJiraConfig();
       if (target === 'ai') loadAiTab();
+      if (target === 'it-assignees') loadItAssignees();
       history.replaceState({}, '', '#' + target);
     });
   });
@@ -4142,8 +4407,15 @@ function updateAdminBadge(valid) {
   let extractLoaded = false;
   async function loadExtractContent() {
     if (extractLoaded) return;
-    const wrap = document.getElementById('extractContent');
-    wrap.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-muted);"><div class="spinner" style="display:inline-block;width:20px;height:20px;border:2px solid var(--border);border-top-color:var(--primary);border-radius:50%;animation:spin .7s linear infinite;"></div><br>로딩 중...</div>';
+    const mountUrl = document.getElementById('extractMountUrl');
+    const mountUrlExtras = document.getElementById('extractMountUrlExtras');
+    const mountApm = document.getElementById('extractMountApm');
+    const mountMock = document.getElementById('extractMountMock');
+    if (!mountUrl || !mountUrlExtras || !mountApm || !mountMock) return;
+    mountUrl.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-muted);"><div class="spinner" style="display:inline-block;width:20px;height:20px;border:2px solid var(--border);border-top-color:var(--primary);border-radius:50%;animation:spin .7s linear infinite;"></div><br>로딩 중...</div>';
+    mountUrlExtras.innerHTML = '';
+    mountApm.innerHTML = '';
+    mountMock.innerHTML = '';
     try {
       const res = await fetch('/url-viewer/extract.html?embedded=1');
       const html = await res.text();
@@ -4158,17 +4430,37 @@ function updateAdminBadge(valid) {
           document.head.appendChild(el);
         });
       }
-      // 본문 카드만 추출 (.main 안의 내용)
-      // 단건 파싱 모달·작업 오버레이는 .main 밖에 있어 임베드 시 함께 주입하지 않으면 버튼 클릭 후 응답 없음
-      const parent = wrap.parentNode;
+      // 단건 파싱 모달·작업 오버레이는 .main 밖 — 첫 마운트 앞에 삽입
+      const parent = mountUrl.parentNode;
       ['debugParseOverlay', 'delOverlay'].forEach((id) => {
         if (document.getElementById(id)) return;
         const node = doc.getElementById(id);
-        if (node && parent) parent.insertBefore(node.cloneNode(true), wrap);
+        if (node && parent) parent.insertBefore(node.cloneNode(true), mountUrl);
       });
       const main = doc.querySelector('.main');
       if (main) {
-        wrap.innerHTML = main.innerHTML;
+        mountUrl.innerHTML = '';
+        mountUrlExtras.innerHTML = '';
+        mountApm.innerHTML = '';
+        mountMock.innerHTML = '';
+        const headUrl = doc.getElementById('extractHeadingUrl');
+        const urlSec = doc.getElementById('extractSectionUrl');
+        const kwSec = doc.getElementById('extractSectionKeywords');
+        const pathSec = doc.getElementById('extractSectionPathParams');
+        const headApm = doc.getElementById('extractHeadingApm');
+        const apmSec = doc.getElementById('extractSectionApm');
+        const headMock = doc.getElementById('extractHeadingMock');
+        const mockSec = doc.getElementById('extractSectionMock');
+        const workSec = doc.getElementById('extractSectionWorkCard');
+        if (headUrl) mountUrl.appendChild(document.importNode(headUrl, true));
+        if (urlSec) mountUrl.appendChild(document.importNode(urlSec, true));
+        if (kwSec) mountUrlExtras.appendChild(document.importNode(kwSec, true));
+        if (pathSec) mountUrlExtras.appendChild(document.importNode(pathSec, true));
+        if (headApm) mountApm.appendChild(document.importNode(headApm, true));
+        if (apmSec) mountApm.appendChild(document.importNode(apmSec, true));
+        if (headMock) mountMock.appendChild(document.importNode(headMock, true));
+        if (mockSec) mountMock.appendChild(document.importNode(mockSec, true));
+        if (workSec) mountUrlExtras.appendChild(document.importNode(workSec, true));
       }
       // <script> 실행 (가드 스크립트 제외)
       // - 외부 스크립트(src)는 필요한 것만 1회 로드한 뒤 인라인 스크립트를 실행해야 초기화가 안정적이다.
@@ -4224,7 +4516,7 @@ function updateAdminBadge(valid) {
       });
       extractLoaded = true;
     } catch(e) {
-      wrap.innerHTML = `<div style="text-align:center;padding:40px;color:var(--danger);">로드 실패: ${e.message}</div>`;
+      mountUrl.innerHTML = `<div style="text-align:center;padding:40px;color:var(--danger);">로드 실패: ${e.message}</div>`;
     }
   }
 

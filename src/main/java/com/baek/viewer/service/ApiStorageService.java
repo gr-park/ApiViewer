@@ -463,6 +463,15 @@ public class ApiStorageService {
                     // 값 설정 시 수동 플래그 ON, 비움 시 OFF (매핑 재갱신 허용)
                     r.setManagerOverridden(mgrVal != null);
                 }
+                if (fields.containsKey("blockedDate")) {
+                    r.setBlockedDate(toNullableDate(fields.get("blockedDate")));
+                }
+                if (fields.containsKey("blockedReason")) {
+                    r.setBlockedReason(toNullableStr(fields.get("blockedReason")));
+                }
+                if (fields.containsKey("memo")) {
+                    r.setMemo(toNullableStr(fields.get("memo")));
+                }
 
                 boolean reviewChanged = false;
                 if (fields.containsKey("reviewResult"))  { r.setReviewResult(toNullableStr(fields.get("reviewResult"))); reviewChanged = true; }

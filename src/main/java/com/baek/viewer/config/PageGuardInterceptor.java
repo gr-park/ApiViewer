@@ -34,7 +34,7 @@ public class PageGuardInterceptor implements HandlerInterceptor {
                 if ("adminToken".equals(c.getName())) { token = c.getValue(); break; }
             }
         }
-        if (authService.isValid(token)) return true;
+        if (authService.isAdmin(token)) return true;
 
         log.warn("[페이지 차단] {} (IP={}) — 관리자 쿠키 없음/만료", request.getRequestURI(), request.getRemoteAddr());
         // 사용자를 인덱스로 돌려보냄 (캐시 방지)

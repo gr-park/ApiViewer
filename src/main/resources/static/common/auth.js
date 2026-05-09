@@ -188,4 +188,15 @@
     }
     return res;
   };
+
+  const EDITOR_TOKEN_KEY = 'editorToken';
+  window.getEditorToken = function () { return sessionStorage.getItem(EDITOR_TOKEN_KEY) || ''; };
+  window.setEditorToken = function (t) {
+    if (t) sessionStorage.setItem(EDITOR_TOKEN_KEY, t);
+    else sessionStorage.removeItem(EDITOR_TOKEN_KEY);
+  };
+  window.isEditorLoggedIn = function () { return !!window.getEditorToken(); };
+  window.editorHeaders = function (extra) {
+    return Object.assign({ 'Content-Type': 'application/json', 'X-Editor-Token': window.getEditorToken() }, extra || {});
+  };
 })();

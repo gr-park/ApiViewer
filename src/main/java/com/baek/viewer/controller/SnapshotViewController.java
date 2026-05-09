@@ -20,6 +20,8 @@ import org.springframework.web.bind.annotation.RestController;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.sql.Date;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -97,6 +99,60 @@ public class SnapshotViewController {
             return ResponseEntity.ok(resp);
         } catch (Exception e) {
             log.warn("[SNAPSHOT_VIEW] list 실패: date={}, requestedRepos={}, err={}", d, requestedRepos, e.getMessage());
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    /**
+     * 기간 내 전체(풀) 스냅샷이 존재하는 날짜(YYYY-MM-DD) 목록 — viewer 기준일자 달력 표시용.
+     */
+    @GetMapping("/dates-with-snapshots")
+    public ResponseEntity<?> datesWithSnapshots(@RequestParam String from,
+                                                @RequestParam String to) {
+        LocalDate dFrom;
+        LocalDate dTo;
+        try {
+            dFrom = LocalDate.parse(from.trim());
+            dTo = LocalDate.parse(to.trim());
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", "from/to는 YYYY-MM-DD 형식이어야 합니다."));
+        }
+        if (dTo.isBefore(dFrom)) {
+            return ResponseEntity.badRequest().body(Map.of("error", "to는 from 이상이어야 합니다."));
+        }
+        if (dFrom.plusYears(3).isBefore(dTo)) {
+            return ResponseEntity.badRequest().body(Map.of("error", "조회 기간은 최대 3년입니다."));
+        }
+        LocalDateTime fromDt = dFrom.atStartOfDay();
+        LocalDateTime toDt = dTo.atTime(LocalTime.MAX);
+        log.debug("[SNAPSHOT_VIEW] dates-with-snapshots: from={} to={}", dFrom, dTo);
+        try {
+            List<Object> raw = snapshotRepository.findDistinctGlobalSnapshotLocalDates(fromDt, toDt);
+            List<String> dates = new ArrayList<>(raw.size());
+            for (Object o : raw) {
+                if (o == null) {
+                    continue;
+                }
+                if (o instanceof LocalDate ld) {
+                    dates.add(ld.toString());
+                } else if (o instanceof Date sqlD) {
+                    dates.add(sqlD.toLocalDate().toString());
+                } else if (o instanceof java.util.Date utilD) {
+                    dates.add(new Date(utilD.getTime()).toLocalDate().toString());
+                } else {
+                    String s = o.toString();
+                    if (s.length() >= 10) {
+                        dates.add(s.substring(0, 10));
+                    }
+                }
+            }
+            Map<String, Object> resp = new LinkedHashMap<>();
+            resp.put("from", dFrom.toString());
+            resp.put("to", dTo.toString());
+            resp.put("dates", dates);
+            return ResponseEntity.ok(resp);
+        } catch (Exception e) {
+            log.warn("[SNAPSHOT_VIEW] dates-with-snapshots 실패: from={}, to={}, err={}", dFrom, dTo, e.getMessage());
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
     }
