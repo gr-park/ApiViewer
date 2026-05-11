@@ -200,6 +200,9 @@ public class SnapshotViewController {
                                      @RequestParam(required = false) String repositories,
                                      @RequestParam(required = false) String status,
                                      @RequestParam(required = false) String statusGroup,
+                                     @RequestParam(required = false) String autoStatus,
+                                     @RequestParam(required = false) String autoStatusGroup,
+                                     @RequestParam(required = false) Boolean expectedDone,
                                      @RequestParam(required = false) String httpMethod,
                                      @RequestParam(required = false) String isDeprecated,
                                      @RequestParam(required = false) Boolean testSuspect,
@@ -210,7 +213,8 @@ public class SnapshotViewController {
         Pageable pageable = PageRequest.of(Math.max(0, page), Math.max(1, size), parseSnapshotSort(sort));
         List<String> repos = parseRepos(repository, repositories);
         Page<?> p = snapshotRowRepository.pageByFilters(id, repos,
-                blankToNull(status), blankToNull(statusGroup), blankToNull(httpMethod), blankToNull(isDeprecated),
+                blankToNull(status), blankToNull(statusGroup), blankToNull(autoStatus), blankToNull(autoStatusGroup), expectedDone,
+                blankToNull(httpMethod), blankToNull(isDeprecated),
                 testSuspect, pathParams, markingIncomplete, blankToNull(q), pageable);
 
         Map<String, Object> resp = new LinkedHashMap<>();
@@ -232,6 +236,7 @@ public class SnapshotViewController {
         boolean hasRepo = (repos != null && !repos.isEmpty());
 
         List<Object[]> statusRows = snapshotRowRepository.countGroupByStatus(id, hasRepo ? repos : null);
+        List<Object[]> autoStatusRows = snapshotRowRepository.countGroupByAutoAnalyzedStatus(id, hasRepo ? repos : null);
         List<Object[]> methodRows = snapshotRowRepository.countGroupByMethod(id, hasRepo ? repos : null);
 
         Map<String, Long> byStatus = new LinkedHashMap<>();
@@ -248,6 +253,12 @@ public class SnapshotViewController {
         for (Object[] row : methodRows) {
             byMethod.put(row[0] != null ? row[0].toString() : "?", ((Number) row[1]).longValue());
         }
+        Map<String, Long> autoByStatus = new LinkedHashMap<>();
+        for (Object[] row : autoStatusRows) {
+            String s = row[0] != null ? row[0].toString() : "사용";
+            long c = ((Number) row[1]).longValue();
+            autoByStatus.put(s, c);
+        }
 
         long newCount        = snapshotRowRepository.countNew(id, hasRepo ? repos : null);
         long changedCount    = snapshotRowRepository.countStatusChanged(id, hasRepo ? repos : null);
@@ -256,6 +267,7 @@ public class SnapshotViewController {
         long markingIncompleteCount = snapshotRowRepository.countBlockMarkingIncomplete(id, hasRepo ? repos : null);
         long testSuspectCount = snapshotRowRepository.countTestSuspect(id, hasRepo ? repos : null);
         long pathParamPatternCount = snapshotRowRepository.countPathParamPattern(id, hasRepo ? repos : null);
+        long expectedDoneCount = snapshotRowRepository.countExpectedDone(id, hasRepo ? repos : null);
         long priorityPureCount = byStatus.getOrDefault("①-① 차단대상", 0L);
 
         long blockResidual = byStatus.getOrDefault("①-① 차단대상", 0L);
@@ -284,7 +296,9 @@ public class SnapshotViewController {
         response.put("markingIncompleteCount", markingIncompleteCount);
         response.put("testSuspectCount", testSuspectCount);
         response.put("pathParamPatternCount", pathParamPatternCount);
+        response.put("expectedDoneCount", expectedDoneCount);
         response.put("byStatus",     byStatus);
+        response.put("autoByStatus", autoByStatus);
         response.put("byCategory",   byCategory);
         response.put("byMethod",     byMethod);
         response.put("priorityPureCount", priorityPureCount);
@@ -313,7 +327,7 @@ public class SnapshotViewController {
     }
 
     private static final Set<String> SNAPSHOT_SORT_FIELDS = Set.of(
-            "id", "apiPath", "httpMethod", "status", "callCount", "callCountMonth", "callCountWeek",
+            "id", "apiPath", "httpMethod", "status", "autoAnalyzedStatus", "callCount", "callCountMonth", "callCountWeek",
             "lastAnalyzedAt", "modifiedAt", "blockedDate", "repositoryName", "teamOverride", "managerOverride",
             "cboScheduledDate", "deployScheduledDate", "pathParamPattern", "methodName", "controllerName");
 

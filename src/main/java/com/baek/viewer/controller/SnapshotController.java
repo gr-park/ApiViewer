@@ -105,6 +105,9 @@ public class SnapshotController {
                                      @RequestParam(required = false) String repo,
                                      @RequestParam(required = false) String status,
                                      @RequestParam(required = false) String statusGroup,
+                                     @RequestParam(required = false) String autoStatus,
+                                     @RequestParam(required = false) String autoStatusGroup,
+                                     @RequestParam(required = false) Boolean expectedDone,
                                      @RequestParam(required = false) String httpMethod,
                                      @RequestParam(required = false) String isDeprecated,
                                      @RequestParam(required = false) Boolean testSuspect,
@@ -117,7 +120,8 @@ public class SnapshotController {
         String r = blankToNull(repo);
         if (r != null) repos = List.of(r);
         Page<?> p = snapshotRowRepository.pageByFilters(id, repos,
-                blankToNull(status), blankToNull(statusGroup), blankToNull(httpMethod), blankToNull(isDeprecated),
+                blankToNull(status), blankToNull(statusGroup), blankToNull(autoStatus), blankToNull(autoStatusGroup), expectedDone,
+                blankToNull(httpMethod), blankToNull(isDeprecated),
                 testSuspect, pathParams, markingIncomplete, blankToNull(q), pageable);
 
         Map<String, Object> resp = new LinkedHashMap<>();

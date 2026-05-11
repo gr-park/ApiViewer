@@ -87,6 +87,12 @@ public interface ApiRecordRepository extends JpaRepository<ApiRecord, Long>,
     @Query("SELECT COALESCE(r.status, '사용'), COUNT(r) FROM ApiRecord r WHERE r.repositoryName IN :repos GROUP BY r.status")
     List<Object[]> countGroupByStatusForRepos(@Param("repos") List<String> repos);
 
+    @Query("SELECT COALESCE(r.autoAnalyzedStatus, '사용'), COUNT(r) FROM ApiRecord r GROUP BY r.autoAnalyzedStatus")
+    List<Object[]> countGroupByAutoAnalyzedStatus();
+
+    @Query("SELECT COALESCE(r.autoAnalyzedStatus, '사용'), COUNT(r) FROM ApiRecord r WHERE r.repositoryName IN :repos GROUP BY r.autoAnalyzedStatus")
+    List<Object[]> countGroupByAutoAnalyzedStatusForRepos(@Param("repos") List<String> repos);
+
     @Query("SELECT COALESCE(r.httpMethod, '?'), COUNT(r) FROM ApiRecord r GROUP BY r.httpMethod")
     List<Object[]> countGroupByMethod();
 
@@ -122,6 +128,23 @@ public interface ApiRecordRepository extends JpaRepository<ApiRecord, Long>,
 
     @Query("SELECT COUNT(r) FROM ApiRecord r WHERE r.blockMarkingIncomplete = true AND r.repositoryName IN :repos AND (r.status IS NULL OR r.status <> '삭제')")
     long countBlockMarkingIncompleteForRepos(@Param("repos") List<String> repos);
+
+    @Query("""
+            SELECT COUNT(r) FROM ApiRecord r
+            WHERE r.autoAnalyzedStatus = '차단완료'
+              AND (r.status IS NULL OR r.status <> '차단완료')
+              AND (r.status IS NULL OR r.status <> '삭제')
+            """)
+    long countExpectedDone();
+
+    @Query("""
+            SELECT COUNT(r) FROM ApiRecord r
+            WHERE r.repositoryName IN :repos
+              AND r.autoAnalyzedStatus = '차단완료'
+              AND (r.status IS NULL OR r.status <> '차단완료')
+              AND (r.status IS NULL OR r.status <> '삭제')
+            """)
+    long countExpectedDoneForRepos(@Param("repos") List<String> repos);
 
     @Query("SELECT COUNT(r) FROM ApiRecord r WHERE r.testSuspectReason IS NOT NULL AND r.testSuspectReason <> '' AND (r.status IS NULL OR r.status <> '삭제')")
     long countTestSuspect();

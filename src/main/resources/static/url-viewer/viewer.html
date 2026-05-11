@@ -958,6 +958,8 @@
     </div>
     <div class="stat-group tight sg-done">
       <div class="stat-pill sg-done" id="pill-차단완료" onclick="setFilter('차단완료')"><span>차단완료</span><strong id="stat-차단완료">0</strong></div>
+      <div class="stat-pill sg-done" id="pill-auto-차단완료" onclick="setFilter('auto:차단완료')" title="순수 자동 판정 기준 차단완료"><span>자동 차단완료</span><strong id="stat-auto-차단완료">0</strong></div>
+      <div class="stat-pill sg-done" id="pill-expected-done" onclick="setFilter('expectedDone')" title="자동은 차단완료지만 공식 상태는 아직 차단완료가 아닌 건"><span>차단완료 예상</span><strong id="stat-expected-done">0</strong></div>
       <div class="stat-pill sg-done" id="pill-marking-incomplete" onclick="setFilter('marking-incomplete')" title="차단완료이지만 @Deprecated 또는 [URL차단작업] 주석 누락"><span>📝 차단처리미흡</span><strong id="stat-marking-incomplete">0</strong></div>
     </div>
     <div class="stat-group tight sg-hist">
@@ -975,6 +977,11 @@
     </div>
     <div class="stat-group tight sg-review">
       <div class="stat-pill sg-review" id="pill-reviewed" onclick="setFilter('reviewed')"><span>현업검토완료</span><strong id="stat-reviewed" style="color:#1e40af;">0</strong></div>
+    </div>
+    <div class="stat-group tight">
+      <div class="stat-pill s-use" id="pill-auto-사용" onclick="setFilter('auto:사용')" title="순수 자동 판정 기준 사용"><span>자동 사용</span><strong id="stat-auto-사용">0</strong></div>
+      <div class="stat-pill sg-pri1" id="pill-auto-block" onclick="setFilter('autoGroup:block')" title="순수 자동 판정 기준 ①-*"><span>자동 ① 차단대상</span><strong id="stat-auto-block">0</strong></div>
+      <div class="stat-pill sg-pri3" id="pill-auto-review" onclick="setFilter('autoGroup:review')" title="순수 자동 판정 기준 ②-*"><span>자동 ② 추가검토대상</span><strong id="stat-auto-review">0</strong></div>
     </div>
 
     <div class="stat-row-break"></div>
@@ -1048,12 +1055,17 @@
       </span>
     </span>
 
-    <span class="bulk-group">
+    <span class="bulk-group" id="bulkStatusGroup">
       <span class="bulk-label" style="color:#bae6fd;">상태변경</span>
       <span class="bulk-seg bulk-seg-status-edit" id="bulkStatusEditSeg">
         <button type="button" id="bulkStatusEditPrimary">승인요청</button>
         <button type="button" id="bulkStatusEditSecondary" style="display:none;">일괄변경</button>
       </span>
+    </span>
+
+    <span class="bulk-group" id="bulkExpectedDoneGroup" style="display:none;">
+      <span class="bulk-label" style="color:#fca5a5;">차단완료</span>
+      <button type="button" class="btn-apply" id="bulkExpectedDoneApplyBtn" onclick="bulkApplyExpectedDone()" style="background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;">차단완료 일괄적용</button>
     </span>
 
     <span class="bulk-group" id="bulkDataChangeGroup">
@@ -1062,7 +1074,7 @@
     </span>
 
     <!-- 상태확정: 확정 | 해제 (한 그룹) -->
-    <span class="bulk-group bulk-group-lock">
+    <span class="bulk-group bulk-group-lock" id="bulkLockGroup">
       <span class="bulk-label">상태확정</span>
       <span class="bulk-seg bulk-seg-confirm">
         <button type="button" onclick="bulkLock(true)">확정</button>
@@ -1071,7 +1083,7 @@
     </span>
 
     <!-- 그룹3: 상태변경알림 -->
-    <span class="bulk-group">
+    <span class="bulk-group" id="bulkStatusAlertGroup">
       <span class="bulk-label">상태변경알림</span>
       <button class="btn-apply" onclick="bulkClearStatusChange()" style="background:#fecaca;color:#7f1d1d;">확인</button>
     </span>
@@ -1480,6 +1492,11 @@
     if (!row) return false;
     const s = row.proposalStatusChangeSummary;
     return !!(s && String(s).trim());
+  }
+
+  function rowIsExpectedDone(row) {
+    if (!row) return false;
+    return row.autoAnalyzedStatus === '차단완료' && row.status !== '차단완료' && row.status !== '삭제';
   }
 
   async function bulkProposalApprove() {
@@ -2557,8 +2574,8 @@
     if (depMgr) params.set('deployManager', depMgr);
     if (window._deployUnscheduledFilter) params.set('deployUnscheduled', 'true');
 
-    // activeFilter → status 또는 alert 또는 method/deprecated
-    // (스냅샷 데이터 조회에서는 alert(new/changed/reviewed/deleted) 기능이 없으므로, 가능하면 status/statusGroup 등으로만 조회)
+    // activeFilter → status / autoStatus / alert / method/deprecated
+    // (스냅샷 데이터 조회에서는 alert(new/changed/reviewed/deleted) 기능이 없으므로, 가능하면 status/statusGroup/autoStatus 중심으로 조회)
     if (!snapshotMode) {
       if (activeFilter === 'new')           params.set('alert', 'new');
       else if (activeFilter === 'changed')  params.set('alert', 'changed');
@@ -2570,6 +2587,7 @@
     } else {
       if (activeFilter === 'marking-incomplete') params.set('markingIncomplete', 'true');
     }
+    if (activeFilter === 'expectedDone') params.set('expectedDone', 'true');
 
     if (activeFilter === 'testSuspect') params.set('testSuspect', 'true');
     else if (activeFilter === 'pathParams') params.set('pathParams', 'true');
@@ -2580,6 +2598,9 @@
     else if (activeFilter === 'group:review') params.set('statusGroup', 'review');
     else if (activeFilter === 'group:blockResidual') params.set('statusGroup', 'blockResidual');
     else if (activeFilter === 'group:blockExcluded') params.set('statusGroup', 'blockExcluded');
+    else if (activeFilter === 'autoGroup:block') params.set('autoStatusGroup', 'block');
+    else if (activeFilter === 'autoGroup:review') params.set('autoStatusGroup', 'review');
+    else if (activeFilter.startsWith('auto:')) params.set('autoStatus', activeFilter.slice(5));
     else if (
       activeFilter === '사용' ||
       activeFilter === '차단완료' ||
@@ -2831,17 +2852,26 @@
 
   // ── 통계 (서버 카운트 기반) ─────────────────────────────
   function renderStats() {
-    const c = serverCounts || { total:0, deletedCount:0, newCount:0, changedCount:0, reviewedCount:0, pendingProposalCount:0, openRejectEventCount:0, byStatus:{}, byMethod:{} };
+    const c = serverCounts || { total:0, deletedCount:0, newCount:0, changedCount:0, reviewedCount:0, pendingProposalCount:0, openRejectEventCount:0, expectedDoneCount:0, byStatus:{}, autoByStatus:{}, byMethod:{} };
     const byStatus = c.byStatus || {};
+    const autoByStatus = c.autoByStatus || {};
     const byMethod = c.byMethod || {};
     const get = (k) => byStatus[k] || 0;
+    const getAuto = (k) => autoByStatus[k] || 0;
 
     // ① 차단대상 / ② 추가검토대상 합계 — leaf 4+3 전부 (하위 배지 합과 일치)
     const blockSum  = STATUS_UMBRELLA_BLOCK_LEAVES.reduce((s, k) => s + (byStatus[k] || 0), 0);
     const reviewSum = STATUS_UMBRELLA_REVIEW_LEAVES.reduce((s, k) => s + (byStatus[k] || 0), 0);
+    const autoBlockSum = STATUS_UMBRELLA_BLOCK_LEAVES.reduce((s, k) => s + (autoByStatus[k] || 0), 0);
+    const autoReviewSum = STATUS_UMBRELLA_REVIEW_LEAVES.reduce((s, k) => s + (autoByStatus[k] || 0), 0);
     document.getElementById('statTotal').textContent     = c.total || 0;
     document.getElementById('stat-사용').textContent      = get('사용');
     document.getElementById('stat-차단완료').textContent   = get('차단완료');
+    { const el = document.getElementById('stat-auto-사용'); if (el) el.textContent = getAuto('사용'); }
+    { const el = document.getElementById('stat-auto-차단완료'); if (el) el.textContent = getAuto('차단완료'); }
+    { const el = document.getElementById('stat-expected-done'); if (el) el.textContent = c.expectedDoneCount || 0; }
+    { const el = document.getElementById('stat-auto-block'); if (el) el.textContent = autoBlockSum; }
+    { const el = document.getElementById('stat-auto-review'); if (el) el.textContent = autoReviewSum; }
     { const e = document.getElementById('stat-block');    if (e) e.textContent = blockSum; }
     { const e = document.getElementById('stat-review');   if (e) e.textContent = reviewSum; }
     // 9 leaf v2 — ① 차단대상 / ② 추가검토대상 leaf 별 카운트
@@ -2922,8 +2952,13 @@
     if (val === '') { document.getElementById('pill-all').classList.add('active-filter'); }
     else if (val === '사용') { document.getElementById('pill-사용').classList.add('active-filter'); }
     else if (val === '차단완료') { document.getElementById('pill-차단완료').classList.add('active-filter'); }
+    else if (val === 'auto:사용') { const e = document.getElementById('pill-auto-사용'); if (e) e.classList.add('active-filter'); }
+    else if (val === 'auto:차단완료') { const e = document.getElementById('pill-auto-차단완료'); if (e) e.classList.add('active-filter'); }
+    else if (val === 'expectedDone') { const e = document.getElementById('pill-expected-done'); if (e) e.classList.add('active-filter'); }
     else if (val === 'group:block')  { const e = document.getElementById('pill-block');  if (e) e.classList.add('active-filter'); }
     else if (val === 'group:review') { const e = document.getElementById('pill-review'); if (e) e.classList.add('active-filter'); }
+    else if (val === 'autoGroup:block') { const e = document.getElementById('pill-auto-block'); if (e) e.classList.add('active-filter'); }
+    else if (val === 'autoGroup:review') { const e = document.getElementById('pill-auto-review'); if (e) e.classList.add('active-filter'); }
     else if (val === '①-① 차단대상')             { const e = document.getElementById('pill-leaf-1-1'); if (e) e.classList.add('active-filter'); }
     else if (val === '①-② 담당자 판단')           { const e = document.getElementById('pill-leaf-1-2'); if (e) e.classList.add('active-filter'); }
     else if (val === '①-③ 현업요청 제외대상')      { const e = document.getElementById('pill-leaf-1-3'); if (e) e.classList.add('active-filter'); }
@@ -3079,7 +3114,7 @@
         <td>${a.fullUrl ? `<a href="${esc(a.fullUrl)}" target="_blank" style="font-size:11px;color:var(--primary);text-decoration:none;padding:2px 8px;border:1px solid var(--primary);border-radius:4px;white-space:nowrap;">열기 ↗</a>` : '<span style="color:#cbd5e1;font-size:11px;">-</span>'}</td>
         <!-- 상태 / 자동분석 / 상태변경 사항·사유 / 상태확정 -->
         <td>${statusBadge(a.status, a.logWorkExcluded)}${a.hasPendingProposal ? `<br><span style="display:inline-block;margin-top:2px;padding:1px 5px;background:#f3e8ff;border:1px solid #ddd6fe;border-radius:3px;color:#6d28d9;font-size:9px;font-weight:700;white-space:nowrap;" title="${esc(pendingTitle)}">⏳ ${esc(pendingLabel)}</span>` : ''}${a.isNew ? `<br><span style="display:inline-block;margin-top:2px;padding:1px 5px;background:#dbeafe;border:1px solid #93c5fd;border-radius:3px;color:#1e40af;font-size:9px;font-weight:600;cursor:pointer;white-space:nowrap;" onclick="clearNewFlag(event,${a.id})" title="클릭하여 확인 완료">🆕 신규추가</span>` : ''}${(() => { if (!a.statusChanged) return ''; const logs = parseChangeLog(a.statusChangeLog); const last = logs.length ? logs[logs.length-1] : '변경감지'; const extra = logs.length > 1 ? ` <span style="color:#f87171;">(외 ${logs.length-1}건)</span>` : ''; return `<br><span style="display:inline-block;margin-top:2px;padding:1px 5px;background:#fef2f2;border:1px solid #fca5a5;border-radius:3px;color:#dc2626;font-size:9px;font-weight:600;cursor:pointer;white-space:nowrap;" onclick="clearStatusFlag(event,${a.id})" title="클릭: 확인 완료 | 상세보기에서 전체 이력 확인">⚠️ ${esc(last)}${extra}</span>`; })()}${a.blockMarkingIncomplete ? `<br><span style="display:inline-block;margin-top:2px;padding:1px 5px;background:#fff7ed;border:1px solid #fed7aa;border-radius:3px;color:#b45309;font-size:9px;font-weight:600;white-space:nowrap;cursor:help;" title="차단완료 상태이나 @Deprecated 또는 [URL차단작업] 주석이 누락됨 — 주석 보완 후 다음 추출 시 자동 해제.">📝 차단처리미흡</span>` : ''}</td>
-        <td style="vertical-align:top;">${a.autoAnalyzedStatus ? statusBadge(a.autoAnalyzedStatus, false) : '<span style="color:#cbd5e1;font-size:11px;">-</span>'}</td>
+        <td style="vertical-align:top;">${a.autoAnalyzedStatus ? statusBadge(a.autoAnalyzedStatus, false) : '<span style="color:#cbd5e1;font-size:11px;">-</span>'}${rowIsExpectedDone(a) ? '<div style="margin-top:4px;font-size:10px;color:#b91c1c;font-weight:700;">차단완료 예상</div>' : ''}</td>
         <td style="font-size:10px;color:var(--text-muted);max-width:140px;line-height:1.35;white-space:normal;" title="${esc(proposalSummFull)}">${proposalSummCell}</td>
         <td style="font-size:10px;color:var(--text-muted);max-width:140px;line-height:1.35;white-space:normal;" title="${esc(a.proposalStatusChangeReason || '')}">${a.proposalStatusChangeReason ? esc(a.proposalStatusChangeReason.length > 100 ? a.proposalStatusChangeReason.slice(0, 97) + '…' : a.proposalStatusChangeReason) : '<span style="color:#cbd5e1;">-</span>'}</td>
         <td style="text-align:center;">${lockIcon}</td>
@@ -3641,12 +3676,13 @@
 
   function updateBulkBar() {
     const bar = document.getElementById('bulkBar');
+    const hasSelection = selectedIds.size > 0;
     document.getElementById('bulkCount').textContent = `${selectedIds.size}개 선택됨`;
-    const show = selectedIds.size > 0 && viewerCanEditTable();
+    const show = hasSelection && viewerCanEditTable();
     bar.classList.toggle('visible', show);
     const propGrp = document.getElementById('bulkProposalAdminGroup');
     if (propGrp) {
-      if (isAdmin() && selectedIds.size > 0) {
+      if (isAdmin() && hasSelection) {
         const hasProp = Array.from(selectedIds).some(id => {
           const row = allApis.find(a => a.id === id);
           return row && row.hasPendingProposal;
@@ -3679,23 +3715,97 @@
     const bp = document.getElementById('bulkStatusEditPrimary');
     const bs = document.getElementById('bulkStatusEditSecondary');
     const dataGrp = document.getElementById('bulkDataChangeGroup');
+    const expectedDoneGrp = document.getElementById('bulkExpectedDoneGroup');
+    const expectedDoneBtn = document.getElementById('bulkExpectedDoneApplyBtn');
+    const statusGrp = document.getElementById('bulkStatusGroup');
+    const lockGrp = document.getElementById('bulkLockGroup');
+    const alertGrp = document.getElementById('bulkStatusAlertGroup');
+    const jiraGrp = document.getElementById('jiraBulkGroup');
     if (bp && bs) {
       const adm = isAdmin();
+      const selectedRows = Array.from(selectedIds).map(id => allApis.find(a => a.id === id)).filter(Boolean);
+      const expectedDoneRows = selectedRows.filter(rowIsExpectedDone);
+      if (statusGrp) statusGrp.style.display = hasSelection ? 'inline-flex' : 'none';
+      if (lockGrp) lockGrp.style.display = hasSelection ? 'inline-flex' : 'none';
+      if (alertGrp) alertGrp.style.display = hasSelection ? 'inline-flex' : 'none';
+      if (jiraGrp) jiraGrp.style.display = (adm && hasSelection) ? '' : 'none';
       if (adm) {
         bp.textContent = '상태변경';
         bp.onclick = () => openBulkStatusModal();
         bs.style.display = '';
         bs.textContent = '일괄변경';
         bs.onclick = () => openBulkCombinedModal();
-        if (dataGrp) dataGrp.style.display = 'none';
+        if (dataGrp) dataGrp.style.display = hasSelection ? 'none' : 'none';
         if (seg) seg.classList.remove('bulk-seg--single');
+        if (expectedDoneGrp) expectedDoneGrp.style.display = (show && expectedDoneRows.length > 0) ? 'inline-flex' : 'none';
+        if (expectedDoneBtn) expectedDoneBtn.disabled = !(show && expectedDoneRows.length > 0);
       } else {
         bp.textContent = '승인요청';
         bp.onclick = () => openBulkStatusModal();
         bs.style.display = 'none';
-        if (dataGrp) dataGrp.style.display = '';
+        if (dataGrp) dataGrp.style.display = hasSelection ? '' : 'none';
         if (seg) seg.classList.add('bulk-seg--single');
+        if (expectedDoneGrp) expectedDoneGrp.style.display = 'none';
       }
+    }
+  }
+
+  function getBulkStatusTargetIds() {
+    return (window._bulkStatusFilteredIds && window._bulkStatusFilteredIds.length)
+      ? window._bulkStatusFilteredIds.slice()
+      : Array.from(selectedIds);
+  }
+
+  async function bulkApplyExpectedDone() {
+    if (!isAdmin()) { showToast('관리자만 차단완료 일괄적용을 할 수 있습니다.', 'error'); return; }
+    if (!guardCanWriteTable('차단완료 일괄적용')) return;
+    if (!selectedIds.size) { showToast('선택된 항목이 없습니다.', 'error'); return; }
+    const selectedRows = Array.from(selectedIds).map(id => allApis.find(a => a.id === id)).filter(Boolean);
+    let eligible = [];
+    let skippedNotExpected = 0;
+    let skippedLocked = 0;
+    for (const row of selectedRows) {
+      if (!rowIsExpectedDone(row)) {
+        skippedNotExpected++;
+        continue;
+      }
+      if (row.statusOverridden) {
+        skippedLocked++;
+        continue;
+      }
+      eligible.push(row.id);
+    }
+    if (!eligible.length) {
+      const detail = skippedLocked > 0
+        ? '선택한 항목이 모두 차단완료 예상이 아니거나, 상태확정되어 적용할 수 없습니다.'
+        : '선택한 항목 중 차단완료 예상 건이 없습니다.';
+      showToast(detail, 'error');
+      return;
+    }
+    let msg = `${eligible.length}건을 차단완료로 변경합니다.`;
+    if (skippedNotExpected > 0 || skippedLocked > 0) {
+      const parts = [];
+      if (skippedNotExpected > 0) parts.push(`차단완료 예상 아님 ${skippedNotExpected}건 제외`);
+      if (skippedLocked > 0) parts.push(`상태확정 ${skippedLocked}건 제외`);
+      msg += `\n(${parts.join(', ')})`;
+    }
+    msg += `\n\n차단일자와 차단근거는 소스 주석에서 비어 있는 값만 자동으로 채웁니다.\n진행하시겠습니까?`;
+    if (!await customConfirm(msg)) return;
+    showBulkProgress('차단완료 일괄적용 중...', eligible.length);
+    try {
+      const res = await adminFetch('/api/db/status', {
+        method: 'PATCH',
+        body: JSON.stringify({ ids: eligible, status: '차단완료' })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || '차단완료 일괄적용 실패');
+      clearSelection();
+      await refreshAll();
+      showToast(`${data.updated != null ? data.updated : eligible.length}건 차단완료 적용 완료`, 'success');
+    } catch (e) {
+      showToast(e.message || '차단완료 일괄적용 실패', 'error');
+    } finally {
+      hideBulkProgress();
     }
   }
 
@@ -3749,12 +3859,36 @@
     document.getElementById('bulkCombinedModal').style.display = 'flex';
   }
 
-  async function openBulkStatusModal() {
+  async function openBulkStatusModal(opts) {
     if (selectedIds.size === 0) { showToast('선택된 항목이 없습니다.', 'error'); return; }
     if (!guardCanWriteTable('상태 변경')) return;
     window._bulkStatusFilteredIds = null;
+    const presetStatus = opts && opts.presetStatus ? opts.presetStatus : '';
+    const expectedDoneOnly = !!(opts && opts.expectedDoneOnly);
+    let workingIds = Array.from(selectedIds);
+    if (expectedDoneOnly) {
+      const eligible = [];
+      const skipped = [];
+      for (const id of workingIds) {
+        const row = allApis.find(a => a.id === id);
+        if (rowIsExpectedDone(row)) eligible.push(id);
+        else skipped.push(id);
+      }
+      if (!eligible.length) {
+        showToast('선택한 항목 중 차단완료 예상 건이 없습니다.', 'error');
+        return;
+      }
+      if (skipped.length > 0) {
+        const ok = await customConfirm(
+          `선택 ${workingIds.length}건 중 ${skipped.length}건은 차단완료 예상이 아니어서 제외하고, ${eligible.length}건에만 적용합니다.\n\n진행하시겠습니까?`
+        );
+        if (!ok) return;
+      }
+      workingIds = eligible;
+      window._bulkStatusFilteredIds = eligible.slice();
+    }
     if (!isAdmin()) {
-      const all = Array.from(selectedIds);
+      const all = workingIds.slice();
       const skipped = [];
       const proceed = [];
       for (const id of all) {
@@ -3772,29 +3906,38 @@
         );
         if (!ok) return;
         window._bulkStatusFilteredIds = proceed;
+        workingIds = proceed;
       }
     }
     const sel = document.getElementById('bulkStatusModalStatus');
-    if (sel) sel.value = '';
+    if (sel) sel.value = presetStatus || '';
     const rsn = document.getElementById('bulkStatusModalReason'); if (rsn) rsn.value = '';
     const prev = document.getElementById('bulkStatusModalTransitionPreview'); if (prev) prev.value = '';
     const adm = isAdmin();
     const title = document.getElementById('bulkStatusModalTitle');
     const btn = document.getElementById('bulkStatusSubmitBtn');
     const hint = document.getElementById('bulkStatusModalHint');
-    if (title) title.textContent = adm ? '상태 일괄 변경' : '상태 변경 승인요청';
-    if (btn) btn.textContent = adm ? '저장' : '승인요청';
+    if (title) title.textContent = expectedDoneOnly
+      ? (adm ? '차단완료 반영' : '차단완료 승인요청')
+      : (adm ? '상태 일괄 변경' : '상태 변경 승인요청');
+    if (btn) btn.textContent = expectedDoneOnly
+      ? (adm ? '차단완료 반영' : '승인요청')
+      : (adm ? '저장' : '승인요청');
     const transitionRow = document.getElementById('bulkStatusModalTransitionRow');
-    const multiSel = selectedIds.size >= 2;
+    const multiSel = workingIds.length >= 2;
     if (transitionRow) transitionRow.style.display = multiSel ? 'none' : 'contents';
     if (hint) {
       hint.style.display = '';
       let hintText = '담당자: 사유를 입력한 뒤 승인요청하세요. 관리자: 즉시 반영되며 사유는 선택입니다.';
+      if (expectedDoneOnly) {
+        hintText = '차단완료 예상 건만 대상으로 차단완료를 반영합니다. 차단일자·차단근거는 소스 주석에서 비어 있는 값만 선세팅합니다. ' + hintText;
+      }
       if (multiSel) {
         hintText = '2건 이상 선택 시 각 행의 공식 상태가 달라 「상태변경 사항」 미리보기는 표시하지 않습니다. ' + hintText;
       }
       hint.textContent = hintText;
     }
+    updateBulkStatusTransitionPreview();
     document.getElementById('bulkStatusModal').style.display = 'flex';
   }
   function closeBulkStatusModal() {
@@ -3806,12 +3949,13 @@
     const sel = document.getElementById('bulkStatusModalStatus');
     const ta = document.getElementById('bulkStatusModalTransitionPreview');
     if (!sel || !ta) return;
-    if (selectedIds.size > 1) { ta.value = ''; return; }
+    const targetIds = getBulkStatusTargetIds();
+    if (targetIds.length > 1) { ta.value = ''; return; }
     const v = sel.value;
     if (!v) { ta.value = ''; return; }
     const target = v === '__AUTO__' ? null : v;
     const lines = [];
-    for (const id of selectedIds) {
+    for (const id of targetIds) {
       const a = allApis.find(x => x.id === id);
       if (!a) continue;
       lines.push(formatStatusChangeSummaryLocal(a.status, target));
@@ -3831,9 +3975,7 @@
     const adm = isAdmin();
     if (!adm && !reason) { showToast('상태변경 사유를 입력하세요.', 'error'); return; }
     const statusPayload = selVal === '__AUTO__' ? null : selVal;
-    const ids = (adm || !window._bulkStatusFilteredIds || !window._bulkStatusFilteredIds.length)
-      ? Array.from(selectedIds)
-      : window._bulkStatusFilteredIds.slice();
+    const ids = getBulkStatusTargetIds();
     if (!await customConfirm(`선택 ${ids.length}건에 상태를 반영합니다. 계속하시겠습니까?`)) return;
     showBulkProgress(adm ? '상태 저장 중...' : '승인요청 저장 중...', ids.length);
     try {
@@ -4709,7 +4851,7 @@
             <option value="" ${statusForSelect === '' ? 'selected' : ''}>자동계산 (초기화)</option>
           </select>${statusApproveBtn}</div>
           <div class="detail-label">상태(자동분석결과)</div>
-          <div class="detail-value" style="white-space:normal;">${r.autoAnalyzedStatus ? statusBadge(r.autoAnalyzedStatus, false) : '<span style="color:var(--text-muted);font-size:12px;">-</span>'}<div style="font-size:10px;color:var(--text-muted);margin-top:6px;line-height:1.4;">호출·Git·차단신호 등 순수 자동 판정(스티키·수동 leaf 미반영). 공식 상태와 다르면 목록에서 상태변경 알림이 켜질 수 있습니다.</div></div>
+          <div class="detail-value" style="white-space:normal;">${r.autoAnalyzedStatus ? statusBadge(r.autoAnalyzedStatus, false) : '<span style="color:var(--text-muted);font-size:12px;">-</span>'}${rowIsExpectedDone(r) ? '<div style="margin-top:6px;font-size:11px;color:#b91c1c;font-weight:700;">차단완료 예상</div>' : ''}<div style="font-size:10px;color:var(--text-muted);margin-top:6px;line-height:1.4;">호출·Git·차단신호 등 순수 자동 판정(스티키·수동 leaf 미반영). 공식 상태와 다르면 목록에서 상태변경 알림이 켜질 수 있습니다.</div></div>
           <div class="detail-label">상태변경 사항</div>
           <div class="detail-value"><input type="text" id="df-statusChangeSummary" class="df-input" readonly style="width:100%;background:#f8fafc;font-size:12px;" value="${esc(detailSummVal)}" placeholder="${detailSummVal ? '' : '-'}"></div>
           <div class="detail-label">상태변경 사유</div>

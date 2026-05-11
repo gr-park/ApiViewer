@@ -434,6 +434,8 @@ public class ApiViewController {
                                      @RequestParam(required = false, defaultValue = "false") boolean blockTargetOnly,
                                      @RequestParam(required = false) String status,
                                      @RequestParam(required = false) String statusGroup,
+                                     @RequestParam(required = false) String autoStatus,
+                                     @RequestParam(required = false) String autoStatusGroup,
                                      @RequestParam(required = false) Boolean testSuspect,
                                      @RequestParam(required = false) Boolean pathParams,
                                      @RequestParam(required = false) Boolean logWorkExcluded,
@@ -442,6 +444,7 @@ public class ApiViewController {
                                      @RequestParam(required = false) String isDeprecated,
                                      @RequestParam(required = false) String q,
                                      @RequestParam(required = false) String alert,
+                                     @RequestParam(required = false) Boolean expectedDone,
                                      @RequestParam(required = false) String ids,
                                      @RequestParam(required = false) String modifiedFrom,
                                      @RequestParam(required = false) String modifiedTo,
@@ -470,6 +473,8 @@ public class ApiViewController {
         // 동적 필터가 하나라도 있으면 Specification 경로 사용
         boolean hasDynamicFilter = (status != null && !status.isBlank())
                 || (statusGroup != null && !statusGroup.isBlank())
+                || (autoStatus != null && !autoStatus.isBlank())
+                || (autoStatusGroup != null && !autoStatusGroup.isBlank())
                 || (testSuspect != null)
                 || (pathParams != null)
                 || (logWorkExcluded != null)
@@ -489,8 +494,10 @@ public class ApiViewController {
                 || (deployManager != null && !deployManager.isBlank())
                 || (deployUnscheduled != null)
                 || Boolean.TRUE.equals(hasPendingProposal)
+                || Boolean.TRUE.equals(expectedDone)
                 || "pendingProposal".equals(alert)
-                || "openRejectEvent".equals(alert);
+                || "openRejectEvent".equals(alert)
+                || "expectedDone".equals(alert);
 
         if (paged || hasDynamicFilter) {
             int pageIdx  = paged ? Math.max(0, page) : 0;
@@ -502,7 +509,7 @@ public class ApiViewController {
                     : PageRequest.of(pageIdx, pageSize, sortSpec);
 
             Specification<ApiRecord> spec = buildSpec(repository, repoList, blockTargetOnly,
-                    status, statusGroup, testSuspect, pathParams, logWorkExcluded, recentLogOnly, httpMethod, isDeprecated, q, alert, ids,
+                    status, statusGroup, autoStatus, autoStatusGroup, testSuspect, pathParams, logWorkExcluded, recentLogOnly, httpMethod, isDeprecated, q, alert, expectedDone, ids,
                     modifiedFrom, modifiedTo, cboFrom, cboTo, deployFrom, deployTo, deployManager, deployUnscheduled,
                     useRepoDisplayOrderSort, hasPendingProposal);
 
@@ -517,8 +524,8 @@ public class ApiViewController {
                             proposalExtras.getOrDefault(r.getId(), ProposalListExtras.EMPTY)))
                     .collect(Collectors.toList());
 
-            log.info("[목록 조회·필터] repo={}, status={}, method={}, q={}, alert={}, page={}/{}, size={}, total={}, 소요={}ms",
-                    repository, status, httpMethod, q, alert, pageIdx, entityPage.getTotalPages(), pageSize,
+            log.info("[목록 조회·필터] repo={}, status={}, autoStatus={}, method={}, q={}, alert={}, expectedDone={}, page={}/{}, size={}, total={}, 소요={}ms",
+                    repository, status, autoStatus, httpMethod, q, alert, expectedDone, pageIdx, entityPage.getTotalPages(), pageSize,
                     entityPage.getTotalElements(), System.currentTimeMillis() - start);
 
             Map<String, Object> response = new LinkedHashMap<>();
@@ -629,9 +636,10 @@ public class ApiViewController {
 
     /** 동적 필터 Specification 빌더 */
     private Specification<ApiRecord> buildSpec(String repository, List<String> repoList, boolean blockTargetOnly,
-                                                String status, String statusGroup, Boolean testSuspect, Boolean pathParams,
+                                                String status, String statusGroup, String autoStatus, String autoStatusGroup,
+                                                Boolean testSuspect, Boolean pathParams,
                                                 Boolean logWorkExcluded, Boolean recentLogOnly,
-                                                String httpMethod, String isDeprecated, String q, String alert,
+                                                String httpMethod, String isDeprecated, String q, String alert, Boolean expectedDone,
                                                 String ids, String modifiedFrom, String modifiedTo,
                                                 String cboFrom, String cboTo,
                                                 String deployFrom, String deployTo,
@@ -688,6 +696,24 @@ public class ApiViewController {
                         ps.add(root.get("status").in(DEPLOY_SCHEDULE_PLANNED_STATUSES));
                     default -> { }
                 }
+            }
+            if (autoStatus != null && !autoStatus.isBlank()) {
+                ps.add(cb.equal(root.get("autoAnalyzedStatus"), autoStatus));
+            }
+            if (autoStatusGroup != null && !autoStatusGroup.isBlank()) {
+                switch (autoStatusGroup) {
+                    case "block" -> ps.add(cb.like(root.get("autoAnalyzedStatus"), "①-%"));
+                    case "review" -> ps.add(cb.like(root.get("autoAnalyzedStatus"), "②-%"));
+                    case "use" -> ps.add(cb.equal(root.get("autoAnalyzedStatus"), "사용"));
+                    case "done" -> ps.add(cb.equal(root.get("autoAnalyzedStatus"), "차단완료"));
+                    default -> { }
+                }
+            }
+            if (Boolean.TRUE.equals(expectedDone)) {
+                ps.add(cb.equal(root.get("autoAnalyzedStatus"), "차단완료"));
+                ps.add(cb.or(
+                        cb.isNull(root.get("status")),
+                        cb.notEqual(root.get("status"), "차단완료")));
             }
             // testSuspect: true = 의심 사유 NOT NULL & 빈문자열 아님, false = NULL 또는 빈문자열
             if (testSuspect != null) {
@@ -756,6 +782,12 @@ public class ApiViewController {
                 switch (alert) {
                     case "new"      -> ps.add(cb.isTrue(root.get("isNew")));
                     case "changed"  -> ps.add(cb.isTrue(root.get("statusChanged")));
+                    case "expectedDone" -> {
+                        ps.add(cb.equal(root.get("autoAnalyzedStatus"), "차단완료"));
+                        ps.add(cb.or(
+                                cb.isNull(root.get("status")),
+                                cb.notEqual(root.get("status"), "차단완료")));
+                    }
                     case "marking-incomplete" -> ps.add(cb.isTrue(root.get("blockMarkingIncomplete")));
                     case "reviewed" -> ps.add(cb.and(
                             cb.isNotNull(root.get("reviewResult")),
@@ -1060,6 +1092,9 @@ public class ApiViewController {
         List<Object[]> statusRows = hasRepo
                 ? recordRepository.countGroupByStatusForRepos(repoFilter)
                 : recordRepository.countGroupByStatus();
+        List<Object[]> autoStatusRows = hasRepo
+                ? recordRepository.countGroupByAutoAnalyzedStatusForRepos(repoFilter)
+                : recordRepository.countGroupByAutoAnalyzedStatus();
         List<Object[]> methodRows = hasRepo
                 ? recordRepository.countGroupByMethodForRepos(repoFilter)
                 : recordRepository.countGroupByMethod();
@@ -1076,6 +1111,12 @@ public class ApiViewController {
         for (Object[] row : methodRows) {
             byMethod.put(row[0] != null ? row[0].toString() : "?", ((Number) row[1]).longValue());
         }
+        Map<String, Long> autoByStatus = new LinkedHashMap<>();
+        for (Object[] row : autoStatusRows) {
+            String s = row[0] != null ? row[0].toString() : "사용";
+            long c = ((Number) row[1]).longValue();
+            autoByStatus.put(s, c);
+        }
 
         long newCount        = hasRepo ? recordRepository.countNewForRepos(repoFilter)             : recordRepository.countNew();
         long changedCount    = hasRepo ? recordRepository.countStatusChangedForRepos(repoFilter)   : recordRepository.countStatusChanged();
@@ -1090,6 +1131,9 @@ public class ApiViewController {
         long pathParamPatternCount = hasRepo
                 ? recordRepository.countPathParamPatternForRepos(repoFilter)
                 : recordRepository.countPathParamPattern();
+        long expectedDoneCount = hasRepo
+                ? recordRepository.countExpectedDoneForRepos(repoFilter)
+                : recordRepository.countExpectedDone();
         long pendingProposalCount = hasRepo
                 ? proposalRepository.countDistinctPendingRecordsForRepos(repoFilter)
                 : proposalRepository.countDistinctPendingRecords();
@@ -1126,9 +1170,11 @@ public class ApiViewController {
         response.put("markingIncompleteCount", markingIncompleteCount);
         response.put("testSuspectCount", testSuspectCount);
         response.put("pathParamPatternCount", pathParamPatternCount);
+        response.put("expectedDoneCount", expectedDoneCount);
         response.put("pendingProposalCount", pendingProposalCount);
         response.put("openRejectEventCount", openRejectEventCount);
         response.put("byStatus",     byStatus);
+        response.put("autoByStatus", autoByStatus);
         response.put("byCategory",   byCategory);  // 7카드 통합
         response.put("byMethod",     byMethod);
         response.put("priorityPureCount", priorityPureCount);

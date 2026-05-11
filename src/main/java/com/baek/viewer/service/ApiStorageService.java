@@ -147,13 +147,19 @@ public class ApiStorageService {
 
             if (existing != null) {
                 // ② 차단완료 → SKIP
-                if (STATUS_DONE.equals(existing.getStatus())) continue;
+                if (STATUS_DONE.equals(existing.getStatus())) {
+                    if (seedBlockedMetadataFromCommentIfNeeded(existing, a.getFullComment())) {
+                        toUpdate.add(existing);
+                    }
+                    continue;
+                }
 
                 // ③ 기존 + 차단완료 아님 → 추출 필드만 업데이트 (공식 status·수동 입력 컬럼 승계)
                 existing.setNew(false); // 재분석 시 신규 플래그 해제
                 updateExtractedFields(existing, a, now);
                 applyManagerMapping(existing, managerMappings);
                 refreshAutoAnalyzedStatusAndMismatchFlag(existing, reviewThreshold);
+                seedBlockedMetadataForDoneFamilyIfNeeded(existing);
                 if (S_1_3.equals(existing.getAutoAnalyzedStatus())
                         && "차단대상 제외".equals(existing.getReviewResult())
                         && !S_1_3.equals(existing.getStatus())) {
@@ -161,10 +167,6 @@ public class ApiStorageService {
                     log.info("[자동분석 ①-③·공식 불일치] id={} repo={} path={} 공식={} 자동={}",
                             existing.getId(), repositoryName, existing.getApiPath(),
                             existing.getStatus(), existing.getAutoAnalyzedStatus());
-                }
-                if (STATUS_DONE.equals(existing.getStatus())) {
-                    existing.setBlockedDate(parseBlockedDate(existing.getFullComment()));
-                    existing.setBlockedReason(parseBlockedReason(existing.getFullComment()));
                 }
                 toUpdate.add(existing);
             } else {
@@ -186,10 +188,7 @@ public class ApiStorageService {
                 r.setAutoAnalyzedStatus(initialAuto);
                 r.setStatus(initialAuto);
                 r.setStatusChanged(false);
-                if (STATUS_DONE.equals(r.getStatus())) {
-                    r.setBlockedDate(parseBlockedDate(r.getFullComment()));
-                    r.setBlockedReason(parseBlockedReason(r.getFullComment()));
-                }
+                seedBlockedMetadataForDoneFamilyIfNeeded(r);
                 toInsert.add(r);
             }
         }
@@ -267,6 +266,35 @@ public class ApiStorageService {
         if (!m.find()) return null;
         String rest = m.group(1).trim();
         return rest.isEmpty() ? null : rest;
+    }
+
+    private boolean shouldSeedBlockedMetadata(ApiRecord r) {
+        return STATUS_DONE.equals(r.getStatus()) || STATUS_DONE.equals(r.getAutoAnalyzedStatus());
+    }
+
+    private boolean seedBlockedMetadataFromCommentIfNeeded(ApiRecord r, String fullComment) {
+        boolean changed = false;
+        LocalDate parsedDate = parseBlockedDate(fullComment);
+        String parsedReason = parseBlockedReason(fullComment);
+        if (r.getBlockedDate() == null && parsedDate != null) {
+            r.setBlockedDate(parsedDate);
+            changed = true;
+        }
+        if ((r.getBlockedReason() == null || r.getBlockedReason().isBlank()) && parsedReason != null) {
+            r.setBlockedReason(parsedReason);
+            changed = true;
+        }
+        return changed;
+    }
+
+    public boolean seedBlockedMetadataFromSourceIfNeeded(ApiRecord r) {
+        if (r == null) return false;
+        return seedBlockedMetadataFromCommentIfNeeded(r, r.getFullComment());
+    }
+
+    public boolean seedBlockedMetadataForDoneFamilyIfNeeded(ApiRecord r) {
+        if (r == null || !shouldSeedBlockedMetadata(r)) return false;
+        return seedBlockedMetadataFromSourceIfNeeded(r);
     }
 
     /** 상태 변경 로그 추가 (기존 로그에 이어붙임) */
@@ -353,6 +381,7 @@ public class ApiStorageService {
 
         for (ApiRecord r : records) {
             if (STATUS_DONE.equals(r.getStatus())) {
+                seedBlockedMetadataForDoneFamilyIfNeeded(r);
                 r.setAutoAnalyzedStatus(STATUS_DONE);
                 applyStatusMismatchFlagOnly(r);
                 repository.save(r);
@@ -374,6 +403,7 @@ public class ApiStorageService {
             }
 
             refreshAutoAnalyzedStatusAndMismatchFlag(r, reviewThreshold);
+            seedBlockedMetadataForDoneFamilyIfNeeded(r);
             repository.save(r);
         }
         log.info("[호출건수 반영 완료] repo={}, 처리 레코드={}건", repoName, records.size());
@@ -480,6 +510,7 @@ public class ApiStorageService {
                 r.setModifiedAt(now);
                 if (clientIp != null) r.setModifiedIp(clientIp);
                 refreshAutoAnalyzedStatusAndMismatchFlag(r, reviewThreshold);
+                seedBlockedMetadataForDoneFamilyIfNeeded(r);
                 dirty.add(r);
                 updated++;
             }

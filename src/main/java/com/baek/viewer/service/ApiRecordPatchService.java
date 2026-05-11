@@ -194,6 +194,7 @@ public class ApiRecordPatchService {
 
         if (anyChanged || reviewChanged) {
             storageService.refreshAutoAnalyzedStatusAndMismatchFlag(r);
+            storageService.seedBlockedMetadataForDoneFamilyIfNeeded(r);
         }
 
         return anyChanged || reviewChanged;

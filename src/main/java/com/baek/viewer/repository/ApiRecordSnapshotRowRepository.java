@@ -24,6 +24,18 @@ public interface ApiRecordSnapshotRowRepository extends JpaRepository<ApiRecordS
                 OR (:statusGroup = 'blockResidual' AND r.status IN ('①-① 차단대상','①-② 담당자 판단'))
                 OR (:statusGroup = 'blockExcluded' AND r.status IN ('①-③ 현업요청 제외대상','①-④ 사용으로 변경'))
               )
+              AND (:autoStatus IS NULL OR r.autoAnalyzedStatus = :autoStatus)
+              AND (
+                :autoStatusGroup IS NULL OR :autoStatusGroup = ''
+                OR (:autoStatusGroup = 'block' AND r.autoAnalyzedStatus LIKE '①-%')
+                OR (:autoStatusGroup = 'review' AND r.autoAnalyzedStatus LIKE '②-%')
+                OR (:autoStatusGroup = 'use' AND r.autoAnalyzedStatus = '사용')
+                OR (:autoStatusGroup = 'done' AND r.autoAnalyzedStatus = '차단완료')
+              )
+              AND (:expectedDone IS NULL OR :expectedDone = false OR (
+                    r.autoAnalyzedStatus = '차단완료'
+                    AND (r.status IS NULL OR r.status <> '차단완료')
+              ))
               AND (:httpMethod IS NULL OR r.httpMethod = :httpMethod)
               AND (:isDeprecated IS NULL OR r.isDeprecated = :isDeprecated)
               AND (:testSuspect IS NULL OR (:testSuspect = true AND r.testSuspectReason IS NOT NULL AND r.testSuspectReason <> ''))
@@ -43,6 +55,9 @@ public interface ApiRecordSnapshotRowRepository extends JpaRepository<ApiRecordS
                                             @Param("repos") List<String> repos,
                                             @Param("status") String status,
                                             @Param("statusGroup") String statusGroup,
+                                            @Param("autoStatus") String autoStatus,
+                                            @Param("autoStatusGroup") String autoStatusGroup,
+                                            @Param("expectedDone") Boolean expectedDone,
                                             @Param("httpMethod") String httpMethod,
                                             @Param("isDeprecated") String isDeprecated,
                                             @Param("testSuspect") Boolean testSuspect,
@@ -53,6 +68,9 @@ public interface ApiRecordSnapshotRowRepository extends JpaRepository<ApiRecordS
 
     @Query("SELECT COALESCE(r.status, '사용'), COUNT(r) FROM ApiRecordSnapshotRow r WHERE r.snapshotId = :snapshotId AND (:repos IS NULL OR r.repositoryName IN :repos) GROUP BY r.status")
     List<Object[]> countGroupByStatus(@Param("snapshotId") Long snapshotId, @Param("repos") List<String> repos);
+
+    @Query("SELECT COALESCE(r.autoAnalyzedStatus, '사용'), COUNT(r) FROM ApiRecordSnapshotRow r WHERE r.snapshotId = :snapshotId AND (:repos IS NULL OR r.repositoryName IN :repos) GROUP BY r.autoAnalyzedStatus")
+    List<Object[]> countGroupByAutoAnalyzedStatus(@Param("snapshotId") Long snapshotId, @Param("repos") List<String> repos);
 
     @Query("SELECT COALESCE(r.httpMethod, '?'), COUNT(r) FROM ApiRecordSnapshotRow r WHERE r.snapshotId = :snapshotId AND (:repos IS NULL OR r.repositoryName IN :repos) GROUP BY r.httpMethod")
     List<Object[]> countGroupByMethod(@Param("snapshotId") Long snapshotId, @Param("repos") List<String> repos);
@@ -71,6 +89,16 @@ public interface ApiRecordSnapshotRowRepository extends JpaRepository<ApiRecordS
 
     @Query("SELECT COUNT(r) FROM ApiRecordSnapshotRow r WHERE r.snapshotId = :snapshotId AND (:repos IS NULL OR r.repositoryName IN :repos) AND r.blockMarkingIncomplete = true AND (r.status IS NULL OR r.status <> '삭제')")
     long countBlockMarkingIncomplete(@Param("snapshotId") Long snapshotId, @Param("repos") List<String> repos);
+
+    @Query("""
+            SELECT COUNT(r) FROM ApiRecordSnapshotRow r
+            WHERE r.snapshotId = :snapshotId
+              AND (:repos IS NULL OR r.repositoryName IN :repos)
+              AND r.autoAnalyzedStatus = '차단완료'
+              AND (r.status IS NULL OR r.status <> '차단완료')
+              AND (r.status IS NULL OR r.status <> '삭제')
+            """)
+    long countExpectedDone(@Param("snapshotId") Long snapshotId, @Param("repos") List<String> repos);
 
     @Query("SELECT COUNT(r) FROM ApiRecordSnapshotRow r WHERE r.snapshotId = :snapshotId AND (:repos IS NULL OR r.repositoryName IN :repos) AND r.testSuspectReason IS NOT NULL AND r.testSuspectReason <> '' AND (r.status IS NULL OR r.status <> '삭제')")
     long countTestSuspect(@Param("snapshotId") Long snapshotId, @Param("repos") List<String> repos);
