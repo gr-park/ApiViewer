@@ -967,6 +967,7 @@
       <div class="stat-pill sg-hist" id="pill-open-reject-event" onclick="setFilter('openRejectEvent')" title="상태변경 반려 이력 중 네비 쪽지함에서 아직 확인하지 않은 건이 있는 레코드"><span>반려</span><strong id="stat-openRejectEvent">0</strong></div>
       <div class="stat-pill sg-hist" id="pill-deleted" onclick="setFilter('deleted')"><span>삭제</span><strong id="stat-deleted">0</strong></div>
     </div>
+    <div class="stat-row-break"></div>
     <div class="stat-group tight sg-suspect">
       <div class="stat-pill sg-suspect" id="pill-test-suspect" onclick="setFilter('testSuspect')" title="URL/메소드/주석 등에 test, sample, mock 등 키워드가 포함된 의심 URL"><span>🧪 테스트용 의심</span><strong id="stat-test-suspect">0</strong></div>
       <div class="stat-pill sg-suspect" id="pill-path-params" onclick="setFilter('pathParams')" title="경로에 {변수} 가 포함된 URL — 호출 이력 URL과 불일치할 수 있음"><span>🔗 파라미터URL 패턴</span><strong id="stat-path-params">0</strong></div>
@@ -1110,6 +1111,7 @@
           <th class="hg-info no-sort">URL호출</th>
           <!-- 상태 / 제안 메타 / 상태확정 -->
           <th class="hg-info" onclick="sortBy('status')">상태 <span class="sort-icon">↕</span></th>
+          <th class="hg-info" onclick="sortBy('autoAnalyzedStatus')" title="순수 자동 판정(스티키 없음)">상태(자동분석결과) <span class="sort-icon">↕</span></th>
           <th class="hg-info no-sort" style="min-width:120px;">상태변경 사항</th>
           <th class="hg-info no-sort" style="min-width:100px;">상태변경 사유</th>
           <th class="hg-info no-sort">상태확정</th>
@@ -1140,7 +1142,7 @@
         </tr>
       </thead>
       <tbody id="tbody">
-        <tr><td colspan="32"><div class="state-box">레포지토리를 선택하고 <b>조회</b>를 클릭하세요.</div></td></tr>
+        <tr><td colspan="33"><div class="state-box">레포지토리를 선택하고 <b>조회</b>를 클릭하세요.</div></td></tr>
       </tbody>
     </table>
   </div>
@@ -1779,7 +1781,7 @@
     syncQueryCountDisplay(null);
     document.getElementById('loadBtn').disabled = true;
     document.getElementById('tbody').innerHTML =
-      '<tr><td colspan="32"><div class="state-box"><div class="spinner"></div><br>조회 중...</div></td></tr>';
+      '<tr><td colspan="33"><div class="state-box"><div class="spinner"></div><br>조회 중...</div></td></tr>';
     clearSelection();
     vCurrentPage = 0;
 
@@ -1923,7 +1925,7 @@
     } catch(e) {
       showToast(e.message || '조회 실패', 'error');
       document.getElementById('tbody').innerHTML =
-        `<tr><td colspan="32"><div class="state-box">조회 오류: ${esc(e.message || '')}</div></td></tr>`;
+        `<tr><td colspan="33"><div class="state-box">조회 오류: ${esc(e.message || '')}</div></td></tr>`;
     } finally {
       document.getElementById('loadBtn').disabled = false;
     }
@@ -2579,7 +2581,7 @@
     }
 
     // 정렬 — 서버에서 매핑 가능한 필드만 전송 (클라이언트 파생 필드는 스킵)
-    const serverSortable = new Set(['id','apiPath','httpMethod','status','callCount','callCountMonth','callCountWeek','lastAnalyzedAt','modifiedAt','blockedDate','repositoryName','teamOverride','managerOverride','cboScheduledDate','deployScheduledDate','pathParamPattern','methodName','controllerName']);
+    const serverSortable = new Set(['id','apiPath','httpMethod','status','autoAnalyzedStatus','callCount','callCountMonth','callCountWeek','lastAnalyzedAt','modifiedAt','blockedDate','repositoryName','teamOverride','managerOverride','cboScheduledDate','deployScheduledDate','pathParamPattern','methodName','controllerName']);
     let sk = sortKey;
     if (sk === 'teamName')     sk = 'teamOverride';
     else if (sk === 'managerName') sk = 'managerOverride';
@@ -2607,13 +2609,13 @@
     const timeoutId = setTimeout(() => pageLoadCtrl.abort(), 30000);
     if (!preloadFirst) {
       document.getElementById('tbody').innerHTML =
-        '<tr><td colspan="32"><div class="state-box"><div class="spinner"></div><br>조회 중...</div></td></tr>';
+        '<tr><td colspan="33"><div class="state-box"><div class="spinner"></div><br>조회 중...</div></td></tr>';
     }
     try {
       let res;
       if (uploadedIdsFilter && uploadedIdsFilter.length > 0) {
         // 엑셀 업로드 필터 — POST로 ID 배열 전달 (URL 길이 제한 없음)
-        const serverSortable = new Set(['id','apiPath','httpMethod','status','callCount','callCountMonth','callCountWeek','lastAnalyzedAt','modifiedAt','blockedDate','repositoryName','teamOverride','managerOverride','cboScheduledDate','deployScheduledDate','pathParamPattern','methodName','controllerName']);
+        const serverSortable = new Set(['id','apiPath','httpMethod','status','autoAnalyzedStatus','callCount','callCountMonth','callCountWeek','lastAnalyzedAt','modifiedAt','blockedDate','repositoryName','teamOverride','managerOverride','cboScheduledDate','deployScheduledDate','pathParamPattern','methodName','controllerName']);
         let sk = sortKey;
         if (sk === 'teamName') sk = 'teamOverride';
         else if (sk === 'managerName') sk = 'managerOverride';
@@ -2641,7 +2643,7 @@
         const totalFmt = (data.total || 0).toLocaleString();
         showToast(`데이터가 너무 많습니다 (${totalFmt}건). 레포지토리를 선택해 주세요.`, 'error');
         document.getElementById('tbody').innerHTML =
-          `<tr><td colspan="32"><div class="state-box">⚠ 전체 조회 제한<br><small>${totalFmt}건<br>레포지토리를 선택하여 조회해 주세요.</small></div></td></tr>`;
+          `<tr><td colspan="33"><div class="state-box">⚠ 전체 조회 제한<br><small>${totalFmt}건<br>레포지토리를 선택하여 조회해 주세요.</small></div></td></tr>`;
         viewerListQuerySucceeded = false;
         syncQueryCountDisplay(null);
         return false;
@@ -2695,7 +2697,7 @@
       if (e.name === 'AbortError') return false;
       showToast(e.message || '페이지 조회 실패', 'error');
       document.getElementById('tbody').innerHTML =
-        `<tr><td colspan="32"><div class="state-box">조회 오류: ${esc(e.message || '')}</div></td></tr>`;
+        `<tr><td colspan="33"><div class="state-box">조회 오류: ${esc(e.message || '')}</div></td></tr>`;
       viewerListQuerySucceeded = false;
       syncQueryCountDisplay(null);
       return false;
@@ -3020,7 +3022,7 @@
     const off = startOffset || 0;
     const tbody = document.getElementById('tbody');
     if (!list.length) {
-      tbody.innerHTML = '<tr><td colspan="32"><div class="state-box">검색 결과가 없습니다.</div></td></tr>';
+      tbody.innerHTML = '<tr><td colspan="33"><div class="state-box">검색 결과가 없습니다.</div></td></tr>';
       return;
     }
     tbody.innerHTML = list.map((a, idx) => {
@@ -3063,8 +3065,9 @@
         </td>
         <!-- 개발 메타 -->
         <td>${a.fullUrl ? `<a href="${esc(a.fullUrl)}" target="_blank" style="font-size:11px;color:var(--primary);text-decoration:none;padding:2px 8px;border:1px solid var(--primary);border-radius:4px;white-space:nowrap;">열기 ↗</a>` : '<span style="color:#cbd5e1;font-size:11px;">-</span>'}</td>
-        <!-- 상태 / 상태변경 사항·사유 / 상태확정 -->
+        <!-- 상태 / 자동분석 / 상태변경 사항·사유 / 상태확정 -->
         <td>${statusBadge(a.status, a.logWorkExcluded)}${a.hasPendingProposal ? `<br><span style="display:inline-block;margin-top:2px;padding:1px 5px;background:#f3e8ff;border:1px solid #ddd6fe;border-radius:3px;color:#6d28d9;font-size:9px;font-weight:700;white-space:nowrap;" title="${esc(pendingTitle)}">⏳ ${esc(pendingLabel)}</span>` : ''}${a.isNew ? `<br><span style="display:inline-block;margin-top:2px;padding:1px 5px;background:#dbeafe;border:1px solid #93c5fd;border-radius:3px;color:#1e40af;font-size:9px;font-weight:600;cursor:pointer;white-space:nowrap;" onclick="clearNewFlag(event,${a.id})" title="클릭하여 확인 완료">🆕 신규추가</span>` : ''}${(() => { if (!a.statusChanged) return ''; const logs = parseChangeLog(a.statusChangeLog); const last = logs.length ? logs[logs.length-1] : '변경감지'; const extra = logs.length > 1 ? ` <span style="color:#f87171;">(외 ${logs.length-1}건)</span>` : ''; return `<br><span style="display:inline-block;margin-top:2px;padding:1px 5px;background:#fef2f2;border:1px solid #fca5a5;border-radius:3px;color:#dc2626;font-size:9px;font-weight:600;cursor:pointer;white-space:nowrap;" onclick="clearStatusFlag(event,${a.id})" title="클릭: 확인 완료 | 상세보기에서 전체 이력 확인">⚠️ ${esc(last)}${extra}</span>`; })()}${a.blockMarkingIncomplete ? `<br><span style="display:inline-block;margin-top:2px;padding:1px 5px;background:#fff7ed;border:1px solid #fed7aa;border-radius:3px;color:#b45309;font-size:9px;font-weight:600;white-space:nowrap;cursor:help;" title="차단완료 상태이나 @Deprecated 또는 [URL차단작업] 주석이 누락됨 — 주석 보완 후 다음 추출 시 자동 해제.">📝 차단처리미흡</span>` : ''}</td>
+        <td style="vertical-align:top;">${a.autoAnalyzedStatus ? statusBadge(a.autoAnalyzedStatus, false) : '<span style="color:#cbd5e1;font-size:11px;">-</span>'}</td>
         <td style="font-size:10px;color:var(--text-muted);max-width:140px;line-height:1.35;white-space:normal;" title="${esc(proposalSummFull)}">${proposalSummCell}</td>
         <td style="font-size:10px;color:var(--text-muted);max-width:140px;line-height:1.35;white-space:normal;" title="${esc(a.proposalStatusChangeReason || '')}">${a.proposalStatusChangeReason ? esc(a.proposalStatusChangeReason.length > 100 ? a.proposalStatusChangeReason.slice(0, 97) + '…' : a.proposalStatusChangeReason) : '<span style="color:#cbd5e1;">-</span>'}</td>
         <td style="text-align:center;">${lockIcon}</td>
@@ -3875,7 +3878,7 @@
       'HTTP Method','컨트롤러파일경로','컨트롤러','메소드명','프로그램ID',
       'ApiOperation','Description주석','메소드주석','컨트롤러주석','RequestProperty','컨트롤러RequestProperty',
       '관련 메뉴(또는 기능)','Deprecated','1년 호출건','1달 호출건','1주 호출건',
-      '상태','상태변경 사항','상태변경 사유','상태확정','테스트용 의심 여부','테스트용 의심 사유','파라미터URL 패턴','침해사고 로그 제외대상','차단기준','차단일자(JAVADOC)','차단근거(JAVADOC)',
+      '상태','상태(자동분석결과)','상태변경 사항','상태변경 사유','상태확정','테스트용 의심 여부','테스트용 의심 사유','파라미터URL 패턴','침해사고 로그 제외대상','차단기준','차단일자(JAVADOC)','차단근거(JAVADOC)',
       '비고','현업검토결과','현업검토의견',
       'SmartWay 티켓번호','검토단계',
       'CBO예정일자','차단예정일자','차단작업CSR','차단작업담당자',
@@ -3891,23 +3894,23 @@
       yellow,yellow,yellow,yellow,      // 7~10: 파일경로~프로그램ID
       yellow,yellow,yellow,yellow,yellow,yellow, // 11~16: 참고용 6개
       purple,purple,purple,purple,purple, // 17~21: 메뉴~1주호출건
-      pink,pink,pink,pink,               // 22~25: 상태,상태변경사항,상태변경사유,상태확정 ★유효성검증
-      testPurple,testPurple,testPurple, // 26~28: 테스트용 의심 여부/사유 + 파라미터URL 패턴
-      pink,pink,pink,pink,               // 29~32: 침해사고,차단기준,차단일자(JAVADOC),차단근거(JAVADOC)
-      pink,pink,pink,                    // 33~35: 비고,검토결과,검토의견
-      jiraIvory,jiraIvory,               // 36~37: SmartWay 티켓, 검토단계
-      pink,pink,pink,pink,               // 38~41: CBO예정일자,차단예정일자,차단작업CSR,차단작업담당자
-      g1,g1,g1, g2,g2,g2, g3,g3,g3, g4,g4,g4, g5,g5,g5, // 42~56: 변경이력1~5
-      blue,blue                          // 57~58: 분석/변경일시
+      pink,pink,pink,pink,pink,               // 22~26: 상태,자동분석,상태변경사항,사유,상태확정 ★유효성검증
+      testPurple,testPurple,testPurple, // 27~29: 테스트용 의심 여부/사유 + 파라미터URL 패턴
+      pink,pink,pink,pink,               // 30~33: 침해사고,차단기준,차단일자(JAVADOC),차단근거(JAVADOC)
+      pink,pink,pink,                    // 34~36: 비고,검토결과,검토의견
+      jiraIvory,jiraIvory,               // 37~38: SmartWay 티켓, 검토단계
+      pink,pink,pink,pink,               // 39~42: CBO예정일자,차단예정일자,차단작업CSR,차단작업담당자
+      g1,g1,g1, g2,g2,g2, g3,g3,g3, g4,g4,g4, g5,g5,g5, // 43~57: 변경이력1~5
+      blue,blue                          // 58~59: 분석/변경일시
     ];
-    const groupBorders = new Set([6, 16, 21, 25, 28, 35, 37, 41, 44, 47, 50, 53, 56]);
+    const groupBorders = new Set([6, 16, 21, 26, 29, 36, 38, 42, 45, 48, 51, 54, 57]);
     // 데이터 유효성 검증: 0-based 컬럼 인덱스 → 허용 값 목록
     const validations = [
       { colIdx:18, values:['Y','N'] },                                                                       // Deprecated
       { colIdx:22, values:['사용','차단완료','①-① 차단대상','①-② 담당자 판단','①-③ 현업요청 제외대상','①-④ 사용으로 변경','②-① 호출0건+변경있음','②-② 호출 3건 이하+변경없음','②-③ 사용으로 변경'] }, // 상태 — 9 leaf v2
-      { colIdx:25, values:['확정','미확정'] },                                                               // 상태확정
-      { colIdx:26, values:['Y','N'] },                                                                       // 테스트용 의심 여부
-      { colIdx:34, values:['차단대상 제외','차단확정','판단불가'] },                                         // 현업검토결과
+      { colIdx:26, values:['확정','미확정'] },                                                               // 상태확정
+      { colIdx:27, values:['Y','N'] },                                                                       // 테스트용 의심 여부
+      { colIdx:35, values:['차단대상 제외','차단확정','판단불가'] },                                         // 현업검토결과
     ];
     const rows = details.map(a => {
       const cfg = repoConfigMap[a.repositoryName] || {};
@@ -3938,6 +3941,7 @@
         a.callCountMonth != null ? a.callCountMonth : '',
         a.callCountWeek != null ? a.callCountWeek : '',
         a.status || '',
+        a.autoAnalyzedStatus || '',
         withProposalSubmitterSuffix(a.proposalStatusChangeSummary || '', proposalSubmitterNameRaw(a)),
         a.proposalStatusChangeReason || '',
         a.statusOverridden ? '확정' : '미확정',
@@ -3977,7 +3981,7 @@
       'HTTP Method','컨트롤러파일경로','컨트롤러','메소드명','프로그램ID',
       'ApiOperation','Description주석','메소드주석','컨트롤러주석','RequestProperty','컨트롤러RequestProperty',
       '관련 메뉴(또는 기능)','Deprecated','1년 호출건','1달 호출건','1주 호출건',
-      '상태','상태변경 사항','상태변경 사유','상태확정','테스트용 의심 여부','테스트용 의심 사유','파라미터URL 패턴','침해사고 로그 제외대상','차단기준','차단일자(JAVADOC)','차단근거(JAVADOC)',
+      '상태','상태(자동분석결과)','상태변경 사항','상태변경 사유','상태확정','테스트용 의심 여부','테스트용 의심 사유','파라미터URL 패턴','침해사고 로그 제외대상','차단기준','차단일자(JAVADOC)','차단근거(JAVADOC)',
       '비고','현업검토결과','현업검토의견',
       'SmartWay 티켓번호','검토단계',
       'CBO예정일자','차단예정일자','차단작업CSR','차단작업담당자',
@@ -3990,7 +3994,7 @@
       yellow,yellow,yellow,yellow,
       yellow,yellow,yellow,yellow,yellow,yellow,
       purple,purple,purple,purple,purple,
-      pink,pink,pink,pink,
+      pink,pink,pink,pink,pink,
       testPurple,testPurple,testPurple,
       pink,pink,pink,pink,
       pink,pink,pink,
@@ -3999,13 +4003,13 @@
       g1,g1,g1, g2,g2,g2, g3,g3,g3, g4,g4,g4, g5,g5,g5,
       blue,blue
     ];
-    const groupBorders = new Set([6, 16, 21, 25, 28, 35, 37, 41, 44, 47, 50, 53, 56]);
+    const groupBorders = new Set([6, 16, 21, 26, 29, 36, 38, 42, 45, 48, 51, 54, 57]);
     const validations = [
       { colIdx:18, values:['Y','N'] },
       { colIdx:22, values:['사용','차단완료','①-① 차단대상','①-② 담당자 판단','①-③ 현업요청 제외대상','①-④ 사용으로 변경','②-① 호출0건+변경있음','②-② 호출 3건 이하+변경없음','②-③ 사용으로 변경'] }, // 9 leaf v2
-      { colIdx:25, values:['확정','미확정'] },
-      { colIdx:26, values:['Y','N'] },
-      { colIdx:34, values:['차단대상 제외','차단확정','판단불가'] },
+      { colIdx:26, values:['확정','미확정'] },
+      { colIdx:27, values:['Y','N'] },
+      { colIdx:35, values:['차단대상 제외','차단확정','판단불가'] },
     ];
     // 샘플 데이터 3행
     const today = new Date().toISOString().slice(0,10);
@@ -4014,7 +4018,7 @@
        'GET','/my-repo/src/main/java/com/example/ExampleController.java','ExampleController','getExample','example01',
        '예제 API','','','','','',
        '메인화면','N',100,50,10,
-       '사용','','','미확정','N','','','','','',
+       '사용','사용','','','미확정','N','','','','','',
        '','','',
        '','',
        '','','',
@@ -4024,7 +4028,7 @@
        'POST','/my-repo/src/main/java/com/example/OldController.java','OldController','oldAction','old01',
        '','','','','','',
        '','N',0,0,0,
-       '①-① 차단대상','','','미확정','N','','', '','','호출 0건 + 커밋 1년 경과','','',
+       '①-① 차단대상','①-① 차단대상','','','미확정','N','','', '','','호출 0건 + 커밋 1년 경과','','',
        '','','',
        '','',
        '','','',
@@ -4034,7 +4038,7 @@
        'DELETE','/my-repo/src/main/java/com/example/TestController.java','TestController','deleteItem','test01',
        '','','','','','',
        '','N',5,2,1,
-       '②-② 호출 3건 이하+변경없음','','','미확정','Y','URL-test, 컨트롤러-Test','{version}','','','','',
+       '②-② 호출 3건 이하+변경없음','②-② 호출 3건 이하+변경없음','','','미확정','Y','URL-test, 컨트롤러-Test','{version}','','','','',
        '','차단확정','불필요한 API로 확인',
        '','',
        '','','',
@@ -4586,6 +4590,8 @@
             <option disabled>──── 자동계산 ────</option>
             <option value="" ${statusForSelect === '' ? 'selected' : ''}>자동계산 (초기화)</option>
           </select>${statusApproveBtn}</div>
+          <div class="detail-label">상태(자동분석결과)</div>
+          <div class="detail-value" style="white-space:normal;">${r.autoAnalyzedStatus ? statusBadge(r.autoAnalyzedStatus, false) : '<span style="color:var(--text-muted);font-size:12px;">-</span>'}<div style="font-size:10px;color:var(--text-muted);margin-top:6px;line-height:1.4;">호출·Git·차단신호 등 순수 자동 판정(스티키·수동 leaf 미반영). 공식 상태와 다르면 목록에서 상태변경 알림이 켜질 수 있습니다.</div></div>
           <div class="detail-label">상태변경 사항</div>
           <div class="detail-value"><input type="text" id="df-statusChangeSummary" class="df-input" readonly style="width:100%;background:#f8fafc;font-size:12px;" value="${esc(detailSummVal)}" placeholder="${detailSummVal ? '' : '-'}"></div>
           <div class="detail-label">상태변경 사유</div>

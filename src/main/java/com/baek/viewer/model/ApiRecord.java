@@ -77,6 +77,12 @@ public class ApiRecord {
     private boolean statusOverridden = false;
 
     /**
+     * 순수 자동 판정 상태(스티키·수동 leaf 미적용). 재분석·APM 후 공식 {@link #status}와 비교해 불일치 시 {@link #statusChanged}.
+     */
+    @Column(name = "auto_analyzed_status", length = 50)
+    private String autoAnalyzedStatus;
+
+    /**
      * 최우선 차단대상 중 "로그작업 이력 제외" 판정 건 여부.
      * true = 전체 커밋 기준으론 1년 미만이지만 로그작업 커밋을 제외하면 1년 경과 (로그작업 때문에 구제된 상태)
      * false = 전체 커밋이 이미 1년 경과 (순수 미사용) 또는 "최우선 차단대상"이 아닌 레코드
@@ -328,6 +334,8 @@ public class ApiRecord {
     public void setStatus(String status) { this.status = status; }
     public boolean isStatusOverridden() { return statusOverridden; }
     public void setStatusOverridden(boolean statusOverridden) { this.statusOverridden = statusOverridden; }
+    public String getAutoAnalyzedStatus() { return autoAnalyzedStatus; }
+    public void setAutoAnalyzedStatus(String autoAnalyzedStatus) { this.autoAnalyzedStatus = autoAnalyzedStatus; }
     public boolean isLogWorkExcluded() { return logWorkExcluded != null && logWorkExcluded; }
     public Boolean getLogWorkExcluded() { return logWorkExcluded; }
     public void setLogWorkExcluded(boolean logWorkExcluded) { this.logWorkExcluded = logWorkExcluded; }

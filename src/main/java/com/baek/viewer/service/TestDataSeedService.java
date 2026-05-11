@@ -185,7 +185,7 @@ public class TestDataSeedService {
 
     private void insertApiRecords(List<ApiRow> rows) {
         final String sql = "INSERT INTO api_record (" +
-                "repository_name, api_path, http_method, status, status_overridden, " +
+                "repository_name, api_path, http_method, status, auto_analyzed_status, status_overridden, " +
                 "block_target, block_criteria, has_url_block, is_deprecated, " +
                 "call_count, call_count_month, call_count_week, " +
                 "method_name, controller_name, program_id, " +
@@ -193,7 +193,7 @@ public class TestDataSeedService {
                 "last_analyzed_at, created_ip, modified_at, modified_ip, " +
                 "data_source, is_new, status_changed, git_history, repo_path, full_comment, " +
                 "deploy_scheduled_date, deploy_manager, recent_log_only" +
-                ") VALUES (?,?,?,?,?, ?,?,?,?, ?,?,?, ?,?,?, ?,?,?,?, ?,?,?,?, ?,?,?,?,?,?, ?,?,?)";
+                ") VALUES (?,?,?,?,?, ?,?,?,?, ?,?,?, ?,?,?, ?,?,?,?, ?,?,?,?, ?,?,?,?,?,?, ?,?,?,?)";
 
         LocalDateTime now = LocalDateTime.now();
         Timestamp nowTs = Timestamp.valueOf(now);
@@ -210,6 +210,7 @@ public class TestDataSeedService {
                     ps.setString(p++, row.repo);
                     ps.setString(p++, row.apiPath);
                     ps.setString(p++, row.method);
+                    ps.setString(p++, row.status);
                     ps.setString(p++, row.status);
                     ps.setBoolean(p++, row.overridden);
                     ps.setString(p++, row.blockTarget);

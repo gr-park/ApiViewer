@@ -2,7 +2,9 @@ package com.baek.viewer.controller;
 
 import com.baek.viewer.model.ApiRecord;
 import com.baek.viewer.repository.ApiRecordRepository;
+import com.baek.viewer.service.ApiStorageService;
 import jakarta.servlet.http.HttpServletRequest;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -10,6 +12,8 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 import org.springframework.http.ResponseEntity;
 
 import java.util.HashMap;
@@ -19,18 +23,26 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.*;
 
 /**
  * UploadController.uploadExcelViewer 범위 확장 및 차단완료 정책 검증.
  */
 @ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 class UploadControllerTest {
 
     @Mock private ApiRecordRepository repository;
+    @Mock private ApiStorageService storageService;
     @Mock private HttpServletRequest req;
 
     @InjectMocks private UploadController controller;
+
+    @BeforeEach
+    void stubStorageRefresh() {
+        lenient().doNothing().when(storageService).refreshAutoAnalyzedStatusAndMismatchFlag(any(ApiRecord.class));
+    }
 
     private Map<String, Object> row(String repo, String path, String method) {
         Map<String, Object> m = new HashMap<>();

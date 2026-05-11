@@ -2,6 +2,7 @@ package com.baek.viewer.controller;
 
 import com.baek.viewer.model.ApiRecord;
 import com.baek.viewer.repository.ApiRecordRepository;
+import com.baek.viewer.service.ApiStorageService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,9 +21,11 @@ public class UploadController {
 
     private static final Logger log = LoggerFactory.getLogger(UploadController.class);
     private final ApiRecordRepository repository;
+    private final ApiStorageService storageService;
 
-    public UploadController(ApiRecordRepository repository) {
+    public UploadController(ApiRecordRepository repository, ApiStorageService storageService) {
         this.repository = repository;
+        this.storageService = storageService;
     }
 
     private static final String BLOCKED = "차단완료";
@@ -115,6 +118,7 @@ public class UploadController {
             r.setModifiedAt(now);
             r.setModifiedIp(ip);
 
+            storageService.refreshAutoAnalyzedStatusAndMismatchFlag(r);
             repository.save(r);
             updatedIds.add(r.getId());
             updated++;

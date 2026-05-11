@@ -215,6 +215,28 @@ class ApiStorageServiceTest {
         assertThat(status).isEqualTo("①-③ 현업요청 제외대상");
     }
 
+    @Test
+    @DisplayName("calculateAutoAnalyzedStatus — umbrella sticky 없음: 호출·커밋이면 '사용'")
+    void calculateAutoAnalyzedStatus_noStickyToUse() {
+        ApiRecord r = new ApiRecord();
+        r.setStatus("①-① 차단대상");
+        r.setCallCount(100L);
+        LocalDate recent = LocalDate.now().minusDays(10);
+        r.setGitHistory("[{\"date\":\"" + recent + "\",\"author\":\"a\",\"message\":\"m\"}]");
+        assertThat(service.calculateAutoAnalyzedStatus(r, 3)).isEqualTo("사용");
+    }
+
+    @Test
+    @DisplayName("calculateAutoAnalyzedStatus — 수동 leaf 무시하고 규칙만 적용")
+    void calculateAutoAnalyzedStatus_ignoresManualLeaf() {
+        ApiRecord r = new ApiRecord();
+        r.setStatus("①-② 담당자 판단");
+        r.setCallCount(0L);
+        LocalDate oldDate = LocalDate.now().minusYears(2);
+        r.setGitHistory("[{\"date\":\"" + oldDate + "\",\"author\":\"a\",\"message\":\"m\"}]");
+        assertThat(service.calculateAutoAnalyzedStatus(r, 3)).isEqualTo("①-① 차단대상");
+    }
+
     // ═══════════════════ save ═══════════════════
 
     @Test
@@ -387,7 +409,8 @@ class ApiStorageServiceTest {
         service.updateCallCounts("repo", Map.of("/api/b", 999L));
 
         assertThat(blocked.getCallCount()).isZero();
-        verify(repository, never()).save(any(ApiRecord.class));
+        assertThat(blocked.getAutoAnalyzedStatus()).isEqualTo(ApiStorageService.STATUS_DONE);
+        verify(repository, times(1)).save(blocked);
     }
 
     // ═══════════════════ statusChangeLog FIFO trimming ═══════════════════
@@ -408,7 +431,6 @@ class ApiStorageServiceTest {
         // 가장 오래된 (msg-1 ~ msg-10) 은 제거되고 msg-11 ~ msg-60 만 남음
         assertThat(parts[0]).isEqualTo("msg-11");
         assertThat(parts[parts.length - 1]).isEqualTo("msg-60");
-        assertThat(r.isStatusChanged()).isTrue();
     }
 
     @Test

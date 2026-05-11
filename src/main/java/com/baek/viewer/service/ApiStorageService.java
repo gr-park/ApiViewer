@@ -104,7 +104,7 @@ public class ApiStorageService {
      *  - 수집 후 saveAll() 벌크 저장 (JDBC batch_size 500 활용)
      */
     @Transactional
-    /** @return [saved, revertedToUsed] — revertedToUsed: "차단대상→사용(차단대상 제외)" 전환 건수 */
+    /** @return [saved, revertedToUsed] — revertedToUsed: 현업검토(차단대상 제외)인데 공식≠자동①-③ 인 불일치 건수 */
     public int[] save(String repositoryName, List<ApiInfo> apis, String clientIp) {
         return saveInternal(repositoryName, apis, clientIp, true);
     }
@@ -149,27 +149,18 @@ public class ApiStorageService {
                 // ② 차단완료 → SKIP
                 if (STATUS_DONE.equals(existing.getStatus())) continue;
 
-                // ③ 기존 + 차단완료 아님 → 추출 필드만 업데이트
+                // ③ 기존 + 차단완료 아님 → 추출 필드만 업데이트 (공식 status·수동 입력 컬럼 승계)
                 existing.setNew(false); // 재분석 시 신규 플래그 해제
-                String oldStatus = existing.getStatus();
                 updateExtractedFields(existing, a, now);
                 applyManagerMapping(existing, managerMappings);
-
-                if (!existing.isStatusOverridden()) {
-                    String newStatus = calculateStatus(existing, reviewThreshold);
-                    if (!Objects.equals(oldStatus, newStatus)) {
-                        if (!STATUS_DONE.equals(newStatus)) {
-                            String logMsg = oldStatus + " → " + newStatus;
-                            if (S_1_3.equals(newStatus) && "차단대상 제외".equals(existing.getReviewResult())) {
-                                logMsg += " (현업검토결과=차단대상 제외)";
-                                revertedToUsed++;
-                                log.info("[현업요청 제외대상 전환] id={} repo={} path={}",
-                                        existing.getId(), repositoryName, existing.getApiPath());
-                            }
-                            appendChangeLog(existing, logMsg);
-                        }
-                    }
-                    existing.setStatus(newStatus);
+                refreshAutoAnalyzedStatusAndMismatchFlag(existing, reviewThreshold);
+                if (S_1_3.equals(existing.getAutoAnalyzedStatus())
+                        && "차단대상 제외".equals(existing.getReviewResult())
+                        && !S_1_3.equals(existing.getStatus())) {
+                    revertedToUsed++;
+                    log.info("[자동분석 ①-③·공식 불일치] id={} repo={} path={} 공식={} 자동={}",
+                            existing.getId(), repositoryName, existing.getApiPath(),
+                            existing.getStatus(), existing.getAutoAnalyzedStatus());
                 }
                 if (STATUS_DONE.equals(existing.getStatus())) {
                     existing.setBlockedDate(parseBlockedDate(existing.getFullComment()));
@@ -191,7 +182,10 @@ public class ApiStorageService {
                 r.setDataSource("ANALYSIS");
                 updateExtractedFields(r, a, now);
                 applyManagerMapping(r, managerMappings);
-                r.setStatus(calculateStatus(r, reviewThreshold));
+                String initialAuto = calculateAutoAnalyzedStatus(r, reviewThreshold);
+                r.setAutoAnalyzedStatus(initialAuto);
+                r.setStatus(initialAuto);
+                r.setStatusChanged(false);
                 if (STATUS_DONE.equals(r.getStatus())) {
                     r.setBlockedDate(parseBlockedDate(r.getFullComment()));
                     r.setBlockedReason(parseBlockedReason(r.getFullComment()));
@@ -211,9 +205,11 @@ public class ApiStorageService {
                 if (!extractedKeys.contains(key)) {
                     String oldStatus = r.getStatus();
                     r.setStatus("삭제");
+                    r.setAutoAnalyzedStatus("삭제");
                     r.setStatusOverridden(true);
                     r.setStatusChanged(true);
-                    appendChangeLog(r, oldStatus + "→삭제: 재추출 시 소스에서 미발견");
+                    r.setStatusChangeLog(appendChangeLogText(r.getStatusChangeLog(),
+                            oldStatus + "→삭제: 재추출 시 소스에서 미발견"));
                     toMarkDeleted.add(r);
                 }
             }
@@ -225,7 +221,7 @@ public class ApiStorageService {
         if (!toMarkDeleted.isEmpty()) repository.saveAll(toMarkDeleted);
 
         int saved = toInsert.size() + toUpdate.size();
-        log.info("[DB 저장 완료] repo={}, 신규={}, 갱신={}, 삭제표시={}, 차단→사용전환={}, partial={}", repositoryName,
+        log.info("[DB 저장 완료] repo={}, 신규={}, 갱신={}, 삭제표시={}, 현업제외·공식≠자동={}, partial={}", repositoryName,
                 toInsert.size(), toUpdate.size(), toMarkDeleted.size(), revertedToUsed, !markMissingAsDeleted);
         return new int[]{saved, revertedToUsed};
     }
@@ -338,7 +334,6 @@ public class ApiStorageService {
     }
 
     private void appendChangeLog(ApiRecord r, String msg) {
-        r.setStatusChanged(true);
         String existing = r.getStatusChangeLog();
         r.setStatusChangeLog(appendChangeLogText(existing, msg));
     }
@@ -357,15 +352,18 @@ public class ApiStorageService {
         List<ApiRecord> records = repository.findByRepositoryName(repoName);
 
         for (ApiRecord r : records) {
-            // 차단완료 SKIP
-            if (STATUS_DONE.equals(r.getStatus())) continue;
+            if (STATUS_DONE.equals(r.getStatus())) {
+                r.setAutoAnalyzedStatus(STATUS_DONE);
+                applyStatusMismatchFlagOnly(r);
+                repository.save(r);
+                continue;
+            }
 
             Long newCount = pathToCount.get(r.getApiPath());
             if (newCount != null) {
                 Long oldCount = r.getCallCount();
                 r.setCallCount(newCount);
 
-                // 호출건수 0↔N 변화 감지
                 boolean wasZero = (oldCount == null || oldCount == 0);
                 boolean isZero  = (newCount == 0);
                 if (wasZero && !isZero) {
@@ -375,14 +373,7 @@ public class ApiStorageService {
                 }
             }
 
-            if (!r.isStatusOverridden()) {
-                String oldStatus = r.getStatus();
-                String newStatus = calculateStatus(r, reviewThreshold);
-                if (!Objects.equals(oldStatus, newStatus)) {
-                    appendChangeLog(r, oldStatus + "→" + newStatus + ": 호출건수 반영 시 상태 변경");
-                }
-                r.setStatus(newStatus);
-            }
+            refreshAutoAnalyzedStatusAndMismatchFlag(r, reviewThreshold);
             repository.save(r);
         }
         log.info("[호출건수 반영 완료] repo={}, 처리 레코드={}건", repoName, records.size());
@@ -419,6 +410,7 @@ public class ApiStorageService {
                         r.setStatusOverridden(locked);
                         r.setModifiedAt(now);
                         if (clientIp != null) r.setModifiedIp(clientIp);
+                        refreshAutoAnalyzedStatusAndMismatchFlag(r, reviewThreshold);
                         dirty.add(r);
                         updated++;
                     }
@@ -487,6 +479,7 @@ public class ApiStorageService {
 
                 r.setModifiedAt(now);
                 if (clientIp != null) r.setModifiedIp(clientIp);
+                refreshAutoAnalyzedStatusAndMismatchFlag(r, reviewThreshold);
                 dirty.add(r);
                 updated++;
             }
@@ -521,6 +514,46 @@ public class ApiStorageService {
     }
 
     // ── 상태 계산 ────────────────────────────────────────────────────────────
+
+    /**
+     * 순수 자동 판정 — umbrella sticky·{@link #MANUAL_STATUSES} 단축 없음. 공식 {@link ApiRecord#getStatus()} 미사용.
+     */
+    public String calculateAutoAnalyzedStatus(ApiRecord r, int reviewThreshold) {
+        if ("Y".equals(r.getHasUrlBlock())) {
+            return STATUS_DONE;
+        }
+        if ("차단대상 제외".equals(r.getReviewResult())) {
+            return S_1_3;
+        }
+        Long call = r.getCallCount();
+        boolean callZero = (call == null || call == 0);
+        boolean callLow  = (call != null && call >= 1 && call <= reviewThreshold);
+        boolean fullOld  = areAllCommitsOlderThanOneYear(r.getGitHistory(), false);
+        boolean bizOld   = areAllCommitsOlderThanOneYear(r.getGitHistory(), true);
+        Umbrella target;
+        if (callZero && (fullOld || bizOld)) target = Umbrella.BLOCK;
+        else if ((callZero && !fullOld) || (callLow && fullOld)) target = Umbrella.REVIEW;
+        else target = Umbrella.USE;
+        return assignLeaf(target, callZero, fullOld);
+    }
+
+    public void refreshAutoAnalyzedStatusAndMismatchFlag(ApiRecord r) {
+        refreshAutoAnalyzedStatusAndMismatchFlag(r, getReviewThreshold());
+    }
+
+    public void refreshAutoAnalyzedStatusAndMismatchFlag(ApiRecord r, int reviewThreshold) {
+        r.setAutoAnalyzedStatus(calculateAutoAnalyzedStatus(r, reviewThreshold));
+        applyStatusMismatchFlagOnly(r);
+    }
+
+    /** 공식 status·auto_analyzed_status 불일치 → {@code status_changed}. 재추출 삭제 표시 행은 항상 true 유지. */
+    public void applyStatusMismatchFlagOnly(ApiRecord r) {
+        if ("삭제".equals(r.getStatus())) {
+            r.setStatusChanged(true);
+            return;
+        }
+        r.setStatusChanged(!Objects.equals(r.getStatus(), r.getAutoAnalyzedStatus()));
+    }
 
     /**
      * 자동 상태 판정 v2 (umbrella sticky, 9 leaf).
@@ -723,7 +756,10 @@ public class ApiStorageService {
                 .orElse(3);
     }
 
-    /** 제안 승인 등 — reviewThreshold 반영 자동 상태 계산 */
+    /**
+     * 공식 status 자동 복원(스티키 포함) — UI에서 상태 비우기·제안 등.
+     * {@link #calculateAutoAnalyzedStatus}와 별개이며, 갱신 후 {@link #refreshAutoAnalyzedStatusAndMismatchFlag}로 자동 컬럼·플래그를 맞춘다.
+     */
     public String computeAutoStatus(ApiRecord r) {
         return calculateStatus(r, getReviewThreshold());
     }

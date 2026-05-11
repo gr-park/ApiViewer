@@ -94,11 +94,11 @@ Spring Boot 기반 웹 애플리케이션. Controller 소스를 파싱하여 URL
 `extract.html`(설정의 URL분석/검토 탭에 embed): 탭 본문은 **대분류 4구역**(현업검토 · URL 분석 · APM 추출 · MOCK)으로 나뉘며, `loadExtractContent()`가 `extractSectionUrl` / 키워드·경로변수·작업카드 / `extractSectionApm` / `extractSectionMock`을 각각 마운트한다. **레포별 APM 수집**에서 **전체(레포설정)**(`ALL`) 선택 시 레포 셀렉터는 와탭·제니퍼 중 하나라도 **Y**인 레포만 표시하고, 수집 실행 시 선택 레포마다 `collectAllApm`과 동일하게(활성 와탭 최대 365일·활성 제니퍼 최대 30일 순차 수집 후 집계) 동작한다. WHATAP/JENNIFER 단일 선택 시에는 각각 `whatapEnabled`/`jenniferEnabled`가 **Y**인 레포만 표시한다. JENNIFER 선택 시 최대 30일 제한을 토스트·안내 문구로 알린다. MOCK(테스트) 선택 시에는 전체 레포 목록을 쓴다.
 | `/encrypt-viewer/` | 공개(자리표시자) |
 
-`viewer.html` 세로 순서(대략): **조회**(레포·기준일 + 메타 줄 아래 검색·필터 한 카드, 조회 전에도 필터 입력 가능) — **기준일자**는 커스텀 달력(버튼+팝오버)으로 선택하며 `GET /api/snapshot-view/dates-with-snapshots?from=&to=`로 전체(풀) 스냅샷이 있는 날을 붉은 음영 표시 — 필터 영역에서 **변경일시(`modifiedFrom`/`modifiedTo`)는 관리자만 표시·쿼리 전송**(CBO·차단예정일 행 **아래**, 빠른 선택은 `UI-GUIDELINES.md` §2.1 `.date-quick-seg`) → **스냅샷 비교**(관리자) → **상태안내 및 빠른필터**(조회 성공 후 표시 — 상단에 상태 구분 안내 박스, 아래 집계·필터 배지) → 업로드 칩·안내·알림·**일괄바**(행 선택 시 — **상태 변경**과 **데이터 변경** UI 분리: 담당자(EDITOR)는 상태 제안 시 `status`+필수 `statusChangeReason`, 데이터 제안 patch에서는 `status` 미포함·병합 유지; 관리자는 **승인대기**(승인/반려), 일괄 바에서 **상태변경**(즉시 반영)·**일괄변경**(데이터 일괄)으로 구분, SmartWay(발행/동기화)·티켓 링크는 **아이보리** 톤으로 승인대기 행 보라와 구분. **상태 제안만 제거**가 필요하면 API `POST /api/proposals/record/{recordId}/withdraw-status-fields` 사용 → 테이블 열 순서 **상태 \| 상태변경 사항(공식→제안, 서버 `statusChangeSummary`) \| 상태변경 사유 \| 상태확정** …(표시 전용). **상세 모달**에서 **차단대상기준**(`blockCriteria`) 편집 UI는 없음(DB·엑셀·관리자 PATCH 등은 유지). 카드형 `details`는 **「펼치기/접기」 pill(`.collapser`)** 클릭 시에만 접힘(summary 빈 영역 클릭으로 접히지 않음).
+`viewer.html` 세로 순서(대략): **조회**(레포·기준일 + 메타 줄 아래 검색·필터 한 카드, 조회 전에도 필터 입력 가능) — **기준일자**는 커스텀 달력(버튼+팝오버)으로 선택하며 `GET /api/snapshot-view/dates-with-snapshots?from=&to=`로 전체(풀) 스냅샷이 있는 날을 붉은 음영 표시 — 필터 영역에서 **변경일시(`modifiedFrom`/`modifiedTo`)는 관리자만 표시·쿼리 전송**(CBO·차단예정일 행 **아래**, 빠른 선택은 `UI-GUIDELINES.md` §2.1 `.date-quick-seg`) → **스냅샷 비교**(관리자) → **상태안내 및 빠른필터**(조회 성공 후 표시 — 상단에 상태 구분 안내 박스, 아래 집계·필터 배지; **통계 배지**는 ①/② 그룹·테스트용 의심 그룹이 줄바꿈되도록 구성) → 업로드 칩·안내·알림·**일괄바**(행 선택 시 — **상태 변경**과 **데이터 변경** UI 분리: 담당자(EDITOR)는 상태 제안 시 `status`+필수 `statusChangeReason`, 데이터 제안 patch에서는 `status` 미포함·병합 유지; 관리자는 **승인대기**(승인/반려), 일괄 바에서 **상태변경**(즉시 반영)·**일괄변경**(데이터 일괄)으로 구분, SmartWay(발행/동기화)·티켓 링크는 **아이보리** 톤으로 승인대기 행 보라와 구분. **상태 제안만 제거**가 필요하면 API `POST /api/proposals/record/{recordId}/withdraw-status-fields` 사용 → 테이블 열 순서 **상태(공식) \| 상태(자동분석결과)(`autoAnalyzedStatus`, 정렬 가능) \| 상태변경 사항(공식→제안, 서버 `statusChangeSummary`) \| 상태변경 사유 \| 상태확정** …(표시 전용). **상세 모달**에서 **차단대상기준**(`blockCriteria`) 편집 UI는 없음(DB·엑셀·관리자 PATCH 등은 유지). 카드형 `details`는 **「펼치기/접기」 pill(`.collapser`)** 클릭 시에만 접힘(summary 빈 영역 클릭으로 접히지 않음).
 
 대시보드 `URL 현황` 탭은 `GET /api/db/stats/block-overview` 기반이며, **팀** 탭은 **팀명만**, **업무** 탭은 **팀·업무·레포 3열**(담당 열 없음), **담당** 탭은 **4열**·**헤더 3행**(대그룹·중그룹·리프)·라벨/합계/사용은 **rowspan 3**·연속 동일 값 **rowspan**이다. **엑셀** 시트도 동일(팀 1열·업무 3열·담당 4열)이며 헤더 **3행**·**행 높이**를 넉넉히 둔다. URL 현황(대시보드+엑셀)의 **차단대상 영역은 ‘제외’ 소계 열 없이** `소계/비율/차단완료/잔여/①-①(호출0+변경없음·로그 통합)/①-②(업무종료·담당자판단)/①-③/①-④`로 구성한다. **표 색·타이포**: 합계·사용 동일(회색 헤더·데이터 무음영); 차단대상 헤더는 차단완료 제외 붉은 음영·차단완료만 연두(헤더+데이터); 보류(검토대상)는 노랑 헤더·데이터 무음영·비볼드; 총합계 행은 전열 회색·볼드. `URL 차단 배포일자`(`GET /api/db/stats/deploy-schedule`) 카드도 탭 **팀·업무·담당자**·동일 라벨 규칙, 지표는 **합계·일정수립필요·배포일정**(날짜) 2행 헤더·**엑셀 3시트**·헤더 행 높이 동일 정책이다. **담당자** 탭 행은 **팀|레포|담당(배포담당자 D:/일반 M:)** 단위이며 `businessName`·`repo`·`managerParamKey`를 포함한다.
 
-**URL분석현황 목록 정렬·딥링크**: 기본 정렬은 **레포 설정 `display_order`(표시순서) → `repository_name` → `api_path` → `http_method` → `id`**(서버 `GET /api/db/apis` 등, `sort=__repoOrder__`). `?detailId=<id>`로 진입 시 해당 행을 **by-ids로 먼저 로드**한 뒤 상세 모달을 연다(닫기 후 빈 테이블 방지). 상태 구분 안내 본문은 공통 `common/status-guide.js`로 **`#statusGuideDetailBox`**에 렌더되며, 화면에서는 **상태안내 및 빠른필터** 카드 본문 상단(타이틀 직하)에 둔다.
+**URL분석현황 목록 정렬·딥링크**: 기본 정렬은 **레포 설정 `display_order`(표시순서) → `repository_name` → `api_path` → `http_method` → `id`**(서버 `GET /api/db/apis` 등, `sort=__repoOrder__`). 서버 페이지 정렬 토큰에 **`autoAnalyzedStatus`**(자동분석 결과 열) 포함. `?detailId=<id>`로 진입 시 해당 행을 **by-ids로 먼저 로드**한 뒤 상세 모달을 연다(닫기 후 빈 테이블 방지). 상태 구분 안내 본문은 공통 `common/status-guide.js`로 **`#statusGuideDetailBox`**에 렌더되며, 화면에서는 **상태안내 및 빠른필터** 카드 본문 상단(타이틀 직하)에 둔다.
 
 `GET /api/db/record-by-key` — 차단 모니터링 등에서 사용. **동일 레포·`apiPath`에서 HTTP 메소드 대소문자 무시 일치**를 먼저 시도하고, 없으면 `REQUEST`/`ALL`/빈값 등은 **동일 경로 행만**으로 폴백(복수 시 GET→POST→첫 행). `httpMethod` 파라미터는 생략 가능.
 
@@ -130,7 +130,20 @@ DB `status` 컬럼은 leaf 값을 직접 저장한다. 화면 라벨 = DB 값 (�
 상위 카테고리 매핑: `차단완료` 단일 / `①-*` → ① 차단대상 / `②-*` → ② 추가검토대상.
 **대시보드 카드 그룹**: 차단대상 잔여(①-① + ①-②) / 차단대상 제외건(①-③ + ①-④) / 검토대상(②-① + ②-② + ②-③).
 
+## 공식 상태 vs 자동분석 결과 (`auto_analyzed_status`)
+
+| 구분 | 컬럼·API | 설명 |
+|------|----------|------|
+| 공식 | `status` | 운영·집계·대시보드 기준 leaf. **전체 URL 재추출·APM 호출 반영 시 기존 행은 승계**(이 경로만으로 공식 leaf가 바뀌지 않음). **신규** 행은 공식·자동을 동일 leaf로 둠. |
+| 자동분석 | `auto_analyzed_status` / JSON `autoAnalyzedStatus` | 호출·Git·`has_url_block`·`review_result` 등 **순수 규칙**만 (`ApiStorageService.calculateAutoAnalyzedStatus` — **MANUAL_STATUSES·umbrella sticky 없음**, 현재 `status` 미참조). 재추출·APM·`updateCallCounts` 등에서 **이 컬럼만** 갱신. |
+| 알림 | `status_changed` | 공식 `status`와 `auto_analyzed_status`가 다르면 **상태변경** pill·필터·배너(삭제 등 예외는 서버 규칙). 확인: `PATCH /api/db/clear-status-change` 등 기존 플로우. |
+| 백필 | — | 기동 시 `AutoAnalyzedStatusBackfillRunner`가 null `auto_analyzed_status`를 페이지 단위로 채움. |
+
+스냅샷 행(`api_record_snapshot_row`)에도 동일 컬럼이 복제된다.
+
 ## 자동 재계산 규칙 (umbrella sticky, v2)
+
+아래 **`calculateStatus` sticky**는 서버가 **공식 `status`를 재계산하는 경로**(일괄·오버라이드 해제 등)에 적용된다. **재추출·APM 저장으로는 공식 `status`를 덮어쓰지 않으며**, 그때는 위 표의 **자동 컬럼만** 맞춘다.
 
 `ApiStorageService.calculateStatus` 는 `statusOverridden=false` 인 레코드에 대해서만 동작:
 
@@ -201,7 +214,7 @@ DB `status` 컬럼은 leaf 값을 직접 저장한다. 화면 라벨 = DB 값 (�
 | 승인/반려 | `POST /api/proposals/approve` `{ "ids":[] }` / `reject` `{ "ids":[], "reason":"…" }` — **ADMIN만**. 승인 시 `applyPatch`는 관리자 `PATCH`와 같이 **`차단완료`로의 상태 반영**을 허용한다(이미 `차단완료`인 행을 다른 상태로 바꾸는 것은 불가). 반려 시 제출 담당자 `it_assignee.proposal_reject_notice`·`proposal_reject_notice_at`에 사유 저장(같은 담당자는 **덮어쓰기**). **동일 담당자에게 한 번에 여러 건이 반려**되면 공지 문구는 첫 URL 한 줄 + `… 외 N건이 상태변경 반려되었습니다` 형태로 요약. 화면에서 승인·반려 전 **관리자 비밀번호** 확인 권장 |
 | 반려 알림 | `GET /api/assignee/auth/check`에 `proposalRejectNotice` 포함(최신 묶음 요약, 하위 호환) · 해제 `POST /api/assignee/auth/dismiss-proposal-notice` (`X-Editor-Token`). **이력·목록**은 `proposal_reject_event` + `GET /api/assignee/inbox-summary`의 `rejectEvents`(단건 `kind:reject`·묶음 `kind:rejectBatch`/`summaryLine`/`batchId`), 건별 확인 `POST /api/assignee/reject-events/{id}/dismiss`, 묶음 확인 `POST /api/assignee/reject-events/dismiss-batch` `{batchId}` |
 | 네비 쪽지 API | `POST /api/config/portal-notice` `{text}` 전체 쪽지 · `POST /api/config/assignee-notices` `{assigneeIds,text}` · `GET /api/config/admin-inbox-summary` · `POST /api/config/messages-from-assignees/{id}/dismiss` · `POST /api/config/reply-to-assignee-message` `{assigneeMessageId,text}` (ADMIN). 담당자: `GET /api/assignee/inbox-summary` · `POST /api/assignee/admin-notices/{id}/dismiss` · `POST /api/assignee/message-to-admin` `{text, replyToAdminNoticeId?}` |
-| 목록 요약 | `GET /api/db/apis` 등 요약 map에 `proposalRequestSummary`, `hasPendingProposal`, `proposalStatusChangeSummary`, `proposalStatusChangeReason`(제안에 `status` 있을 때), `proposalSubmitterName`(제출 담당자명·화면에서 상태변경 사항·승인대기 배지 접미사용). `GET /api/proposals/record/{id}`에도 동일 키 `proposalSubmitterName` |
+| 목록 요약 | `GET /api/db/apis` 등 요약 map에 `autoAnalyzedStatus`, `proposalRequestSummary`, `hasPendingProposal`, `proposalStatusChangeSummary`, `proposalStatusChangeReason`(제안에 `status` 있을 때), `proposalSubmitterName`(제출 담당자명·화면에서 상태변경 사항·승인대기 배지 접미사용). `GET /api/proposals/record/{id}`에도 동일 키 `proposalSubmitterName` |
 | URL현황 | 담당자: 인라인·상세 저장 → 제안 API 경유(데이터 저장 시 `status` 미전송·병합). 관리자: `PATCH /api/db/record/{id}` 즉시 반영. **승인대기** stat·필터·행 ⏳ 배지. 상세 모달: 승인대기 건은 관리자에게 상태 셀 옆 **승인완료** / **반려**(반려 사유 전용 모달 → `POST /api/proposals/reject`)·일괄과 동일하게 비밀번호 확인. **상태변경알림 확인**: `PATCH /api/db/clear-status-change` — **ADMIN**(`X-Admin-Token`) 또는 **EDITOR**(`X-Editor-Token`); 관리자 일괄바 동일 버튼은 기존처럼 `PATCH /api/db/clear-alerts`로 신규+상태변경 일괄 해제, 담당자는 **상태변경 플래그만** 해제. 일괄바: **승인대기**(승인/반려), 관리자 **상태변경\|일괄변경**(파란 세그먼트)·담당자 **승인요청**+**데이터변경**; **상태변경 반려 안내**는 상단 네비 담당자 **쪽지함**에서 확인(이력·묶음 요약) |
 | 임원·집계 기준 | `GET /api/db/apis`, `counts`, 대시보드 블록 집계는 **승인된 공식 `api_record`**. 제안만 반영된 값은 URL현황 상태 카드·`counts`로 별도 확인: `pendingProposalCount`(제안 행 존재)·`openRejectEventCount`(미확인 `proposal_reject_event`가 있는 레코드). 목록 필터 `alert`: `pendingProposal` / `openRejectEvent`(스냅샷 조회 모드에서는 제안·반려 alert 미전송, 카운트 0) |
 
@@ -223,7 +236,9 @@ DB `status` 컬럼은 leaf 값을 직접 저장한다. 화면 라벨 = DB 값 (�
 | 컬럼 | 설명 |
 |------|------|
 | `(repository_name, api_path, http_method)` | UNIQUE 복합키 |
-| `status` / `status_overridden` | leaf 상태 / 확정 여부 |
+| `status` / `status_overridden` | 공식 leaf 상태 / 확정 여부 |
+| `auto_analyzed_status` | 순수 자동분석 leaf(스티키·수동 배제). 재추출·APM 등에서 갱신 |
+| `status_changed` | 공식 `status` ≠ `auto_analyzed_status` 등으로 상태변경 알림 표시 시 Y |
 | `has_url_block` / `is_deprecated` | 차단 throw YN / @Deprecated YN |
 | `controller_file_path` | /{repoName}/{repoPath} |
 | `call_count` 등 | 총·월·주 호출 |
@@ -242,7 +257,7 @@ repo_config: `whatap_okinds` / `whatap_okinds_name` — ID 리스트와 동일 �
 
 ## 스냅샷(Extract 히스토리) — `api_record_snapshot` / `api_record_snapshot_row`
 
-풀 스냅샷만(v1.2~, `source_repo` NULL). `삭제` 행 포함. diff `deleted`≠DB `삭제`. label에 trigger 레포. 레거시 `source_repo` 행은 보존·표준 경로 미사용. 생성: Extract 후·`POST /api/snapshots`. 정리: cleanup, DELETE id/ids/by-date. `restore-live`: api_record 전삭제 후 row INSERT(호출 테이블 불변). list/resolve는 풀만; `/{id}/records|counts`는 repo 필터. 메타: id, snapshot_at, snapshot_type, label, created_ip, source_repo, record_count. 행: 복합키+api_record 복제+source_id.
+풀 스냅샷만(v1.2~, `source_repo` NULL). `삭제` 행 포함. diff `deleted`≠DB `삭제`. label에 trigger 레포. 레거시 `source_repo` 행은 보존·표준 경로 미사용. 생성: Extract 후·`POST /api/snapshots`. 정리: cleanup, DELETE id/ids/by-date. `restore-live`: api_record 전삭제 후 row INSERT(호출 테이블 불변). list/resolve는 풀만; `/{id}/records|counts`는 repo 필터. 메타: id, snapshot_at, snapshot_type, label, created_ip, source_repo, record_count. 행: 복합키+api_record 복제+source_id(`auto_analyzed_status` 포함).
 
 # 로깅
 
@@ -286,11 +301,12 @@ SLF4J+Logback, 콘솔+파일, MDC `[ADMIN/USER/SYSTEM] [IP]`, `./logs/app.log`, 
 (repositoryName, apiPath, httpMethod) 3-tuple 로 기존 레코드를 매칭한다. 미매칭 건은 스킵(생성하지 않음).
 
 ## 업로드 반영 필드
-viewer.html 엑셀 업로드는 아래 사용자 편집 필드만 반영한다. 추출/APM 자동 채움 필드(호출건수·Deprecated·차단일자(JAVADOC)·차단근거(JAVADOC)·Git이력 등)는 엑셀에 값이 있어도 무시한다. **다운로드 양식의 `상태변경 사항`·`상태변경 사유` 열은 표시용**이며, 업로드 매핑에 포함되지 않아 값이 있어도 반영되지 않는다.
+viewer.html 엑셀 업로드는 아래 사용자 편집 필드만 반영한다. 추출/APM 자동 채움 필드(호출건수·Deprecated·차단일자(JAVADOC)·차단근거(JAVADOC)·Git이력 등)는 엑셀에 값이 있어도 무시한다. **다운로드 양식의 `상태(자동분석결과)`·`상태변경 사항`·`상태변경 사유` 열은 표시용**이며, 업로드 매핑에 포함되지 않아 값이 있어도 반영되지 않는다.
 
 | 엑셀 헤더 | DB 필드 | 비고 |
 |-----------|--------|------|
 | 상태 / 상태확정 | `status` / `statusOverridden` | 상태 변경 시 `statusOverridden` 자동 true |
+| 상태(자동분석결과) | — | 다운로드·표시 전용(업로드 무시) |
 | 팀 | `teamOverride` | |
 | 담당자 | `managerOverride` (+ `managerOverridden` 플래그) | 값 있으면 수동 플래그 ON (재추출 시 programId 매핑이 덮어쓰지 않음), 빈값이면 OFF |
 | 관련 메뉴(또는 기능) | `descriptionOverride` | ApiOperation/Description/컨트롤러주석보다 우선 |

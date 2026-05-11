@@ -66,7 +66,9 @@ class ApmCollectionServiceTest {
         GlobalConfig gc = new GlobalConfig();
         gc.setReviewThreshold(3);
         lenient().when(globalConfigRepository.findById(1L)).thenReturn(java.util.Optional.of(gc));
-        lenient().when(apiStorageService.calculateStatus(any(ApiRecord.class), anyInt())).thenReturn("사용");
+        lenient().doNothing().when(apiStorageService).refreshAutoAnalyzedStatusAndMismatchFlag(any(ApiRecord.class), anyInt());
+        lenient().doNothing().when(apiStorageService).refreshAutoAnalyzedStatusAndMismatchFlag(any(ApiRecord.class));
+        lenient().doNothing().when(apiStorageService).applyStatusMismatchFlagOnly(any(ApiRecord.class));
     }
 
     // ═══════════════════ 파라미터 검증 ═══════════════════

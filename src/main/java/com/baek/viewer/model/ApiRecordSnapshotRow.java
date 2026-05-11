@@ -56,6 +56,9 @@ public class ApiRecordSnapshotRow {
     @Column(name = "status", length = 50)
     private String status;
 
+    @Column(name = "auto_analyzed_status", length = 50)
+    private String autoAnalyzedStatus;
+
     @Column(name = "status_overridden")
     private Boolean statusOverridden;
 
@@ -231,6 +234,8 @@ public class ApiRecordSnapshotRow {
     public void setHttpMethod(String httpMethod) { this.httpMethod = httpMethod; }
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
+    public String getAutoAnalyzedStatus() { return autoAnalyzedStatus; }
+    public void setAutoAnalyzedStatus(String autoAnalyzedStatus) { this.autoAnalyzedStatus = autoAnalyzedStatus; }
     public String getPathParamPattern() { return pathParamPattern; }
     public void setPathParamPattern(String pathParamPattern) { this.pathParamPattern = pathParamPattern; }
 }

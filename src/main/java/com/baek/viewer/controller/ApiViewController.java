@@ -949,6 +949,7 @@ public class ApiViewController {
         m.put("modifiedIp",         r.getModifiedIp());
         m.put("reviewedIp",         r.getReviewedIp());
         m.put("status",             r.getStatus());
+        m.put("autoAnalyzedStatus", r.getAutoAnalyzedStatus());
         m.put("statusOverridden",   r.isStatusOverridden());
         m.put("logWorkExcluded",    r.isLogWorkExcluded());
         m.put("recentLogOnly",      r.isRecentLogOnly());
@@ -1435,12 +1436,15 @@ public class ApiViewController {
             if (body.containsKey("status")) {
                 String newStatusForLog = r.getStatus();
                 if (!java.util.Objects.equals(oldStatusForLog, newStatusForLog)) {
-                    r.setStatusChanged(true);
                     r.setStatusChangeLog(com.baek.viewer.service.ApiStorageService.appendChangeLogText(
                             r.getStatusChangeLog(),
                             "수동상태 " + oldStatusForLog + "→" + newStatusForLog
                     ));
                 }
+            }
+
+            if (!body.isEmpty()) {
+                storageService.refreshAutoAnalyzedStatusAndMismatchFlag(r);
             }
 
             recordRepository.save(r);

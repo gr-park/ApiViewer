@@ -173,7 +173,6 @@ public class ApiRecordPatchService {
         if (work.containsKey("status")) {
             String newStatusForLog = r.getStatus();
             if (!Objects.equals(oldStatusForLog, newStatusForLog)) {
-                r.setStatusChanged(true);
                 String logLine = "제안승인 " + oldStatusForLog + "→" + newStatusForLog;
                 if (reasonForLog != null) {
                     logLine += " (사유: " + reasonForLog + ")";
@@ -191,6 +190,10 @@ public class ApiRecordPatchService {
             if (ApiStorageService.MANUAL_STATUSES.contains(st)) {
                 r.setStatusOverridden(true);
             }
+        }
+
+        if (anyChanged || reviewChanged) {
+            storageService.refreshAutoAnalyzedStatusAndMismatchFlag(r);
         }
 
         return anyChanged || reviewChanged;

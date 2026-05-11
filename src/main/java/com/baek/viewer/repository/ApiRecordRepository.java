@@ -21,6 +21,9 @@ public interface ApiRecordRepository extends JpaRepository<ApiRecord, Long>,
 
     List<ApiRecord> findByRepositoryName(String repositoryName);
 
+    /** 기동 시 auto_analyzed_status 백필용 */
+    Page<ApiRecord> findByAutoAnalyzedStatusIsNull(Pageable pageable);
+
     Optional<ApiRecord> findByJiraIssueKey(String jiraIssueKey);
 
     Optional<ApiRecord> findByRepositoryNameAndApiPathAndHttpMethod(

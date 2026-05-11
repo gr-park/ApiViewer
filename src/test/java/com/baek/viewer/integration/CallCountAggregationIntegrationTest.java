@@ -83,23 +83,24 @@ class CallCountAggregationIntegrationTest {
         storage.updateCallCounts(REPO, Map.of("/api/a", 100L));
         ApiRecord after = recordRepo.findByRepositoryNameAndApiPathAndHttpMethod(REPO, "/api/a", "GET").orElseThrow();
         assertThat(after.getCallCount()).isEqualTo(100L);
-        // umbrella sticky: ②-* 에서 target=USE 매칭 → '사용' 전이
-        assertThat(after.getStatus()).isEqualTo("사용");
+        assertThat(after.getStatus()).isEqualTo("②-① 호출0건+변경있음");
+        assertThat(after.getAutoAnalyzedStatus()).isEqualTo("사용");
+        assertThat(after.isStatusChanged()).isTrue();
     }
 
     @Test
-    @DisplayName("updateCallCounts — 1년 경과 + 호출 1~3 → ②-③ 매칭, 단 sticky 로 ①-② 보존")
+    @DisplayName("updateCallCounts — 1년 경과 + 호출 1~3 → 자동은 ②-②, 공식 ①-① 승계")
     void updateCallCounts_stickyBlock() {
-        // 1년 경과 → 신규 분석 시 ①-② (호출 0 + fullOld → BLOCK)
         storage.save(REPO, List.of(info("/api/b", oldCommit())), "ip");
         ApiRecord r = recordRepo.findByRepositoryNameAndApiPathAndHttpMethod(REPO, "/api/b", "GET").orElseThrow();
         assertThat(r.getStatus()).isEqualTo("①-① 차단대상");
 
-        // 호출 2건 발생 → target=REVIEW (callMid + fullOld) 이지만 sticky 로 ①-② 보존
         storage.updateCallCounts(REPO, Map.of("/api/b", 2L));
         ApiRecord after = recordRepo.findByRepositoryNameAndApiPathAndHttpMethod(REPO, "/api/b", "GET").orElseThrow();
         assertThat(after.getCallCount()).isEqualTo(2L);
-        assertThat(after.getStatus()).isEqualTo("①-① 차단대상");  // 보존
+        assertThat(after.getStatus()).isEqualTo("①-① 차단대상");
+        assertThat(after.getAutoAnalyzedStatus()).isEqualTo("②-② 호출 3건 이하+변경없음");
+        assertThat(after.isStatusChanged()).isTrue();
     }
 
     @Test
@@ -132,8 +133,11 @@ class CallCountAggregationIntegrationTest {
         ApiRecord rx = recordRepo.findByRepositoryNameAndApiPathAndHttpMethod(REPO, "/api/x", "GET").orElseThrow();
         ApiRecord ry = recordRepo.findByRepositoryNameAndApiPathAndHttpMethod(REPO, "/api/y", "GET").orElseThrow();
         assertThat(rx.getCallCount()).isEqualTo(2L);
-        assertThat(rx.getStatus()).isEqualTo("①-① 차단대상");  // sticky
-        // /api/y 는 매핑에 없었으므로 호출 0 그대로 → ①-① 보존
+        assertThat(rx.getStatus()).isEqualTo("①-① 차단대상");
+        assertThat(rx.getAutoAnalyzedStatus()).isEqualTo("②-② 호출 3건 이하+변경없음");
+        assertThat(rx.isStatusChanged()).isTrue();
         assertThat(ry.getStatus()).isEqualTo("①-① 차단대상");
+        assertThat(ry.getAutoAnalyzedStatus()).isEqualTo("①-① 차단대상");
+        assertThat(ry.isStatusChanged()).isFalse();
     }
 }

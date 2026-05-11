@@ -27,7 +27,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * 검증:
  *   - 신규 레코드 INSERT
  *   - 기존 레코드 추출 시 필드 업데이트 (필요한 필드만)
- *   - umbrella sticky: ① 차단대상 / ② 추가검토대상 leaf 보존
+ *   - 재추출 시 공식 status 승계 — sticky 전이는 자동분석 컬럼·status_changed 로만 표시
  *   - 차단완료 레코드는 SKIP (수정 없음)
  *   - DB에 있지만 추출 결과에 없는 건 → '삭제' 마킹
  *   - statusOverridden=true 레코드는 자동 재계산 미적용
@@ -158,20 +158,22 @@ class AnalysisCrudIntegrationTest {
     }
 
     @Test
-    @DisplayName("save sticky — 현재 ①-② 인 레코드에 호출 다수 + 최신 커밋 → '사용' 으로 전이 허용")
+    @DisplayName("save — 재추출 시 공식 leaf 승계, 자동분석만 '사용'이면 불일치 플래그")
     void save_umbrellaStickyToUse() {
         storage.save(REPO, List.of(info("/api/use", "GET")), "1.1.1.1");
         ApiRecord r = recordRepo.findByRepositoryNameAndApiPathAndHttpMethod(REPO, "/api/use", "GET").orElseThrow();
         r.setCallCount(1000L);
         recordRepo.save(r);
 
-        // 1년 미만 커밋 + 호출 다수 → target=USE → '사용' 전이
+        // 1년 미만 커밋 + 호출 다수 → 순수 자동은 '사용', 공식은 기존 ①-① 승계
         ApiInfo recent = info("/api/use", "GET");
         recent.setGit1(new String[]{LocalDate.now().minusDays(10).toString(), "a", "recent"});
         storage.save(REPO, List.of(recent), "1.1.1.1");
 
         ApiRecord after = recordRepo.findByRepositoryNameAndApiPathAndHttpMethod(REPO, "/api/use", "GET").orElseThrow();
-        assertThat(after.getStatus()).isEqualTo("사용");
+        assertThat(after.getStatus()).isEqualTo("①-① 차단대상");
+        assertThat(after.getAutoAnalyzedStatus()).isEqualTo("사용");
+        assertThat(after.isStatusChanged()).isTrue();
     }
 
     @Test

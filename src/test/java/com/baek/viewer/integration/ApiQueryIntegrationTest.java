@@ -246,6 +246,7 @@ class ApiQueryIntegrationTest {
         assertThat(b).contains("\"recentLogOnly\"");
         assertThat(b).contains("\"logWorkExcluded\"");
         assertThat(b).contains("\"statusChanged\"");
+        assertThat(b).contains("\"autoAnalyzedStatus\"");
     }
 
     @Test

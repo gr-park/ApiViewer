@@ -350,7 +350,7 @@ public class ApiExtractorService {
                 savedCount = saveResult[0];
                 statusRevertedCount = saveResult[1];
                 String saveMsg = "DB 저장 완료 — " + savedCount + "개 저장/갱신";
-                if (statusRevertedCount > 0) saveMsg += ", 차단대상→사용 전환 " + statusRevertedCount + "건 (현업검토결과=차단대상 제외)";
+                if (statusRevertedCount > 0) saveMsg += ", 자동①-③·공식 불일치 " + statusRevertedCount + "건 (현업검토=차단대상 제외)";
                 addLog("OK", saveMsg);
             } catch (Exception e) {
                 savedCount = -1;
