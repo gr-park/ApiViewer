@@ -281,6 +281,7 @@
     .stat-pill.s-target  strong { color: #ea580c; }
     .stat-pill.s-done    strong { color: #6b7280; }
     .stat-pill.s-use     strong { color: var(--success); }
+    .stat-pill.s-delete  strong { color: #dc2626; }
     /* stats-bar 행 구분/구분자 */
     .stat-row-break { flex-basis:100%; height:0; }
     .stat-sep { display:none; }
@@ -305,6 +306,9 @@
     .sg-pri3-sum { background:#fef3c7; border-color:#f59e0b; font-weight:700; }   /* ② 합계 강조 */
     .sg-review { background:#eff6ff; border-color:#93c5fd; }           /* 현업검토완료 */
     .sg-review .stat-group-label { color:#1d4ed8; }
+    .sg-review .stat-pill { background:#dbeafe; border-color:#93c5fd; }
+    .sg-review .stat-pill strong { color:#1d4ed8; }
+    .sg-review .stat-pill.s-use strong { color: var(--success); }
     /* (구) sg-path-params: 호환용. 현재는 sg-suspect 그룹으로 렌더 */
     .sg-path-params { background:#fdf4ff; border-color:#e9d5ff; }
     /* 신규/상태변경/삭제 — 보라(테스트/패턴)과 겹치지 않게 옅은 주황(피치) 톤 */
@@ -961,55 +965,55 @@
       <!-- 통계 (상태 필터 겸용) -->
       <div class="stats-bar" id="statsBar" style="display:none;margin:0 0 10px 0;">
     <div class="stat-group tight sg-done">
-      <span class="stat-group-label">전체 |</span>
+      <span class="stat-group-label">주요현황</span>
       <div class="stat-pill" id="pill-all" onclick="setFilter('')"><span>전체</span><strong id="statTotal">0</strong></div>
       <div class="stat-pill s-use" id="pill-사용" onclick="setFilter('사용')"><span>사용</span><strong id="stat-사용">0</strong></div>
       <div class="stat-pill" id="pill-차단완료" onclick="setFilter('차단완료')"><span>차단완료</span><strong id="stat-차단완료">0</strong></div>
-      <div class="stat-pill sg-hist" id="pill-deleted" onclick="setFilter('deleted')"><span>삭제</span><strong id="stat-deleted">0</strong></div>
+      <div class="stat-pill s-delete" id="pill-deleted" onclick="setFilter('deleted')"><span>삭제</span><strong id="stat-deleted">0</strong></div>
     </div>
     <div class="stat-group tight sg-hist">
-      <span class="stat-group-label">상태 |</span>
+      <span class="stat-group-label">처리현황</span>
       <div class="stat-pill sg-hist" id="pill-new"     onclick="setFilter('new')"    ><span>신규</span><strong id="stat-new">0</strong></div>
-      <div class="stat-pill sg-hist" id="pill-changed" onclick="setFilter('changed')"><span>상태변경</span><strong id="stat-changed">0</strong></div>
+      <div class="stat-pill sg-hist" id="pill-changed" onclick="setFilter('changed')"><span>변경감지</span><strong id="stat-changed">0</strong></div>
       <div class="stat-pill sg-hist" id="pill-pending-proposal" onclick="setFilter('pendingProposal')" title="담당자 제안이 승인 대기 중"><span>승인대기</span><strong id="stat-pendingProposal">0</strong></div>
-      <div class="stat-pill sg-hist" id="pill-open-reject-event" onclick="setFilter('openRejectEvent')" title="상태변경 반려 이력 중 네비 쪽지함에서 아직 확인하지 않은 건이 있는 레코드"><span>반려</span><strong id="stat-openRejectEvent">0</strong></div>
+      <div class="stat-pill sg-hist" id="pill-open-reject-event" onclick="setFilter('openRejectEvent')" title="상태변경 반려 이력 중 네비 쪽지함에서 아직 확인하지 않은 건이 있는 레코드"><span>반려알림</span><strong id="stat-openRejectEvent">0</strong></div>
       <div class="stat-pill sg-hist" id="pill-reviewed" onclick="setFilter('reviewed')"><span>현업검토완료</span><strong id="stat-reviewed">0</strong></div>
     </div>
     <div class="stat-row-break"></div>
     <div class="stat-group sg-pri1">
-      <span class="stat-group-label">차단대상 |</span>
+      <span class="stat-group-label">차단대상</span>
       <div class="stat-pill sg-pri1 sg-pri1-sum" id="pill-block" onclick="setFilter('group:block')" title="①-①~①-④ 합계"><span>① 차단대상</span><strong id="stat-block">0</strong></div>
       <div class="stat-pill sg-pri1" id="pill-leaf-1-1" onclick="setFilter('①-① 차단대상')" title="호출 0건 + 소스변경 1년 경과"><span>①-① 차단대상</span><strong id="stat-leaf-1-1">0</strong></div>
       <div class="stat-pill sg-pri1" id="pill-leaf-1-2" onclick="setFilter('①-② 담당자 판단')" title="담당자 수동 판단"><span>①-② 담당자 판단</span><strong id="stat-leaf-1-2">0</strong></div>
       <div class="stat-pill sg-pri1" id="pill-leaf-1-3" onclick="setFilter('①-③ 현업요청 제외대상')" title="현업요청에 의한 차단 제외"><span>①-③ 현업요청 제외대상</span><strong id="stat-leaf-1-3">0</strong></div>
-      <div class="stat-pill sg-pri1" id="pill-leaf-1-4" onclick="setFilter('①-④ 사용으로 변경')" title="담당자 검토결과 사용중으로 확정"><span>①-④ 사용으로 변경</span><strong id="stat-leaf-1-4">0</strong></div>
+      <div class="stat-pill sg-pri1 s-use" id="pill-leaf-1-4" onclick="setFilter('①-④ 사용으로 변경')" title="담당자 검토결과 사용중으로 확정"><span>①-④ 사용으로 변경</span><strong id="stat-leaf-1-4">0</strong></div>
     </div>
 
     <div class="stat-group sg-pri3">
-      <span class="stat-group-label">추가검토대상 |</span>
+      <span class="stat-group-label">추가검토대상</span>
       <div class="stat-pill sg-pri3 sg-pri3-sum" id="pill-review" onclick="setFilter('group:review')" title="②-①~②-③ 합계"><span>② 추가검토대상</span><strong id="stat-review">0</strong></div>
       <div class="stat-pill sg-pri3" id="pill-leaf-2-1" onclick="setFilter('②-① 호출0건+변경있음')" title="호출 0건 + 1년 미만 변경"><span>②-① 호출0건+변경있음</span><strong id="stat-leaf-2-1">0</strong></div>
       <div class="stat-pill sg-pri3" id="pill-leaf-2-2" onclick="setFilter('②-② 호출 3건 이하+변경없음')" title="호출 1~N건 + 1년 경과"><span>②-② 호출 3건 이하</span><strong id="stat-leaf-2-2">0</strong></div>
-      <div class="stat-pill sg-pri3" id="pill-leaf-2-3" onclick="setFilter('②-③ 사용으로 변경')" title="담당자 검토결과 사용중으로 확정"><span>②-③ 사용으로 변경</span><strong id="stat-leaf-2-3">0</strong></div>
+      <div class="stat-pill sg-pri3 s-use" id="pill-leaf-2-3" onclick="setFilter('②-③ 사용으로 변경')" title="담당자 검토결과 사용중으로 확정"><span>②-③ 사용으로 변경</span><strong id="stat-leaf-2-3">0</strong></div>
     </div>
 
     <div class="stat-row-break"></div>
     <div class="stat-group tight sg-review">
-      <span class="stat-group-label">자동분석결과 |</span>
-      <div class="stat-pill" id="pill-auto-사용" onclick="setFilter('auto:사용')" title="순수 자동 판정 기준 사용"><span>사용</span><strong id="stat-auto-사용">0</strong></div>
+      <span class="stat-group-label">자동분석상태</span>
+      <div class="stat-pill s-use" id="pill-auto-사용" onclick="setFilter('auto:사용')" title="순수 자동 판정 기준 사용"><span>사용</span><strong id="stat-auto-사용">0</strong></div>
       <div class="stat-pill" id="pill-auto-차단완료" onclick="setFilter('auto:차단완료')" title="순수 자동 판정 기준 차단완료"><span>차단완료</span><strong id="stat-auto-차단완료">0</strong></div>
       <div class="stat-pill" id="pill-expected-done" onclick="setFilter('expectedDone')" title="자동은 차단완료지만 공식 상태는 아직 차단완료가 아닌 전환 대상"><span>차단완료 전환대상</span><strong id="stat-expected-done">0</strong></div>
       <div class="stat-pill" id="pill-auto-leaf-1-1" onclick="setFilter('auto:①-① 차단대상')" title="순수 자동 판정 기준 ①-① 차단대상"><span>① 차단대상</span><strong id="stat-auto-leaf-1-1">0</strong></div>
       <div class="stat-pill" id="pill-auto-leaf-2-1" onclick="setFilter('auto:②-① 호출0건+변경있음')" title="순수 자동 판정 기준 ②-① 호출0건+변경있음"><span>②-① 호출0건+변경있음</span><strong id="stat-auto-leaf-2-1">0</strong></div>
       <div class="stat-pill" id="pill-auto-leaf-2-2" onclick="setFilter('auto:②-② 호출 3건 이하+변경없음')" title="순수 자동 판정 기준 ②-② 호출 3건 이하+변경없음"><span>②-② 호출 3건 이하</span><strong id="stat-auto-leaf-2-2">0</strong></div>
-      <div class="stat-group-note">ℹ️ 공식 상태는 이전 분석 상태를 그대로 승계하며, 자동분석결과는 현재 기준으로 다시 계산한 참고값입니다. 둘이 다른 건은 검토 후 반영해 주세요.</div>
     </div>
     <div class="stat-group tight sg-suspect">
-      <span class="stat-group-label">주의필요 |</span>
+      <span class="stat-group-label">주의필요</span>
       <div class="stat-pill sg-suspect" id="pill-marking-incomplete" onclick="setFilter('marking-incomplete')" title="차단완료이지만 @Deprecated 또는 [URL차단작업] 주석 누락"><span>📝 차단처리미흡</span><strong id="stat-marking-incomplete">0</strong></div>
       <div class="stat-pill sg-suspect" id="pill-test-suspect" onclick="setFilter('testSuspect')" title="URL/메소드/주석 등에 test, sample, mock 등 키워드가 포함된 의심 URL"><span>🧪 테스트용 의심</span><strong id="stat-test-suspect">0</strong></div>
       <div class="stat-pill sg-suspect" id="pill-path-params" onclick="setFilter('pathParams')" title="경로에 {변수} 가 포함된 URL — 호출 이력 URL과 불일치할 수 있음"><span>🔗 파라미터URL 패턴</span><strong id="stat-path-params">0</strong></div>
     </div>
+    <div class="stat-group-note">ℹ️ 공식 상태는 이전 분석 상태를 그대로 승계하며, 자동분석상태는 현재 기준으로 다시 계산한 참고값입니다. 둘이 다른 건은 검토 후 반영해 주세요.</div>
   </div>
 
     </div>
@@ -1026,7 +1030,7 @@
   </div>
 
   <!-- 알림바 (콤팩트 pill 형태) -->
-  <div id="alertStack" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px;">
+  <div id="alertStack" style="display:none;gap:6px;flex-wrap:wrap;margin-bottom:6px;">
     <div id="noticeBar" style="display:none;background:#fffbeb;border:1px solid #fcd34d;border-radius:20px;padding:5px 12px 5px 12px;font-size:11px;color:#92400e;white-space:nowrap;position:relative;padding-right:26px;">
       ⚠️ 차단대상 중 판단이 어려운 건은 <b>"사용"</b>으로 변경하고 비고에 의견 남겨주세요.
       <button onclick="dismissNotice('noticeBar')" style="position:absolute;top:50%;right:8px;transform:translateY(-50%);background:none;border:none;color:#92400e;cursor:pointer;font-size:13px;line-height:1;padding:0;" title="닫기">×</button>
@@ -1139,7 +1143,7 @@
           <th class="hg-info no-sort">URL호출</th>
           <!-- 상태 / 제안 메타 / 상태확정 -->
           <th class="hg-info" onclick="sortBy('status')">상태 <span class="sort-icon">↕</span></th>
-          <th class="hg-info" onclick="sortBy('autoAnalyzedStatus')" title="순수 자동 판정(스티키 없음)">상태(자동분석결과) <span class="sort-icon">↕</span></th>
+          <th class="hg-info" onclick="sortBy('autoAnalyzedStatus')" title="순수 자동 판정(스티키 없음)">자동분석상태 <span class="sort-icon">↕</span></th>
           <th class="hg-info no-sort" style="min-width:120px;">상태변경 사항</th>
           <th class="hg-info no-sort" style="min-width:100px;">상태변경 사유</th>
           <th class="hg-info no-sort">상태확정</th>
@@ -4143,7 +4147,7 @@
       'HTTP Method','컨트롤러파일경로','컨트롤러','메소드명','프로그램ID',
       'ApiOperation','Description주석','메소드주석','컨트롤러주석','RequestProperty','컨트롤러RequestProperty',
       '관련 메뉴(또는 기능)','Deprecated','1년 호출건','1달 호출건','1주 호출건',
-      '상태','상태(자동분석결과)','상태변경 사항','상태변경 사유','상태확정','테스트용 의심 여부','테스트용 의심 사유','파라미터URL 패턴','침해사고 로그 제외대상','차단기준','차단일자(JAVADOC)','차단근거(JAVADOC)',
+      '상태','자동분석상태','상태변경 사항','상태변경 사유','상태확정','테스트용 의심 여부','테스트용 의심 사유','파라미터URL 패턴','침해사고 로그 제외대상','차단기준','차단일자(JAVADOC)','차단근거(JAVADOC)',
       '비고','현업검토결과','현업검토의견',
       'SmartWay 티켓번호','검토단계',
       'CBO예정일자','차단예정일자','차단작업CSR','차단작업담당자',
@@ -4246,7 +4250,7 @@
       'HTTP Method','컨트롤러파일경로','컨트롤러','메소드명','프로그램ID',
       'ApiOperation','Description주석','메소드주석','컨트롤러주석','RequestProperty','컨트롤러RequestProperty',
       '관련 메뉴(또는 기능)','Deprecated','1년 호출건','1달 호출건','1주 호출건',
-      '상태','상태(자동분석결과)','상태변경 사항','상태변경 사유','상태확정','테스트용 의심 여부','테스트용 의심 사유','파라미터URL 패턴','침해사고 로그 제외대상','차단기준','차단일자(JAVADOC)','차단근거(JAVADOC)',
+      '상태','자동분석상태','상태변경 사항','상태변경 사유','상태확정','테스트용 의심 여부','테스트용 의심 사유','파라미터URL 패턴','침해사고 로그 제외대상','차단기준','차단일자(JAVADOC)','차단근거(JAVADOC)',
       '비고','현업검토결과','현업검토의견',
       'SmartWay 티켓번호','검토단계',
       'CBO예정일자','차단예정일자','차단작업CSR','차단작업담당자',
@@ -4861,7 +4865,7 @@
             <option disabled>──── 자동계산 ────</option>
             <option value="" ${statusForSelect === '' ? 'selected' : ''}>자동계산 (초기화)</option>
           </select>${statusApproveBtn}</div>
-          <div class="detail-label">상태(자동분석결과)</div>
+          <div class="detail-label">자동분석상태</div>
           <div class="detail-value" style="white-space:normal;">${r.autoAnalyzedStatus ? statusBadge(r.autoAnalyzedStatus, false) : '<span style="color:var(--text-muted);font-size:12px;">-</span>'}${rowIsExpectedDone(r) ? '<div style="margin-top:6px;font-size:11px;color:#b91c1c;font-weight:700;">차단완료 전환대상</div>' : ''}<div style="font-size:10px;color:var(--text-muted);margin-top:6px;line-height:1.4;">호출·Git·차단신호 등 순수 자동 판정(스티키·수동 leaf 미반영). 공식 상태와 다르면 목록에서 상태변경 알림이 켜질 수 있습니다.</div></div>
           <div class="detail-label">상태변경 사항</div>
           <div class="detail-value"><input type="text" id="df-statusChangeSummary" class="df-input" readonly style="width:100%;background:#f8fafc;font-size:12px;" value="${esc(detailSummVal)}" placeholder="${detailSummVal ? '' : '-'}"></div>
