@@ -8,6 +8,7 @@
   <meta name="nav-page" content="apm-match-report">
   <link rel="stylesheet" href="/css/common.css">
   <link rel="stylesheet" href="/common/nav.css">
+  <link rel="stylesheet" href="/common/repo-select.css">
   <script src="/js/darkmode.js"></script>
   <style>
     .main{max-width:1400px;margin:0 auto;padding:18px 24px;}
@@ -82,6 +83,7 @@
 
   <!-- 관리자 토큰(쿠키→sessionStorage 복원) 후 API 호출 — 인라인보다 먼저 로드 -->
   <script src="/common/auth.js"></script>
+  <script src="/common/assignee-login.js"></script>
   <script>
     function esc(s){ if(s==null) return ''; return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
     function showToast(msg, type){
@@ -212,7 +214,8 @@
       document.getElementById('tbody').innerHTML = `<tr><td colspan="6" class="muted" style="padding:18px;">로드 실패: ${esc(e.message)}</td></tr>`;
     });
   </script>
-  <script src="/common/nav.js"></script>
+  <script src="/common/repo-select.js"></script>
+<script src="/common/nav.js"></script>
 </body>
 </html>
 

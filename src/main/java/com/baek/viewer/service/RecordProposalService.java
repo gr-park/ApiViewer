@@ -2,6 +2,7 @@ package com.baek.viewer.service;
 
 import com.baek.viewer.model.ApiRecord;
 import com.baek.viewer.model.ApiRecordProposal;
+import com.baek.viewer.model.ItAssignee;
 import com.baek.viewer.repository.ApiRecordProposalRepository;
 import com.baek.viewer.repository.ApiRecordRepository;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -12,10 +13,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 
 @Service
 public class RecordProposalService {
@@ -26,20 +30,35 @@ public class RecordProposalService {
     private final ApiRecordRepository recordRepository;
     private final ApiRecordPatchService patchService;
     private final ItAssigneeService itAssigneeService;
+    private final NavNoticeService navNoticeService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     public RecordProposalService(ApiRecordProposalRepository proposalRepository,
                                  ApiRecordRepository recordRepository,
                                  ApiRecordPatchService patchService,
-                                 ItAssigneeService itAssigneeService) {
+                                 ItAssigneeService itAssigneeService,
+                                 NavNoticeService navNoticeService) {
         this.proposalRepository = proposalRepository;
         this.recordRepository = recordRepository;
         this.patchService = patchService;
         this.itAssigneeService = itAssigneeService;
+        this.navNoticeService = navNoticeService;
     }
 
     public Optional<ApiRecordProposal> findByRecordId(long recordId) {
         return proposalRepository.findByRecordId(recordId);
+    }
+
+    static String formatStatusChangeSummary(String fromDb, Object toPatch) {
+        String from = (fromDb == null || fromDb.isBlank()) ? "-" : fromDb.trim();
+        String to;
+        if (toPatch == null) {
+            to = "자동계산";
+        } else {
+            String s = toPatch.toString().trim();
+            to = s.isEmpty() ? "자동계산" : s;
+        }
+        return from + " → " + to;
     }
 
     @Transactional
@@ -49,6 +68,27 @@ public class RecordProposalService {
         if (filtered.isEmpty()) {
             throw new IllegalArgumentException("저장할 제안 필드가 없습니다.");
         }
+        if (!filtered.containsKey("status")) {
+            filtered.remove("statusChangeSummary");
+            filtered.remove("statusChangeReason");
+        }
+        if (filtered.containsKey("statusChangeReason") && !filtered.containsKey("status")) {
+            throw new IllegalArgumentException("상태 변경사유는 상태 변경과 함께 제출해야 합니다.");
+        }
+        if (filtered.containsKey("status")) {
+            Object reason = filtered.get("statusChangeReason");
+            if (reason == null || reason.toString().trim().isEmpty()) {
+                throw new IllegalArgumentException("상태 변경 시 상태 변경사유를 입력하세요.");
+            }
+        }
+        filtered.remove("statusChangeSummary");
+
+        ApiRecord record = recordRepository.findById(recordId)
+                .orElseThrow(() -> new IllegalArgumentException("레코드를 찾을 수 없습니다."));
+        if (filtered.containsKey("status")) {
+            filtered.put("statusChangeSummary", formatStatusChangeSummary(record.getStatus(), filtered.get("status")));
+        }
+
         String json;
         try {
             json = objectMapper.writeValueAsString(filtered);
@@ -91,6 +131,51 @@ public class RecordProposalService {
         log.info("[제안 철회] recordId={}, admin={}", recordId, isAdmin);
     }
 
+    /**
+     * 제안 JSON에서 상태 변경 관련 키만 제거. 나머지 필드가 없으면 제안 행 삭제.
+     */
+    @Transactional
+    public void withdrawStatusFieldsOnly(long recordId, boolean isAdmin, Long editorId) {
+        Optional<ApiRecordProposal> opt = proposalRepository.findByRecordId(recordId);
+        if (opt.isEmpty()) {
+            return;
+        }
+        ApiRecordProposal p = opt.get();
+        if (!isAdmin) {
+            Long sub = p.getSubmitterAssigneeId();
+            if (sub == null || editorId == null || !sub.equals(editorId)) {
+                throw new IllegalStateException("본인이 제출한 제안만 철회할 수 있습니다.");
+            }
+        }
+        Map<String, Object> map;
+        try {
+            map = objectMapper.readValue(p.getPayloadJson(), new TypeReference<>() {});
+        } catch (Exception e) {
+            log.warn("[제안 상태 부분 철회] JSON 파싱 실패 recordId={}", recordId);
+            return;
+        }
+        LinkedHashMap<String, Object> next = new LinkedHashMap<>(map);
+        next.remove("status");
+        next.remove("statusChangeReason");
+        next.remove("statusChangeSummary");
+        next = new LinkedHashMap<>(ApiRecordPatchService.filterProposalKeys(next));
+        if (next.isEmpty()) {
+            proposalRepository.delete(p);
+            log.info("[제안 상태 부분 철회→전체삭제] recordId={}", recordId);
+            return;
+        }
+        try {
+            p.setPayloadJson(objectMapper.writeValueAsString(next));
+        } catch (Exception e) {
+            throw new IllegalArgumentException("제안 직렬화 실패");
+        }
+        String s = ProposalSummaryFormatter.format(next);
+        p.setSummaryText(s.isEmpty() ? null : s);
+        p.setUpdatedAt(LocalDateTime.now());
+        proposalRepository.save(p);
+        log.info("[제안 상태 부분 철회] recordId={}", recordId);
+    }
+
     @Transactional
     public int approve(List<Long> recordIds, String clientIp) {
         int applied = 0;
@@ -121,27 +206,127 @@ public class RecordProposalService {
         return applied;
     }
 
+    private static final class ProposalRejectBundle {
+        final long recordId;
+        final ApiRecordProposal proposal;
+        final ApiRecord record;
+
+        ProposalRejectBundle(long recordId, ApiRecordProposal proposal, ApiRecord record) {
+            this.recordId = recordId;
+            this.proposal = proposal;
+            this.record = record;
+        }
+    }
+
+    private static String formatRecordPathLine(ApiRecord rec, long recordId) {
+        if (rec != null) {
+            List<String> parts = new ArrayList<>();
+            if (rec.getRepositoryName() != null && !rec.getRepositoryName().isBlank()) {
+                parts.add(rec.getRepositoryName().trim());
+            }
+            if (rec.getApiPath() != null && !rec.getApiPath().isBlank()) {
+                parts.add(rec.getApiPath().trim());
+            }
+            if (rec.getHttpMethod() != null && !rec.getHttpMethod().isBlank()) {
+                parts.add(rec.getHttpMethod().trim());
+            }
+            if (!parts.isEmpty()) {
+                return String.join(" - ", parts);
+            }
+        }
+        return "record #" + recordId;
+    }
+
+    private static String buildProposalRejectNoticeForGroup(List<ProposalRejectBundle> group, String reason) {
+        List<ProposalRejectBundle> sorted = new ArrayList<>(group);
+        sorted.sort(Comparator.comparingLong(b -> b.recordId));
+        ProposalRejectBundle first = sorted.get(0);
+        String line = formatRecordPathLine(first.record, first.recordId);
+        if (sorted.size() <= 1) {
+            return reason + "\n\n" + line;
+        }
+        return reason + "\n\n" + line + " 외 " + (sorted.size() - 1) + "건이 상태변경 반려되었습니다.";
+    }
+
     @Transactional
     public int reject(List<Long> recordIds, String reason) {
         String r = reason == null ? "" : reason.trim();
         if (r.isEmpty()) {
             throw new IllegalArgumentException("반려 사유를 입력하세요.");
         }
-        int n = 0;
+        List<ProposalRejectBundle> bundles = new ArrayList<>();
         for (Long rid : recordIds) {
-            if (rid == null) continue;
-            Optional<ApiRecordProposal> opt = proposalRepository.findByRecordId(rid);
-            if (opt.isEmpty()) continue;
-            ApiRecordProposal p = opt.get();
-            Long aid = p.getSubmitterAssigneeId();
-            if (aid != null) {
-                itAssigneeService.setProposalRejectNotice(aid, r);
+            if (rid == null) {
+                continue;
             }
-            proposalRepository.delete(p);
+            Optional<ApiRecordProposal> opt = proposalRepository.findByRecordId(rid);
+            if (opt.isEmpty()) {
+                continue;
+            }
+            ApiRecordProposal p = opt.get();
+            ApiRecord rec = recordRepository.findById(rid).orElse(null);
+            bundles.add(new ProposalRejectBundle(rid, p, rec));
+        }
+        Map<Long, List<ProposalRejectBundle>> byAssignee = new LinkedHashMap<>();
+        List<ProposalRejectBundle> noAssignee = new ArrayList<>();
+        for (ProposalRejectBundle b : bundles) {
+            Long aid = b.proposal.getSubmitterAssigneeId();
+            if (aid == null) {
+                noAssignee.add(b);
+            } else {
+                byAssignee.computeIfAbsent(aid, k -> new ArrayList<>()).add(b);
+            }
+        }
+        int n = 0;
+        for (ProposalRejectBundle b : noAssignee) {
+            proposalRepository.delete(b.proposal);
             n++;
         }
-        log.info("[제안 반려] 제거={}건", n);
+        for (Map.Entry<Long, List<ProposalRejectBundle>> e : byAssignee.entrySet()) {
+            String batchId = UUID.randomUUID().toString();
+            List<ProposalRejectBundle> group = e.getValue();
+            String notice = buildProposalRejectNoticeForGroup(group, r);
+            itAssigneeService.setProposalRejectNotice(e.getKey(), notice);
+            for (ProposalRejectBundle b : group) {
+                navNoticeService.recordProposalReject(b.recordId, e.getKey(), r, b.record, b.proposal.getSummaryText(), batchId);
+                proposalRepository.delete(b.proposal);
+                n++;
+            }
+        }
+        log.info("[상태변경 반려] 제거={}건", n);
         return n;
+    }
+
+    /** 제안 제출자 표시명 — `submitter_assignee_id` 우선, 없으면 `submitted_by` 파싱 */
+    public String resolveProposalSubmitterDisplayName(ApiRecordProposal p) {
+        if (p == null) {
+            return "";
+        }
+        Long sid = p.getSubmitterAssigneeId();
+        if (sid != null) {
+            Optional<ItAssignee> oa = itAssigneeService.findById(sid.longValue());
+            if (oa.isPresent()) {
+                String n = oa.get().getAssigneeName();
+                if (n != null && !n.isBlank()) {
+                    return n.trim();
+                }
+            }
+        }
+        String sb = p.getSubmittedBy() != null ? p.getSubmittedBy().trim() : "";
+        if (sb.isEmpty()) {
+            return "";
+        }
+        if ("ADMIN".equalsIgnoreCase(sb)) {
+            return "관리자";
+        }
+        int slash = sb.lastIndexOf(" / ");
+        if (slash >= 0) {
+            return sb.substring(slash + 3).trim();
+        }
+        if (sb.startsWith("EDITOR:")) {
+            return "";
+        }
+        return sb;
     }
 
     public Map<String, Object> previewPayload(long recordId) {
@@ -153,6 +338,7 @@ public class RecordProposalService {
                     m.put("submittedAt", p.getSubmittedAt() != null ? p.getSubmittedAt().toString() : null);
                     m.put("updatedAt", p.getUpdatedAt() != null ? p.getUpdatedAt().toString() : null);
                     m.put("summary", p.getSummaryText() != null ? p.getSummaryText() : "");
+                    m.put("proposalSubmitterName", resolveProposalSubmitterDisplayName(p));
                     try {
                         m.put("patch", objectMapper.readValue(p.getPayloadJson(), new TypeReference<>() {}));
                     } catch (Exception e) {

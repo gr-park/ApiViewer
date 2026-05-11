@@ -3,6 +3,7 @@ package com.baek.viewer.controller;
 import com.baek.viewer.model.ItAssignee;
 import com.baek.viewer.service.AuthService;
 import com.baek.viewer.service.ItAssigneeService;
+import com.baek.viewer.service.NavNoticeService;
 import com.baek.viewer.service.TeamSuggestionService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,13 +27,16 @@ public class AssigneeAuthController {
     private final ItAssigneeService itAssigneeService;
     private final TeamSuggestionService teamSuggestionService;
     private final AuthService authService;
+    private final NavNoticeService navNoticeService;
 
     public AssigneeAuthController(ItAssigneeService itAssigneeService,
                                   TeamSuggestionService teamSuggestionService,
-                                  AuthService authService) {
+                                  AuthService authService,
+                                  NavNoticeService navNoticeService) {
         this.itAssigneeService = itAssigneeService;
         this.teamSuggestionService = teamSuggestionService;
         this.authService = authService;
+        this.navNoticeService = navNoticeService;
     }
 
     @GetMapping("/team-suggestions")
@@ -126,5 +130,107 @@ public class AssigneeAuthController {
     public ResponseEntity<?> logoutEditor(@RequestHeader(value = "X-Editor-Token", required = false) String token) {
         authService.revoke(token);
         return ResponseEntity.ok(Map.of("success", true));
+    }
+
+    @GetMapping("/inbox-summary")
+    public ResponseEntity<?> editorInboxSummary(@RequestHeader(value = "X-Editor-Token", required = false) String token) {
+        if (!authService.isEditor(token)) {
+            return ResponseEntity.status(401).body(Map.of("error", "담당자 로그인이 필요합니다."));
+        }
+        Long id = authService.getEditorAssigneeId(token);
+        if (id == null) {
+            return ResponseEntity.status(401).body(Map.of("error", "담당자 로그인이 필요합니다."));
+        }
+        return ResponseEntity.ok(navNoticeService.editorInboxSummary(id));
+    }
+
+    @PostMapping("/reject-events/{eventId}/dismiss")
+    public ResponseEntity<?> dismissRejectEvent(@RequestHeader(value = "X-Editor-Token", required = false) String token,
+                                                @PathVariable long eventId) {
+        if (!authService.isEditor(token)) {
+            return ResponseEntity.status(401).body(Map.of("error", "담당자 로그인이 필요합니다."));
+        }
+        Long id = authService.getEditorAssigneeId(token);
+        if (id == null) {
+            return ResponseEntity.status(401).body(Map.of("error", "담당자 로그인이 필요합니다."));
+        }
+        try {
+            navNoticeService.dismissRejectEvent(eventId, id);
+            return ResponseEntity.ok(Map.of("success", true));
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @PostMapping("/admin-notices/{noticeId}/dismiss")
+    public ResponseEntity<?> dismissAdminNotice(@RequestHeader(value = "X-Editor-Token", required = false) String token,
+                                               @PathVariable long noticeId) {
+        if (!authService.isEditor(token)) {
+            return ResponseEntity.status(401).body(Map.of("error", "담당자 로그인이 필요합니다."));
+        }
+        Long id = authService.getEditorAssigneeId(token);
+        if (id == null) {
+            return ResponseEntity.status(401).body(Map.of("error", "담당자 로그인이 필요합니다."));
+        }
+        try {
+            navNoticeService.dismissAdminAssigneeNotice(noticeId, id);
+            return ResponseEntity.ok(Map.of("success", true));
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @PostMapping("/message-to-admin")
+    public ResponseEntity<?> messageToAdmin(@RequestHeader(value = "X-Editor-Token", required = false) String token,
+                                            @RequestBody Map<String, Object> body) {
+        if (!authService.isEditor(token)) {
+            return ResponseEntity.status(401).body(Map.of("error", "담당자 로그인이 필요합니다."));
+        }
+        Long id = authService.getEditorAssigneeId(token);
+        if (id == null) {
+            return ResponseEntity.status(401).body(Map.of("error", "담당자 로그인이 필요합니다."));
+        }
+        try {
+            String text = null;
+            if (body != null && body.get("text") != null) {
+                text = body.get("text").toString();
+            }
+            Long replyTo = null;
+            if (body != null && body.get("replyToAdminNoticeId") != null) {
+                Object r = body.get("replyToAdminNoticeId");
+                if (r instanceof Number) {
+                    replyTo = ((Number) r).longValue();
+                } else if (r instanceof String s && !s.isBlank()) {
+                    replyTo = Long.parseLong(s.trim());
+                }
+            }
+            navNoticeService.postMessageToAdmin(id, text, replyTo);
+            return ResponseEntity.ok(Map.of("success", true));
+        } catch (NumberFormatException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", "replyToAdminNoticeId 형식이 올바르지 않습니다."));
+        } catch (IllegalStateException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @PostMapping("/reject-events/dismiss-batch")
+    public ResponseEntity<?> dismissRejectBatch(@RequestHeader(value = "X-Editor-Token", required = false) String token,
+                                                @RequestBody Map<String, String> body) {
+        if (!authService.isEditor(token)) {
+            return ResponseEntity.status(401).body(Map.of("error", "담당자 로그인이 필요합니다."));
+        }
+        Long assigneeId = authService.getEditorAssigneeId(token);
+        if (assigneeId == null) {
+            return ResponseEntity.status(401).body(Map.of("error", "담당자 로그인이 필요합니다."));
+        }
+        String batchId = body != null ? body.get("batchId") : null;
+        try {
+            navNoticeService.dismissRejectBatch(batchId, assigneeId);
+            return ResponseEntity.ok(Map.of("success", true));
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
     }
 }

@@ -100,6 +100,19 @@ public class RecordProposalController {
         }
     }
 
+    /** 제안에서 상태·사유·요약 전환 문자열만 제거 (데이터 제안은 유지). */
+    @PostMapping("/record/{recordId}/withdraw-status-fields")
+    public ResponseEntity<?> withdrawStatusFields(@PathVariable long recordId, HttpServletRequest req) {
+        try {
+            boolean admin = authService.isAdmin(req.getHeader("X-Admin-Token"));
+            Long editorId = authService.getEditorAssigneeId(req.getHeader("X-Editor-Token"));
+            proposalService.withdrawStatusFieldsOnly(recordId, admin, editorId);
+            return ResponseEntity.ok(Map.of("success", true));
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(403).body(Map.of("error", e.getMessage()));
+        }
+    }
+
     @PostMapping("/approve")
     public ResponseEntity<?> approve(@RequestBody Map<String, Object> body, HttpServletRequest req) {
         @SuppressWarnings("unchecked")

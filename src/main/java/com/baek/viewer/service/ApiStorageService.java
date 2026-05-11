@@ -723,4 +723,9 @@ public class ApiStorageService {
                 .orElse(3);
     }
 
+    /** 제안 승인 등 — reviewThreshold 반영 자동 상태 계산 */
+    public String computeAutoStatus(ApiRecord r) {
+        return calculateStatus(r, getReviewThreshold());
+    }
+
 }

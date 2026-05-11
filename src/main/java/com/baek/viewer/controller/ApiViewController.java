@@ -3,6 +3,7 @@ package com.baek.viewer.controller;
 import com.baek.viewer.model.ApiInfo;
 import com.baek.viewer.model.ApiRecord;
 import com.baek.viewer.model.ApiRecordProposal;
+import com.baek.viewer.model.ProposalRejectEvent;
 import com.baek.viewer.model.ApiRecordStatsDto;
 import com.baek.viewer.model.ApiRecordSummary;
 import com.baek.viewer.model.BlockOverviewDto;
@@ -12,14 +13,19 @@ import com.baek.viewer.model.ExtractRequest;
 import com.baek.viewer.model.RepoConfig;
 import com.baek.viewer.model.WhatapRequest;
 import com.baek.viewer.model.WhatapResult;
+import com.baek.viewer.model.ItAssignee;
 import com.baek.viewer.repository.ApiRecordRepository;
 import com.baek.viewer.repository.ApiRecordProposalRepository;
+import com.baek.viewer.repository.ItAssigneeRepository;
+import com.baek.viewer.repository.ProposalRejectEventRepository;
 import com.baek.viewer.util.PathParamPatternUtil;
 import com.baek.viewer.repository.GlobalConfigRepository;
 import com.baek.viewer.repository.RepoConfigRepository;
 import com.baek.viewer.service.ApiExtractorService;
 import com.baek.viewer.service.ApiStorageService;
 import com.baek.viewer.service.WhatapService;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -55,6 +61,8 @@ public class ApiViewController {
 
     private static final Logger log = LoggerFactory.getLogger(ApiViewController.class);
 
+    private static final ObjectMapper PROPOSAL_PAYLOAD_MAPPER = new ObjectMapper();
+
     private final ApiExtractorService extractorService;
     private final WhatapService whatapService;
     private final ApiRecordRepository recordRepository;
@@ -65,6 +73,8 @@ public class ApiViewController {
     private final com.baek.viewer.service.TestSuspectMatcher testSuspectMatcher;
     private final com.baek.viewer.service.YamlConfigService yamlConfigService;
     private final ApiRecordProposalRepository proposalRepository;
+    private final ProposalRejectEventRepository proposalRejectEventRepository;
+    private final ItAssigneeRepository itAssigneeRepository;
 
     public ApiViewController(ApiExtractorService extractorService,
                              WhatapService whatapService,
@@ -75,7 +85,9 @@ public class ApiViewController {
                              com.baek.viewer.service.AuthService authService,
                              com.baek.viewer.service.TestSuspectMatcher testSuspectMatcher,
                              com.baek.viewer.service.YamlConfigService yamlConfigService,
-                             ApiRecordProposalRepository proposalRepository) {
+                             ApiRecordProposalRepository proposalRepository,
+                             ProposalRejectEventRepository proposalRejectEventRepository,
+                             ItAssigneeRepository itAssigneeRepository) {
         this.extractorService = extractorService;
         this.whatapService = whatapService;
         this.recordRepository = recordRepository;
@@ -86,6 +98,8 @@ public class ApiViewController {
         this.testSuspectMatcher = testSuspectMatcher;
         this.yamlConfigService = yamlConfigService;
         this.proposalRepository = proposalRepository;
+        this.proposalRejectEventRepository = proposalRejectEventRepository;
+        this.itAssigneeRepository = itAssigneeRepository;
     }
 
     /** 토큰 유효성 확인 (페이지 로드 시 자동 검증용) + 남은 수명 반환 */
@@ -408,7 +422,7 @@ public class ApiViewController {
      *  - status:     특정 상태 필터 (단일)
      *  - httpMethod: HTTP 메소드 필터
      *  - q:          검색어 (apiPath / methodName / memo LIKE)
-     *  - alert:      "new" / "changed" / "reviewed" / "deleted" 필터
+     *  - alert:      "new" / "changed" / "reviewed" / "deleted" / "pendingProposal" / "openRejectEvent" 필터
      *  - page, size: 지정 시 서버 페이지네이션 모드 ({apis, total, page, size, totalPages} 반환)
      *  - sort:       정렬 필드 (예: "id,desc") — 페이지 모드에서만 사용
      *
@@ -475,7 +489,8 @@ public class ApiViewController {
                 || (deployManager != null && !deployManager.isBlank())
                 || (deployUnscheduled != null)
                 || Boolean.TRUE.equals(hasPendingProposal)
-                || "pendingProposal".equals(alert);
+                || "pendingProposal".equals(alert)
+                || "openRejectEvent".equals(alert);
 
         if (paged || hasDynamicFilter) {
             int pageIdx  = paged ? Math.max(0, page) : 0;
@@ -496,10 +511,10 @@ public class ApiViewController {
             java.util.Set<Long> pendingIds = pageIds.isEmpty()
                     ? java.util.Set.of()
                     : new java.util.HashSet<>(proposalRepository.findRecordIdsHavingProposal(pageIds));
-            java.util.Map<Long, String> proposalSummaries = proposalSummariesByRecordIds(pageIds);
+            java.util.Map<Long, ProposalListExtras> proposalExtras = proposalExtrasByRecordIds(pageIds);
             List<Map<String, Object>> summaryList = entityPage.getContent().stream()
                     .map(r -> toSummaryMap(r, pendingIds.contains(r.getId()),
-                            proposalSummaries.getOrDefault(r.getId(), "")))
+                            proposalExtras.getOrDefault(r.getId(), ProposalListExtras.EMPTY)))
                     .collect(Collectors.toList());
 
             log.info("[목록 조회·필터] repo={}, status={}, method={}, q={}, alert={}, page={}/{}, size={}, total={}, 소요={}ms",
@@ -596,10 +611,10 @@ public class ApiViewController {
         java.util.Set<Long> pendingIds2 = pageIds2.isEmpty()
                 ? java.util.Set.of()
                 : new java.util.HashSet<>(proposalRepository.findRecordIdsHavingProposal(pageIds2));
-        java.util.Map<Long, String> proposalSummaries2 = proposalSummariesByRecordIds(pageIds2);
+        java.util.Map<Long, ProposalListExtras> proposalExtras2 = proposalExtrasByRecordIds(pageIds2);
         List<Map<String, Object>> summaryList = entityPage.getContent().stream()
                 .map(r -> toSummaryMap(r, pendingIds2.contains(r.getId()),
-                        proposalSummaries2.getOrDefault(r.getId(), "")))
+                        proposalExtras2.getOrDefault(r.getId(), ProposalListExtras.EMPTY)))
                 .collect(Collectors.toList());
 
         Map<String, Object> response = new LinkedHashMap<>();
@@ -753,6 +768,15 @@ public class ApiViewController {
                         sq.where(cb.equal(pr.get("recordId"), root.get("id")));
                         ps.add(cb.exists(sq));
                     }
+                    case "openRejectEvent" -> {
+                        Subquery<Long> sq = query.subquery(Long.class);
+                        Root<ProposalRejectEvent> ev = sq.from(ProposalRejectEvent.class);
+                        sq.select(ev.get("recordId"));
+                        sq.where(cb.and(
+                                cb.equal(ev.get("recordId"), root.get("id")),
+                                cb.isNull(ev.get("dismissedAt"))));
+                        ps.add(cb.exists(sq));
+                    }
                     default -> {}
                 }
             }
@@ -821,20 +845,99 @@ public class ApiViewController {
         return PathParamPatternUtil.fromApiPath(r.getApiPath());
     }
 
-    private java.util.Map<Long, String> proposalSummariesByRecordIds(List<Long> recordIds) {
+    private static final class ProposalListExtras {
+        static final ProposalListExtras EMPTY = new ProposalListExtras("", "", "", "");
+        final String proposalRequestSummary;
+        final String proposalStatusChangeSummary;
+        final String proposalStatusChangeReason;
+        /** 제안 제출 담당자 표시명(목록·엑셀·상세 접미사용) */
+        final String proposalSubmitterName;
+
+        ProposalListExtras(String proposalRequestSummary, String proposalStatusChangeSummary,
+                             String proposalStatusChangeReason, String proposalSubmitterName) {
+            this.proposalRequestSummary = proposalRequestSummary != null ? proposalRequestSummary : "";
+            this.proposalStatusChangeSummary = proposalStatusChangeSummary != null ? proposalStatusChangeSummary : "";
+            this.proposalStatusChangeReason = proposalStatusChangeReason != null ? proposalStatusChangeReason : "";
+            this.proposalSubmitterName = proposalSubmitterName != null ? proposalSubmitterName : "";
+        }
+    }
+
+    /** {@link ApiRecordProposal} 제출자 표시명 — 담당자 PK 우선, 없으면 submitted_by 파싱 */
+    private String resolveProposalSubmitterDisplayName(ApiRecordProposal p, java.util.Map<Long, String> assigneeNameById) {
+        if (p == null) {
+            return "";
+        }
+        Long sid = p.getSubmitterAssigneeId();
+        if (sid != null) {
+            String n = assigneeNameById.getOrDefault(sid, "");
+            if (n != null && !n.isBlank()) {
+                return n.trim();
+            }
+        }
+        String sb = p.getSubmittedBy() != null ? p.getSubmittedBy().trim() : "";
+        if (sb.isEmpty()) {
+            return "";
+        }
+        if ("ADMIN".equalsIgnoreCase(sb)) {
+            return "관리자";
+        }
+        int slash = sb.lastIndexOf(" / ");
+        if (slash >= 0) {
+            return sb.substring(slash + 3).trim();
+        }
+        if (sb.startsWith("EDITOR:")) {
+            return "";
+        }
+        return sb;
+    }
+
+    private java.util.Map<Long, ProposalListExtras> proposalExtrasByRecordIds(List<Long> recordIds) {
         if (recordIds == null || recordIds.isEmpty()) {
             return java.util.Map.of();
         }
-        java.util.Map<Long, String> out = new java.util.HashMap<>();
-        for (ApiRecordProposal p : proposalRepository.findByRecordIdIn(recordIds)) {
-            String s = p.getSummaryText();
-            out.put(p.getRecordId(), s != null ? s : "");
+        java.util.List<ApiRecordProposal> proposals = proposalRepository.findByRecordIdIn(recordIds);
+        java.util.Set<Long> assigneeIds = new java.util.HashSet<>();
+        for (ApiRecordProposal p : proposals) {
+            if (p.getSubmitterAssigneeId() != null) {
+                assigneeIds.add(p.getSubmitterAssigneeId());
+            }
+        }
+        java.util.Map<Long, String> assigneeNameById = new java.util.HashMap<>();
+        if (!assigneeIds.isEmpty()) {
+            for (ItAssignee a : itAssigneeRepository.findAllById(assigneeIds)) {
+                String nm = a.getAssigneeName() != null ? a.getAssigneeName().trim() : "";
+                assigneeNameById.put(a.getId(), nm);
+            }
+        }
+        java.util.Map<Long, ProposalListExtras> out = new java.util.HashMap<>();
+        for (ApiRecordProposal p : proposals) {
+            String summ = p.getSummaryText() != null ? p.getSummaryText() : "";
+            String changeSumm = "";
+            String changeReason = "";
+            try {
+                java.util.Map<String, Object> patch = PROPOSAL_PAYLOAD_MAPPER.readValue(
+                        p.getPayloadJson(), new TypeReference<>() {});
+                if (patch != null && patch.containsKey("status")) {
+                    Object cs = patch.get("statusChangeSummary");
+                    if (cs != null) {
+                        changeSumm = String.valueOf(cs).trim();
+                    }
+                    Object cr = patch.get("statusChangeReason");
+                    if (cr != null) {
+                        changeReason = String.valueOf(cr).trim();
+                    }
+                }
+            } catch (Exception e) {
+                log.debug("[제안 payload 파싱 스킵] recordId={}: {}", p.getRecordId(), e.getMessage());
+            }
+            String submitterName = resolveProposalSubmitterDisplayName(p, assigneeNameById);
+            out.put(p.getRecordId(), new ProposalListExtras(summ, changeSumm, changeReason, submitterName));
         }
         return out;
     }
 
     /** ApiRecord → 경량 summary Map — TEXT 컬럼(fullComment 등) 응답에서 제외 */
-    private Map<String, Object> toSummaryMap(ApiRecord r, boolean hasPendingProposal, String proposalRequestSummary) {
+    private Map<String, Object> toSummaryMap(ApiRecord r, boolean hasPendingProposal, ProposalListExtras proposalExtras) {
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("id",                 r.getId());
         m.put("repositoryName",     r.getRepositoryName());
@@ -896,7 +999,11 @@ public class ApiViewController {
         m.put("jiraIssueUrl",       r.getJiraIssueUrl());
         m.put("jiraSyncedAt",       r.getJiraSyncedAt());
         m.put("hasPendingProposal", hasPendingProposal);
-        m.put("proposalRequestSummary", proposalRequestSummary != null ? proposalRequestSummary : "");
+        ProposalListExtras ex = proposalExtras != null ? proposalExtras : ProposalListExtras.EMPTY;
+        m.put("proposalRequestSummary", ex.proposalRequestSummary);
+        m.put("proposalStatusChangeSummary", ex.proposalStatusChangeSummary);
+        m.put("proposalStatusChangeReason", ex.proposalStatusChangeReason);
+        m.put("proposalSubmitterName", ex.proposalSubmitterName);
         return m;
     }
 
@@ -985,6 +1092,9 @@ public class ApiViewController {
         long pendingProposalCount = hasRepo
                 ? proposalRepository.countDistinctPendingRecordsForRepos(repoFilter)
                 : proposalRepository.countDistinctPendingRecords();
+        long openRejectEventCount = hasRepo
+                ? proposalRejectEventRepository.countDistinctOpenRecordIdsForRepos(repoFilter)
+                : proposalRejectEventRepository.countDistinctOpenRecordIds();
         // ①-② 호출0건+변경없음 — 옛 "최우선 차단대상" + logWorkExcluded=false. 이제 status 자체가 leaf 이므로 단순 countByStatus.
         long priorityPureCount = byStatus.getOrDefault("①-① 차단대상", 0L);
 
@@ -1016,6 +1126,7 @@ public class ApiViewController {
         response.put("testSuspectCount", testSuspectCount);
         response.put("pathParamPatternCount", pathParamPatternCount);
         response.put("pendingProposalCount", pendingProposalCount);
+        response.put("openRejectEventCount", openRejectEventCount);
         response.put("byStatus",     byStatus);
         response.put("byCategory",   byCategory);  // 7카드 통합
         response.put("byMethod",     byMethod);
@@ -1066,8 +1177,9 @@ public class ApiViewController {
         Optional<ApiRecord> found = resolveRecordByKeyForMonitor(repositoryName, apiPath, hmRaw);
         return found.<ResponseEntity<?>>map(r -> {
                     Optional<ApiRecordProposal> pp = proposalRepository.findByRecordId(r.getId());
-                    String summ = pp.map(ApiRecordProposal::getSummaryText).orElse("");
-                    return ResponseEntity.ok(toSummaryMap(r, pp.isPresent(), summ != null ? summ : ""));
+                    ProposalListExtras ex = proposalExtrasByRecordIds(java.util.List.of(r.getId()))
+                            .getOrDefault(r.getId(), ProposalListExtras.EMPTY);
+                    return ResponseEntity.ok(toSummaryMap(r, pp.isPresent(), ex));
                 })
                 .orElseGet(() -> ResponseEntity.status(404).body(Map.of(
                         "error", "레코드를 찾을 수 없습니다.",
@@ -1203,8 +1315,10 @@ public class ApiViewController {
     @PatchMapping("/db/clear-status-change")
     public ResponseEntity<?> clearStatusChange(@RequestBody Map<String, Object> body, HttpServletRequest httpReq) {
         try {
-            if (!authService.isAdmin(httpReq.getHeader("X-Admin-Token"))) {
-                return ResponseEntity.status(401).body(Map.of("error", "관리자 인증이 필요합니다."));
+            String adminTok = httpReq.getHeader("X-Admin-Token");
+            String editorTok = httpReq.getHeader("X-Editor-Token");
+            if (!authService.isAdmin(adminTok) && !authService.isEditor(editorTok)) {
+                return ResponseEntity.status(401).body(Map.of("error", "관리자 또는 일반사용자(담당자) 로그인이 필요합니다."));
             }
             @SuppressWarnings("unchecked")
             List<Integer> rawIds = (List<Integer>) body.get("ids");

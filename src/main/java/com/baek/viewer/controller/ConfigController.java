@@ -12,6 +12,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -26,15 +27,18 @@ public class ConfigController {
     private final GlobalConfigRepository globalRepo;
     private final YamlConfigService yamlConfigService;
     private final com.baek.viewer.service.ApmMatchReportService apmMatchReportService;
+    private final com.baek.viewer.service.NavNoticeService navNoticeService;
 
     public ConfigController(RepoConfigRepository repoRepo,
                             GlobalConfigRepository globalRepo,
                             YamlConfigService yamlConfigService,
-                            com.baek.viewer.service.ApmMatchReportService apmMatchReportService) {
+                            com.baek.viewer.service.ApmMatchReportService apmMatchReportService,
+                            com.baek.viewer.service.NavNoticeService navNoticeService) {
         this.repoRepo = repoRepo;
         this.globalRepo = globalRepo;
         this.yamlConfigService = yamlConfigService;
         this.apmMatchReportService = apmMatchReportService;
+        this.navNoticeService = navNoticeService;
     }
 
     // ── 공통 설정 ──────────────────────────────────────────
@@ -385,6 +389,74 @@ public class ConfigController {
         } catch (Exception e) {
             log.error("[YAML 내용 임포트 실패] {}", e.getMessage(), e);
             return ResponseEntity.badRequest().body(Map.of("error", "임포트 실패: " + e.getMessage()));
+        }
+    }
+
+    // ── 포털 쪽지(관리자) ───────────────────────────────────
+    @PostMapping("/portal-notice")
+    public ResponseEntity<?> savePortalNotice(@RequestBody Map<String, String> body) {
+        try {
+            navNoticeService.setPortalNotice(body != null ? body.get("text") : null);
+            return ResponseEntity.ok(Map.of("success", true));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @PostMapping("/assignee-notices")
+    public ResponseEntity<?> sendAssigneeNotices(@RequestBody Map<String, Object> body) {
+        try {
+            @SuppressWarnings("unchecked")
+            List<Number> raw = body != null ? (List<Number>) body.get("assigneeIds") : null;
+            List<Long> ids = new ArrayList<>();
+            if (raw != null) {
+                for (Number n : raw) {
+                    if (n != null) ids.add(n.longValue());
+                }
+            }
+            String text = body != null && body.get("text") != null ? body.get("text").toString() : "";
+            int sent = navNoticeService.sendAssigneeNotices(ids, text);
+            return ResponseEntity.ok(Map.of("success", true, "sent", sent));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @GetMapping("/admin-inbox-summary")
+    public ResponseEntity<?> adminInboxSummary() {
+        return ResponseEntity.ok(navNoticeService.adminInboxSummary());
+    }
+
+    @PostMapping("/messages-from-assignees/{id}/dismiss")
+    public ResponseEntity<?> dismissMessageFromAssignee(@PathVariable long id) {
+        try {
+            navNoticeService.dismissAssigneeToAdminMessage(id);
+            return ResponseEntity.ok(Map.of("success", true));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @PostMapping("/reply-to-assignee-message")
+    public ResponseEntity<?> replyToAssigneeMessage(@RequestBody Map<String, Object> body) {
+        try {
+            if (body == null || body.get("assigneeMessageId") == null) {
+                return ResponseEntity.badRequest().body(Map.of("error", "assigneeMessageId 가 필요합니다."));
+            }
+            Object mid = body.get("assigneeMessageId");
+            long assigneeMessageId;
+            if (mid instanceof Number) {
+                assigneeMessageId = ((Number) mid).longValue();
+            } else {
+                assigneeMessageId = Long.parseLong(mid.toString().trim());
+            }
+            String text = body.get("text") != null ? body.get("text").toString() : "";
+            navNoticeService.replyFromAdminToAssigneeMessage(assigneeMessageId, text);
+            return ResponseEntity.ok(Map.of("success", true));
+        } catch (NumberFormatException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", "assigneeMessageId 형식이 올바르지 않습니다."));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
     }
 }

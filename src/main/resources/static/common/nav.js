@@ -3,6 +3,7 @@
  *
  * 사용법: 페이지 <head> 에 아래 2개 meta 태그 추가, <body> 상단에
  *   <div id="nav-container"></div> 배치.
+ *   스크립트: `auth.js` → `assignee-login.js`(선택, 담당자 로그인) → `nav.js` — 관리자 쪽지 발송(다중 담당자)은 `repo-select.js` 선행.
  *     <meta name="nav-segment" content="url-viewer">
  *     <meta name="nav-page"    content="viewer">
  *   (메타 없으면 현재 URL 기준 자동 매칭)
@@ -12,7 +13,7 @@
  * ═══════════════════════════════════════════════════════════════ */
 (function () {
   // UI 버전 표기 (캐시/반영 여부 확인용) — 변경 시 이 값만 갱신
-  const APP_UI_VERSION = 'ver6.2.15';
+  const APP_UI_VERSION = 'ver10.0.01';
 
   const SEGMENTS = [
     {
@@ -427,15 +428,587 @@
       .catch(() => {});
   }
 
-  // ─── URL분석현황(viewer): 일반사용자(IT담당자) 로그인 슬롯 ─────────────────────────
+  const NAV_PORTAL_DISMISS_KEY = 'navPortalNoticeDismissAt';
+  let _navAssigneeSelectInst = null;
+
+  function upgradeNavOverlaysIfNeeded() {
+    const msgBody = document.querySelector('#navMsgToAdminModal .nav-modal-body');
+    if (msgBody && !document.getElementById('navMsgToAdminReplyToId')) {
+      msgBody.insertAdjacentHTML('afterbegin', '<input type="hidden" id="navMsgToAdminReplyToId" value="">');
+    }
+    if (!document.getElementById('navReplyFromAdminModal')) {
+      document.body.insertAdjacentHTML('beforeend', `
+<div id="navReplyFromAdminModal" class="nav-modal-overlay" style="display:none;">
+  <div class="nav-modal-box" onclick="event.stopPropagation()">
+    <div class="nav-modal-head"><strong>담당자에게 답장</strong><button type="button" class="nav-modal-x" onclick="window.AppNav.closeReplyFromAdminModal && window.AppNav.closeReplyFromAdminModal()">✕</button></div>
+    <div class="nav-modal-body">
+      <input type="hidden" id="navReplyAssigneeMessageId" value="">
+      <label class="nav-modal-label">내용</label>
+      <textarea id="navReplyFromAdminBody" class="nav-modal-textarea" rows="5" placeholder="답장 내용"></textarea>
+      <div class="nav-modal-actions">
+        <button type="button" class="nav-btn nav-btn-primary" onclick="window.AppNav.submitReplyFromAdmin && window.AppNav.submitReplyFromAdmin()">보내기</button>
+        <button type="button" class="nav-btn" onclick="window.AppNav.closeReplyFromAdminModal && window.AppNav.closeReplyFromAdminModal()">취소</button>
+      </div>
+    </div>
+  </div>
+</div>`);
+      const rpl = document.getElementById('navReplyFromAdminModal');
+      if (rpl) {
+        rpl.addEventListener('click', (e) => {
+          if (e.target && e.target.id === 'navReplyFromAdminModal') closeReplyFromAdminModal();
+        });
+      }
+    }
+  }
+
+  function ensureNavOverlays() {
+    if (document.getElementById('nav-inbox-backdrop')) {
+      upgradeNavOverlaysIfNeeded();
+      return;
+    }
+    document.body.insertAdjacentHTML('beforeend', `
+<div id="nav-inbox-backdrop" class="nav-inbox-backdrop" style="display:none;" aria-hidden="true"></div>
+<div id="nav-editor-inbox" class="nav-inbox-popover" style="display:none;" role="dialog" aria-label="담당자 쪽지함"></div>
+<div id="nav-admin-inbox" class="nav-inbox-popover" style="display:none;" role="dialog" aria-label="관리자 쪽지함"></div>
+<div id="navSendNoticeModal" class="nav-modal-overlay" style="display:none;">
+  <div class="nav-modal-box" onclick="event.stopPropagation()">
+    <div class="nav-modal-head"><strong>쪽지 발송</strong><button type="button" class="nav-modal-x" onclick="window.AppNav.closeSendNoticeModal && window.AppNav.closeSendNoticeModal()">✕</button></div>
+    <div class="nav-modal-body">
+      <label class="nav-radio-row"><input type="radio" name="navSendScope" value="whole" checked> 전체 (로그인 사용자)</label>
+      <label class="nav-radio-row"><input type="radio" name="navSendScope" value="selected"> 선택 담당자</label>
+      <div id="navNoticeAssigneeWrap" style="display:none;margin:8px 0;">
+        <div class="nav-muted" style="font-size:11px;margin-bottom:4px;">담당자 검색·다중 선택 (아래 목록에서 적용)</div>
+        <div id="navNoticeAssigneeMount"></div>
+      </div>
+      <label class="nav-modal-label">내용</label>
+      <textarea id="navNoticeBody" class="nav-modal-textarea" rows="5" placeholder="쪽지 내용"></textarea>
+      <div class="nav-modal-actions">
+        <button type="button" class="nav-btn nav-btn-primary" onclick="window.AppNav.submitSendNotice && window.AppNav.submitSendNotice()">보내기</button>
+        <button type="button" class="nav-btn" onclick="window.AppNav.closeSendNoticeModal && window.AppNav.closeSendNoticeModal()">취소</button>
+      </div>
+    </div>
+  </div>
+</div>
+<div id="navMsgToAdminModal" class="nav-modal-overlay" style="display:none;">
+  <div class="nav-modal-box" onclick="event.stopPropagation()">
+    <div class="nav-modal-head"><strong>관리자에게 쪽지</strong><button type="button" class="nav-modal-x" onclick="window.AppNav.closeMsgToAdminModal && window.AppNav.closeMsgToAdminModal()">✕</button></div>
+    <div class="nav-modal-body">
+      <input type="hidden" id="navMsgToAdminReplyToId" value="">
+      <textarea id="navMsgToAdminBody" class="nav-modal-textarea" rows="5" placeholder="내용을 입력하세요"></textarea>
+      <div class="nav-modal-actions">
+        <button type="button" class="nav-btn nav-btn-primary" onclick="window.AppNav.submitMsgToAdmin && window.AppNav.submitMsgToAdmin()">보내기</button>
+        <button type="button" class="nav-btn" onclick="window.AppNav.closeMsgToAdminModal && window.AppNav.closeMsgToAdminModal()">취소</button>
+      </div>
+    </div>
+  </div>
+</div>
+<div id="navReplyFromAdminModal" class="nav-modal-overlay" style="display:none;">
+  <div class="nav-modal-box" onclick="event.stopPropagation()">
+    <div class="nav-modal-head"><strong>담당자에게 답장</strong><button type="button" class="nav-modal-x" onclick="window.AppNav.closeReplyFromAdminModal && window.AppNav.closeReplyFromAdminModal()">✕</button></div>
+    <div class="nav-modal-body">
+      <input type="hidden" id="navReplyAssigneeMessageId" value="">
+      <label class="nav-modal-label">내용</label>
+      <textarea id="navReplyFromAdminBody" class="nav-modal-textarea" rows="5" placeholder="답장 내용"></textarea>
+      <div class="nav-modal-actions">
+        <button type="button" class="nav-btn nav-btn-primary" onclick="window.AppNav.submitReplyFromAdmin && window.AppNav.submitReplyFromAdmin()">보내기</button>
+        <button type="button" class="nav-btn" onclick="window.AppNav.closeReplyFromAdminModal && window.AppNav.closeReplyFromAdminModal()">취소</button>
+      </div>
+    </div>
+  </div>
+</div>`);
+    document.getElementById('nav-inbox-backdrop').addEventListener('click', () => closeInboxPopovers());
+    document.querySelectorAll('input[name="navSendScope"]').forEach(r => {
+      r.addEventListener('change', () => {
+        const w = document.getElementById('navNoticeAssigneeWrap');
+        if (w) w.style.display = r.value === 'selected' && r.checked ? 'block' : 'none';
+        if (r.value === 'selected' && r.checked) loadAssigneesForNoticePicker();
+      });
+    });
+    document.getElementById('navSendNoticeModal').addEventListener('click', (e) => {
+      if (e.target && e.target.id === 'navSendNoticeModal') closeSendNoticeModal();
+    });
+    document.getElementById('navMsgToAdminModal').addEventListener('click', (e) => {
+      if (e.target && e.target.id === 'navMsgToAdminModal') closeMsgToAdminModal();
+    });
+    const rpl = document.getElementById('navReplyFromAdminModal');
+    if (rpl) {
+      rpl.addEventListener('click', (e) => {
+        if (e.target && e.target.id === 'navReplyFromAdminModal') closeReplyFromAdminModal();
+      });
+    }
+  }
+
+  function positionPopover(pop, anchor) {
+    if (!pop || !anchor) return;
+    const r = anchor.getBoundingClientRect();
+    const w = Math.min(380, window.innerWidth - 16);
+    pop.style.position = 'fixed';
+    pop.style.zIndex = '10001';
+    pop.style.width = w + 'px';
+    pop.style.top = (r.bottom + 6) + 'px';
+    let left = r.right - w;
+    if (left < 8) left = 8;
+    if (left + w > window.innerWidth - 8) left = Math.max(8, window.innerWidth - 8 - w);
+    pop.style.left = left + 'px';
+  }
+
+  function closeInboxPopovers() {
+    const b = document.getElementById('nav-inbox-backdrop');
+    const e = document.getElementById('nav-editor-inbox');
+    const a = document.getElementById('nav-admin-inbox');
+    if (b) b.style.display = 'none';
+    if (e) e.style.display = 'none';
+    if (a) a.style.display = 'none';
+  }
+
+  function toastNav(msg, type) {
+    if (typeof window.showToast === 'function') window.showToast(msg, type || 'info');
+  }
+
+  async function refreshEditorInboxBadge() {
+    const tok = window.getEditorToken ? window.getEditorToken() : '';
+    const badge = document.getElementById('navEditorInboxBadge');
+    if (!tok || !badge) return;
+    try {
+      const res = await fetch('/api/assignee/inbox-summary', { headers: { 'X-Editor-Token': tok } });
+      if (!res.ok) return;
+      const d = await res.json();
+      let n = (Number(d.rejectOpenCount) || 0) + (Number(d.adminNoticeOpenCount) || 0);
+      const pn = d.portalNotice || {};
+      if (pn.text && String(pn.text).trim()) {
+        try {
+          const dis = sessionStorage.getItem(NAV_PORTAL_DISMISS_KEY);
+          if (!dis || dis !== String(pn.at || '')) n++;
+        } catch (e2) { n++; }
+      }
+      if (n > 0) {
+        badge.textContent = n > 99 ? '99+' : String(n);
+        badge.style.display = 'inline-block';
+      } else badge.style.display = 'none';
+    } catch (e) { /* ignore */ }
+  }
+
+  async function refreshAdminInboxBadge() {
+    const badge = document.getElementById('navAdminInboxBadge');
+    if (!badge || !window.AuthState || !window.AuthState.loggedIn) return;
+    if (!window.adminFetch) return;
+    try {
+      const res = await window.adminFetch('/api/config/admin-inbox-summary');
+      if (!res.ok) return;
+      const d = await res.json();
+      let n = Number(d.fromAssigneesOpenCount) || 0;
+      const pn = d.portalNotice || {};
+      if (pn.text && String(pn.text).trim()) {
+        try {
+          const dis = sessionStorage.getItem(NAV_PORTAL_DISMISS_KEY);
+          if (!dis || dis !== String(pn.at || '')) n++;
+        } catch (e2) { n++; }
+      }
+      if (n > 0) {
+        badge.textContent = n > 99 ? '99+' : String(n);
+        badge.style.display = 'inline-block';
+      } else badge.style.display = 'none';
+    } catch (e) { /* ignore */ }
+  }
+
+  function renderEditorInboxHtml(d) {
+    const parts = [];
+    const pn = d.portalNotice || {};
+    if (pn.text && String(pn.text).trim()) {
+      try {
+        const dis = sessionStorage.getItem(NAV_PORTAL_DISMISS_KEY);
+        if (!dis || dis !== String(pn.at || '')) {
+          parts.push(`<div class="nav-inbox-section"><div class="nav-inbox-h">전체 쪽지</div><div class="nav-inbox-p">${esc(pn.text)}</div>
+            <button type="button" class="nav-btn nav-btn-sm" data-nav-dismiss-portal="${esc(pn.at || '')}">확인</button></div>`);
+        }
+      } catch (e) {
+        parts.push(`<div class="nav-inbox-section"><div class="nav-inbox-h">전체 쪽지</div><div class="nav-inbox-p">${esc(pn.text)}</div>
+            <button type="button" class="nav-btn nav-btn-sm" data-nav-dismiss-portal="${esc(pn.at || '')}">확인</button></div>`);
+      }
+    }
+    const rejects = (d.rejectEvents || []).filter(x => !x.dismissedAt);
+    if (rejects.length) {
+      parts.push('<div class="nav-inbox-section"><div class="nav-inbox-h">상태변경 반려</div>');
+      rejects.forEach(x => {
+        if (x.kind === 'rejectBatch') {
+          const summary = esc(x.summaryLine || '');
+          const reason = esc(x.reason || '');
+          const bid = esc(x.batchId || '');
+          parts.push(`<div class="nav-inbox-item"><div class="nav-inbox-p">${summary}</div>
+            <div class="nav-inbox-meta" style="margin-top:6px;">사유: ${reason}</div>
+            <button type="button" class="nav-btn nav-btn-sm" style="margin-top:6px;" data-nav-dismiss-reject-batch="${bid}">확인</button></div>`);
+        } else {
+          const path = [x.repositoryName, x.apiPath, x.httpMethod].filter(Boolean).join(' · ');
+          parts.push(`<div class="nav-inbox-item"><div class="nav-inbox-meta">${esc(path || 'record #' + x.recordId)}</div><div class="nav-inbox-p">${esc(x.reason)}</div>
+            <button type="button" class="nav-btn nav-btn-sm" data-nav-dismiss-reject="${x.id}">확인</button></div>`);
+        }
+      });
+      parts.push('</div>');
+    }
+    const notices = (d.adminNotices || []).filter(x => !x.dismissedAt);
+    if (notices.length) {
+      parts.push('<div class="nav-inbox-section"><div class="nav-inbox-h">관리자 쪽지</div>');
+      notices.forEach(x => {
+        parts.push(`<div class="nav-inbox-item"><div class="nav-inbox-p">${esc(x.body)}</div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;">
+            <button type="button" class="nav-btn nav-btn-sm nav-btn-primary" data-nav-reply-admin="${x.id}">답장</button>
+            <button type="button" class="nav-btn nav-btn-sm" data-nav-dismiss-admin="${x.id}">확인</button>
+          </div></div>`);
+      });
+      parts.push('</div>');
+    }
+    parts.push(`<div style="margin-top:10px;"><button type="button" class="nav-btn nav-btn-primary nav-btn-sm" id="navOpenMsgToAdmin">관리자에게 쪽지</button></div>`);
+    return parts.join('') || '<div class="nav-muted">새 쪽지가 없습니다.</div>';
+  }
+
+  function bindEditorInboxClicks(container) {
+    container.querySelectorAll('[data-nav-dismiss-portal]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        try { sessionStorage.setItem(NAV_PORTAL_DISMISS_KEY, btn.getAttribute('data-nav-dismiss-portal') || '1'); } catch (e) {}
+        reloadEditorInboxPanel();
+        refreshEditorInboxBadge();
+      });
+    });
+    container.querySelectorAll('[data-nav-dismiss-reject]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const id = btn.getAttribute('data-nav-dismiss-reject');
+        const tok = window.getEditorToken ? window.getEditorToken() : '';
+        try {
+          const res = await fetch('/api/assignee/reject-events/' + id + '/dismiss', {
+            method: 'POST', headers: { 'X-Editor-Token': tok, 'Content-Type': 'application/json' }
+          });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) throw new Error(data.error || '실패');
+          reloadEditorInboxPanel();
+          refreshEditorInboxBadge();
+        } catch (e) { toastNav(e.message || '실패', 'error'); }
+      });
+    });
+    container.querySelectorAll('[data-nav-dismiss-reject-batch]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const batchId = btn.getAttribute('data-nav-dismiss-reject-batch') || '';
+        const tok = window.getEditorToken ? window.getEditorToken() : '';
+        try {
+          const res = await fetch('/api/assignee/reject-events/dismiss-batch', {
+            method: 'POST',
+            headers: { 'X-Editor-Token': tok, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ batchId })
+          });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) throw new Error(data.error || '실패');
+          reloadEditorInboxPanel();
+          refreshEditorInboxBadge();
+        } catch (e) { toastNav(e.message || '실패', 'error'); }
+      });
+    });
+    container.querySelectorAll('[data-nav-reply-admin]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const nid = btn.getAttribute('data-nav-reply-admin');
+        closeInboxPopovers();
+        openMsgToAdminModal(nid);
+      });
+    });
+    container.querySelectorAll('[data-nav-dismiss-admin]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const id = btn.getAttribute('data-nav-dismiss-admin');
+        const tok = window.getEditorToken ? window.getEditorToken() : '';
+        try {
+          const res = await fetch('/api/assignee/admin-notices/' + id + '/dismiss', {
+            method: 'POST', headers: { 'X-Editor-Token': tok, 'Content-Type': 'application/json' }
+          });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) throw new Error(data.error || '실패');
+          reloadEditorInboxPanel();
+          refreshEditorInboxBadge();
+        } catch (e) { toastNav(e.message || '실패', 'error'); }
+      });
+    });
+    const o = container.querySelector('#navOpenMsgToAdmin');
+    if (o) o.addEventListener('click', () => { closeInboxPopovers(); openMsgToAdminModal(); });
+  }
+
+  async function reloadEditorInboxPanel() {
+    const panel = document.getElementById('nav-editor-inbox');
+    const tok = window.getEditorToken ? window.getEditorToken() : '';
+    if (!panel || !tok) return;
+    try {
+      const res = await fetch('/api/assignee/inbox-summary', { headers: { 'X-Editor-Token': tok } });
+      const d = await res.json();
+      panel.innerHTML = '<div class="nav-inbox-inner">' + renderEditorInboxHtml(d) + '</div>';
+      bindEditorInboxClicks(panel);
+    } catch (e) {
+      panel.innerHTML = '<div class="nav-muted">불러오기 실패</div>';
+    }
+  }
+
+  function toggleEditorInbox(ev) {
+    ensureNavOverlays();
+    const panel = document.getElementById('nav-editor-inbox');
+    const back = document.getElementById('nav-inbox-backdrop');
+    if (!panel) return;
+    if (panel.style.display === 'block') {
+      closeInboxPopovers();
+      return;
+    }
+    closeInboxPopovers();
+    panel.style.display = 'block';
+    if (back) back.style.display = 'block';
+    positionPopover(panel, ev && ev.currentTarget ? ev.currentTarget : document.getElementById('navEditorInboxBtn'));
+    reloadEditorInboxPanel();
+  }
+
+  function renderAdminInboxHtml(d) {
+    const parts = [];
+    const pn = d.portalNotice || {};
+    if (pn.text && String(pn.text).trim()) {
+      try {
+        const dis = sessionStorage.getItem(NAV_PORTAL_DISMISS_KEY);
+        if (!dis || dis !== String(pn.at || '')) {
+          parts.push(`<div class="nav-inbox-section"><div class="nav-inbox-h">전체 쪽지</div><div class="nav-inbox-p">${esc(pn.text)}</div>
+            <button type="button" class="nav-btn nav-btn-sm" data-nav-dismiss-portal="${esc(pn.at || '')}">확인</button></div>`);
+        }
+      } catch (e) {
+        parts.push(`<div class="nav-inbox-section"><div class="nav-inbox-h">전체 쪽지</div><div class="nav-inbox-p">${esc(pn.text)}</div>
+            <button type="button" class="nav-btn nav-btn-sm" data-nav-dismiss-portal="${esc(pn.at || '')}">확인</button></div>`);
+      }
+    }
+    const msgs = d.fromAssignees || [];
+    if (msgs.length) {
+      parts.push('<div class="nav-inbox-section"><div class="nav-inbox-h">담당자 메시지</div>');
+      msgs.forEach(x => {
+        const who = esc((x.senderTeamName || '') + ' / ' + (x.senderAssigneeName || ''));
+        parts.push(`<div class="nav-inbox-item"><div class="nav-inbox-meta">${who}</div><div class="nav-inbox-p">${esc(x.body)}</div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;">
+            <button type="button" class="nav-btn nav-btn-sm nav-btn-primary" data-nav-reply-to-assignee="${x.id}">답장</button>
+            <button type="button" class="nav-btn nav-btn-sm" data-nav-dismiss-msg="${x.id}">확인</button>
+          </div></div>`);
+      });
+      parts.push('</div>');
+    }
+    return parts.join('') || '<div class="nav-muted">새 쪽지가 없습니다.</div>';
+  }
+
+  async function reloadAdminInboxPanel() {
+    const panel = document.getElementById('nav-admin-inbox');
+    if (!panel || !window.adminFetch) return;
+    try {
+      const res = await window.adminFetch('/api/config/admin-inbox-summary');
+      const d = await res.json();
+      panel.innerHTML = '<div class="nav-inbox-inner">' + renderAdminInboxHtml(d) + '</div>';
+      panel.querySelectorAll('[data-nav-dismiss-portal]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          try { sessionStorage.setItem(NAV_PORTAL_DISMISS_KEY, btn.getAttribute('data-nav-dismiss-portal') || '1'); } catch (e) {}
+          reloadAdminInboxPanel();
+          refreshAdminInboxBadge();
+        });
+      });
+      panel.querySelectorAll('[data-nav-dismiss-msg]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const id = btn.getAttribute('data-nav-dismiss-msg');
+          try {
+            const res2 = await window.adminFetch('/api/config/messages-from-assignees/' + id + '/dismiss', { method: 'POST', body: '{}' });
+            const data = await res2.json().catch(() => ({}));
+            if (!res2.ok) throw new Error(data.error || '실패');
+            reloadAdminInboxPanel();
+            refreshAdminInboxBadge();
+          } catch (e) { toastNav(e.message || '실패', 'error'); }
+        });
+      });
+      panel.querySelectorAll('[data-nav-reply-to-assignee]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const id = btn.getAttribute('data-nav-reply-to-assignee');
+          closeInboxPopovers();
+          openReplyFromAdminModal(id);
+        });
+      });
+    } catch (e) {
+      panel.innerHTML = '<div class="nav-muted">불러오기 실패</div>';
+    }
+  }
+
+  function toggleAdminInbox(ev) {
+    ensureNavOverlays();
+    const panel = document.getElementById('nav-admin-inbox');
+    const back = document.getElementById('nav-inbox-backdrop');
+    if (!panel) return;
+    if (panel.style.display === 'block') {
+      closeInboxPopovers();
+      return;
+    }
+    closeInboxPopovers();
+    panel.style.display = 'block';
+    if (back) back.style.display = 'block';
+    positionPopover(panel, ev && ev.currentTarget ? ev.currentTarget : document.getElementById('navAdminInboxBtn'));
+    reloadAdminInboxPanel();
+  }
+
+  async function loadAssigneesForNoticePicker() {
+    const mount = document.getElementById('navNoticeAssigneeMount');
+    if (!mount || !window.adminFetch || !window.RepoSelect) {
+      if (!window.RepoSelect) toastNav('repo-select.js 로드 필요', 'error');
+      return;
+    }
+    try {
+      const res = await window.adminFetch('/api/config/it-assignees?page=0&size=500&sortBy=teamName&sortDir=asc');
+      const data = await res.json();
+      const items = (data.assignees || []).map(a => ({
+        value: String(a.id),
+        label: (a.teamName || '') + ' / ' + (a.assigneeName || '')
+      }));
+      if (_navAssigneeSelectInst) {
+        try { _navAssigneeSelectInst.destroy(); } catch (e) {}
+        _navAssigneeSelectInst = null;
+      }
+      mount.innerHTML = '';
+      _navAssigneeSelectInst = window.RepoSelect.mountLarge(mount, { items, placeholder: '담당자' });
+    } catch (e) {
+      toastNav('담당자 목록 로드 실패', 'error');
+    }
+  }
+
+  function openSendNoticeModal() {
+    ensureNavOverlays();
+    const m = document.getElementById('navSendNoticeModal');
+    if (!m) return;
+    const ta = document.getElementById('navNoticeBody');
+    if (ta) ta.value = '';
+    const w = document.getElementById('navNoticeAssigneeWrap');
+    if (w) w.style.display = 'none';
+    const r0 = document.querySelector('input[name="navSendScope"][value="whole"]');
+    if (r0) r0.checked = true;
+    m.style.display = 'flex';
+  }
+
+  function closeSendNoticeModal() {
+    const m = document.getElementById('navSendNoticeModal');
+    if (m) m.style.display = 'none';
+  }
+
+  async function submitSendNotice() {
+    if (!window.adminFetch) return;
+    const ta = document.getElementById('navNoticeBody');
+    const text = ta ? String(ta.value || '').trim() : '';
+    if (!text) { toastNav('내용을 입력하세요.', 'error'); return; }
+    const scope = (document.querySelector('input[name="navSendScope"]:checked') || {}).value || 'whole';
+    try {
+      if (scope === 'whole') {
+        const res = await window.adminFetch('/api/config/portal-notice', {
+          method: 'POST', body: JSON.stringify({ text })
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || '실패');
+        toastNav('전체 쪽지가 갱신되었습니다.', 'success');
+      } else {
+        if (!_navAssigneeSelectInst) { toastNav('담당자를 선택하세요.', 'error'); return; }
+        const sel = _navAssigneeSelectInst.getSelected().map(s => parseInt(s, 10)).filter(n => !isNaN(n));
+        if (!sel.length) { toastNav('담당자를 한 명 이상 선택하세요.', 'error'); return; }
+        const res = await window.adminFetch('/api/config/assignee-notices', {
+          method: 'POST', body: JSON.stringify({ assigneeIds: sel, text })
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || '실패');
+        toastNav('발송 ' + (data.sent != null ? data.sent : '') + '건', 'success');
+      }
+      closeSendNoticeModal();
+    } catch (e) { toastNav(e.message || '실패', 'error'); }
+  }
+
+  function openMsgToAdminModal(replyToAdminNoticeId) {
+    ensureNavOverlays();
+    const m = document.getElementById('navMsgToAdminModal');
+    const ta = document.getElementById('navMsgToAdminBody');
+    if (ta) ta.value = '';
+    const hid = document.getElementById('navMsgToAdminReplyToId');
+    const rid = replyToAdminNoticeId != null && String(replyToAdminNoticeId).trim() !== ''
+      ? String(replyToAdminNoticeId).trim()
+      : '';
+    if (hid) hid.value = rid;
+    const headEl = document.querySelector('#navMsgToAdminModal .nav-modal-head strong');
+    if (headEl) {
+      headEl.textContent = rid ? '관리자 쪽지에 답장' : '관리자에게 쪽지';
+    }
+    if (m) m.style.display = 'flex';
+  }
+
+  function closeMsgToAdminModal() {
+    const m = document.getElementById('navMsgToAdminModal');
+    if (m) m.style.display = 'none';
+    const hid = document.getElementById('navMsgToAdminReplyToId');
+    if (hid) hid.value = '';
+    const headEl = document.querySelector('#navMsgToAdminModal .nav-modal-head strong');
+    if (headEl) headEl.textContent = '관리자에게 쪽지';
+  }
+
+  function openReplyFromAdminModal(assigneeMessageId) {
+    ensureNavOverlays();
+    const m = document.getElementById('navReplyFromAdminModal');
+    const hid = document.getElementById('navReplyAssigneeMessageId');
+    const ta = document.getElementById('navReplyFromAdminBody');
+    if (hid) hid.value = assigneeMessageId != null ? String(assigneeMessageId) : '';
+    if (ta) ta.value = '';
+    if (m) m.style.display = 'flex';
+  }
+
+  function closeReplyFromAdminModal() {
+    const m = document.getElementById('navReplyFromAdminModal');
+    if (m) m.style.display = 'none';
+    const hid = document.getElementById('navReplyAssigneeMessageId');
+    if (hid) hid.value = '';
+    const ta = document.getElementById('navReplyFromAdminBody');
+    if (ta) ta.value = '';
+  }
+
+  async function submitReplyFromAdmin() {
+    if (!window.adminFetch) return;
+    const hid = document.getElementById('navReplyAssigneeMessageId');
+    const ta = document.getElementById('navReplyFromAdminBody');
+    const mid = hid ? parseInt(hid.value || '0', 10) : 0;
+    const text = ta ? String(ta.value || '').trim() : '';
+    if (!mid || isNaN(mid)) { toastNav('메시지를 찾을 수 없습니다.', 'error'); return; }
+    if (!text) { toastNav('내용을 입력하세요.', 'error'); return; }
+    try {
+      const res = await window.adminFetch('/api/config/reply-to-assignee-message', {
+        method: 'POST',
+        body: JSON.stringify({ assigneeMessageId: mid, text })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || '실패');
+      toastNav('답장을 보냈습니다.', 'success');
+      closeReplyFromAdminModal();
+      reloadAdminInboxPanel();
+      refreshAdminInboxBadge();
+    } catch (e) { toastNav(e.message || '실패', 'error'); }
+  }
+
+  async function submitMsgToAdmin() {
+    const tok = window.getEditorToken ? window.getEditorToken() : '';
+    const ta = document.getElementById('navMsgToAdminBody');
+    const text = ta ? String(ta.value || '').trim() : '';
+    if (!text) { toastNav('내용을 입력하세요.', 'error'); return; }
+    const hid = document.getElementById('navMsgToAdminReplyToId');
+    const ridStr = hid ? String(hid.value || '').trim() : '';
+    const payload = { text };
+    if (ridStr) {
+      const n = parseInt(ridStr, 10);
+      if (!isNaN(n)) payload.replyToAdminNoticeId = n;
+    }
+    try {
+      const res = await fetch('/api/assignee/message-to-admin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Editor-Token': tok },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || '실패');
+      toastNav('전송되었습니다.', 'success');
+      closeMsgToAdminModal();
+    } catch (e) { toastNav(e.message || '실패', 'error'); }
+  }
+
+  // ─── 일반사용자(IT담당자) 로그인 슬롯 (전 페이지) ─────────────────────────
   function renderAssigneeSlot() {
     const slot = document.getElementById('nav-assignee-slot');
     if (!slot) return;
-    const { segId, pageId } = resolveCurrent();
-    if (segId !== 'url-viewer' || pageId !== 'viewer') {
-      slot.innerHTML = '';
-      return;
-    }
     if (window.AuthState && window.AuthState.loggedIn) {
       slot.innerHTML = '';
       return;
@@ -444,8 +1017,11 @@
     try { ed = window.isEditorLoggedIn && window.isEditorLoggedIn(); } catch (e) {}
     if (ed) {
       slot.innerHTML = `
-        <span class="nav-assignee-indicator" id="navAssigneeLabel" title="일반 사용자 세션 — 변경은 제안으로 저장">👤 …</span>
+        <span class="nav-assignee-indicator" id="navAssigneeLabel" title="일반 사용자 세션">👤 …</span>
+        <button type="button" class="nav-btn" id="navEditorInboxBtn" title="쪽지함">📝<span class="nav-inbox-badge" id="navEditorInboxBadge" style="display:none;"></span></button>
         <button type="button" class="nav-btn" onclick="window.assigneeLogout && window.assigneeLogout()">일반 로그아웃</button>`;
+      const btn = document.getElementById('navEditorInboxBtn');
+      if (btn) btn.addEventListener('click', (ev) => toggleEditorInbox(ev));
       const tok = window.getEditorToken ? window.getEditorToken() : '';
       if (tok) {
         fetch('/api/assignee/auth/check', { headers: { 'X-Editor-Token': tok } })
@@ -458,6 +1034,7 @@
           })
           .catch(() => {});
       }
+      setTimeout(() => { refreshEditorInboxBadge(); }, 0);
     } else {
       slot.innerHTML =
         '<button type="button" class="nav-btn" onclick="window.openAssigneeLoginModal && window.openAssigneeLoginModal()">👤 일반사용자 로그인</button>';
@@ -471,9 +1048,14 @@
     const A = window.AuthState;
     if (A && A.loggedIn) {
       slot.innerHTML = `
+        <button type="button" class="nav-btn" onclick="window.AppNav.openSendNoticeModal && window.AppNav.openSendNoticeModal()">📨 쪽지 발송</button>
+        <button type="button" class="nav-btn" id="navAdminInboxBtn" title="수신함">📝<span class="nav-inbox-badge" id="navAdminInboxBadge" style="display:none;"></span></button>
         <span class="admin-indicator" title="관리자 세션">👤 관리자 <small>· 남은 ${esc(A.fmtRemaining())}</small></span>
         <button class="nav-btn" onclick="AuthState.logout()">로그아웃</button>
       `;
+      const ib = document.getElementById('navAdminInboxBtn');
+      if (ib) ib.addEventListener('click', (ev) => toggleAdminInbox(ev));
+      setTimeout(() => { refreshAdminInboxBadge(); }, 0);
     } else {
       slot.innerHTML = `
         <button class="nav-btn nav-btn-primary" onclick="adminLogin && adminLogin()">🔑 관리자 로그인</button>
@@ -491,6 +1073,7 @@
 
   // ─── 부팅 ───────────────────────────────────────────────
   function boot() {
+    ensureNavOverlays();
     render();
     applyAdminVisibility();
     loadSyncWarnings();
@@ -515,5 +1098,26 @@
   }
 
   // 전역 노출 (필요 시 페이지가 재렌더 호출 가능)
-  window.AppNav = { SEGMENTS, render, renderAdminSlot, renderAssigneeSlot, loadSyncWarnings, renderSyncWarnings, loadOpsDigestBanner, renderOpsDigestBanner };
+  window.AppNav = {
+    SEGMENTS,
+    render,
+    renderAdminSlot,
+    renderAssigneeSlot,
+    loadSyncWarnings,
+    renderSyncWarnings,
+    loadOpsDigestBanner,
+    renderOpsDigestBanner,
+    openSendNoticeModal,
+    closeSendNoticeModal,
+    submitSendNotice,
+    toggleEditorInbox,
+    toggleAdminInbox,
+    closeInboxPopovers,
+    openMsgToAdminModal,
+    closeMsgToAdminModal,
+    submitMsgToAdmin,
+    openReplyFromAdminModal,
+    closeReplyFromAdminModal,
+    submitReplyFromAdmin
+  };
 })();

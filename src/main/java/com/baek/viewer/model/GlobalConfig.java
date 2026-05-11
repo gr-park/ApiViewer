@@ -213,6 +213,13 @@ public class GlobalConfig {
     @Column(name = "extract_issue_report_at")
     private LocalDateTime extractIssueReportAt;
 
+    /** 포털 전체 쪽지(관리자 브로드캐스트) — 로그인 사용자에게만 표시 */
+    @Column(name = "portal_notice_text", columnDefinition = "TEXT")
+    private String portalNoticeText;
+
+    @Column(name = "portal_notice_at")
+    private LocalDateTime portalNoticeAt;
+
 
     public Long getId() { return id; }
     public String getStartDate() { return startDate; }
@@ -335,6 +342,11 @@ public class GlobalConfig {
     public void setExtractIssueReport(String v) { this.extractIssueReport = v; }
     public LocalDateTime getExtractIssueReportAt() { return extractIssueReportAt; }
     public void setExtractIssueReportAt(LocalDateTime v) { this.extractIssueReportAt = v; }
+
+    public String getPortalNoticeText() { return portalNoticeText; }
+    public void setPortalNoticeText(String portalNoticeText) { this.portalNoticeText = portalNoticeText; }
+    public LocalDateTime getPortalNoticeAt() { return portalNoticeAt; }
+    public void setPortalNoticeAt(LocalDateTime portalNoticeAt) { this.portalNoticeAt = portalNoticeAt; }
 
     /** 채팅 API 전체 URL */
     public String resolveAiChatEndpoint() {

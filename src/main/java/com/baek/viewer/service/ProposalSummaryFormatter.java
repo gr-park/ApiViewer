@@ -41,6 +41,9 @@ public final class ProposalSummaryFormatter {
         }
         List<String> parts = new ArrayList<>();
         for (Map.Entry<String, Object> e : patch.entrySet()) {
+            if ("statusChangeReason".equals(e.getKey()) || "statusChangeSummary".equals(e.getKey())) {
+                continue;
+            }
             if (e.getValue() == null) {
                 continue;
             }
