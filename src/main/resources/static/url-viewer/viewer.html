@@ -137,17 +137,6 @@
     }
     details[open] .collapser .c-label::after { content: "접기"; }
     details:not([open]) .collapser .c-label::after { content: "펼치기"; }
-    .stats-card-hint {
-      margin-left: auto;
-      max-width: 52%;
-      font-size: 11px;
-      font-weight: 500;
-      text-transform: none;
-      letter-spacing: 0;
-      color: var(--text-muted);
-      line-height: 1.45;
-      text-align: right;
-    }
     details[open] .collapser .c-arrow { transform: rotate(180deg); }
     .collapser .c-arrow { display: inline-block; transition: transform .12s ease; }
     details.card .card-body { padding: 14px 18px 16px; }
@@ -255,12 +244,31 @@
       display: flex;
       gap: 6px;
       align-items: center;
+      flex-wrap: wrap;
       padding: 6px;
       border-radius: 12px;
       border: 1px solid var(--border);
       background: #f8fafc;
     }
     .stat-group.tight { padding: 5px; }
+    .stat-group-label {
+      display: inline-flex;
+      align-items: center;
+      padding: 0 4px 0 2px;
+      font-size: 11px;
+      font-weight: 700;
+      white-space: nowrap;
+      color: var(--text-muted);
+    }
+    .stat-group-note {
+      flex-basis: 100%;
+      display: block;
+      margin-top: 2px;
+      padding: 2px 4px 0 2px;
+      font-size: 10px;
+      line-height: 1.45;
+      color: var(--text-muted);
+    }
     .stat-group .stat-pill,
     .stat-group .stat-chip { box-shadow: none; }
     /* 상태 pill 크기: 메소드 chip 수준으로 축소 */
@@ -279,25 +287,31 @@
     /* 그룹 색상 */
     .sg-status { background:#f0fdf4; border-color:#86efac; }           /* 사용 */
     .sg-done   { background:#f1f5f9; border-color:#cbd5e1; }           /* 차단완료/차단처리미흡 */
+    .sg-done .stat-group-label,
     .sg-done strong { color:#475569; }
-    /* 테스트용 의심 / 파라미터URL 패턴 / @Deprecated (차단대상과 겹치지 않는 경고 톤) */
+    /* 테스트용 의심 / 파라미터URL 패턴 등 주의필요 그룹 */
     .sg-suspect { background:#faf5ff; border-color:#c4b5fd; }
+    .sg-suspect .stat-group-label { color:#7c3aed; }
     .sg-suspect .stat-pill { background:#fdf4ff; border-color:#e9d5ff; }
     .sg-suspect .stat-pill strong { color:#7c3aed; }
     .sg-pri1   { background:#fef2f2; border-color:#fca5a5; }           /* ① 차단대상 그룹 */
+    .sg-pri1 .stat-group-label,
     .sg-pri1 strong { color:#dc2626; }
     .sg-pri1-sum { background:#fee2e2; border-color:#f87171; font-weight:700; }   /* ① 합계 강조 */
     .sg-pri2   { background:#fff7ed; border-color:#fdba74; }           /* (예비) */
     .sg-pri3   { background:#fffbeb; border-color:#fcd34d; }           /* ② 추가검토대상 그룹 */
+    .sg-pri3 .stat-group-label,
     .sg-pri3 strong { color:#d97706; }
     .sg-pri3-sum { background:#fef3c7; border-color:#f59e0b; font-weight:700; }   /* ② 합계 강조 */
     .sg-review { background:#eff6ff; border-color:#93c5fd; }           /* 현업검토완료 */
+    .sg-review .stat-group-label { color:#1d4ed8; }
     /* (구) sg-path-params: 호환용. 현재는 sg-suspect 그룹으로 렌더 */
     .sg-path-params { background:#fdf4ff; border-color:#e9d5ff; }
     /* 신규/상태변경/삭제 — 보라(테스트/패턴)과 겹치지 않게 옅은 주황(피치) 톤 */
     .sg-hist   { background:#fff7ed; border-color:#fed7aa; }
+    .sg-hist .stat-group-label,
     .sg-hist strong { color:#9a3412; }
-    /* 메소드/deprecated — 소형 chip */
+    /* 메소드/기타 소형 chip */
     .stat-chip { background:#f1f5f9; border:1px solid #cbd5e1; border-radius:20px; padding:3px 10px; font-size:11px; display:flex; align-items:center; gap:4px; cursor:pointer; transition:border-color .15s, background .15s; white-space:nowrap; }
     .stat-chip:hover { border-color:var(--primary); background:#eff6ff; }
     .stat-chip.active-filter { border-color:var(--primary); background:#dbeafe; }
@@ -760,7 +774,6 @@
   <meta name="nav-page" content="viewer">
   <link rel="stylesheet" href="/common/nav.css">
   <link rel="stylesheet" href="/common/repo-select.css">
-  <script src="/common/status-guide.js"></script>
   <script src="/exceljs.min.js"></script>
   <script src="/js/dialog.js"></script>
   <script src="/js/darkmode.js"></script>
@@ -932,60 +945,39 @@
     </div>
   </details>
 
-  <!-- 상태안내 및 빠른필터 (상태 구분 안내 + 집계 배지) -->
+  <!-- 빠른필터 -->
   <details class="card" id="statsCard" open style="display:none;">
     <summary class="section-heading section-heading--query">
       <span class="dot"></span>
       <span class="heading-toggle-wrap">
-        상태안내 및 빠른필터
+        빠른필터
         <span class="collapser inline" aria-hidden="true">
           <span class="c-label"></span>
           <span class="c-arrow">▾</span>
         </span>
       </span>
-      <span class="stats-card-hint">안내: 삭제 상태 행은 상태카드의 ‘전체’ 등 주요 집계에서 제외됩니다. 삭제만 보려면 ‘삭제’ 카드를 눌러주세요.</span>
     </summary>
     <div class="card-body">
-      <div id="statusGuideDetailBox"
-           style="border:1px solid #bae6fd;border-radius:10px;padding:10px 12px;font-size:11px;color:#0c4a6e;line-height:1.75;background:#f0f9ff;margin-bottom:12px;">
-      </div>
-      <!-- 통계 (상태 필터 겸용) — 2줄 고정 구성 -->
+      <!-- 통계 (상태 필터 겸용) -->
       <div class="stats-bar" id="statsBar" style="display:none;margin:0 0 10px 0;">
-    <!-- ── 1행: 일반/완료/이력/테스트·패턴·@Deprecated/현업검토완료 ────── -->
-    <div class="stat-group tight">
-      <div class="stat-pill" id="pill-all" onclick="setFilter('')"><span>전체</span><strong id="statTotal">0</strong></div>
-      <div class="stat-pill s-use sg-status" id="pill-사용" onclick="setFilter('사용')"><span>사용</span><strong id="stat-사용">0</strong></div>
-    </div>
     <div class="stat-group tight sg-done">
-      <div class="stat-pill sg-done" id="pill-차단완료" onclick="setFilter('차단완료')"><span>차단완료</span><strong id="stat-차단완료">0</strong></div>
-      <div class="stat-pill sg-done" id="pill-auto-차단완료" onclick="setFilter('auto:차단완료')" title="순수 자동 판정 기준 차단완료"><span>자동 차단완료</span><strong id="stat-auto-차단완료">0</strong></div>
-      <div class="stat-pill sg-done" id="pill-expected-done" onclick="setFilter('expectedDone')" title="자동은 차단완료지만 공식 상태는 아직 차단완료가 아닌 건"><span>차단완료 예상</span><strong id="stat-expected-done">0</strong></div>
-      <div class="stat-pill sg-done" id="pill-marking-incomplete" onclick="setFilter('marking-incomplete')" title="차단완료이지만 @Deprecated 또는 [URL차단작업] 주석 누락"><span>📝 차단처리미흡</span><strong id="stat-marking-incomplete">0</strong></div>
+      <span class="stat-group-label">전체 |</span>
+      <div class="stat-pill" id="pill-all" onclick="setFilter('')"><span>전체</span><strong id="statTotal">0</strong></div>
+      <div class="stat-pill s-use" id="pill-사용" onclick="setFilter('사용')"><span>사용</span><strong id="stat-사용">0</strong></div>
+      <div class="stat-pill" id="pill-차단완료" onclick="setFilter('차단완료')"><span>차단완료</span><strong id="stat-차단완료">0</strong></div>
+      <div class="stat-pill sg-hist" id="pill-deleted" onclick="setFilter('deleted')"><span>삭제</span><strong id="stat-deleted">0</strong></div>
     </div>
     <div class="stat-group tight sg-hist">
+      <span class="stat-group-label">상태 |</span>
       <div class="stat-pill sg-hist" id="pill-new"     onclick="setFilter('new')"    ><span>신규</span><strong id="stat-new">0</strong></div>
       <div class="stat-pill sg-hist" id="pill-changed" onclick="setFilter('changed')"><span>상태변경</span><strong id="stat-changed">0</strong></div>
       <div class="stat-pill sg-hist" id="pill-pending-proposal" onclick="setFilter('pendingProposal')" title="담당자 제안이 승인 대기 중"><span>승인대기</span><strong id="stat-pendingProposal">0</strong></div>
       <div class="stat-pill sg-hist" id="pill-open-reject-event" onclick="setFilter('openRejectEvent')" title="상태변경 반려 이력 중 네비 쪽지함에서 아직 확인하지 않은 건이 있는 레코드"><span>반려</span><strong id="stat-openRejectEvent">0</strong></div>
-      <div class="stat-pill sg-hist" id="pill-deleted" onclick="setFilter('deleted')"><span>삭제</span><strong id="stat-deleted">0</strong></div>
+      <div class="stat-pill sg-hist" id="pill-reviewed" onclick="setFilter('reviewed')"><span>현업검토완료</span><strong id="stat-reviewed">0</strong></div>
     </div>
-    <div class="stat-row-break"></div>
-    <div class="stat-group tight sg-suspect">
-      <div class="stat-pill sg-suspect" id="pill-test-suspect" onclick="setFilter('testSuspect')" title="URL/메소드/주석 등에 test, sample, mock 등 키워드가 포함된 의심 URL"><span>🧪 테스트용 의심</span><strong id="stat-test-suspect">0</strong></div>
-      <div class="stat-pill sg-suspect" id="pill-path-params" onclick="setFilter('pathParams')" title="경로에 {변수} 가 포함된 URL — 호출 이력 URL과 불일치할 수 있음"><span>🔗 파라미터URL 패턴</span><strong id="stat-path-params">0</strong></div>
-      <div class="stat-pill sg-suspect" id="pill-deprecated" onclick="setFilter('deprecated')"><span>@Deprecated</span><strong id="stat-deprecated">0</strong></div>
-    </div>
-    <div class="stat-group tight sg-review">
-      <div class="stat-pill sg-review" id="pill-reviewed" onclick="setFilter('reviewed')"><span>현업검토완료</span><strong id="stat-reviewed" style="color:#1e40af;">0</strong></div>
-    </div>
-    <div class="stat-group tight">
-      <div class="stat-pill s-use" id="pill-auto-사용" onclick="setFilter('auto:사용')" title="순수 자동 판정 기준 사용"><span>자동 사용</span><strong id="stat-auto-사용">0</strong></div>
-      <div class="stat-pill sg-pri1" id="pill-auto-block" onclick="setFilter('autoGroup:block')" title="순수 자동 판정 기준 ①-*"><span>자동 ① 차단대상</span><strong id="stat-auto-block">0</strong></div>
-      <div class="stat-pill sg-pri3" id="pill-auto-review" onclick="setFilter('autoGroup:review')" title="순수 자동 판정 기준 ②-*"><span>자동 ② 추가검토대상</span><strong id="stat-auto-review">0</strong></div>
-    </div>
-
     <div class="stat-row-break"></div>
     <div class="stat-group sg-pri1">
+      <span class="stat-group-label">차단대상 |</span>
       <div class="stat-pill sg-pri1 sg-pri1-sum" id="pill-block" onclick="setFilter('group:block')" title="①-①~①-④ 합계"><span>① 차단대상</span><strong id="stat-block">0</strong></div>
       <div class="stat-pill sg-pri1" id="pill-leaf-1-1" onclick="setFilter('①-① 차단대상')" title="호출 0건 + 소스변경 1년 경과"><span>①-① 차단대상</span><strong id="stat-leaf-1-1">0</strong></div>
       <div class="stat-pill sg-pri1" id="pill-leaf-1-2" onclick="setFilter('①-② 담당자 판단')" title="담당자 수동 판단"><span>①-② 담당자 판단</span><strong id="stat-leaf-1-2">0</strong></div>
@@ -994,10 +986,29 @@
     </div>
 
     <div class="stat-group sg-pri3">
+      <span class="stat-group-label">추가검토대상 |</span>
       <div class="stat-pill sg-pri3 sg-pri3-sum" id="pill-review" onclick="setFilter('group:review')" title="②-①~②-③ 합계"><span>② 추가검토대상</span><strong id="stat-review">0</strong></div>
       <div class="stat-pill sg-pri3" id="pill-leaf-2-1" onclick="setFilter('②-① 호출0건+변경있음')" title="호출 0건 + 1년 미만 변경"><span>②-① 호출0건+변경있음</span><strong id="stat-leaf-2-1">0</strong></div>
       <div class="stat-pill sg-pri3" id="pill-leaf-2-2" onclick="setFilter('②-② 호출 3건 이하+변경없음')" title="호출 1~N건 + 1년 경과"><span>②-② 호출 3건 이하</span><strong id="stat-leaf-2-2">0</strong></div>
       <div class="stat-pill sg-pri3" id="pill-leaf-2-3" onclick="setFilter('②-③ 사용으로 변경')" title="담당자 검토결과 사용중으로 확정"><span>②-③ 사용으로 변경</span><strong id="stat-leaf-2-3">0</strong></div>
+    </div>
+
+    <div class="stat-row-break"></div>
+    <div class="stat-group tight sg-review">
+      <span class="stat-group-label">자동분석결과 |</span>
+      <div class="stat-pill" id="pill-auto-사용" onclick="setFilter('auto:사용')" title="순수 자동 판정 기준 사용"><span>사용</span><strong id="stat-auto-사용">0</strong></div>
+      <div class="stat-pill" id="pill-auto-차단완료" onclick="setFilter('auto:차단완료')" title="순수 자동 판정 기준 차단완료"><span>차단완료</span><strong id="stat-auto-차단완료">0</strong></div>
+      <div class="stat-pill" id="pill-expected-done" onclick="setFilter('expectedDone')" title="자동은 차단완료지만 공식 상태는 아직 차단완료가 아닌 전환 대상"><span>차단완료 전환대상</span><strong id="stat-expected-done">0</strong></div>
+      <div class="stat-pill" id="pill-auto-leaf-1-1" onclick="setFilter('auto:①-① 차단대상')" title="순수 자동 판정 기준 ①-① 차단대상"><span>① 차단대상</span><strong id="stat-auto-leaf-1-1">0</strong></div>
+      <div class="stat-pill" id="pill-auto-leaf-2-1" onclick="setFilter('auto:②-① 호출0건+변경있음')" title="순수 자동 판정 기준 ②-① 호출0건+변경있음"><span>②-① 호출0건+변경있음</span><strong id="stat-auto-leaf-2-1">0</strong></div>
+      <div class="stat-pill" id="pill-auto-leaf-2-2" onclick="setFilter('auto:②-② 호출 3건 이하+변경없음')" title="순수 자동 판정 기준 ②-② 호출 3건 이하+변경없음"><span>②-② 호출 3건 이하</span><strong id="stat-auto-leaf-2-2">0</strong></div>
+      <div class="stat-group-note">ℹ️ 공식 상태는 이전 분석 상태를 그대로 승계하며, 자동분석결과는 현재 기준으로 다시 계산한 참고값입니다. 둘이 다른 건은 검토 후 반영해 주세요.</div>
+    </div>
+    <div class="stat-group tight sg-suspect">
+      <span class="stat-group-label">주의필요 |</span>
+      <div class="stat-pill sg-suspect" id="pill-marking-incomplete" onclick="setFilter('marking-incomplete')" title="차단완료이지만 @Deprecated 또는 [URL차단작업] 주석 누락"><span>📝 차단처리미흡</span><strong id="stat-marking-incomplete">0</strong></div>
+      <div class="stat-pill sg-suspect" id="pill-test-suspect" onclick="setFilter('testSuspect')" title="URL/메소드/주석 등에 test, sample, mock 등 키워드가 포함된 의심 URL"><span>🧪 테스트용 의심</span><strong id="stat-test-suspect">0</strong></div>
+      <div class="stat-pill sg-suspect" id="pill-path-params" onclick="setFilter('pathParams')" title="경로에 {변수} 가 포함된 URL — 호출 이력 URL과 불일치할 수 있음"><span>🔗 파라미터URL 패턴</span><strong id="stat-path-params">0</strong></div>
     </div>
   </div>
 
@@ -2862,16 +2873,15 @@
     // ① 차단대상 / ② 추가검토대상 합계 — leaf 4+3 전부 (하위 배지 합과 일치)
     const blockSum  = STATUS_UMBRELLA_BLOCK_LEAVES.reduce((s, k) => s + (byStatus[k] || 0), 0);
     const reviewSum = STATUS_UMBRELLA_REVIEW_LEAVES.reduce((s, k) => s + (byStatus[k] || 0), 0);
-    const autoBlockSum = STATUS_UMBRELLA_BLOCK_LEAVES.reduce((s, k) => s + (autoByStatus[k] || 0), 0);
-    const autoReviewSum = STATUS_UMBRELLA_REVIEW_LEAVES.reduce((s, k) => s + (autoByStatus[k] || 0), 0);
     document.getElementById('statTotal').textContent     = c.total || 0;
     document.getElementById('stat-사용').textContent      = get('사용');
     document.getElementById('stat-차단완료').textContent   = get('차단완료');
     { const el = document.getElementById('stat-auto-사용'); if (el) el.textContent = getAuto('사용'); }
     { const el = document.getElementById('stat-auto-차단완료'); if (el) el.textContent = getAuto('차단완료'); }
     { const el = document.getElementById('stat-expected-done'); if (el) el.textContent = c.expectedDoneCount || 0; }
-    { const el = document.getElementById('stat-auto-block'); if (el) el.textContent = autoBlockSum; }
-    { const el = document.getElementById('stat-auto-review'); if (el) el.textContent = autoReviewSum; }
+    { const el = document.getElementById('stat-auto-leaf-1-1'); if (el) el.textContent = getAuto('①-① 차단대상'); }
+    { const el = document.getElementById('stat-auto-leaf-2-1'); if (el) el.textContent = getAuto('②-① 호출0건+변경있음'); }
+    { const el = document.getElementById('stat-auto-leaf-2-2'); if (el) el.textContent = getAuto('②-② 호출 3건 이하+변경없음'); }
     { const e = document.getElementById('stat-block');    if (e) e.textContent = blockSum; }
     { const e = document.getElementById('stat-review');   if (e) e.textContent = reviewSum; }
     // 9 leaf v2 — ① 차단대상 / ② 추가검토대상 leaf 별 카운트
@@ -2895,7 +2905,6 @@
     { const el = document.getElementById('statPost');   if (el) el.textContent = byMethod['POST']   || 0; }
     { const el = document.getElementById('statPut');    if (el) el.textContent = byMethod['PUT']    || 0; }
     { const el = document.getElementById('statDelete'); if (el) el.textContent = byMethod['DELETE'] || 0; }
-    { const el = document.getElementById('stat-deprecated'); if (el) el.textContent = c.deprecated || 0; }
   }
 
   let activeFilter = '';
@@ -2954,6 +2963,9 @@
     else if (val === '차단완료') { document.getElementById('pill-차단완료').classList.add('active-filter'); }
     else if (val === 'auto:사용') { const e = document.getElementById('pill-auto-사용'); if (e) e.classList.add('active-filter'); }
     else if (val === 'auto:차단완료') { const e = document.getElementById('pill-auto-차단완료'); if (e) e.classList.add('active-filter'); }
+    else if (val === 'auto:①-① 차단대상') { const e = document.getElementById('pill-auto-leaf-1-1'); if (e) e.classList.add('active-filter'); }
+    else if (val === 'auto:②-① 호출0건+변경있음') { const e = document.getElementById('pill-auto-leaf-2-1'); if (e) e.classList.add('active-filter'); }
+    else if (val === 'auto:②-② 호출 3건 이하+변경없음') { const e = document.getElementById('pill-auto-leaf-2-2'); if (e) e.classList.add('active-filter'); }
     else if (val === 'expectedDone') { const e = document.getElementById('pill-expected-done'); if (e) e.classList.add('active-filter'); }
     else if (val === 'group:block')  { const e = document.getElementById('pill-block');  if (e) e.classList.add('active-filter'); }
     else if (val === 'group:review') { const e = document.getElementById('pill-review'); if (e) e.classList.add('active-filter'); }
@@ -2979,7 +2991,6 @@
     else if (val === 'method:POST')   { document.getElementById('pill-POST').classList.add('active-filter'); }
     else if (val === 'method:PUT')    { document.getElementById('pill-PUT').classList.add('active-filter'); }
     else if (val === 'method:DELETE') { document.getElementById('pill-DELETE').classList.add('active-filter'); }
-    else if (val === 'deprecated')    { document.getElementById('pill-deprecated').classList.add('active-filter'); }
     // 영구삭제 버튼 토글 (삭제 필터 활성 + 관리자일 때만 노출)
     const purgeBtn = document.getElementById('bulkPurgeBtn');
     if (purgeBtn) purgeBtn.style.display = (val === 'deleted' && isAdmin()) ? 'inline-block' : 'none';
@@ -3114,7 +3125,7 @@
         <td>${a.fullUrl ? `<a href="${esc(a.fullUrl)}" target="_blank" style="font-size:11px;color:var(--primary);text-decoration:none;padding:2px 8px;border:1px solid var(--primary);border-radius:4px;white-space:nowrap;">열기 ↗</a>` : '<span style="color:#cbd5e1;font-size:11px;">-</span>'}</td>
         <!-- 상태 / 자동분석 / 상태변경 사항·사유 / 상태확정 -->
         <td>${statusBadge(a.status, a.logWorkExcluded)}${a.hasPendingProposal ? `<br><span style="display:inline-block;margin-top:2px;padding:1px 5px;background:#f3e8ff;border:1px solid #ddd6fe;border-radius:3px;color:#6d28d9;font-size:9px;font-weight:700;white-space:nowrap;" title="${esc(pendingTitle)}">⏳ ${esc(pendingLabel)}</span>` : ''}${a.isNew ? `<br><span style="display:inline-block;margin-top:2px;padding:1px 5px;background:#dbeafe;border:1px solid #93c5fd;border-radius:3px;color:#1e40af;font-size:9px;font-weight:600;cursor:pointer;white-space:nowrap;" onclick="clearNewFlag(event,${a.id})" title="클릭하여 확인 완료">🆕 신규추가</span>` : ''}${(() => { if (!a.statusChanged) return ''; const logs = parseChangeLog(a.statusChangeLog); const last = logs.length ? logs[logs.length-1] : '변경감지'; const extra = logs.length > 1 ? ` <span style="color:#f87171;">(외 ${logs.length-1}건)</span>` : ''; return `<br><span style="display:inline-block;margin-top:2px;padding:1px 5px;background:#fef2f2;border:1px solid #fca5a5;border-radius:3px;color:#dc2626;font-size:9px;font-weight:600;cursor:pointer;white-space:nowrap;" onclick="clearStatusFlag(event,${a.id})" title="클릭: 확인 완료 | 상세보기에서 전체 이력 확인">⚠️ ${esc(last)}${extra}</span>`; })()}${a.blockMarkingIncomplete ? `<br><span style="display:inline-block;margin-top:2px;padding:1px 5px;background:#fff7ed;border:1px solid #fed7aa;border-radius:3px;color:#b45309;font-size:9px;font-weight:600;white-space:nowrap;cursor:help;" title="차단완료 상태이나 @Deprecated 또는 [URL차단작업] 주석이 누락됨 — 주석 보완 후 다음 추출 시 자동 해제.">📝 차단처리미흡</span>` : ''}</td>
-        <td style="vertical-align:top;">${a.autoAnalyzedStatus ? statusBadge(a.autoAnalyzedStatus, false) : '<span style="color:#cbd5e1;font-size:11px;">-</span>'}${rowIsExpectedDone(a) ? '<div style="margin-top:4px;font-size:10px;color:#b91c1c;font-weight:700;">차단완료 예상</div>' : ''}</td>
+        <td style="vertical-align:top;">${a.autoAnalyzedStatus ? statusBadge(a.autoAnalyzedStatus, false) : '<span style="color:#cbd5e1;font-size:11px;">-</span>'}${rowIsExpectedDone(a) ? '<div style="margin-top:4px;font-size:10px;color:#b91c1c;font-weight:700;">차단완료 전환대상</div>' : ''}</td>
         <td style="font-size:10px;color:var(--text-muted);max-width:140px;line-height:1.35;white-space:normal;" title="${esc(proposalSummFull)}">${proposalSummCell}</td>
         <td style="font-size:10px;color:var(--text-muted);max-width:140px;line-height:1.35;white-space:normal;" title="${esc(a.proposalStatusChangeReason || '')}">${a.proposalStatusChangeReason ? esc(a.proposalStatusChangeReason.length > 100 ? a.proposalStatusChangeReason.slice(0, 97) + '…' : a.proposalStatusChangeReason) : '<span style="color:#cbd5e1;">-</span>'}</td>
         <td style="text-align:center;">${lockIcon}</td>
@@ -3777,15 +3788,15 @@
     }
     if (!eligible.length) {
       const detail = skippedLocked > 0
-        ? '선택한 항목이 모두 차단완료 예상이 아니거나, 상태확정되어 적용할 수 없습니다.'
-        : '선택한 항목 중 차단완료 예상 건이 없습니다.';
+        ? '선택한 항목이 모두 차단완료 전환대상이 아니거나, 상태확정되어 적용할 수 없습니다.'
+        : '선택한 항목 중 차단완료 전환대상 건이 없습니다.';
       showToast(detail, 'error');
       return;
     }
     let msg = `${eligible.length}건을 차단완료로 변경합니다.`;
     if (skippedNotExpected > 0 || skippedLocked > 0) {
       const parts = [];
-      if (skippedNotExpected > 0) parts.push(`차단완료 예상 아님 ${skippedNotExpected}건 제외`);
+      if (skippedNotExpected > 0) parts.push(`차단완료 전환대상 아님 ${skippedNotExpected}건 제외`);
       if (skippedLocked > 0) parts.push(`상태확정 ${skippedLocked}건 제외`);
       msg += `\n(${parts.join(', ')})`;
     }
@@ -3875,12 +3886,12 @@
         else skipped.push(id);
       }
       if (!eligible.length) {
-        showToast('선택한 항목 중 차단완료 예상 건이 없습니다.', 'error');
+        showToast('선택한 항목 중 차단완료 전환대상 건이 없습니다.', 'error');
         return;
       }
       if (skipped.length > 0) {
         const ok = await customConfirm(
-          `선택 ${workingIds.length}건 중 ${skipped.length}건은 차단완료 예상이 아니어서 제외하고, ${eligible.length}건에만 적용합니다.\n\n진행하시겠습니까?`
+          `선택 ${workingIds.length}건 중 ${skipped.length}건은 차단완료 전환대상이 아니어서 제외하고, ${eligible.length}건에만 적용합니다.\n\n진행하시겠습니까?`
         );
         if (!ok) return;
       }
@@ -3930,7 +3941,7 @@
       hint.style.display = '';
       let hintText = '담당자: 사유를 입력한 뒤 승인요청하세요. 관리자: 즉시 반영되며 사유는 선택입니다.';
       if (expectedDoneOnly) {
-        hintText = '차단완료 예상 건만 대상으로 차단완료를 반영합니다. 차단일자·차단근거는 소스 주석에서 비어 있는 값만 선세팅합니다. ' + hintText;
+        hintText = '차단완료 전환대상 건만 대상으로 차단완료를 반영합니다. 차단일자·차단근거는 소스 주석에서 비어 있는 값만 선세팅합니다. ' + hintText;
       }
       if (multiSel) {
         hintText = '2건 이상 선택 시 각 행의 공식 상태가 달라 「상태변경 사항」 미리보기는 표시하지 않습니다. ' + hintText;
@@ -4851,7 +4862,7 @@
             <option value="" ${statusForSelect === '' ? 'selected' : ''}>자동계산 (초기화)</option>
           </select>${statusApproveBtn}</div>
           <div class="detail-label">상태(자동분석결과)</div>
-          <div class="detail-value" style="white-space:normal;">${r.autoAnalyzedStatus ? statusBadge(r.autoAnalyzedStatus, false) : '<span style="color:var(--text-muted);font-size:12px;">-</span>'}${rowIsExpectedDone(r) ? '<div style="margin-top:6px;font-size:11px;color:#b91c1c;font-weight:700;">차단완료 예상</div>' : ''}<div style="font-size:10px;color:var(--text-muted);margin-top:6px;line-height:1.4;">호출·Git·차단신호 등 순수 자동 판정(스티키·수동 leaf 미반영). 공식 상태와 다르면 목록에서 상태변경 알림이 켜질 수 있습니다.</div></div>
+          <div class="detail-value" style="white-space:normal;">${r.autoAnalyzedStatus ? statusBadge(r.autoAnalyzedStatus, false) : '<span style="color:var(--text-muted);font-size:12px;">-</span>'}${rowIsExpectedDone(r) ? '<div style="margin-top:6px;font-size:11px;color:#b91c1c;font-weight:700;">차단완료 전환대상</div>' : ''}<div style="font-size:10px;color:var(--text-muted);margin-top:6px;line-height:1.4;">호출·Git·차단신호 등 순수 자동 판정(스티키·수동 leaf 미반영). 공식 상태와 다르면 목록에서 상태변경 알림이 켜질 수 있습니다.</div></div>
           <div class="detail-label">상태변경 사항</div>
           <div class="detail-value"><input type="text" id="df-statusChangeSummary" class="df-input" readonly style="width:100%;background:#f8fafc;font-size:12px;" value="${esc(detailSummVal)}" placeholder="${detailSummVal ? '' : '-'}"></div>
           <div class="detail-label">상태변경 사유</div>
@@ -5874,19 +5885,5 @@
 </script>
 <script src="/common/nav.js"></script>
 <script src="/common/repo-select.js"></script>
-<script>
-  // 상태 구분 안내 — 공통 모듈 렌더 (상태안내 및 빠른필터 카드 상단 박스)
-  (function mountStatusGuide() {
-    function run() {
-      try {
-        if (window.StatusGuide) {
-          StatusGuide.mountDetailInto('#statusGuideDetailBox');
-        }
-      } catch (e) {}
-    }
-    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', run);
-    else run();
-  })();
-</script>
 </body>
 </html>
