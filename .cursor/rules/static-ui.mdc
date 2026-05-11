@@ -1,0 +1,13 @@
+---
+description: Static UI rules for bundled frontend pages
+globs: src/main/resources/static/**/*
+alwaysApply: false
+---
+
+# Static UI Rules
+
+- Follow `UI-GUIDELINES.md` for section titles, colors, buttons, pills, and quick date segments.
+- This project runs in a network-isolated environment. Use bundled assets only and keep ExcelJS on `/exceljs.min.js`; do not introduce CDN dependencies.
+- Shared script order is `auth.js` -> `assignee-login.js` -> optional `repo-select.js` -> `nav.js`.
+- Changes to `common/repo-select.*` directly affect `url-viewer/viewer.html`; verify both flows together.
+- Keep admin and editor write behaviors clearly separated in action bars, modals, and request flows.

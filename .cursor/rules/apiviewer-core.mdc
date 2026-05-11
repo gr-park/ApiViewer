@@ -1,0 +1,13 @@
+---
+description: Core ApiViewer conventions
+alwaysApply: true
+---
+
+# ApiViewer Core Conventions
+
+- Use `SmartWay` for UI labels and messages. Keep internal identifiers such as DB columns, code symbols, statuses, and API paths as `jira`.
+- Treat `status` as the official operational state and `autoAnalyzedStatus` as the pure auto-analysis result. Do not swap these meanings unless explicitly requested.
+- Keep H2 and PostgreSQL both working for persistence changes. Prefer JPQL or Spring Data derived queries over native SQL.
+- Avoid PostgreSQL-fragile predicates like `(:param IS NULL OR x IN (:param))` with the same collection parameter. Split the query path instead.
+- When UI, server behavior, batch behavior, or deploy-visible flow changes, bump `APP_UI_VERSION` in `src/main/resources/static/common/nav.js`.
+- If static UI or deploy-visible behavior changed, include the current `APP_UI_VERSION` in the final response.

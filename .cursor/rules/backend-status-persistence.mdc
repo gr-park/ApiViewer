@@ -1,0 +1,13 @@
+---
+description: Backend status, snapshot, and persistence rules
+globs: src/main/java/**/*.java
+alwaysApply: false
+---
+
+# Backend Status And Persistence Rules
+
+- Keep `status` as the official persisted state and `auto_analyzed_status` / `autoAnalyzedStatus` as the pure calculated result.
+- Re-extract, APM refresh, and similar analysis updates should refresh auto-analysis fields without overwriting inherited official status unless the write path is explicitly for official status changes.
+- When a record is `차단완료` or `차단완료 예상`, seed `blockedDate` and `blockedReason` from source comments only if the stored values are blank.
+- Snapshot rows should preserve `auto_analyzed_status` and support matching status or auto-status filters when exposed in snapshot views.
+- For repository and query changes, preserve H2/PostgreSQL compatibility and prefer split query paths over DB-specific conditional binding tricks.

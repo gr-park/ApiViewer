@@ -1,0 +1,15 @@
+---
+description: URL viewer extract and status operation rules
+globs: src/main/resources/static/url-viewer/**/*
+alwaysApply: false
+---
+
+# URL Viewer Status Rules
+
+- `extract.html` keeps the main URL analysis card plus a collapsed `단건추출 및 디버깅` card.
+- Manual extract saves to DB by default, and TS results persist when the repo has `ts_analysis_enabled=Y`.
+- In `viewer.html`, keep `status` as the official status and use `autoAnalyzedStatus` as the comparison axis for operational filters.
+- `차단완료 예상` means `autoAnalyzedStatus='차단완료'` while official `status` is still not `차단완료`.
+- `차단완료 일괄적용` is selection-based: apply only selected `차단완료 예상` rows.
+- Existing pending status proposals must block duplicate editor approval requests, and bulk flows should exclude those rows with a clear confirmation message.
+- Rejection notice dismiss actions should refresh the editor inbox and nav badge together.

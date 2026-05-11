@@ -1,0 +1,11 @@
+---
+description: Release and source handoff checklist
+alwaysApply: true
+---
+
+# Release And Handoff
+
+- Source handoff zip path is `/Users/baegmyeongseon/Downloads/ApiViewer.zip`.
+- Recreate the zip from scratch by deleting the old file first; do not rely on update mode.
+- Exclude `target/`, `.git/`, `.idea/`, `.claude/`, `data/`, `logs/`, shell or bat launchers, jars, `mvnw`, root `application.properties`, `src/main/resources/application.properties`, root `repos-config.yml`, and `src/main/resources/repos-config.yml`.
+- If static resources changed and the user asks for local verification, use a build-including run such as `sh run.sh` rather than `--no-build`.
