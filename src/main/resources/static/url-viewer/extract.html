@@ -422,12 +422,6 @@
 
 <div class="main">
 
-  <!-- 대분류 헤더(id 유지) — 설정 탭 loadExtractContent 가 함께 마운트 -->
-  <div id="extractHeadingUrl" class="section-header">
-    <h3>🔍 URL 분석</h3>
-    <span class="section-sub">레포 URL 추출 · 키워드 · 경로변수 · 작업 로그</span>
-  </div>
-
   <!-- 설정 임베드: URL(#extractSectionUrl)·키워드·경로변수·작업카드 / APM(#extractSectionApm) / MOCK(#extractSectionMock) 로 분리 마운트 -->
   <div id="extractSectionUrl">
   <!-- ─── API 추출 설정 ─── -->
@@ -464,23 +458,28 @@
     </div>
 
     <!-- 공용 액션: 선택 개수와 무관하게 항상 노출 -->
-    <div style="margin-top:12px;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;">
-      <label style="display:inline-flex;align-items:center;gap:8px;font-size:12px;color:var(--text);cursor:pointer;user-select:none;">
-        <input type="checkbox" id="extractPersistDb" checked style="width:15px;height:15px;cursor:pointer;">
-        분석 후 DB에 반영 (TS 포함)
-      </label>
+    <div style="margin-top:12px;display:flex;justify-content:flex-end;">
       <button type="button" class="btn btn-purple" id="extractBtn" onclick="doExtract()">추출 시작</button>
     </div>
+  </div>
 
-    <!-- 단건 JavaParser (주로 디버그 목적) — 기본 접힘 -->
-    <div class="single-debug-box">
-      <div class="single-debug-fold-head">
-        <div class="single-debug-fold-title">🔧 단건 JavaParser 파싱 (주로 디버그 목적)</div>
-        <button type="button" class="btn btn-ghost" id="singleDebugJavaToggleBtn"
-                style="height:28px;padding:4px 12px;font-size:11px;flex-shrink:0;"
-                onclick="toggleSingleDebugJavaSection()">펼치기</button>
+  <div class="card" style="margin-top:14px;">
+    <div class="section-heading section-heading--neutral" style="justify-content:space-between;">
+      <div style="display:flex;align-items:center;gap:8px;min-width:0;">
+        <span class="dot"></span>
+        <span>단건추출 및 디버깅</span>
+        <span style="font-size:10px;font-weight:400;color:var(--text-muted);">JavaParser 단건 파싱 · TS 정규식 폴더 스캔</span>
       </div>
-      <div id="singleDebugJavaBody" style="display:none;margin-top:10px;">
+      <button type="button" class="btn btn-ghost" id="singleDebugToggleBtn"
+              style="height:28px;padding:4px 12px;font-size:12px;"
+              onclick="toggleSingleDebugSection()">펼치기</button>
+    </div>
+
+    <div id="singleDebugBody">
+      <div style="padding:14px;background:#f8fafc;border:1px solid var(--border);border-radius:8px;margin-bottom:12px;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+          <span style="font-size:13px;font-weight:700;color:#475569;">🔧 단건 JavaParser 파싱 (주로 디버그 목적)</span>
+        </div>
         <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;">
           <label class="field" style="flex:1;min-width:240px;text-transform:none;letter-spacing:0;">
             파일명 / 경로
@@ -502,17 +501,11 @@
           <b>파일 선택</b>은 PC의 <code style="font-size:10px;">.java</code>를 지정만 하고, <b>파싱 실행</b>을 눌렀을 때 서버로 전송·파싱합니다(레포 미선택 시 프리픽스는 비우고 미리보기).
         </p>
       </div>
-    </div>
 
-    <!-- TS(NestJS) 정규식 파싱 (디버그 목적) — 기본 접힘 -->
-    <div class="single-debug-box" data-admin-only style="margin-top:10px;">
-      <div class="single-debug-fold-head">
-        <div class="single-debug-fold-title">📘 TS(NestJS) 정규식 파싱 (디버그 · 폴더 스캔)</div>
-        <button type="button" class="btn btn-ghost" id="singleDebugTsToggleBtn"
-                style="height:28px;padding:4px 12px;font-size:11px;flex-shrink:0;"
-                onclick="toggleSingleDebugTsSection()">펼치기</button>
-      </div>
-      <div id="singleDebugTsBody" style="display:none;margin-top:10px;">
+      <div data-admin-only style="padding:14px;background:#f8fafc;border:1px solid var(--border);border-radius:8px;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+          <span style="font-size:13px;font-weight:700;color:#475569;">📘 TS(NestJS) 정규식 파싱 (디버그 · 폴더 스캔)</span>
+        </div>
         <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;">
           <label class="field" style="flex:1;min-width:280px;text-transform:none;letter-spacing:0;">
             rootPath (레포 ROOT)
@@ -990,40 +983,24 @@
     applyMockFoldState(collapsed);
   })();
 
-  // ── 단건 JavaParser / TS 디버그 블록 접기 (기본: 접힘, localStorage 유지) ──
-  const DEBUG_JAVA_FOLD_KEY = 'extract.debugJavaSectionCollapsed';
-  const DEBUG_TS_FOLD_KEY = 'extract.debugTsSectionCollapsed';
-  function applySingleDebugJavaFoldState(collapsed) {
-    const body = document.getElementById('singleDebugJavaBody');
-    const btn = document.getElementById('singleDebugJavaToggleBtn');
+  // ── 단건추출 및 디버깅 섹션 접기/펼치기 (기본: 접힘, localStorage 유지) ──
+  const SINGLE_DEBUG_FOLD_KEY = 'extract.singleDebugSectionCollapsed';
+  function applySingleDebugFoldState(collapsed) {
+    const body = document.getElementById('singleDebugBody');
+    const btn = document.getElementById('singleDebugToggleBtn');
     if (!body || !btn) return;
     body.style.display = collapsed ? 'none' : 'block';
     btn.textContent = collapsed ? '펼치기' : '접기';
   }
-  function applySingleDebugTsFoldState(collapsed) {
-    const body = document.getElementById('singleDebugTsBody');
-    const btn = document.getElementById('singleDebugTsToggleBtn');
-    if (!body || !btn) return;
-    body.style.display = collapsed ? 'none' : 'block';
-    btn.textContent = collapsed ? '펼치기' : '접기';
-  }
-  function toggleSingleDebugJavaSection() {
-    const collapsed = localStorage.getItem(DEBUG_JAVA_FOLD_KEY) !== 'false';
+  function toggleSingleDebugSection() {
+    const collapsed = localStorage.getItem(SINGLE_DEBUG_FOLD_KEY) !== 'false';
     const next = !collapsed;
-    localStorage.setItem(DEBUG_JAVA_FOLD_KEY, String(next));
-    applySingleDebugJavaFoldState(next);
+    localStorage.setItem(SINGLE_DEBUG_FOLD_KEY, String(next));
+    applySingleDebugFoldState(next);
   }
-  function toggleSingleDebugTsSection() {
-    const collapsed = localStorage.getItem(DEBUG_TS_FOLD_KEY) !== 'false';
-    const next = !collapsed;
-    localStorage.setItem(DEBUG_TS_FOLD_KEY, String(next));
-    applySingleDebugTsFoldState(next);
-  }
-  (function initDebugFoldSections() {
-    const javaCollapsed = localStorage.getItem(DEBUG_JAVA_FOLD_KEY) !== 'false';
-    const tsCollapsed = localStorage.getItem(DEBUG_TS_FOLD_KEY) !== 'false';
-    applySingleDebugJavaFoldState(javaCollapsed);
-    applySingleDebugTsFoldState(tsCollapsed);
+  (function initSingleDebugFold() {
+    const collapsed = localStorage.getItem(SINGLE_DEBUG_FOLD_KEY) !== 'false';
+    applySingleDebugFoldState(collapsed);
   })();
 
   // RepoSelect 기반 헬퍼 — 다중 선택 시 [선택된 repoName 배열] 반환.
@@ -1943,15 +1920,12 @@
         currentExtractRepo = repositoryName || '';
         currentExtractRoot = rootPath || '';
         // skipSnapshot=true: 일괄 추출 — 매 레포마다 스냅샷이 만들어지지 않도록 하고, 마지막에 1회만 생성한다.
-        const persistEl = document.getElementById('extractPersistDb');
-        const persistToDatabase = !(persistEl && !persistEl.checked);
         const res = await fetch('/api/extract', {
           method: 'POST',
           headers: {'Content-Type':'application/json', 'X-Admin-Token': sessionStorage.getItem('adminToken')||''},
           body: JSON.stringify({
             rootPath, repositoryName, domain, apiPathPrefix, gitBinPath, pathConstants,
-            skipSnapshot: true,
-            persistToDatabase
+            skipSnapshot: true
           })
         });
         const data = await res.json();

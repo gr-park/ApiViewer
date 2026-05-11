@@ -25,7 +25,7 @@ Spring Boot 기반 웹 애플리케이션. Controller 소스를 파싱하여 URL
   - 파일 수 규칙과 의미가 충돌하면 **더 높은 승격**을 택한다. 애매하면 보수적으로 한 단계 올린다.
 
 - **변경 파일 수 산정 (`APP_UI_VERSION` 승격 단계 결정)**
-  - **대상**: 이번 작업에서 **수정·추가·삭제**한 **프로젝트 소스 전부**(예: `src/**`, 루트 설정·스크립트·`pom.xml`, `CLAUDE.md` 등 **저장소에 포함되는 파일**). `target/`, `data/`, `logs/` 등 **빌드·런타임 산출물은 제외**.
+ - **대상**: 이번 작업에서 **수정·추가·삭제**한 **프로젝트 소스 전부**(예: `src/**`, 루트 설정·스크립트·`pom.xml` 등 **저장소에 포함되는 파일**). 단, **`CLAUDE.md`는 문서 동기화 목적이므로 버전 승격용 변경 파일 수 산정에서 제외**한다. `target/`, `data/`, `logs/` 등 **빌드·런타임 산출물은 제외**.
   - **7개 이상** → **major** 증가.
   - **5개 이상 7개 미만** → **minor** 증가.
   - **5개 미만** → **patch**(마지막 숫자)만 증가.
@@ -91,8 +91,8 @@ Spring Boot 기반 웹 애플리케이션. Controller 소스를 파싱하여 URL
 | `/url-viewer/`, `/url-viewer/viewer.html`, `/url-viewer/call-stats.html`, `/url-viewer/url-block-monitor.html`, `/url-viewer/review.html`, `/url-viewer/workflow.html` | 공개 (`viewer.html`은 **관리자 또는 일반사용자(IT담당자) 로그인 전까지 조회 전용** — 네비 「일반사용자 로그인」모달) |
 | `/url-viewer/extract.html`, `/settings/`, `/h2-console` | 관리자 |
 
-`extract.html`(설정의 URL분석/검토 탭에 embed): 탭 본문은 **대분류 4구역**(현업검토 · URL 분석 · APM 추출 · MOCK)으로 나뉘며, `loadExtractContent()`가 `extractSectionUrl` / 키워드·경로변수·작업카드 / `extractSectionApm` / `extractSectionMock`을 각각 마운트한다. **레포별 APM 수집**에서 **전체(레포설정)**(`ALL`) 선택 시 레포 셀렉터는 와탭·제니퍼 중 하나라도 **Y**인 레포만 표시하고, 수집 실행 시 선택 레포마다 `collectAllApm`과 동일하게(활성 와탭 최대 365일·활성 제니퍼 최대 30일 순차 수집 후 집계) 동작한다. WHATAP/JENNIFER 단일 선택 시에는 각각 `whatapEnabled`/`jenniferEnabled`가 **Y**인 레포만 표시한다. JENNIFER 선택 시 최대 30일 제한을 토스트·안내 문구로 알린다. MOCK(테스트) 선택 시에는 전체 레포 목록을 쓴다.
-- **수동 추출 DB 옵트아웃**: `extract.html` 「분석 후 DB에 반영 (TS 포함)」(기본 ON)를 끄면 `POST /api/extract`에 `persistToDatabase: false` — 추출·TS 스캔만 하고 `ApiExtractorService`에서 DB 저장·APM 집계·(단일 레포) 스냅샷은 생략. `ts_analysis_enabled=Y` 레포는 진행률 분모에 TS 스캔 1단계를 포함한다.
+`extract.html`(설정의 URL분석/검토 탭에 embed): 탭 본문은 **대분류 4구역**(현업검토 · URL 분석 · APM 추출 · MOCK)으로 나뉘며, `loadExtractContent()`가 `extractSectionUrl` / 키워드·경로변수·작업카드 / `extractSectionApm` / `extractSectionMock`을 각각 마운트한다. URL 분석 영역은 **`URL 분석 추출`** 카드와 기본 접힘 **`단건추출 및 디버깅`** 카드(JavaParser 단건 파싱 + TS 정규식 폴더 스캔)로 구성한다. **레포별 APM 수집**에서 **전체(레포설정)**(`ALL`) 선택 시 레포 셀렉터는 와탭·제니퍼 중 하나라도 **Y**인 레포만 표시하고, 수집 실행 시 선택 레포마다 `collectAllApm`과 동일하게(활성 와탭 최대 365일·활성 제니퍼 최대 30일 순차 수집 후 집계) 동작한다. WHATAP/JENNIFER 단일 선택 시에는 각각 `whatapEnabled`/`jenniferEnabled`가 **Y**인 레포만 표시한다. JENNIFER 선택 시 최대 30일 제한을 토스트·안내 문구로 알린다. MOCK(테스트) 선택 시에는 전체 레포 목록을 쓴다.
+- **수동 추출 저장 정책**: `extract.html`의 일반 추출은 별도 체크박스 없이 DB 반영을 기본값으로 사용한다. `ts_analysis_enabled=Y` 레포는 TS 스캔 결과도 함께 반영되며, 진행률 분모에 TS 스캔 1단계를 포함한다.
 - **URL현황(담당자)**: `proposalStatusChangeSummary`가 있는 행은 이미 상태 승인요청 중으로 간주 — 일괄 승인요청 시 확인 모달 후 제외, 상세의 승인요청 버튼 비활성. 서버 `RecordProposalService`는 EDITOR가 기존 제안에 `status`가 있는 상태에서 다른 `status`/사유로 재PUT하는 것을 거절(동일 값 재전송은 데이터 제안 병합용으로 허용). 일괄 바 **반려상태알림**「확인」은 `GET /api/assignee/inbox-summary`의 미확인 반려를 일괄 dismiss 후 `AppNav.refreshEditorInbox()`로 쪽지함·배지 동기화.
 | `/encrypt-viewer/` | 공개(자리표시자) |
 
@@ -384,16 +384,15 @@ CBO→운영 노랑→주황 명도, 운영 주황 전용. 배지 Body/Header �
 
 | 항목 | 내용 |
 |------|------|
-| 제외 대상 | `target/`, `.git/`, `.idea/`, `.claude/`, `data/`, `logs/`, `.sh`, `.bat`, `mvnw`, `*.jar` (lib/*.jar 포함), `application.properties`, `repos-config.yml` (루트), `src/main/resources/repos-config.yml` (리소스) |
+| 제외 대상 | `target/`, `.git/`, `.idea/`, `.claude/`, `data/`, `logs/`, `.sh`, `.bat`, `mvnw`, `*.jar` (lib/*.jar 포함), `application.properties`, `src/main/resources/application.properties`, `repos-config.yml` (루트), `src/main/resources/repos-config.yml` (리소스) |
 | 출력 경로 | `/Users/baegmyeongseon/Downloads/ApiViewer.zip` (절대 경로 사용) |
 | 실행 위치 | `cd /Users/baegmyeongseon/LP_DEV` 후 `zip -r 출력경로 ApiViewer --exclude "ApiViewer/..."` |
 | 기존 파일 | 기존 zip 존재 시 반드시 먼저 삭제 후 재생성 (업데이트 모드 방지) |
 
 ## application.properties 포함 여부 규칙
 
-- **기본: 제외** — `application.properties`는 DB URL, 포트, 비밀번호 등 환경별 설정이 달라 기본 제외
-- **변경 시: 사용자에게 먼저 확인** — 압축 직전 `git diff`로 변경 여부를 체크하고, 변경이 있으면 포함 여부를 사용자에게 물어본 후 결정
-- 확인 메시지 예시: "`application.properties`가 변경되었습니다. 압축에 포함할까요? (포함 시 DB 접속 정보 등이 노출될 수 있습니다.)"
+- **압축 시: 항상 제외** — 루트 `application.properties`와 `src/main/resources/application.properties`는 DB URL, 포트, 비밀번호 등 환경별 설정이 달라 압축에 포함하지 않는다
+- **압축 명령 작성 시 주의** — 제외 패턴에 루트 파일뿐 아니라 `src/main/resources/application.properties`도 명시해, classpath 리소스 설정이 함께 포함되지 않도록 한다
 
 ## repos-config.yml 위치 및 압축 규칙
 
