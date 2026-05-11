@@ -14,8 +14,16 @@ public class ExtractRequest {
      */
     private boolean skipSnapshot = false;
 
+    /**
+     * false면 추출·TS 스캔은 수행하되 DB 저장·APM 집계·(단일 레포) 스냅샷 생성은 하지 않는다. 수동 미리보기용.
+     */
+    private boolean persistToDatabase = true;
+
     public boolean isSkipSnapshot() { return skipSnapshot; }
     public void setSkipSnapshot(boolean skipSnapshot) { this.skipSnapshot = skipSnapshot; }
+
+    public boolean isPersistToDatabase() { return persistToDatabase; }
+    public void setPersistToDatabase(boolean persistToDatabase) { this.persistToDatabase = persistToDatabase; }
 
     public String getClientIp() { return clientIp; }
     public void setClientIp(String clientIp) { this.clientIp = clientIp; }

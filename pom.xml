@@ -69,9 +69,11 @@
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
+        <!-- 사내망 저장소 정렬: Boot BOM(3.4 → crypto 6.4.x) 대신 반입 가능한 6.2.0 고정 -->
         <dependency>
             <groupId>org.springframework.security</groupId>
             <artifactId>spring-security-crypto</artifactId>
+            <version>6.2.0</version>
         </dependency>
     </dependencies>
 

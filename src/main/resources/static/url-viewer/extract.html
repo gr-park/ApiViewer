@@ -464,7 +464,11 @@
     </div>
 
     <!-- 공용 액션: 선택 개수와 무관하게 항상 노출 -->
-    <div style="margin-top:12px;display:flex;justify-content:flex-end;">
+    <div style="margin-top:12px;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;">
+      <label style="display:inline-flex;align-items:center;gap:8px;font-size:12px;color:var(--text);cursor:pointer;user-select:none;">
+        <input type="checkbox" id="extractPersistDb" checked style="width:15px;height:15px;cursor:pointer;">
+        분석 후 DB에 반영 (TS 포함)
+      </label>
       <button type="button" class="btn btn-purple" id="extractBtn" onclick="doExtract()">추출 시작</button>
     </div>
 
@@ -1939,10 +1943,16 @@
         currentExtractRepo = repositoryName || '';
         currentExtractRoot = rootPath || '';
         // skipSnapshot=true: 일괄 추출 — 매 레포마다 스냅샷이 만들어지지 않도록 하고, 마지막에 1회만 생성한다.
+        const persistEl = document.getElementById('extractPersistDb');
+        const persistToDatabase = !(persistEl && !persistEl.checked);
         const res = await fetch('/api/extract', {
           method: 'POST',
           headers: {'Content-Type':'application/json', 'X-Admin-Token': sessionStorage.getItem('adminToken')||''},
-          body: JSON.stringify({ rootPath, repositoryName, domain, apiPathPrefix, gitBinPath, pathConstants, skipSnapshot: true })
+          body: JSON.stringify({
+            rootPath, repositoryName, domain, apiPathPrefix, gitBinPath, pathConstants,
+            skipSnapshot: true,
+            persistToDatabase
+          })
         });
         const data = await res.json();
         if (!res.ok) { reject(new Error(data.error || '서버 오류')); return; }

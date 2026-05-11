@@ -83,6 +83,37 @@ public class RecordProposalService {
         }
         filtered.remove("statusChangeSummary");
 
+        if (submitterAssigneeId != null && filtered.containsKey("status")) {
+            proposalRepository.findByRecordId(recordId).ifPresent(ex -> {
+                String payload = ex.getPayloadJson();
+                if (payload == null || payload.isBlank()) {
+                    return;
+                }
+                try {
+                    Map<String, Object> prev = objectMapper.readValue(payload, new TypeReference<>() {});
+                    if (prev == null || !prev.containsKey("status")) {
+                        return;
+                    }
+                    Object newSt = filtered.get("status");
+                    Object oldSt = prev.get("status");
+                    String ns = newSt == null ? "" : newSt.toString().trim();
+                    String os = oldSt == null ? "" : oldSt.toString().trim();
+                    Object newR = filtered.get("statusChangeReason");
+                    Object oldR = prev.get("statusChangeReason");
+                    String nr = newR == null ? "" : newR.toString().trim();
+                    String or = oldR == null ? "" : oldR.toString().trim();
+                    if (ns.equals(os) && nr.equals(or)) {
+                        return;
+                    }
+                } catch (Exception parseEx) {
+                    log.debug("[제안] 기존 payload 파싱 스킵 recordId={}: {}", recordId, parseEx.getMessage());
+                    return;
+                }
+                throw new IllegalArgumentException(
+                        "이미 승인요청 중인 상태 변경이 있습니다. 관리자 승인·반려 후 다시 시도하거나, 상태 제안 철회 후 재요청하세요.");
+            });
+        }
+
         ApiRecord record = recordRepository.findById(recordId)
                 .orElseThrow(() -> new IllegalArgumentException("레코드를 찾을 수 없습니다."));
         if (filtered.containsKey("status")) {

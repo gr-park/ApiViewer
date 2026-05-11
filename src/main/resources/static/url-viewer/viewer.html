@@ -1076,6 +1076,11 @@
       <button class="btn-apply" onclick="bulkClearStatusChange()" style="background:#fecaca;color:#7f1d1d;">확인</button>
     </span>
 
+    <span class="bulk-group" id="bulkRejectNoticeGroup" style="display:none;">
+      <span class="bulk-label" style="color:#fecaca;">반려상태알림</span>
+      <button type="button" class="btn-apply" id="bulkRejectDismissBtn" onclick="bulkDismissRejectNotices()" style="background:#fef2f2;color:#991b1b;border:1px solid #fca5a5;">확인</button>
+    </span>
+
     <!-- 그룹4: Jira (관리자 전용) -->
     <span class="bulk-group" id="jiraBulkGroup">
       <span class="bulk-label">SmartWay</span>
@@ -1468,6 +1473,13 @@
       showToast('비밀번호 확인 실패', 'error');
       return false;
     }
+  }
+
+  /** 목록 API의 proposalStatusChangeSummary가 있으면 상태 승인요청이 이미 있는 행 */
+  function rowHasPendingStatusProposal(row) {
+    if (!row) return false;
+    const s = row.proposalStatusChangeSummary;
+    return !!(s && String(s).trim());
   }
 
   async function bulkProposalApprove() {
@@ -3277,6 +3289,71 @@
     } catch(e) { showToast('실패: ' + e.message,'error'); } finally { hideBulkProgress(); }
   }
 
+  async function bulkDismissRejectNotices() {
+    if (!window.isEditorLoggedIn || !window.isEditorLoggedIn()) {
+      showToast('담당자 로그인 후 반려 알림을 확인할 수 있습니다.', 'info');
+      if (typeof openAssigneeLoginModal === 'function') openAssigneeLoginModal();
+      return;
+    }
+    const tok = window.getEditorToken ? window.getEditorToken() : '';
+    if (!tok) {
+      showToast('담당자 토큰이 없습니다. 다시 로그인하세요.', 'error');
+      return;
+    }
+    if (!await customConfirm('상태변경 반려 알림을 모두 확인 처리합니다. 계속하시겠습니까?')) return;
+    showBulkProgress('반려 알림 확인 중...', 1);
+    try {
+      const res = await fetch('/api/assignee/inbox-summary', { headers: { 'X-Editor-Token': tok } });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(d.error || ('HTTP ' + res.status));
+      const rejects = (d.rejectEvents || []).filter(x => x && !x.dismissedAt);
+      if (!rejects.length) {
+        showToast('확인할 반려 알림이 없습니다.', 'info');
+        await refreshAll();
+        try { await loadCounts(getSelectedReposCsv()); renderStats(); } catch (e) {}
+        updateBulkBar();
+        if (window.AppNav && typeof window.AppNav.refreshEditorInbox === 'function') {
+          await window.AppNav.refreshEditorInbox();
+        }
+        return;
+      }
+      for (const x of rejects) {
+        if (x.kind === 'rejectBatch') {
+          const batchId = x.batchId != null ? String(x.batchId).trim() : '';
+          if (!batchId) continue;
+          const r2 = await fetch('/api/assignee/reject-events/dismiss-batch', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-Editor-Token': tok },
+            body: JSON.stringify({ batchId })
+          });
+          const d2 = await r2.json().catch(() => ({}));
+          if (!r2.ok) throw new Error(d2.error || '묶음 반려 확인 실패');
+        } else {
+          const evId = x.id;
+          if (evId == null) continue;
+          const r2 = await fetch('/api/assignee/reject-events/' + encodeURIComponent(String(evId)) + '/dismiss', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-Editor-Token': tok },
+            body: '{}'
+          });
+          const d2 = await r2.json().catch(() => ({}));
+          if (!r2.ok) throw new Error(d2.error || '반려 확인 실패');
+        }
+      }
+      showToast('반려 알림을 확인했습니다.', 'success');
+      await refreshAll();
+      try { await loadCounts(getSelectedReposCsv()); renderStats(); } catch (e) {}
+      updateBulkBar();
+      if (window.AppNav && typeof window.AppNav.refreshEditorInbox === 'function') {
+        await window.AppNav.refreshEditorInbox();
+      }
+    } catch (e) {
+      showToast(e.message || '실패', 'error');
+    } finally {
+      hideBulkProgress();
+    }
+  }
+
   // ' | ' 구분자로 나뉜 변경이력 문자열을 배열로 파싱
   function parseChangeLog(log) {
     if (!log) return [];
@@ -3588,6 +3665,16 @@
         master.indeterminate = false;
       }
     }
+    const rejGrp = document.getElementById('bulkRejectNoticeGroup');
+    const rejBtn = document.getElementById('bulkRejectDismissBtn');
+    if (rejGrp) {
+      const ed = window.isEditorLoggedIn && window.isEditorLoggedIn();
+      const c = serverCounts || {};
+      const n = Number(c.openRejectEventCount) || 0;
+      const showRej = show && ed && n > 0;
+      rejGrp.style.display = showRej ? 'inline-flex' : 'none';
+      if (rejBtn) rejBtn.disabled = !showRej;
+    }
     const seg = document.getElementById('bulkStatusEditSeg');
     const bp = document.getElementById('bulkStatusEditPrimary');
     const bs = document.getElementById('bulkStatusEditSecondary');
@@ -3662,9 +3749,31 @@
     document.getElementById('bulkCombinedModal').style.display = 'flex';
   }
 
-  function openBulkStatusModal() {
+  async function openBulkStatusModal() {
     if (selectedIds.size === 0) { showToast('선택된 항목이 없습니다.', 'error'); return; }
     if (!guardCanWriteTable('상태 변경')) return;
+    window._bulkStatusFilteredIds = null;
+    if (!isAdmin()) {
+      const all = Array.from(selectedIds);
+      const skipped = [];
+      const proceed = [];
+      for (const id of all) {
+        const row = allApis.find(a => a.id === id);
+        if (rowHasPendingStatusProposal(row)) skipped.push(id);
+        else proceed.push(id);
+      }
+      if (skipped.length === all.length) {
+        showToast('선택한 항목은 모두 이미 상태 승인요청 중입니다.', 'error');
+        return;
+      }
+      if (skipped.length > 0) {
+        const ok = await customConfirm(
+          `선택 ${all.length}건 중 ${skipped.length}건은 이미 상태 승인요청이 있어 제외하고, ${proceed.length}건에만 적용합니다.\n\n진행하시겠습니까?`
+        );
+        if (!ok) return;
+        window._bulkStatusFilteredIds = proceed;
+      }
+    }
     const sel = document.getElementById('bulkStatusModalStatus');
     if (sel) sel.value = '';
     const rsn = document.getElementById('bulkStatusModalReason'); if (rsn) rsn.value = '';
@@ -3689,6 +3798,7 @@
     document.getElementById('bulkStatusModal').style.display = 'flex';
   }
   function closeBulkStatusModal() {
+    window._bulkStatusFilteredIds = null;
     const m = document.getElementById('bulkStatusModal');
     if (m) m.style.display = 'none';
   }
@@ -3721,7 +3831,9 @@
     const adm = isAdmin();
     if (!adm && !reason) { showToast('상태변경 사유를 입력하세요.', 'error'); return; }
     const statusPayload = selVal === '__AUTO__' ? null : selVal;
-    const ids = Array.from(selectedIds);
+    const ids = (adm || !window._bulkStatusFilteredIds || !window._bulkStatusFilteredIds.length)
+      ? Array.from(selectedIds)
+      : window._bulkStatusFilteredIds.slice();
     if (!await customConfirm(`선택 ${ids.length}건에 상태를 반영합니다. 계속하시겠습니까?`)) return;
     showBulkProgress(adm ? '상태 저장 중...' : '승인요청 저장 중...', ids.length);
     try {
@@ -4514,8 +4626,14 @@
     window._detailProposalSubmitterName = proposalSubmitterNameRaw(r);
     detailSummVal = withProposalSubmitterSuffix(detailSummVal, window._detailProposalSubmitterName);
     const adminPendingProposal = isAdmin() && !lk && r.hasPendingProposal;
+    const pendingStatusReq = editorSession && !lk && rowHasPendingStatusProposal(r);
     const statusApproveBtn = editorSession && !lk
-        ? `<button type="button" class="btn btn-sm btn-blue" onclick="detailSubmitStatusProposal()" style="flex:none;white-space:nowrap;">승인요청</button>`
+        ? (pendingStatusReq
+            ? `<span style="display:inline-flex;flex-wrap:wrap;gap:6px;align-items:center;flex:none;">
+                 <button type="button" class="btn btn-sm btn-blue" disabled style="flex:none;white-space:nowrap;opacity:0.55;cursor:not-allowed;">승인요청</button>
+                 <span style="font-size:10px;color:#64748b;white-space:nowrap;">이미 승인요청 중</span>
+               </span>`
+            : `<button type="button" class="btn btn-sm btn-blue" onclick="detailSubmitStatusProposal()" style="flex:none;white-space:nowrap;">승인요청</button>`)
         : (adminPendingProposal
             ? `<span style="display:inline-flex;flex-wrap:wrap;gap:6px;align-items:center;flex:none;">
                  <button type="button" class="btn btn-sm btn-blue" onclick="detailProposalApprove()" style="white-space:nowrap;">승인완료</button>
@@ -4814,6 +4932,11 @@
   async function detailSubmitStatusProposal() {
     const id = parseInt(document.getElementById('df-id')?.value || '0', 10);
     if (!id) return;
+    const curRow = allApis.find(a => a.id === id);
+    if (rowHasPendingStatusProposal(curRow)) {
+      showToast('이미 상태 승인요청이 있습니다. 관리자 처리 후 다시 시도하세요.', 'error');
+      return;
+    }
     if (!guardWritable('승인요청')) return;
     const reason = (document.getElementById('df-statusChangeReason')?.value || '').trim();
     if (!reason) { showToast('상태변경 사유를 입력하세요.', 'error'); return; }

@@ -236,6 +236,8 @@ public class ApiExtractorService {
             addLog("INFO", "레포지토리: " + req.getRepositoryName());
         }
 
+        boolean tsRanForSummary = false;
+        int javaControllerFileCount = 0;
         try {
             Path root = Paths.get(rootPath);
             if (!Files.exists(root)) throw new IllegalArgumentException("경로가 존재하지 않습니다: " + rootPath);
@@ -281,10 +283,19 @@ public class ApiExtractorService {
                     })
                     .collect(Collectors.toList());
 
-            totalFiles = controllerFiles.size();
+            java.util.Optional<com.baek.viewer.model.RepoConfig> rcTsOptForProgress = java.util.Optional.empty();
+            if (repoName != null && !repoName.isBlank()) {
+                rcTsOptForProgress = repoConfigRepository.findByRepoName(repoName);
+            }
+            boolean tsWillScan = rcTsOptForProgress.isPresent()
+                    && "Y".equals(rcTsOptForProgress.get().getTsAnalysisEnabled());
+            int javaFileCount = controllerFiles.size();
+            javaControllerFileCount = javaFileCount;
+            totalFiles = javaFileCount + (tsWillScan ? 1 : 0);
             processedFiles = 0;
             currentFile = "";  // 파일 개별 처리로 진입 — 개별 파일명이 채워짐
-            addLog("INFO", "Controller 파일 " + totalFiles + "개 발견");
+            addLog("INFO", "Controller 파일 " + javaFileCount + "개 발견"
+                    + (tsWillScan ? " · TS(NestJS) 스캔 1단계 포함(진행률)" : ""));
 
             controllerFiles.parallelStream().forEach(file -> {
                 String rel = root.relativize(file).toString();
@@ -301,26 +312,26 @@ public class ApiExtractorService {
                 processedFiles++;
             });
 
-            if (repoName != null && !repoName.isBlank()) {
-                var rcTsOpt = repoConfigRepository.findByRepoName(repoName);
-                if (rcTsOpt.isPresent() && "Y".equals(rcTsOpt.get().getTsAnalysisEnabled())) {
-                    String tsGitBin = gitBin;
-                    String gbp = rcTsOpt.get().getGitBinPath();
-                    if (gbp != null && !gbp.isBlank()) tsGitBin = gbp;
-                    addLog("INFO", "TS(NestJS) 라우트 스캔 시작 (ts_analysis_enabled=Y)");
-                    currentFile = "TS(NestJS) 스캔 중...";
-                    try {
-                        List<ApiInfo> tsApis = extractWithTsRegexDebug(root, apiPathPrefix, null, null,
-                                null, "", null);
-                        applyGitHistoryPerRepoPath(tsApis, rootPath, tsGitBin);
-                        apis.addAll(tsApis);
-                        addLog("OK", "TS(NestJS) 스캔 완료 — " + tsApis.size() + "개 API (Java 결과에 병합)");
-                    } catch (Exception tsEx) {
-                        addLog("WARN", "TS(NestJS) 스캔 실패 (Java 결과만 이어서 처리): " + tsEx.getMessage());
-                        log.warn("[추출] TS 스캔 실패 repo={}", repoName, tsEx);
-                    }
+            if (tsWillScan) {
+                var rcTs = rcTsOptForProgress.get();
+                String tsGitBin = gitBin;
+                String gbp = rcTs.getGitBinPath();
+                if (gbp != null && !gbp.isBlank()) tsGitBin = gbp;
+                addLog("INFO", "TS(NestJS) 라우트 스캔 시작 (ts_analysis_enabled=Y)");
+                currentFile = "TS(NestJS) 스캔 중...";
+                try {
+                    List<ApiInfo> tsApis = extractWithTsRegexDebug(root, apiPathPrefix, null, null,
+                            null, "", null);
+                    applyGitHistoryPerRepoPath(tsApis, rootPath, tsGitBin);
+                    apis.addAll(tsApis);
+                    addLog("OK", "TS(NestJS) 스캔 완료 — " + tsApis.size() + "개 API (Java 결과에 병합)");
+                } catch (Exception tsEx) {
+                    addLog("WARN", "TS(NestJS) 스캔 실패 (Java 결과만 이어서 처리): " + tsEx.getMessage());
+                    log.warn("[추출] TS 스캔 실패 repo={}", repoName, tsEx);
                 }
+                processedFiles++;
             }
+            tsRanForSummary = tsWillScan;
 
         } catch (Exception e) {
             lastError = e.getMessage();
@@ -339,14 +350,21 @@ public class ApiExtractorService {
         }
 
         cachedApis = sorted;
-        addLog("INFO", "추출 완료 — 총 " + sorted.size() + "개 API, 파일 " + totalFiles + "개 처리");
+        addLog("INFO", "추출 완료 — 총 " + sorted.size() + "개 API, Java 컨트롤러 파일 "
+                + javaControllerFileCount + "개 처리"
+                + (tsRanForSummary ? " + TS 스캔" : ""));
 
         // DB 저장 (레포지토리명이 있을 때만)
-        String repoName = req.getRepositoryName();
-        if (repoName != null && !repoName.isBlank()) {
+        String repoNameOut = req.getRepositoryName();
+        if (repoNameOut != null && !repoNameOut.isBlank()) {
+            if (!req.isPersistToDatabase()) {
+                savedCount = 0;
+                statusRevertedCount = 0;
+                addLog("INFO", "DB 저장 건너뜀 — 요청에 따라 미리보기만 수행 (APM·스냅샷 생략)");
+            } else {
             try {
-                addLog("INFO", "DB 저장 중 — 레포: " + repoName.trim());
-                int[] saveResult = storageService.save(repoName.trim(), cachedApis, req.getClientIp());
+                addLog("INFO", "DB 저장 중 — 레포: " + repoNameOut.trim());
+                int[] saveResult = storageService.save(repoNameOut.trim(), cachedApis, req.getClientIp());
                 savedCount = saveResult[0];
                 statusRevertedCount = saveResult[1];
                 String saveMsg = "DB 저장 완료 — " + savedCount + "개 저장/갱신";
@@ -359,7 +377,7 @@ public class ApiExtractorService {
 
             // APM 호출건수 자동 집계 (데이터가 있을 때만)
             try {
-                var result = apmCollectionService.aggregateToRecords(repoName.trim());
+                var result = apmCollectionService.aggregateToRecords(repoNameOut.trim());
                 int aggUpdated = ((Number) result.get("updated")).intValue();
                 if (aggUpdated > 0) {
                     addLog("OK", "호출건수 자동 집계 — " + aggUpdated + "개 API 반영");
@@ -380,8 +398,8 @@ public class ApiExtractorService {
                     if (savedCount >= 0) {
                         String ts = java.time.LocalDateTime.now().toString().replace("T", " ");
                         if (ts.length() > 19) ts = ts.substring(0, 19);
-                        String label = "Extract " + repoName.trim() + " @ " + ts;
-                        snapshotService.createSnapshot("EXTRACT_MANUAL", label, repoName.trim(), req.getClientIp());
+                        String label = "Extract " + repoNameOut.trim() + " @ " + ts;
+                        snapshotService.createSnapshot("EXTRACT_MANUAL", label, repoNameOut.trim(), req.getClientIp());
                         addLog("OK", "스냅샷 생성 완료 (전체 스냅샷)");
                     } else {
                         addLog("WARN", "스냅샷 생성 건너뜀 (DB 저장 실패)");
@@ -389,6 +407,7 @@ public class ApiExtractorService {
                 } catch (Exception e) {
                     addLog("WARN", "스냅샷 생성 실패 (분석 결과에 영향 없음): " + e.getMessage());
                 }
+            }
             }
         }
 

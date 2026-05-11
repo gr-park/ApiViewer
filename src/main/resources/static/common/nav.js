@@ -13,7 +13,7 @@
  * ═══════════════════════════════════════════════════════════════ */
 (function () {
   // UI 버전 표기 (캐시/반영 여부 확인용) — 변경 시 이 값만 갱신
-  const APP_UI_VERSION = 'ver11.0.01';
+  const APP_UI_VERSION = 'ver12.0.01';
 
   const SEGMENTS = [
     {
@@ -1118,6 +1118,11 @@
     submitMsgToAdmin,
     openReplyFromAdminModal,
     closeReplyFromAdminModal,
-    submitReplyFromAdmin
+    submitReplyFromAdmin,
+    /** URL현황 등에서 반려 일괄 확인 후 배지·쪽지 패널 동기화 */
+    refreshEditorInbox: async () => {
+      await refreshEditorInboxBadge();
+      await reloadEditorInboxPanel();
+    }
   };
 })();
