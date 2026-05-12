@@ -98,6 +98,13 @@
       gap: 6px;
       flex-wrap: wrap;
     }
+    .query-summary-primary-actions {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .query-summary-primary-actions > .btn { margin: 0; }
     .query-filter-divider {
       border: none;
       border-top: 1px dashed var(--border);
@@ -328,6 +335,68 @@
     .filter-bar select { padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 12px; outline: none; background: var(--card); }
     .filter-count { margin-left: auto; font-size: 12px; color: var(--text-muted); }
     .filter-row { width: 100%; display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+    .table-view-toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 0 4px;
+      white-space: nowrap;
+    }
+    .table-view-label-btn {
+      border: none;
+      background: transparent;
+      padding: 0;
+      margin: 0;
+      font: inherit;
+      font-size: 12px;
+      font-weight: 700;
+      color: #64748b;
+      cursor: pointer;
+      transition: color .15s ease, opacity .15s ease;
+    }
+    .table-view-label-btn:hover { color: #2563eb; }
+    .table-view-label-btn.active { color: #1d4ed8; }
+    .table-view-switch {
+      position: relative;
+      width: 42px;
+      height: 24px;
+      border: none;
+      border-radius: 999px;
+      padding: 2px;
+      background: #2563eb;
+      box-shadow: inset 0 0 0 1px rgba(29, 78, 216, 0.18);
+      cursor: pointer;
+      transition: background .18s ease;
+    }
+    .table-view-switch::after {
+      content: "";
+      display: block;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: #fff;
+      box-shadow: 0 1px 4px rgba(15, 23, 42, 0.28);
+      transform: translateX(0);
+      transition: transform .18s ease;
+    }
+    .table-view-switch.is-detail::after {
+      transform: translateX(18px);
+    }
+    .table-view-switch:focus-visible {
+      outline: 2px solid #93c5fd;
+      outline-offset: 2px;
+    }
+    [data-theme="dark"] .table-view-label-btn {
+      color: #94a3b8;
+    }
+    [data-theme="dark"] .table-view-label-btn:hover,
+    [data-theme="dark"] .table-view-label-btn.active {
+      color: #93c5fd;
+    }
+    [data-theme="dark"] .table-view-switch {
+      background: #3b82f6;
+      box-shadow: inset 0 0 0 1px rgba(147, 197, 253, 0.22);
+    }
     /* 관리자 전용(변경일시) 필터 위 시각적 구분 */
     .admin-modified-filter-sep {
       margin-top: 8px;
@@ -585,6 +654,7 @@
     /* 마지막 sticky 컬럼에 그림자 */
     thead th.sticky-last { border-right:2px solid #93c5fd; }
     tbody td.sk-last { border-right:2px solid #e2e8f0; box-shadow:2px 0 4px rgba(0,0,0,.06); }
+    #apiTable.compact-view .col-compact-hide { display:none; }
 
     .ref-col { font-size:10px; color:var(--text-muted); max-width:140px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
     .desc-col { font-size:11px; color:var(--text); min-width:300px; max-width:450px; line-height:1.5; word-break:break-all; }
@@ -801,7 +871,14 @@
         <span id="globalQueryCount" title="조회 성공 후, 필터·페이지네이션 기준 총 건수"></span>
       </span>
       <span class="query-summary-actions">
-        <button type="button" class="btn btn-blue btn-sm" id="loadBtn" onclick="loadApis()">조회</button>
+        <span class="query-summary-primary-actions">
+          <button type="button" class="btn btn-blue btn-sm" id="loadBtn" onclick="loadApis()">조회</button>
+          <span class="table-view-toggle" role="group" aria-label="테이블 보기 모드">
+            <button type="button" class="table-view-label-btn" id="viewerCompactModeBtn" aria-pressed="false" onclick="setViewerTableMode('compact')">간단히</button>
+            <button type="button" class="table-view-switch" id="viewerTableModeSwitch" role="switch" aria-checked="false" aria-label="간단히와 자세히 보기 전환" onclick="toggleViewerTableMode()"></button>
+            <button type="button" class="table-view-label-btn" id="viewerDetailModeBtn" aria-pressed="false" onclick="setViewerTableMode('detail')">자세히</button>
+          </span>
+        </span>
         <button type="button" class="btn btn-green btn-sm" id="excelBtn" onclick="downloadExcel()" style="display:none;">⬇ 엑셀다운로드</button>
         <span id="uploadGroup" style="display:none;gap:0;">
           <button type="button" class="btn btn-green btn-sm" id="excelUploadBtn" onclick="triggerExcelUpload()">⬆ 엑셀업로드</button>
@@ -918,7 +995,26 @@
     <div class="card-body">
       <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;">
         <label class="field">A(From) 기준일자
-          <input id="cmpFromDate" type="date" style="min-width:160px;">
+          <input id="cmpFromDate" type="hidden" value="">
+          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;min-width:160px;">
+            <div class="basis-date-picker-wrap">
+              <button type="button" id="cmpFromDateBtn" class="basis-date-btn"
+                      title="클릭하여 날짜 선택 — 스냅샷(전체 풀)이 있는 날은 달력에서 붉은 음영">기준일 선택</button>
+              <div id="cmpFromDateCalPop" class="basis-snap-cal" style="display:none;" role="dialog" aria-label="비교 A 기준일자 달력">
+                <div class="basis-snap-cal-head">
+                  <button type="button" id="cmpFromCalPrev" aria-label="이전 달">◀</button>
+                  <strong id="cmpFromCalTitle">—</strong>
+                  <button type="button" id="cmpFromCalNext" aria-label="다음 달">▶</button>
+                  <button type="button" id="cmpFromCalClose" style="margin-left:4px;" aria-label="닫기">✕</button>
+                </div>
+                <div class="basis-snap-cal-grid" id="cmpFromCalGrid"></div>
+                <div class="basis-snap-cal-legend"><span class="i" aria-hidden="true"></span> 붉은 날 = 전체(풀) 스냅샷 존재</div>
+              </div>
+            </div>
+            <button type="button" id="cmpFromDateClearBtn"
+                    title="기준일자 비우기 (현재 DB 비교)"
+                    style="display:none;height:34px;padding:0 10px;font-size:11px;border:1px solid var(--border);border-radius:6px;background:var(--card);cursor:pointer;color:var(--text-muted);">✕ 비우기</button>
+          </div>
         </label>
         <label class="field">A 스냅샷(시간)
           <select id="cmpFromSnapshotId" style="min-width:220px;">
@@ -926,7 +1022,26 @@
           </select>
         </label>
         <label class="field">B(To) 기준일자
-          <input id="cmpToDate" type="date" style="min-width:160px;">
+          <input id="cmpToDate" type="hidden" value="">
+          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;min-width:160px;">
+            <div class="basis-date-picker-wrap">
+              <button type="button" id="cmpToDateBtn" class="basis-date-btn"
+                      title="클릭하여 날짜 선택 — 스냅샷(전체 풀)이 있는 날은 달력에서 붉은 음영">기준일 선택</button>
+              <div id="cmpToDateCalPop" class="basis-snap-cal" style="display:none;" role="dialog" aria-label="비교 B 기준일자 달력">
+                <div class="basis-snap-cal-head">
+                  <button type="button" id="cmpToCalPrev" aria-label="이전 달">◀</button>
+                  <strong id="cmpToCalTitle">—</strong>
+                  <button type="button" id="cmpToCalNext" aria-label="다음 달">▶</button>
+                  <button type="button" id="cmpToCalClose" style="margin-left:4px;" aria-label="닫기">✕</button>
+                </div>
+                <div class="basis-snap-cal-grid" id="cmpToCalGrid"></div>
+                <div class="basis-snap-cal-legend"><span class="i" aria-hidden="true"></span> 붉은 날 = 전체(풀) 스냅샷 존재</div>
+              </div>
+            </div>
+            <button type="button" id="cmpToDateClearBtn"
+                    title="기준일자 비우기 (현재 DB 비교)"
+                    style="display:none;height:34px;padding:0 10px;font-size:11px;border:1px solid var(--border);border-radius:6px;background:var(--card);cursor:pointer;color:var(--text-muted);">✕ 비우기</button>
+          </div>
         </label>
         <label class="field">B 스냅샷(시간)
           <select id="cmpToSnapshotId" style="min-width:220px;">
@@ -1074,6 +1189,7 @@
       <span class="bulk-label" style="color:#bae6fd;">상태변경</span>
       <span class="bulk-seg bulk-seg-status-edit" id="bulkStatusEditSeg">
         <button type="button" id="bulkStatusEditPrimary">승인요청</button>
+        <button type="button" id="bulkStatusEditAuto" style="display:none;">자동분석상태로 변경</button>
         <button type="button" id="bulkStatusEditSecondary" style="display:none;">일괄변경</button>
       </span>
     </span>
@@ -1088,24 +1204,20 @@
       <button type="button" class="btn-bulk btn-bulk-merge" onclick="openBulkCombinedModal()">일괄변경</button>
     </span>
 
-    <!-- 상태확정: 확정 | 해제 (한 그룹) -->
+    <!-- URL확정: 확정 | 해제 (한 그룹) -->
     <span class="bulk-group bulk-group-lock" id="bulkLockGroup">
-      <span class="bulk-label">상태확정</span>
+      <span class="bulk-label">URL확정</span>
       <span class="bulk-seg bulk-seg-confirm">
         <button type="button" onclick="bulkLock(true)">확정</button>
         <button type="button" onclick="bulkLock(false)">해제</button>
       </span>
     </span>
 
-    <!-- 그룹3: 상태변경알림 -->
+    <!-- 그룹3: 상태알림 -->
     <span class="bulk-group" id="bulkStatusAlertGroup">
-      <span class="bulk-label">상태변경알림</span>
-      <button class="btn-apply" onclick="bulkClearStatusChange()" style="background:#fecaca;color:#7f1d1d;">확인</button>
-    </span>
-
-    <span class="bulk-group" id="bulkRejectNoticeGroup" style="display:none;">
-      <span class="bulk-label" style="color:#fecaca;">반려상태알림</span>
-      <button type="button" class="btn-apply" id="bulkRejectDismissBtn" onclick="bulkDismissRejectNotices()" style="background:#fef2f2;color:#991b1b;border:1px solid #fca5a5;">확인</button>
+      <span class="bulk-label">상태알림</span>
+      <button class="btn-apply" id="bulkStatusAlertBtn" onclick="bulkClearStatusChange()" style="background:#fecaca;color:#7f1d1d;">상태변경감지 확인</button>
+      <button type="button" class="btn-apply" id="bulkRejectDismissBtn" onclick="bulkDismissRejectNotices()" style="display:none;background:#fef2f2;color:#991b1b;border:1px solid #fca5a5;">반려알림확인</button>
     </span>
 
     <!-- 그룹4: Jira (관리자 전용) -->
@@ -1141,19 +1253,19 @@
           </th>
           <!-- 개발 메타 -->
           <th class="hg-info no-sort">URL호출</th>
-          <!-- 상태 / 제안 메타 / 상태확정 -->
+          <!-- 상태 / 제안 메타 / URL확정 -->
           <th class="hg-info" onclick="sortBy('status')">상태 <span class="sort-icon">↕</span></th>
-          <th class="hg-info" onclick="sortBy('autoAnalyzedStatus')" title="순수 자동 판정(스티키 없음)">자동분석상태 <span class="sort-icon">↕</span></th>
-          <th class="hg-info no-sort" style="min-width:120px;">상태변경 사항</th>
-          <th class="hg-info no-sort" style="min-width:100px;">상태변경 사유</th>
-          <th class="hg-info no-sort">상태확정</th>
-          <th class="hg-info no-sort" style="min-width:140px;">테스트용 의심</th>
-          <th class="hg-info" onclick="sortBy('pathParamPattern')" style="min-width:140px;">파라미터URL 패턴 <span class="sort-icon">↕</span></th>
+          <th class="hg-info col-compact-hide" onclick="sortBy('autoAnalyzedStatus')" title="순수 자동 판정(스티키 없음)">자동분석상태 <span class="sort-icon">↕</span></th>
+          <th class="hg-info no-sort col-compact-hide" style="min-width:120px;">상태변경 사항</th>
+          <th class="hg-info no-sort col-compact-hide" style="min-width:100px;">상태변경 사유</th>
+          <th class="hg-info no-sort col-compact-hide">URL확정여부</th>
+          <th class="hg-info no-sort col-compact-hide" style="min-width:140px;">테스트용 의심</th>
+          <th class="hg-info col-compact-hide" onclick="sortBy('pathParamPattern')" style="min-width:140px;">파라미터URL 패턴 <span class="sort-icon">↕</span></th>
           <!-- 개발 메타 -->
-          <th class="hg-dev" onclick="sortBy('controllerName')">컨트롤러 <span class="sort-icon">↕</span></th>
-          <th class="hg-dev" style="min-width:160px;" onclick="sortBy('methodName')">메소드명 <span class="sort-icon">↕</span></th>
+          <th class="hg-dev col-compact-hide" onclick="sortBy('controllerName')">컨트롤러 <span class="sort-icon">↕</span></th>
+          <th class="hg-dev col-compact-hide" style="min-width:160px;" onclick="sortBy('methodName')">메소드명 <span class="sort-icon">↕</span></th>
           <!-- 기타 메타 -->
-          <th class="hg-dev no-sort">최근변경</th>
+          <th class="hg-dev no-sort col-compact-hide">최근변경</th>
           <th class="hg-desc" onclick="sortBy('apiOperationValue')">관련메뉴 <span class="sort-icon">↕</span></th>
           <th class="hg-desc" style="min-width:120px;" onclick="sortBy('callCount')">1년 호출건 <span class="sort-icon">↕</span></th>
           <th class="hg-desc" style="min-width:110px;" onclick="sortBy('callCountMonth')">1달 호출건 <span class="sort-icon">↕</span></th>
@@ -1162,19 +1274,19 @@
           <th class="hg-block" onclick="sortBy('blockedDate')">차단일자(JAVADOC) <span class="sort-icon">↕</span></th>
           <th class="hg-block no-sort" style="min-width:100px;">차단근거(JAVADOC)</th>
           <th class="hg-block no-sort">비고(입력가능)</th>
-          <th class="hg-block" onclick="sortBy('reviewResult')">현업검토결과 <span class="sort-icon">↕</span></th>
-          <th class="hg-block no-sort">현업검토의견</th>
-          <th class="hg-block no-sort">SmartWay 티켓번호</th>
-          <th class="hg-deploy" onclick="sortBy('cboScheduledDate')">CBO예정일자 <span class="sort-icon">↕</span></th>
-          <th class="hg-deploy" onclick="sortBy('deployScheduledDate')">차단예정일자 <span class="sort-icon">↕</span></th>
-          <th class="hg-deploy no-sort">차단작업CSR</th>
-          <th class="hg-deploy no-sort">차단작업담당자</th>
-          <th class="hg-info" onclick="sortBy('lastAnalyzedAt')">분석일시 <span class="sort-icon">↕</span></th>
-          <th class="hg-info" onclick="sortBy('modifiedAt')">변경일시 <span class="sort-icon">↕</span></th>
+          <th class="hg-block col-compact-hide" onclick="sortBy('reviewResult')">현업검토결과 <span class="sort-icon">↕</span></th>
+          <th class="hg-block no-sort col-compact-hide">현업검토의견</th>
+          <th class="hg-block no-sort col-compact-hide">SmartWay 티켓번호</th>
+          <th class="hg-deploy col-compact-hide" onclick="sortBy('cboScheduledDate')">CBO예정일자 <span class="sort-icon">↕</span></th>
+          <th class="hg-deploy col-compact-hide" onclick="sortBy('deployScheduledDate')">차단예정일자 <span class="sort-icon">↕</span></th>
+          <th class="hg-deploy no-sort col-compact-hide">차단작업CSR</th>
+          <th class="hg-deploy no-sort col-compact-hide">차단작업담당자</th>
+          <th class="hg-info col-compact-hide" onclick="sortBy('lastAnalyzedAt')">분석일시 <span class="sort-icon">↕</span></th>
+          <th class="hg-info col-compact-hide" onclick="sortBy('modifiedAt')">변경일시 <span class="sort-icon">↕</span></th>
         </tr>
       </thead>
       <tbody id="tbody">
-        <tr><td colspan="33"><div class="state-box">레포지토리를 선택하고 <b>조회</b>를 클릭하세요.</div></td></tr>
+        <tr><td colspan="33" id="viewerStateCell"><div class="state-box">레포지토리를 선택하고 <b>조회</b>를 클릭하세요.</div></td></tr>
       </tbody>
     </table>
   </div>
@@ -1367,7 +1479,7 @@
         <div id="bulkStatusModalTransitionRow" style="display:contents;">
           <div class="detail-label">상태변경 사항</div>
           <div class="detail-value ta-top">
-            <textarea id="bulkStatusModalTransitionPreview" class="df-textarea" rows="4" readonly style="background:#f8fafc;font-size:11px;" placeholder="목표 상태를 선택하면 미리보기됩니다. 저장 후 서버가 확정합니다."></textarea>
+            <textarea id="bulkStatusModalTransitionPreview" class="df-textarea" rows="4" readonly style="background:#f8fafc;font-size:11px;" placeholder="목표 상태를 선택하면 미리보기됩니다. 저장 후 서버 반영값이 적용됩니다."></textarea>
           </div>
         </div>
         <div class="detail-label">상태변경 사유</div>
@@ -1416,6 +1528,7 @@
   }
   /** 관리자 또는 일반사용자(담당자) 로그인 시에만 테이블·상세 편집 가능 */
   function viewerCanEditTable() {
+    if (isSnapshotReadOnly()) return false;
     if (isAdmin()) return true;
     try {
       return !!(window.isEditorLoggedIn && window.isEditorLoggedIn());
@@ -1457,7 +1570,7 @@
     return out;
   }
   function refreshViewerAssigneeDependentUi() {
-    if (!viewerCanEditTable() && selectedIds.size) clearSelection();
+    if ((!viewerCanEditTable() || isSnapshotReadOnly()) && selectedIds.size) clearSelection();
     updateBulkBar();
     if (typeof renderRows === 'function' && filteredApis.length) renderRows(filteredApis);
     try {
@@ -1509,9 +1622,53 @@
     return !!(s && String(s).trim());
   }
 
+  const AUTO_STATUS_CHANGE_REASON = '자동분석 상태로 변경';
+
+  function rowHasAutoStatusMismatch(row) {
+    if (!row) return false;
+    const status = row.status == null ? '' : String(row.status).trim();
+    const autoStatus = row.autoAnalyzedStatus == null ? '' : String(row.autoAnalyzedStatus).trim();
+    return !!autoStatus && status !== autoStatus;
+  }
+
   function rowIsExpectedDone(row) {
     if (!row) return false;
     return row.autoAnalyzedStatus === '차단완료' && row.status !== '차단완료' && row.status !== '삭제';
+  }
+
+  function collectAutoStatusActionTargets() {
+    const adm = isAdmin();
+    const rows = Array.from(selectedIds).map(id => allApis.find(a => a.id === id)).filter(Boolean);
+    const summary = {
+      total: rows.length,
+      eligibleIds: [],
+      skippedSame: 0,
+      skippedLocked: 0,
+      skippedPending: 0,
+      skippedMissingAuto: 0
+    };
+    for (const row of rows) {
+      const autoStatus = row.autoAnalyzedStatus == null ? '' : String(row.autoAnalyzedStatus).trim();
+      const status = row.status == null ? '' : String(row.status).trim();
+      if (!autoStatus) {
+        summary.skippedMissingAuto++;
+        continue;
+      }
+      if (status === autoStatus) {
+        summary.skippedSame++;
+        continue;
+      }
+      if (row.statusOverridden) {
+        summary.skippedLocked++;
+        continue;
+      }
+      if (!adm && rowHasPendingStatusProposal(row)) {
+        summary.skippedPending++;
+        continue;
+      }
+      summary.eligibleIds.push(row.id);
+    }
+    return summary;
   }
 
   async function bulkProposalApprove() {
@@ -1621,6 +1778,16 @@
     if (isAdmin()) return adminFetch(url, options);
     const tok = window.getEditorToken ? window.getEditorToken() : '';
     const headers = Object.assign({}, options.headers || {}, { 'X-Editor-Token': tok });
+    return fetch(url, Object.assign({}, options, { headers }));
+  }
+
+  async function tableWriteAuthFetch(url, options = {}) {
+    if (isAdmin()) return adminFetch(url, options);
+    const tok = window.getEditorToken ? window.getEditorToken() : '';
+    const headers = Object.assign({
+      'Content-Type': 'application/json',
+      'X-Editor-Token': tok
+    }, options.headers || {});
     return fetch(url, Object.assign({}, options, { headers }));
   }
 
@@ -1825,7 +1992,7 @@
     syncQueryCountDisplay(null);
     document.getElementById('loadBtn').disabled = true;
     document.getElementById('tbody').innerHTML =
-      '<tr><td colspan="33"><div class="state-box"><div class="spinner"></div><br>조회 중...</div></td></tr>';
+      renderViewerStateRow('<div class="spinner"></div><br>조회 중...');
     clearSelection();
     vCurrentPage = 0;
 
@@ -1968,8 +2135,8 @@
       showToast(`${serverTotal.toLocaleString()}개 URL 조회 완료`, 'success');
     } catch(e) {
       showToast(e.message || '조회 실패', 'error');
-      document.getElementById('tbody').innerHTML =
-        `<tr><td colspan="33"><div class="state-box">조회 오류: ${esc(e.message || '')}</div></td></tr>`;
+        document.getElementById('tbody').innerHTML =
+          renderViewerStateRow(`조회 오류: ${esc(e.message || '')}`);
     } finally {
       document.getElementById('loadBtn').disabled = false;
     }
@@ -2054,7 +2221,7 @@
         manager:        colMap['담당자'],
         relatedMenu:    colMap['관련 메뉴(또는 기능)'],
         status:         colMap['상태'],
-        statusOverridden: colMap['상태확정'],
+        statusOverridden: colMap['URL확정여부'] || colMap['상태확정'],
         blockCriteria:  colMap['차단기준'],
         memo:           colMap['비고'],
         reviewResult:       colMap['현업검토결과'],
@@ -2097,7 +2264,7 @@
       });
       if (!rows.length) throw new Error('유효한 데이터 행이 없습니다.');
 
-      if (!await customConfirm(`${rows.length.toLocaleString()}건을 업로드하겠습니까?\n팀 · 담당자 · 관련 메뉴 · 상태 · 비고 · 현업검토 · 검토단계 · 예정일자 등이 업데이트됩니다.\n(차단완료 행은 상태/상태확정은 변경되지 않으며, 분석일시는 업로드 시각으로 자동 설정)`)) return;
+      if (!await customConfirm(`${rows.length.toLocaleString()}건을 업로드하겠습니까?\n팀 · 담당자 · 관련 메뉴 · 상태 · 비고 · 현업검토 · 검토단계 · 예정일자 등이 업데이트됩니다.\n(차단완료 행은 상태/URL확정여부는 변경되지 않으며, 분석일시는 업로드 시각으로 자동 설정)`)) return;
 
       showToast('업로드 중...', 'info');
       const res = await fetch('/api/upload/excel-viewer', {
@@ -2374,6 +2541,172 @@
     loadApis();
   }
 
+  function compareDateIds(side) {
+    return side === 'A'
+      ? {
+          input: 'cmpFromDate', btn: 'cmpFromDateBtn', clear: 'cmpFromDateClearBtn',
+          pop: 'cmpFromDateCalPop', title: 'cmpFromCalTitle', grid: 'cmpFromCalGrid',
+          prev: 'cmpFromCalPrev', next: 'cmpFromCalNext', close: 'cmpFromCalClose'
+        }
+      : {
+          input: 'cmpToDate', btn: 'cmpToDateBtn', clear: 'cmpToDateClearBtn',
+          pop: 'cmpToDateCalPop', title: 'cmpToCalTitle', grid: 'cmpToCalGrid',
+          prev: 'cmpToCalPrev', next: 'cmpToCalNext', close: 'cmpToCalClose'
+        };
+  }
+
+  function updateCompareDateButtonLabel(side) {
+    const ids = compareDateIds(side);
+    const input = document.getElementById(ids.input);
+    const btn = document.getElementById(ids.btn);
+    const clearBtn = document.getElementById(ids.clear);
+    if (!btn) return;
+    const v = (input && input.value) ? String(input.value).trim() : '';
+    btn.textContent = v || '기준일 선택';
+    if (clearBtn) clearBtn.style.display = v ? '' : 'none';
+  }
+
+  function setCompareDateValue(side, ymd, silent) {
+    const ids = compareDateIds(side);
+    const input = document.getElementById(ids.input);
+    if (!input) return;
+    input.value = (ymd || '').trim();
+    updateCompareDateButtonLabel(side);
+    if (!silent) {
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+  }
+
+  async function renderCompareDateCalendar(side) {
+    const ids = compareDateIds(side);
+    const ymMap = window._cmpCalYM || {};
+    const ym = ymMap[side];
+    const grid = document.getElementById(ids.grid);
+    const titleEl = document.getElementById(ids.title);
+    const input = document.getElementById(ids.input);
+    if (!ym || !grid || !titleEl) return;
+    const y = ym.y;
+    const m = ym.m;
+    titleEl.textContent = y + '년 ' + (m + 1) + '월';
+    let snapSet;
+    try {
+      snapSet = await fetchSnapshotDatesForMonth(y, m);
+    } catch (e) {
+      snapSet = new Set();
+    }
+    const dow = ['일', '월', '화', '수', '목', '금', '토'];
+    const cells = dow.map(function (d) { return '<div class="basis-snap-cal-dow">' + d + '</div>'; });
+    const firstDow = new Date(y, m, 1).getDay();
+    const nDays = new Date(y, m + 1, 0).getDate();
+    for (let i = 0; i < firstDow; i++) cells.push('<div class="basis-snap-cal-empty"></div>');
+    const sel = (input && input.value) ? String(input.value).trim() : '';
+    const today = _basisTodayYmd();
+    for (let d = 1; d <= nDays; d++) {
+      const ymd = _basisYmdFromParts(y, m, d);
+      const hasSnap = snapSet.has(ymd);
+      let cls = 'basis-snap-cal-day';
+      if (hasSnap) cls += ' has-snapshot';
+      if (ymd === sel) cls += ' is-selected';
+      if (ymd === today) cls += ' is-today';
+      cells.push('<button type="button" class="' + cls + '" data-side="' + side + '" data-ymd="' + ymd + '">' + d + '</button>');
+    }
+    grid.innerHTML = cells.join('');
+    grid.querySelectorAll('.basis-snap-cal-day').forEach(function (b) {
+      b.addEventListener('click', function (ev) {
+        ev.preventDefault();
+        const v = b.getAttribute('data-ymd');
+        if (v) {
+          setCompareDateValue(side, v, false);
+          closeCompareDateCalendar(side);
+        }
+      });
+    });
+  }
+
+  function positionCompareDateCalendar(side) {
+    const ids = compareDateIds(side);
+    const pop = document.getElementById(ids.pop);
+    const btn = document.getElementById(ids.btn);
+    if (!pop || !btn) return;
+    const r = btn.getBoundingClientRect();
+    const w = 300;
+    let left = r.left;
+    if (left + w > window.innerWidth - 8) left = window.innerWidth - w - 8;
+    if (left < 8) left = 8;
+    pop.style.position = 'fixed';
+    pop.style.left = left + 'px';
+    let top = r.bottom + 4;
+    const ph = pop.getBoundingClientRect().height || 340;
+    if (top + ph > window.innerHeight - 8) top = Math.max(8, r.top - ph - 4);
+    pop.style.top = top + 'px';
+  }
+
+  async function openCompareDateCalendar(side) {
+    const ids = compareDateIds(side);
+    const pop = document.getElementById(ids.pop);
+    const input = document.getElementById(ids.input);
+    if (!pop) return;
+    closeCompareDateCalendar();
+    const cur = (input && input.value) ? String(input.value).trim() : '';
+    let y;
+    let mo;
+    if (/^\d{4}-\d{2}-\d{2}$/.test(cur)) {
+      y = parseInt(cur.substring(0, 4), 10);
+      mo = parseInt(cur.substring(5, 7), 10) - 1;
+    } else {
+      const now = new Date();
+      y = now.getFullYear();
+      mo = now.getMonth();
+    }
+    window._cmpCalYM = window._cmpCalYM || {};
+    window._cmpCalYM[side] = { y: y, m: mo };
+    window._cmpCalOpenSide = side;
+    pop.style.display = 'block';
+    await renderCompareDateCalendar(side);
+    requestAnimationFrame(function () { positionCompareDateCalendar(side); });
+  }
+
+  function closeCompareDateCalendar(side) {
+    const openSide = side || window._cmpCalOpenSide;
+    if (!openSide) return;
+    const ids = compareDateIds(openSide);
+    const pop = document.getElementById(ids.pop);
+    if (pop) pop.style.display = 'none';
+    if (!side || window._cmpCalOpenSide === side) window._cmpCalOpenSide = null;
+  }
+
+  function compareCalDocMouseDown(ev) {
+    const side = window._cmpCalOpenSide;
+    if (!side) return;
+    const ids = compareDateIds(side);
+    const pop = document.getElementById(ids.pop);
+    const btn = document.getElementById(ids.btn);
+    if (!pop || !btn) return;
+    const t = ev.target;
+    if (pop.contains(t) || btn.contains(t)) return;
+    closeCompareDateCalendar(side);
+  }
+
+  function stepCompareCalendarMonth(side, delta) {
+    window._cmpCalYM = window._cmpCalYM || {};
+    const ym = window._cmpCalYM[side];
+    if (!ym) return;
+    let ny = ym.y;
+    let nm = ym.m + delta;
+    if (nm < 0) { nm = 11; ny--; }
+    if (nm > 11) { nm = 0; ny++; }
+    window._cmpCalYM[side] = { y: ny, m: nm };
+    renderCompareDateCalendar(side).then(function () {
+      requestAnimationFrame(function () { positionCompareDateCalendar(side); });
+    });
+  }
+
+  function clearCompareDate(side) {
+    setCompareDateValue(side, '', false);
+    closeCompareDateCalendar(side);
+  }
+
   /**
    * 기준일자 입력 시각의 풀 스냅샷 목록을 자동 로드해 드롭다운에 채운다.
    * - 0건: 드롭다운 숨김 (이후 조회 시 폴백 로직이 처리)
@@ -2458,12 +2791,12 @@
           pickedTm = at.length >= 19 ? at.substring(11, 19) : at.substring(11);
         }
       } catch(e) {}
-      const baseLabel = '스냅샷 데이터';
+      const baseLabel = '스냅샷 데이터 · 읽기 전용';
       badge.textContent = pickedTm ? `${baseLabel} · ${pickedTm}` : baseLabel;
       badge.style.background = '#ede9fe';
       badge.style.color = '#6d28d9';
       badge.style.borderColor = '#c4b5fd';
-      badge.title = '선택한 기준일자(+시각) 이전 중 가장 최신 스냅샷을 조회합니다. 그 시점 이후의 변경/추가 데이터는 표시되지 않습니다.';
+      badge.title = '선택한 기준일자(+시각) 이전 중 가장 최신 스냅샷을 조회합니다. 그 시점 이후의 변경/추가 데이터는 표시되지 않으며 수정도 할 수 없습니다.';
     } else {
       badge.textContent = '현재 데이터';
       badge.style.background = '#ecfccb';
@@ -2657,7 +2990,7 @@
     const timeoutId = setTimeout(() => pageLoadCtrl.abort(), 30000);
     if (!preloadFirst) {
       document.getElementById('tbody').innerHTML =
-        '<tr><td colspan="33"><div class="state-box"><div class="spinner"></div><br>조회 중...</div></td></tr>';
+        renderViewerStateRow('<div class="spinner"></div><br>조회 중...');
     }
     try {
       let res;
@@ -2691,7 +3024,7 @@
         const totalFmt = (data.total || 0).toLocaleString();
         showToast(`데이터가 너무 많습니다 (${totalFmt}건). 레포지토리를 선택해 주세요.`, 'error');
         document.getElementById('tbody').innerHTML =
-          `<tr><td colspan="33"><div class="state-box">⚠ 전체 조회 제한<br><small>${totalFmt}건<br>레포지토리를 선택하여 조회해 주세요.</small></div></td></tr>`;
+          renderViewerStateRow(`⚠ 전체 조회 제한<br><small>${totalFmt}건<br>레포지토리를 선택하여 조회해 주세요.</small>`);
         viewerListQuerySucceeded = false;
         syncQueryCountDisplay(null);
         return false;
@@ -2726,6 +3059,9 @@
       filteredApis = allApis;
       serverTotal  = data.total || 0;
       vCurrentPage = data.page || 0;
+      if (isSnapshotReadOnly() && selectedIds.size) {
+        clearSelection();
+      }
 
       // 현재 페이지의 최대 분석일자로 maxAnalyzedAt 갱신 (첫 페이지만)
       if (pageIdx === 0) {
@@ -2739,13 +3075,14 @@
       renderRows(filteredApis, vCurrentPage * vPageSize);
       renderViewerPagination(serverTotal, totalPages);
       syncCheckAll();
+      updateBulkBar();
       expandStatsCardIfVisible();
       return true;
     } catch(e) {
       if (e.name === 'AbortError') return false;
       showToast(e.message || '페이지 조회 실패', 'error');
       document.getElementById('tbody').innerHTML =
-        `<tr><td colspan="33"><div class="state-box">조회 오류: ${esc(e.message || '')}</div></td></tr>`;
+        renderViewerStateRow(`조회 오류: ${esc(e.message || '')}`);
       viewerListQuerySucceeded = false;
       syncQueryCountDisplay(null);
       return false;
@@ -2915,6 +3252,68 @@
   let uploadedIdsFilter = null;        // 배열이면 엑셀업로드 필터 활성, null이면 비활성
   window._deployUnscheduledFilter = false;
   const UPLOADED_FILTER_MAX = 5000;   // 이 이상이면 IN 절 성능 저하 우려 → 필터 미적용
+  const VIEWER_TABLE_MODE_KEY = 'viewer.table.mode';
+  const VIEWER_TABLE_TOTAL_COLS = 33;
+  const VIEWER_TABLE_COMPACT_HIDDEN_COLS = 18;
+  let viewerTableMode = 'detail';
+
+  function isViewerCompactMode() {
+    return viewerTableMode === 'compact';
+  }
+
+  function viewerVisibleColspan() {
+    return isViewerCompactMode()
+      ? (VIEWER_TABLE_TOTAL_COLS - VIEWER_TABLE_COMPACT_HIDDEN_COLS)
+      : VIEWER_TABLE_TOTAL_COLS;
+  }
+
+  function renderViewerStateRow(html) {
+    return `<tr><td colspan="${viewerVisibleColspan()}"><div class="state-box">${html}</div></td></tr>`;
+  }
+
+  function applyViewerTableMode() {
+    const table = document.getElementById('apiTable');
+    if (table) table.classList.toggle('compact-view', isViewerCompactMode());
+    const compactBtn = document.getElementById('viewerCompactModeBtn');
+    const detailBtn = document.getElementById('viewerDetailModeBtn');
+    const modeSwitch = document.getElementById('viewerTableModeSwitch');
+    const compactMode = isViewerCompactMode();
+    if (compactBtn) {
+      compactBtn.classList.toggle('active', compactMode);
+      compactBtn.setAttribute('aria-pressed', compactMode ? 'true' : 'false');
+    }
+    if (detailBtn) {
+      detailBtn.classList.toggle('active', !compactMode);
+      detailBtn.setAttribute('aria-pressed', compactMode ? 'false' : 'true');
+    }
+    if (modeSwitch) {
+      modeSwitch.classList.toggle('is-detail', !compactMode);
+      modeSwitch.setAttribute('aria-checked', compactMode ? 'false' : 'true');
+    }
+    const stateCell = document.querySelector('#tbody td[colspan]');
+    if (stateCell) stateCell.setAttribute('colspan', String(viewerVisibleColspan()));
+  }
+
+  function loadViewerTableMode() {
+    try {
+      const saved = localStorage.getItem(VIEWER_TABLE_MODE_KEY);
+      viewerTableMode = saved === 'compact' ? 'compact' : 'detail';
+    } catch (e) {
+      viewerTableMode = 'detail';
+    }
+    applyViewerTableMode();
+  }
+
+  function setViewerTableMode(mode) {
+    viewerTableMode = mode === 'compact' ? 'compact' : 'detail';
+    try { localStorage.setItem(VIEWER_TABLE_MODE_KEY, viewerTableMode); } catch (e) {}
+    applyViewerTableMode();
+  }
+
+  function toggleViewerTableMode() {
+    setViewerTableMode(isViewerCompactMode() ? 'detail' : 'compact');
+  }
+
   // ── 담당자 매핑 해석 (managerOverride > programId매핑 > 팀 대표) ──
   function resolveManager(a) {
     if (a.managerOverride) return a.managerOverride;
@@ -3084,29 +3483,36 @@
     const off = startOffset || 0;
     const tbody = document.getElementById('tbody');
     if (!list.length) {
-      tbody.innerHTML = '<tr><td colspan="33"><div class="state-box">검색 결과가 없습니다.</div></td></tr>';
+      tbody.innerHTML = renderViewerStateRow('검색 결과가 없습니다.');
       return;
     }
     tbody.innerHTML = list.map((a, idx) => {
       const checked = selectedIds.has(a.id) ? 'checked' : '';
+      const snapshotRo = isSnapshotReadOnly();
       const locked = a.statusOverridden;
       const isBlocked = a.status === '차단완료';
       const canTableWrite = viewerCanEditTable();
-      const rowRo = !canTableWrite ? ' row-readonly' : '';
+      const rowRo = (!canTableWrite || snapshotRo) ? ' row-readonly' : '';
       const rowCls  = (selectedIds.has(a.id) ? ' row-selected' : '') + (a.statusChanged ? ' row-changed' : '') + (locked ? ' row-locked' : '') + (a.hasPendingProposal ? ' row-has-proposal' : '') + rowRo;
       const cfg = repoConfigMap[a.repositoryName] || {};
       const git1 = parseGitHistory(a.gitHistory)[0];
-      const lockIcon = isAdmin()
+      const lockIcon = snapshotRo
         ? (locked
-            ? `<span class="lock-btn lock-on" onclick="toggleLock(${a.id}, false)" title="클릭하여 확정 해제">🔒 확정</span>`
-            : `<span class="lock-btn lock-off" onclick="toggleLock(${a.id}, true)" title="클릭하여 상태 확정">미확정</span>`)
+            ? `<span class="lock-btn lock-on" style="opacity:.85;cursor:default;" title="스냅샷 읽기 전용">🔒 확정</span>`
+            : `<span class="lock-btn lock-off" style="opacity:.75;cursor:default;" title="스냅샷 읽기 전용">미확정</span>`)
+        : isAdmin()
+        ? (locked
+            ? `<span class="lock-btn lock-on" onclick="toggleLock(${a.id}, false)" title="클릭하여 URL확정 해제">🔒 확정</span>`
+            : `<span class="lock-btn lock-off" onclick="toggleLock(${a.id}, true)" title="클릭하여 URL확정">미확정</span>`)
         : (locked
-            ? `<span class="lock-btn lock-on" style="opacity:.85;cursor:default;" title="확정">🔒 확정</span>`
-            : `<span class="lock-btn lock-off" style="opacity:.75;cursor:default;" title="조회 전용 — 확정 변경은 관리자">미확정</span>`);
+            ? `<span class="lock-btn lock-on" style="opacity:.85;cursor:default;" title="URL확정">🔒 확정</span>`
+            : `<span class="lock-btn lock-off" style="opacity:.75;cursor:default;" title="조회 전용 — URL확정 변경은 관리자">미확정</span>`);
       const noCell = locked || !canTableWrite;
       const noDesc = locked || isBlocked || !canTableWrite;
       const cbDis = canTableWrite ? '' : 'disabled';
-      const proposalSummFull = withProposalSubmitterSuffix(a.proposalStatusChangeSummary || '', proposalSubmitterNameRaw(a));
+      const statusChangeSummaryRaw = (a.statusChangeSummary != null ? String(a.statusChangeSummary).trim() : '');
+      const statusChangeReasonRaw = (a.statusChangeReason != null ? String(a.statusChangeReason).trim() : '');
+      const proposalSummFull = withProposalSubmitterSuffix(statusChangeSummaryRaw, proposalSubmitterNameRaw(a));
       const proposalSummCell = !proposalSummFull
         ? '<span style="color:#cbd5e1;">-</span>'
         : esc(proposalSummFull.length > 100 ? proposalSummFull.slice(0, 97) + '…' : proposalSummFull);
@@ -3114,7 +3520,7 @@
       const pendingTitle = '담당자 제안이 승인 대기 중' + (proposalSubmitterNameRaw(a) ? ' — 요청: ' + proposalSubmitterNameRaw(a) : '');
       return `
       <tr class="${rowCls}" id="row-${a.id}">
-        <td class="cb-cell sk" style="left:0;min-width:36px;width:36px;text-align:center;font-size:10px;color:var(--text-muted);">${off+idx+1}<br><input type="checkbox" data-id="${a.id}" ${checked} ${cbDis} onchange="toggleRow(this)"></td>
+        <td class="cb-cell sk" style="left:0;min-width:36px;width:36px;text-align:center;font-size:10px;color:var(--text-muted);">${off+idx+1}${snapshotRo ? '' : `<br><input type="checkbox" data-id="${a.id}" ${checked} ${cbDis} onchange="toggleRow(this)">`}</td>
         <td class="sk" style="left:36px;min-width:110px;"><b style="font-size:12px;">${esc(a.repositoryName)}</b></td>
         <td class="sk" style="left:146px;min-width:100px;font-size:11px;color:var(--text-muted);">${esc(cfg.businessName || '')}</td>
         <td class="sk memo-cell" onclick="${noCell?'':('editField(this,'+a.id+',&apos;teamOverride&apos;)')}" title="${noCell?(locked?'수정불가':'조회 전용'):'클릭하여 편집'}" style="left:246px;min-width:80px;font-size:11px;color:var(--text-muted);white-space:nowrap;">${esc(a.teamOverride || cfg.team)}</td>
@@ -3128,18 +3534,18 @@
         <!-- 개발 메타 -->
         <td>${a.fullUrl ? `<a href="${esc(a.fullUrl)}" target="_blank" style="font-size:11px;color:var(--primary);text-decoration:none;padding:2px 8px;border:1px solid var(--primary);border-radius:4px;white-space:nowrap;">열기 ↗</a>` : '<span style="color:#cbd5e1;font-size:11px;">-</span>'}</td>
         <!-- 상태 / 자동분석 / 상태변경 사항·사유 / 상태확정 -->
-        <td>${statusBadge(a.status, a.logWorkExcluded)}${a.hasPendingProposal ? `<br><span style="display:inline-block;margin-top:2px;padding:1px 5px;background:#f3e8ff;border:1px solid #ddd6fe;border-radius:3px;color:#6d28d9;font-size:9px;font-weight:700;white-space:nowrap;" title="${esc(pendingTitle)}">⏳ ${esc(pendingLabel)}</span>` : ''}${a.isNew ? `<br><span style="display:inline-block;margin-top:2px;padding:1px 5px;background:#dbeafe;border:1px solid #93c5fd;border-radius:3px;color:#1e40af;font-size:9px;font-weight:600;cursor:pointer;white-space:nowrap;" onclick="clearNewFlag(event,${a.id})" title="클릭하여 확인 완료">🆕 신규추가</span>` : ''}${(() => { if (!a.statusChanged) return ''; const logs = parseChangeLog(a.statusChangeLog); const last = logs.length ? logs[logs.length-1] : '변경감지'; const extra = logs.length > 1 ? ` <span style="color:#f87171;">(외 ${logs.length-1}건)</span>` : ''; return `<br><span style="display:inline-block;margin-top:2px;padding:1px 5px;background:#fef2f2;border:1px solid #fca5a5;border-radius:3px;color:#dc2626;font-size:9px;font-weight:600;cursor:pointer;white-space:nowrap;" onclick="clearStatusFlag(event,${a.id})" title="클릭: 확인 완료 | 상세보기에서 전체 이력 확인">⚠️ ${esc(last)}${extra}</span>`; })()}${a.blockMarkingIncomplete ? `<br><span style="display:inline-block;margin-top:2px;padding:1px 5px;background:#fff7ed;border:1px solid #fed7aa;border-radius:3px;color:#b45309;font-size:9px;font-weight:600;white-space:nowrap;cursor:help;" title="차단완료 상태이나 @Deprecated 또는 [URL차단작업] 주석이 누락됨 — 주석 보완 후 다음 추출 시 자동 해제.">📝 차단처리미흡</span>` : ''}</td>
-        <td style="vertical-align:top;">${a.autoAnalyzedStatus ? statusBadge(a.autoAnalyzedStatus, false) : '<span style="color:#cbd5e1;font-size:11px;">-</span>'}${rowIsExpectedDone(a) ? '<div style="margin-top:4px;font-size:10px;color:#b91c1c;font-weight:700;">차단완료 전환대상</div>' : ''}</td>
-        <td style="font-size:10px;color:var(--text-muted);max-width:140px;line-height:1.35;white-space:normal;" title="${esc(proposalSummFull)}">${proposalSummCell}</td>
-        <td style="font-size:10px;color:var(--text-muted);max-width:140px;line-height:1.35;white-space:normal;" title="${esc(a.proposalStatusChangeReason || '')}">${a.proposalStatusChangeReason ? esc(a.proposalStatusChangeReason.length > 100 ? a.proposalStatusChangeReason.slice(0, 97) + '…' : a.proposalStatusChangeReason) : '<span style="color:#cbd5e1;">-</span>'}</td>
-        <td style="text-align:center;">${lockIcon}</td>
-        <td style="font-size:11px;">${testSuspectBadge(a.testSuspectReason)}</td>
-        <td style="font-size:11px;">${pathParamTags(a.pathParamPattern, a.apiPath)}</td>
+        <td>${statusBadge(a.status, a.logWorkExcluded)}${a.hasPendingProposal ? `<br><span style="display:inline-block;margin-top:2px;padding:1px 5px;background:#f3e8ff;border:1px solid #ddd6fe;border-radius:3px;color:#6d28d9;font-size:9px;font-weight:700;white-space:nowrap;" title="${esc(pendingTitle)}">⏳ ${esc(pendingLabel)}</span>` : ''}${a.isNew ? `<br><span style="display:inline-block;margin-top:2px;padding:1px 5px;background:#dbeafe;border:1px solid #93c5fd;border-radius:3px;color:#1e40af;font-size:9px;font-weight:600;white-space:nowrap;${(snapshotRo || !isAdmin()) ? 'cursor:default;' : 'cursor:pointer;'}" ${(snapshotRo || !isAdmin()) ? 'title="스냅샷 읽기 전용"' : `onclick="clearNewFlag(event,${a.id})" title="클릭하여 확인 완료"`}>🆕 신규추가</span>` : ''}${(() => { if (!a.statusChanged) return ''; if (snapshotRo || !canTableWrite) return '<br><span style="display:inline-block;margin-top:2px;padding:1px 5px;background:#fef2f2;border:1px solid #fca5a5;border-radius:3px;color:#dc2626;font-size:9px;font-weight:600;white-space:nowrap;" title="' + (snapshotRo ? '스냅샷 읽기 전용' : '로그인 후 확인 가능') + '">⚠️ 자동분석과 상태 불일치</span>'; return `<br><span style="display:inline-block;margin-top:2px;padding:1px 5px;background:#fef2f2;border:1px solid #fca5a5;border-radius:3px;color:#dc2626;font-size:9px;font-weight:600;cursor:pointer;white-space:nowrap;" onclick="clearStatusFlag(event,${a.id})" title="클릭: 확인 완료 | 상세보기에서 전체 이력 확인">⚠️ 자동분석과 상태 불일치</span>`; })()}${a.blockMarkingIncomplete ? `<br><span style="display:inline-block;margin-top:2px;padding:1px 5px;background:#fff7ed;border:1px solid #fed7aa;border-radius:3px;color:#b45309;font-size:9px;font-weight:600;white-space:nowrap;cursor:help;" title="차단완료 상태이나 @Deprecated 또는 [URL차단작업] 주석이 누락됨 — 주석 보완 후 다음 추출 시 자동 해제.">📝 차단처리미흡</span>` : ''}</td>
+        <td class="col-compact-hide" style="vertical-align:top;">${a.autoAnalyzedStatus ? statusBadge(a.autoAnalyzedStatus, false) : '<span style="color:#cbd5e1;font-size:11px;">-</span>'}${rowIsExpectedDone(a) ? '<div style="margin-top:4px;font-size:10px;color:#b91c1c;font-weight:700;">차단완료 전환대상</div>' : ''}</td>
+        <td class="col-compact-hide" style="font-size:10px;color:var(--text-muted);max-width:140px;line-height:1.35;white-space:normal;" title="${esc(proposalSummFull)}">${proposalSummCell}</td>
+        <td class="col-compact-hide" style="font-size:10px;color:var(--text-muted);max-width:140px;line-height:1.35;white-space:normal;" title="${esc(statusChangeReasonRaw || '')}">${statusChangeReasonRaw ? esc(statusChangeReasonRaw.length > 100 ? statusChangeReasonRaw.slice(0, 97) + '…' : statusChangeReasonRaw) : '<span style="color:#cbd5e1;">-</span>'}</td>
+        <td class="col-compact-hide" style="text-align:center;">${lockIcon}</td>
+        <td class="col-compact-hide" style="font-size:11px;">${testSuspectBadge(a.testSuspectReason)}</td>
+        <td class="col-compact-hide" style="font-size:11px;">${pathParamTags(a.pathParamPattern, a.apiPath)}</td>
         <!-- 개발 메타 -->
-        <td class="ctrl-name"><div style="display:flex;align-items:center;gap:4px;"><button class="copy-btn" onclick="copyText(event,'${esc(a.controllerName)}')" title="컨트롤러명 복사"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>${esc(a.controllerName)}</div></td>
-        <td style="font-size:12px;min-width:160px;"><div style="display:flex;align-items:center;gap:4px;"><button class="copy-btn" onclick="copyText(event,'${esc(a.methodName)}')" title="메소드명 복사"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>${esc(a.methodName)}</div></td>
+        <td class="ctrl-name col-compact-hide"><div style="display:flex;align-items:center;gap:4px;"><button class="copy-btn" onclick="copyText(event,'${esc(a.controllerName)}')" title="컨트롤러명 복사"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>${esc(a.controllerName)}</div></td>
+        <td class="col-compact-hide" style="font-size:12px;min-width:160px;"><div style="display:flex;align-items:center;gap:4px;"><button class="copy-btn" onclick="copyText(event,'${esc(a.methodName)}')" title="메소드명 복사"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>${esc(a.methodName)}</div></td>
         <!-- 기타 메타 -->
-        <td class="git-col">${git1 ? `<span class="git-col-d">${esc(git1.date)}</span> <span class="git-col-a">${esc(git1.author)}</span><br><span class="git-col-m" title="${esc(git1.message)}">${esc(git1.message)}</span>` : '<span style="color:#cbd5e1;">-</span>'}</td>
+        <td class="git-col col-compact-hide">${git1 ? `<span class="git-col-d">${esc(git1.date)}</span> <span class="git-col-a">${esc(git1.author)}</span><br><span class="git-col-m" title="${esc(git1.message)}">${esc(git1.message)}</span>` : '<span style="color:#cbd5e1;">-</span>'}</td>
         <td class="desc-col ${noDesc?'':'memo-editable'}" onclick="${noDesc?'':('editField(this,'+a.id+',&apos;descriptionOverride&apos;)')}" title="${noDesc?esc(allDesc(a)):'클릭하여 수정 — 자동 파싱값 대신 사용'}" style="font-size:11px;">${esc(allDesc(a))}${a.descriptionOverride ? '<span style=\"display:inline-block;margin-left:4px;padding:0 4px;background:#dbeafe;border:1px solid #93c5fd;border-radius:3px;color:#1e40af;font-size:9px;font-weight:600;vertical-align:middle;\" title=\"사용자 수정됨\">수정</span>' : ''}</td>
         <td style="text-align:right;font-size:12px;">${callCountCell(a, 'total')}</td>
         <td style="text-align:right;font-size:12px;">${callCountCell(a, 'month')}</td>
@@ -3148,15 +3554,15 @@
         <td class="${noCell?'':'memo-editable'}" onclick="${noCell?'':('editField(this,'+a.id+',&apos;blockedDate&apos;)')}" title="${noCell?(locked?'수정불가':'조회 전용'):'클릭하여 날짜 입력'}" style="font-size:11px;color:var(--text-muted);white-space:nowrap;">${esc(a.blockedDate || '')}</td>
         <td class="${noCell?'':'memo-editable'}" onclick="${noCell?'':('editField(this,'+a.id+',&apos;blockedReason&apos;)')}" title="${noCell?(locked?'수정불가':'조회 전용'):'클릭하여 입력'}" style="font-size:11px;color:var(--text-muted);min-width:100px;max-width:220px;">${renderBlockedReason((a.blockedReason||'').slice(0,60))}${(a.blockedReason||'').length>60?'…':''}</td>
         <td class="${noCell?'':'memo-editable'}" onclick="${noCell?'':('editField(this,'+a.id+',&apos;memo&apos;)')}" title="${noCell?(locked?'수정불가':'조회 전용'):'클릭하여 입력'}" style="font-size:11px;">${esc(a.memo || '')}</td>
-        <td>${reviewResultBadge(a.reviewResult)}</td>
-        <td style="font-size:11px;color:var(--text-muted);max-width:140px;">${esc(a.reviewOpinion || '')}</td>
-        <td>${a.jiraIssueKey ? `<a href="${esc(a.jiraIssueUrl)}" target="_blank" class="jira-badge" title="SmartWay 티켓 바로가기">🔗 ${esc(a.jiraIssueKey)}</a>` : '<span style="color:#cbd5e1;font-size:11px;">-</span>'}</td>
-        <td class="${noCell?'':'memo-editable'}" onclick="${noCell?'':('editField(this,'+a.id+',&apos;cboScheduledDate&apos;)')}" title="${noCell?(locked?'수정불가':'조회 전용'):'클릭하여 날짜 선택'}" style="font-size:11px;white-space:nowrap;">${esc(a.cboScheduledDate || '')}</td>
-        <td class="${noCell?'':'memo-editable'}" onclick="${noCell?'':('editField(this,'+a.id+',&apos;deployScheduledDate&apos;)')}" title="${noCell?(locked?'수정불가':'조회 전용'):'클릭하여 날짜 선택'}" style="font-size:11px;white-space:nowrap;">${esc(a.deployScheduledDate || '')}</td>
-        <td class="${noCell?'':'memo-editable'}" onclick="${noCell?'':('editField(this,'+a.id+',&apos;deployCsr&apos;)')}" title="${noCell?(locked?'수정불가':'조회 전용'):'클릭하여 입력'}" style="font-size:11px;">${esc(a.deployCsr || '')}</td>
-        <td class="${noCell?'':'memo-editable'}" onclick="${noCell?'':('editField(this,'+a.id+',&apos;deployManager&apos;)')}" title="${noCell?(locked?'수정불가':'조회 전용'):'클릭하여 입력'}" style="font-size:11px;">${esc(a.deployManager || '')}</td>
-        <td style="font-size:10px;color:var(--text-muted);white-space:nowrap;">${fmtDt(a.lastAnalyzedAt)}${isAdmin()&&a.createdIp ? `<br><span style="color:#94a3b8;font-size:9px;">${esc(a.createdIp)}</span>` : ''}</td>
-        <td style="font-size:10px;color:var(--text-muted);white-space:nowrap;">${fmtDt(a.modifiedAt)}${isAdmin()&&a.modifiedIp ? `<br><span style="color:#94a3b8;font-size:9px;">${esc(a.modifiedIp)}</span>` : ''}</td>
+        <td class="col-compact-hide">${reviewResultBadge(a.reviewResult)}</td>
+        <td class="col-compact-hide" style="font-size:11px;color:var(--text-muted);max-width:140px;">${esc(a.reviewOpinion || '')}</td>
+        <td class="col-compact-hide">${a.jiraIssueKey ? `<a href="${esc(a.jiraIssueUrl)}" target="_blank" class="jira-badge" title="SmartWay 티켓 바로가기">🔗 ${esc(a.jiraIssueKey)}</a>` : '<span style="color:#cbd5e1;font-size:11px;">-</span>'}</td>
+        <td class="col-compact-hide ${noCell?'':'memo-editable'}" onclick="${noCell?'':('editField(this,'+a.id+',&apos;cboScheduledDate&apos;)')}" title="${noCell?(locked?'수정불가':'조회 전용'):'클릭하여 날짜 선택'}" style="font-size:11px;white-space:nowrap;">${esc(a.cboScheduledDate || '')}</td>
+        <td class="col-compact-hide ${noCell?'':'memo-editable'}" onclick="${noCell?'':('editField(this,'+a.id+',&apos;deployScheduledDate&apos;)')}" title="${noCell?(locked?'수정불가':'조회 전용'):'클릭하여 날짜 선택'}" style="font-size:11px;white-space:nowrap;">${esc(a.deployScheduledDate || '')}</td>
+        <td class="col-compact-hide ${noCell?'':'memo-editable'}" onclick="${noCell?'':('editField(this,'+a.id+',&apos;deployCsr&apos;)')}" title="${noCell?(locked?'수정불가':'조회 전용'):'클릭하여 입력'}" style="font-size:11px;">${esc(a.deployCsr || '')}</td>
+        <td class="col-compact-hide ${noCell?'':'memo-editable'}" onclick="${noCell?'':('editField(this,'+a.id+',&apos;deployManager&apos;)')}" title="${noCell?(locked?'수정불가':'조회 전용'):'클릭하여 입력'}" style="font-size:11px;">${esc(a.deployManager || '')}</td>
+        <td class="col-compact-hide" style="font-size:10px;color:var(--text-muted);white-space:nowrap;">${fmtDt(a.lastAnalyzedAt)}${isAdmin()&&a.createdIp ? `<br><span style="color:#94a3b8;font-size:9px;">${esc(a.createdIp)}</span>` : ''}</td>
+        <td class="col-compact-hide" style="font-size:10px;color:var(--text-muted);white-space:nowrap;">${fmtDt(effectiveModifiedAtOf(a))}${renderModifiedMetaLines(a, { showIp: isAdmin(), includeRawFallback: true })}</td>
       </tr>`;
     }).join('');
   }
@@ -3460,32 +3866,32 @@
   }
 
   // ── 인라인 편집 (비고, 팀, 담당자) ────────────────────────
-  // ── 상태확정 토글 ────────────────────────────────────────
+  // ── URL확정 토글 ────────────────────────────────────────
   async function bulkLock(lock) {
-    if (!isAdmin()) { showToast('상태 확정은 관리자만 변경할 수 있습니다.', 'error'); return; }
-    if (!guardWritable('상태확정 변경')) return;
+    if (!isAdmin()) { showToast('URL 확정은 관리자만 변경할 수 있습니다.', 'error'); return; }
+    if (!guardWritable('URL확정 변경')) return;
     if (selectedIds.size === 0) { showToast('선택된 항목이 없습니다.','error'); return; }
     // 서버에서 차단완료 건은 자동으로 건너뜀 — 전체 선택 ID 그대로 전송
     const ids = Array.from(selectedIds);
-    if (!await customConfirm(`${ids.length}개 항목을 ${lock?'상태 확정':'확정 해제'}하시겠습니까?`)) return;
-    showBulkProgress(lock ? '일괄 확정 중...' : '일괄 해제 중...', ids.length);
+    if (!await customConfirm(`${ids.length}개 항목을 ${lock?'URL 확정':'URL확정 해제'}하시겠습니까?`)) return;
+    showBulkProgress(lock ? 'URL확정 처리 중...' : 'URL확정 해제 중...', ids.length);
     try {
       await adminFetch('/api/db/status', { method:'PATCH',
         body: JSON.stringify({ ids, statusOverridden: lock }) });
       clearSelection();
       await refreshAll();
-      showToast(`${ids.length}개 ${lock?'확정':'해제'} 처리`,'success');
+      showToast(`${ids.length}개 ${lock?'URL확정':'해제'} 처리`,'success');
     } catch(e) { showToast('변경 실패','error'); } finally { hideBulkProgress(); }
   }
 
   async function toggleLock(id, lock) {
-    if (!isAdmin()) { showToast('상태 확정은 관리자만 변경할 수 있습니다.', 'error'); return; }
-    if (!guardWritable('상태확정 변경')) return;
+    if (!isAdmin()) { showToast('URL 확정은 관리자만 변경할 수 있습니다.', 'error'); return; }
+    if (!guardWritable('URL확정 변경')) return;
     try {
       await adminFetch('/api/db/status', { method:'PATCH',
         body: JSON.stringify({ ids: [id], statusOverridden: lock }) });
       await refreshAll();
-      showToast(lock ? '상태 확정' : '확정 해제', 'success');
+      showToast(lock ? 'URL확정 완료' : 'URL확정 해제', 'success');
     } catch(e) { showToast('변경 실패','error'); }
   }
 
@@ -3642,11 +4048,11 @@
                         lastAnalyzedAt:30, modifiedAt:31 };
   function sortBy(key) {
     if (sortKey === key) sortAsc = !sortAsc; else { sortKey = key; sortAsc = true; }
-    document.querySelectorAll('thead th').forEach(th => th.classList.remove('sorted'));
-    document.querySelectorAll('thead th .sort-icon').forEach(el => { el.textContent = '↕'; });
+    document.querySelectorAll('#apiTable thead th').forEach(th => th.classList.remove('sorted'));
+    document.querySelectorAll('#apiTable thead th .sort-icon').forEach(el => { el.textContent = '↕'; });
     const idx = colIndexMap[key];
     if (idx !== undefined) {
-      const th = document.querySelectorAll('thead th')[idx];
+      const th = document.querySelectorAll('#apiTable thead th')[idx];
       const icon = th && th.querySelector('.sort-icon');
       if (th && icon) {
         th.classList.add('sorted');
@@ -3658,7 +4064,7 @@
 
   // ── 체크박스 ──────────────────────────────────────────────
   function toggleRow(cb) {
-    if (!viewerCanEditTable()) return;
+    if (!viewerCanEditTable() || isSnapshotReadOnly()) return;
     const id = parseInt(cb.dataset.id);
     if (cb.checked) { selectedIds.add(id); } else { selectedIds.delete(id); }
     const row = document.getElementById(`row-${id}`);
@@ -3668,7 +4074,7 @@
   }
 
   function toggleAll(masterCb) {
-    if (!viewerCanEditTable()) { masterCb.checked = false; return; }
+    if (!viewerCanEditTable() || isSnapshotReadOnly()) { masterCb.checked = false; return; }
     filteredApis.forEach(a => {
       if (masterCb.checked) selectedIds.add(a.id); else selectedIds.delete(a.id);
       const row = document.getElementById(`row-${a.id}`);
@@ -3692,8 +4098,9 @@
   function updateBulkBar() {
     const bar = document.getElementById('bulkBar');
     const hasSelection = selectedIds.size > 0;
+    const snapshotRo = isSnapshotReadOnly();
     document.getElementById('bulkCount').textContent = `${selectedIds.size}개 선택됨`;
-    const show = hasSelection && viewerCanEditTable();
+    const show = hasSelection && viewerCanEditTable() && !snapshotRo;
     bar.classList.toggle('visible', show);
     const propGrp = document.getElementById('bulkProposalAdminGroup');
     if (propGrp) {
@@ -3709,57 +4116,66 @@
     }
     const master = document.getElementById('checkAll');
     if (master) {
-      const can = viewerCanEditTable();
+      const can = viewerCanEditTable() && !snapshotRo;
       master.disabled = !can;
       if (!can) {
         master.checked = false;
         master.indeterminate = false;
       }
     }
-    const rejGrp = document.getElementById('bulkRejectNoticeGroup');
+    const alertGrp = document.getElementById('bulkStatusAlertGroup');
+    const alertBtn = document.getElementById('bulkStatusAlertBtn');
     const rejBtn = document.getElementById('bulkRejectDismissBtn');
-    if (rejGrp) {
+    if (alertGrp) {
       const ed = window.isEditorLoggedIn && window.isEditorLoggedIn();
       const c = serverCounts || {};
       const n = Number(c.openRejectEventCount) || 0;
+      const showStatusAlert = hasSelection;
       const showRej = show && ed && n > 0;
-      rejGrp.style.display = showRej ? 'inline-flex' : 'none';
+      alertGrp.style.display = (showStatusAlert || showRej) ? 'inline-flex' : 'none';
+      if (alertBtn) alertBtn.style.display = showStatusAlert ? '' : 'none';
+      if (alertBtn) alertBtn.disabled = !showStatusAlert;
+      if (rejBtn) rejBtn.style.display = showRej ? '' : 'none';
       if (rejBtn) rejBtn.disabled = !showRej;
     }
     const seg = document.getElementById('bulkStatusEditSeg');
     const bp = document.getElementById('bulkStatusEditPrimary');
+    const ba = document.getElementById('bulkStatusEditAuto');
     const bs = document.getElementById('bulkStatusEditSecondary');
     const dataGrp = document.getElementById('bulkDataChangeGroup');
     const expectedDoneGrp = document.getElementById('bulkExpectedDoneGroup');
     const expectedDoneBtn = document.getElementById('bulkExpectedDoneApplyBtn');
     const statusGrp = document.getElementById('bulkStatusGroup');
     const lockGrp = document.getElementById('bulkLockGroup');
-    const alertGrp = document.getElementById('bulkStatusAlertGroup');
     const jiraGrp = document.getElementById('jiraBulkGroup');
-    if (bp && bs) {
+    if (bp && ba && bs) {
       const adm = isAdmin();
       const selectedRows = Array.from(selectedIds).map(id => allApis.find(a => a.id === id)).filter(Boolean);
+      const autoMismatchRows = selectedRows.filter(rowHasAutoStatusMismatch);
       const expectedDoneRows = selectedRows.filter(rowIsExpectedDone);
       if (statusGrp) statusGrp.style.display = hasSelection ? 'inline-flex' : 'none';
       if (lockGrp) lockGrp.style.display = hasSelection ? 'inline-flex' : 'none';
-      if (alertGrp) alertGrp.style.display = hasSelection ? 'inline-flex' : 'none';
       if (jiraGrp) jiraGrp.style.display = (adm && hasSelection) ? '' : 'none';
       if (adm) {
         bp.textContent = '상태변경';
         bp.onclick = () => openBulkStatusModal();
-        bs.style.display = '';
-        bs.textContent = '일괄변경';
-        bs.onclick = () => openBulkCombinedModal();
-        if (dataGrp) dataGrp.style.display = hasSelection ? 'none' : 'none';
-        if (seg) seg.classList.remove('bulk-seg--single');
+        ba.style.display = autoMismatchRows.length > 0 ? '' : 'none';
+        ba.textContent = '자동분석상태로 변경';
+        ba.onclick = () => bulkApplyAutoAnalyzedStatus();
+        bs.style.display = 'none';
+        if (dataGrp) dataGrp.style.display = hasSelection ? '' : 'none';
+        if (seg) seg.classList.toggle('bulk-seg--single', autoMismatchRows.length === 0);
         if (expectedDoneGrp) expectedDoneGrp.style.display = (show && expectedDoneRows.length > 0) ? 'inline-flex' : 'none';
         if (expectedDoneBtn) expectedDoneBtn.disabled = !(show && expectedDoneRows.length > 0);
       } else {
         bp.textContent = '승인요청';
         bp.onclick = () => openBulkStatusModal();
+        ba.style.display = autoMismatchRows.length > 0 ? '' : 'none';
+        ba.textContent = '자동분석상태로 변경';
+        ba.onclick = () => bulkApplyAutoAnalyzedStatus();
         bs.style.display = 'none';
         if (dataGrp) dataGrp.style.display = hasSelection ? '' : 'none';
-        if (seg) seg.classList.add('bulk-seg--single');
+        if (seg) seg.classList.toggle('bulk-seg--single', autoMismatchRows.length === 0);
         if (expectedDoneGrp) expectedDoneGrp.style.display = 'none';
       }
     }
@@ -3769,6 +4185,58 @@
     return (window._bulkStatusFilteredIds && window._bulkStatusFilteredIds.length)
       ? window._bulkStatusFilteredIds.slice()
       : Array.from(selectedIds);
+  }
+
+  async function bulkApplyAutoAnalyzedStatus() {
+    if (!selectedIds.size) { showToast('선택된 항목이 없습니다.', 'error'); return; }
+    if (!guardCanWriteTable('자동분석상태로 변경')) return;
+    const targets = collectAutoStatusActionTargets();
+    const ids = targets.eligibleIds.slice();
+    if (!ids.length) {
+      const noMismatch = targets.skippedSame === targets.total && targets.total > 0;
+      if (noMismatch) {
+        showToast('선택한 항목은 모두 공식 상태와 자동분석상태가 같습니다.', 'error');
+      } else if (targets.skippedPending === targets.total) {
+        showToast('선택한 항목은 모두 이미 상태 승인요청 중입니다.', 'error');
+      } else if (targets.skippedLocked === targets.total) {
+        showToast('선택한 항목은 모두 URL확정 상태라 변경할 수 없습니다.', 'error');
+      } else {
+        showToast('자동분석상태로 변경할 대상이 없습니다.', 'error');
+      }
+      return;
+    }
+    const skips = [];
+    if (targets.skippedSame) skips.push(`${targets.skippedSame}건은 이미 동일 상태라 제외`);
+    if (targets.skippedLocked) skips.push(`${targets.skippedLocked}건은 URL확정 상태라 제외`);
+    if (targets.skippedPending) skips.push(`${targets.skippedPending}건은 이미 상태 승인요청 중이라 제외`);
+    if (targets.skippedMissingAuto) skips.push(`${targets.skippedMissingAuto}건은 자동분석상태가 없어 제외`);
+    let message = `선택 ${targets.total}건 중 ${ids.length}건을 자동분석상태로 변경합니다.`;
+    if (skips.length) {
+      message += `\n\n제외 대상:\n- ${skips.join('\n- ')}`;
+    }
+    if (!await customConfirm(message)) return;
+
+    const adm = isAdmin();
+    showBulkProgress(adm ? '자동분석상태 반영 중...' : '자동분석상태 승인요청 저장 중...', ids.length);
+    try {
+      const res = await tableWriteAuthFetch('/api/db/status/apply-auto', {
+        method: 'PATCH',
+        body: JSON.stringify({ ids, statusChangeReason: AUTO_STATUS_CHANGE_REASON })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || '서버 오류');
+      if (adm) {
+        showToast(`${data.updated != null ? data.updated : ids.length}건 반영 완료`, 'success');
+      } else {
+        showToast(`저장 완료 ${data.saved != null ? data.saved : ids.length}건 (승인대기)`, 'success');
+      }
+      clearSelection();
+      await refreshAll();
+    } catch (e) {
+      showToast(e.message || '실패', 'error');
+    } finally {
+      hideBulkProgress();
+    }
   }
 
   async function bulkApplyExpectedDone() {
@@ -3792,7 +4260,7 @@
     }
     if (!eligible.length) {
       const detail = skippedLocked > 0
-        ? '선택한 항목이 모두 차단완료 전환대상이 아니거나, 상태확정되어 적용할 수 없습니다.'
+        ? '선택한 항목이 모두 차단완료 전환대상이 아니거나, URL확정 상태라 적용할 수 없습니다.'
         : '선택한 항목 중 차단완료 전환대상 건이 없습니다.';
       showToast(detail, 'error');
       return;
@@ -3801,7 +4269,7 @@
     if (skippedNotExpected > 0 || skippedLocked > 0) {
       const parts = [];
       if (skippedNotExpected > 0) parts.push(`차단완료 전환대상 아님 ${skippedNotExpected}건 제외`);
-      if (skippedLocked > 0) parts.push(`상태확정 ${skippedLocked}건 제외`);
+      if (skippedLocked > 0) parts.push(`URL확정 ${skippedLocked}건 제외`);
       msg += `\n(${parts.join(', ')})`;
     }
     msg += `\n\n차단일자와 차단근거는 소스 주석에서 비어 있는 값만 자동으로 채웁니다.\n진행하시겠습니까?`;
@@ -4011,7 +4479,9 @@
         }
         showToast(`저장 완료 ${ok}건 (승인대기)`, 'success');
       } else {
-        const res = await adminFetch('/api/db/status', { method: 'PATCH', body: JSON.stringify({ ids, status: statusPayload }) });
+        const payload = { ids, status: statusPayload };
+        if (reason) payload.statusChangeReason = reason;
+        const res = await adminFetch('/api/db/status', { method: 'PATCH', body: JSON.stringify(payload) });
         const data = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(data.error || '서버 오류');
         showToast(`${data.updated != null ? data.updated : ids.length}개 항목 변경 완료`, 'success');
@@ -4137,7 +4607,7 @@
     // 17         18          19        20          21
     // 메뉴      Deprecated  총호출건  1달호출건   1주호출건
     // 22    23       24                    25      26      27      28    29        30
-    // 상태  상태확정 침해사고 로그 제외대상  차단기준 차단일자 차단근거 비고  검토결과  검토의견
+    // 상태  URL확정여부 침해사고 로그 제외대상  차단기준 차단일자 차단근거 비고  검토결과  검토의견
     // 31  32            33        34        35
     // Jira 검토단계     CBO예정   차단예정   차단작업CSR
     // 36~50 변경이력1~5(각3열)  51  52
@@ -4147,7 +4617,7 @@
       'HTTP Method','컨트롤러파일경로','컨트롤러','메소드명','프로그램ID',
       'ApiOperation','Description주석','메소드주석','컨트롤러주석','RequestProperty','컨트롤러RequestProperty',
       '관련 메뉴(또는 기능)','Deprecated','1년 호출건','1달 호출건','1주 호출건',
-      '상태','자동분석상태','상태변경 사항','상태변경 사유','상태확정','테스트용 의심 여부','테스트용 의심 사유','파라미터URL 패턴','침해사고 로그 제외대상','차단기준','차단일자(JAVADOC)','차단근거(JAVADOC)',
+      '상태','자동분석상태','상태변경 사항','상태변경 사유','URL확정여부','테스트용 의심 여부','테스트용 의심 사유','파라미터URL 패턴','침해사고 로그 제외대상','차단기준','차단일자(JAVADOC)','차단근거(JAVADOC)',
       '비고','현업검토결과','현업검토의견',
       'SmartWay 티켓번호','검토단계',
       'CBO예정일자','차단예정일자','차단작업CSR','차단작업담당자',
@@ -4163,7 +4633,7 @@
       yellow,yellow,yellow,yellow,      // 7~10: 파일경로~프로그램ID
       yellow,yellow,yellow,yellow,yellow,yellow, // 11~16: 참고용 6개
       purple,purple,purple,purple,purple, // 17~21: 메뉴~1주호출건
-      pink,pink,pink,pink,pink,               // 22~26: 상태,자동분석,상태변경사항,사유,상태확정 ★유효성검증
+      pink,pink,pink,pink,pink,               // 22~26: 상태,자동분석,상태변경사항,사유,URL확정여부 ★유효성검증
       testPurple,testPurple,testPurple, // 27~29: 테스트용 의심 여부/사유 + 파라미터URL 패턴
       pink,pink,pink,pink,               // 30~33: 침해사고,차단기준,차단일자(JAVADOC),차단근거(JAVADOC)
       pink,pink,pink,                    // 34~36: 비고,검토결과,검토의견
@@ -4177,7 +4647,7 @@
     const validations = [
       { colIdx:18, values:['Y','N'] },                                                                       // Deprecated
       { colIdx:22, values:['사용','차단완료','①-① 차단대상','①-② 담당자 판단','①-③ 현업요청 제외대상','①-④ 사용으로 변경','②-① 호출0건+변경있음','②-② 호출 3건 이하+변경없음','②-③ 사용으로 변경'] }, // 상태 — 9 leaf v2
-      { colIdx:26, values:['확정','미확정'] },                                                               // 상태확정
+      { colIdx:26, values:['확정','미확정'] },                                                               // URL확정여부
       { colIdx:27, values:['Y','N'] },                                                                       // 테스트용 의심 여부
       { colIdx:35, values:['차단대상 제외','차단확정','판단불가'] },                                         // 현업검토결과
     ];
@@ -4211,8 +4681,8 @@
         a.callCountWeek != null ? a.callCountWeek : '',
         a.status || '',
         a.autoAnalyzedStatus || '',
-        withProposalSubmitterSuffix(a.proposalStatusChangeSummary || '', proposalSubmitterNameRaw(a)),
-        a.proposalStatusChangeReason || '',
+        withProposalSubmitterSuffix(a.statusChangeSummary || '', proposalSubmitterNameRaw(a)),
+        a.statusChangeReason || '',
         a.statusOverridden ? '확정' : '미확정',
         a.testSuspectReason ? 'Y' : 'N',
         a.testSuspectReason || '',
@@ -4231,7 +4701,7 @@
         a.deployCsr || '',
         a.deployManager || '',
         ...commitCols,
-        fmtDt(a.lastAnalyzedAt), fmtDt(a.modifiedAt)
+        fmtDt(a.lastAnalyzedAt), fmtDt(effectiveModifiedAtOf(a))
       ];
     });
     const filename = `url-list-${getSingleSelectedRepo() || (getSelectedRepos().length > 1 ? 'multi' : 'all')}`;
@@ -4250,7 +4720,7 @@
       'HTTP Method','컨트롤러파일경로','컨트롤러','메소드명','프로그램ID',
       'ApiOperation','Description주석','메소드주석','컨트롤러주석','RequestProperty','컨트롤러RequestProperty',
       '관련 메뉴(또는 기능)','Deprecated','1년 호출건','1달 호출건','1주 호출건',
-      '상태','자동분석상태','상태변경 사항','상태변경 사유','상태확정','테스트용 의심 여부','테스트용 의심 사유','파라미터URL 패턴','침해사고 로그 제외대상','차단기준','차단일자(JAVADOC)','차단근거(JAVADOC)',
+      '상태','자동분석상태','상태변경 사항','상태변경 사유','URL확정여부','테스트용 의심 여부','테스트용 의심 사유','파라미터URL 패턴','침해사고 로그 제외대상','차단기준','차단일자(JAVADOC)','차단근거(JAVADOC)',
       '비고','현업검토결과','현업검토의견',
       'SmartWay 티켓번호','검토단계',
       'CBO예정일자','차단예정일자','차단작업CSR','차단작업담당자',
@@ -4445,6 +4915,119 @@
     return s.replace('T',' ').substring(0,16);
   }
 
+  function effectiveModifiedAtOf(a) {
+    if (!a) return '';
+    return a.effectiveModifiedAt || a.modifiedAt || '';
+  }
+
+  function effectiveModifiedByOf(a) {
+    if (!a) return '';
+    return a.effectiveModifiedBy || a.modifiedIp || '';
+  }
+
+  function effectiveModifiedIpOf(a) {
+    if (!a) return '';
+    return a.effectiveModifiedIp || a.modifiedIp || '';
+  }
+
+  function parseModifierIdentity(a) {
+    const raw = effectiveModifiedByOf(a);
+    if (!raw) return { raw: '', teamName: '', assigneeName: '' };
+    const s = String(raw).trim();
+    const slash = s.lastIndexOf(' / ');
+    if (slash > 0) {
+      return {
+        raw: s,
+        teamName: s.substring(0, slash).trim(),
+        assigneeName: s.substring(slash + 3).trim()
+      };
+    }
+    return { raw: s, teamName: '', assigneeName: '' };
+  }
+
+  function renderModifiedMetaLines(a, opts) {
+    const options = opts || {};
+    const idn = parseModifierIdentity(a);
+    const ip = String(effectiveModifiedIpOf(a) || '').trim();
+    const lines = [];
+    if (options.showIp && ip) lines.push(ip);
+    if (idn.teamName || idn.assigneeName) {
+      lines.push([idn.teamName, idn.assigneeName].filter(Boolean).join(' / '));
+    } else if (options.includeRawFallback && idn.raw && (!options.showIp || idn.raw !== ip)) {
+      lines.push(idn.raw);
+    }
+    if (!lines.length) return '';
+    return '<br>' + lines.map(function (line) {
+      return `<span style="color:#94a3b8;font-size:9px;">${esc(line)}</span>`;
+    }).join('<br>');
+  }
+
+  function statusValueLabel(v) {
+    const raw = (v == null ? '' : String(v)).trim();
+    return raw || '자동계산';
+  }
+
+  function buildStatusHistoryClearBtn(r) {
+    if (r && r.readOnly) {
+      return '<span style="font-size:10px;color:#6d28d9;font-weight:600;">스냅샷 읽기 전용</span>';
+    }
+    const editorSession = !isAdmin() && window.isEditorLoggedIn && window.isEditorLoggedIn();
+    const canAckStatusAlert = (isAdmin() || editorSession) && r.statusChanged;
+    if (canAckStatusAlert) {
+      return `<button class="btn btn-sm btn-ghost" style="padding:2px 8px;font-size:10px;" onclick="clearStatusFlag(event,${r.id})">확인 완료</button>`;
+    }
+    if (r.statusChanged) {
+      return '<span style="font-size:10px;color:#ea580c;font-weight:600;">로그인 후 확인 가능</span>';
+    }
+    return '<span style="font-size:10px;color:#22c55e;">확인됨</span>';
+  }
+
+  function renderStatusHistorySection(r) {
+    const events = Array.isArray(r.statusEvents) ? r.statusEvents : [];
+    if (!events.length) return '';
+    const clearBtn = buildStatusHistoryClearBtn(r);
+    const rows = events.map(ev => {
+      const reason = (ev.reason || '').trim();
+      const summary = (ev.summaryText || '').trim();
+      const actor = (ev.actorLabel || ev.actorIp || '-').trim() || '-';
+      const move = `${statusValueLabel(ev.fromStatus)} → ${statusValueLabel(ev.toStatus)}`;
+      return `<div style="display:grid;grid-template-columns:112px 1fr;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);">
+        <div style="display:flex;flex-direction:column;gap:4px;">
+          <span style="display:inline-flex;align-items:center;justify-content:center;padding:3px 8px;border-radius:999px;background:#eff6ff;color:#1d4ed8;font-size:11px;font-weight:700;">${esc(ev.eventTypeLabel || ev.eventType || '-')}</span>
+          <span style="font-size:10px;color:var(--text-muted);">${fmtDt(ev.createdAt)}</span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:5px;min-width:0;">
+          <div style="font-size:12px;font-weight:700;color:var(--text);word-break:break-word;">${esc(move)}</div>
+          <div style="font-size:11px;color:var(--text-muted);">변경자: <b style="color:var(--text);">${esc(actor)}</b></div>
+          ${reason ? `<div style="font-size:11px;color:var(--text-muted);line-height:1.5;">사유: ${esc(reason)}</div>` : ''}
+          ${summary ? `<div style="font-size:11px;color:var(--text-muted);line-height:1.5;">요약: ${esc(summary)}</div>` : ''}
+        </div>
+      </div>`;
+    }).join('');
+    return `<div class="detail-section">
+      <div class="detail-section-title" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">📑 상태 변경 이력 <span style="font-size:12px;font-weight:600;color:var(--text-muted);">(${events.length}건)</span>${clearBtn}</div>
+      <div style="max-height:260px;overflow-y:auto;">${rows}</div>
+    </div>`;
+  }
+
+  function renderLegacyStatusHistorySection(r) {
+    const events = Array.isArray(r.statusEvents) ? r.statusEvents : [];
+    const logs = parseChangeLog(r.statusChangeLog);
+    if (events.length || !logs.length) return '';
+    const clearBtn = buildStatusHistoryClearBtn(r);
+    const rows = logs.map((entry, i) => {
+      const num = logs.length - i;
+      return `<div style="display:flex;align-items:baseline;gap:8px;padding:4px 0;border-bottom:1px solid var(--border);">
+        <span style="min-width:22px;text-align:right;font-size:10px;color:var(--text-muted);flex-shrink:0;">${num}</span>
+        <span style="font-size:12px;color:var(--text);word-break:break-all;">${esc(entry)}</span>
+      </div>`;
+    }).reverse().join('');
+    return `<div class="detail-section">
+      <div class="detail-section-title" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">📑 상태 변경 이력 <span style="font-size:12px;font-weight:600;color:var(--text-muted);">(레거시 ${logs.length}건)</span>${clearBtn}</div>
+      <div style="max-height:200px;overflow-y:auto;">${rows}</div>
+    </div>`;
+  }
+
   function esc(s) {
     if (!s) return '';
     return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
@@ -4484,30 +5067,46 @@
     document.getElementById('detailModal').style.display = 'flex';
     document.getElementById('detailBody').innerHTML = '<div class="state-box"><div class="spinner"></div></div>';
     try {
-      const res = await fetch(`/api/db/record/${id}`);
+      const detailUrl = (isSnapshotReadOnly() && snapshotId)
+        ? `/api/snapshot-view/${snapshotId}/records/${id}`
+        : `/api/db/record/${id}`;
+      const res = await fetch(detailUrl);
       if (!res.ok) throw new Error('조회 실패');
-      const r = await res.json();
+      const payload = await res.json();
+      const r = payload && payload.record ? payload.record : payload;
+      if (payload && payload.readOnly) {
+        r.readOnly = true;
+        r.snapshotId = payload.snapshotId;
+        r.snapshotAt = payload.snapshotAt;
+        r.snapshotLabel = payload.snapshotLabel;
+      }
       r._proposalDetailSummary = '';
       r.hasPendingProposal = false;
       r.proposalSubmitterName = '';
-      try {
-        const h = {};
-        if (isAdmin()) {
-          const t = sessionStorage.getItem('adminToken') || '';
-          if (t) h['X-Admin-Token'] = t;
-        } else {
-          const et = window.getEditorToken ? window.getEditorToken() : '';
-          if (et) h['X-Editor-Token'] = et;
-        }
-        const pr = await fetch(`/api/proposals/record/${id}`, { headers: h });
-        const pj = await pr.json().catch(() => ({}));
-        if (pj.hasProposal) {
-          r.hasPendingProposal = true;
-          r._proposalDetailSummary = pj.summary || '';
-          if (pj.proposalSubmitterName != null) r.proposalSubmitterName = String(pj.proposalSubmitterName).trim();
-          if (pj.patch && typeof pj.patch === 'object') r._proposalPatch = pj.patch;
-        }
-      } catch (e) { /* ignore */ }
+      if (!r.readOnly) {
+        try {
+          const h = {};
+          if (isAdmin()) {
+            const t = sessionStorage.getItem('adminToken') || '';
+            if (t) h['X-Admin-Token'] = t;
+          } else {
+            const et = window.getEditorToken ? window.getEditorToken() : '';
+            if (et) h['X-Editor-Token'] = et;
+          }
+          const pr = await fetch(`/api/proposals/record/${id}`, { headers: h });
+          const pj = await pr.json().catch(() => ({}));
+          if (pj.hasProposal) {
+            r.hasPendingProposal = true;
+            r._proposalDetailSummary = pj.summary || '';
+            if (pj.proposalSubmitterName != null) r.proposalSubmitterName = String(pj.proposalSubmitterName).trim();
+            if (pj.patch && typeof pj.patch === 'object') r._proposalPatch = pj.patch;
+          }
+        } catch (e) { /* ignore */ }
+      } else {
+        r.statusEvents = Array.isArray(r.statusEvents) ? r.statusEvents : [];
+        r.effectiveModifiedAt = r.effectiveModifiedAt || r.modifiedAt || '';
+        r.effectiveModifiedBy = r.effectiveModifiedBy || r.modifiedIp || '';
+      }
       renderDetailModal(r);
     } catch(e) {
       document.getElementById('detailBody').innerHTML = `<div class="state-box">오류: ${esc(e.message)}</div>`;
@@ -4747,16 +5346,19 @@
     });
     if (!gitRows) gitRows = '<tr><td colspan="4" style="color:#94a3b8;text-align:center;">이력 없음</td></tr>';
 
+    const snapshotReadOnly = !!r.readOnly;
     const lk = r.statusOverridden; // true면 전체 입력 비활성
     const editorSession = !isAdmin() && window.isEditorLoggedIn && window.isEditorLoggedIn();
     const roAnonymous = !isAdmin() && !editorSession;
-    const dis = (lk || roAnonymous) ? 'disabled' : '';
-    const lockNote = lk ? '<span style="font-size:10px;color:#64748b;margin-left:6px;">※ 확정완료 — 수정 불가 (해제 후 편집)</span>' : '';
+    const dis = (snapshotReadOnly || lk || roAnonymous) ? 'disabled' : '';
+    const detailModeNote = snapshotReadOnly
+      ? '<span style="font-size:10px;color:#6d28d9;margin-left:6px;">※ 스냅샷 읽기 전용 — 수정 불가</span>'
+      : (lk ? '<span style="font-size:10px;color:#64748b;margin-left:6px;">※ URL확정 상태 — 수정 불가 (해제 후 편집)</span>' : '');
 
     // 저장 버튼 표시/숨김
     const saveBtn = document.getElementById('detailSaveBtn');
     if (saveBtn) {
-      if (lk || roAnonymous) saveBtn.style.display = 'none';
+      if (snapshotReadOnly || lk || roAnonymous) saveBtn.style.display = 'none';
       else {
         saveBtn.style.display = '';
         saveBtn.textContent = '저장';
@@ -4772,6 +5374,8 @@
     let detailSummVal = '';
     if (patch.statusChangeSummary) {
       detailSummVal = String(patch.statusChangeSummary).trim();
+    } else if (r.statusChangeSummary) {
+      detailSummVal = String(r.statusChangeSummary).trim();
     } else {
       const official = (r.status || '');
       const selected = (statusForSelect === '' ? '' : String(statusForSelect || ''));
@@ -4779,12 +5383,14 @@
         ? formatStatusChangeSummaryLocal(official, selected)
         : '';
     }
-    const detailReasonVal = patch.statusChangeReason != null ? String(patch.statusChangeReason) : '';
+    const detailReasonVal = patch.statusChangeReason != null
+      ? String(patch.statusChangeReason)
+      : (r.statusChangeReason != null ? String(r.statusChangeReason) : '');
     window._detailProposalSubmitterName = proposalSubmitterNameRaw(r);
     detailSummVal = withProposalSubmitterSuffix(detailSummVal, window._detailProposalSubmitterName);
-    const adminPendingProposal = isAdmin() && !lk && r.hasPendingProposal;
-    const pendingStatusReq = editorSession && !lk && rowHasPendingStatusProposal(r);
-    const statusApproveBtn = editorSession && !lk
+    const adminPendingProposal = !snapshotReadOnly && isAdmin() && !lk && r.hasPendingProposal;
+    const pendingStatusReq = !snapshotReadOnly && editorSession && !lk && rowHasPendingStatusProposal(r);
+    const statusApproveBtn = (snapshotReadOnly ? '' : (editorSession && !lk
         ? (pendingStatusReq
             ? `<span style="display:inline-flex;flex-wrap:wrap;gap:6px;align-items:center;flex:none;">
                  <button type="button" class="btn btn-sm btn-blue" disabled style="flex:none;white-space:nowrap;opacity:0.55;cursor:not-allowed;">승인요청</button>
@@ -4796,21 +5402,21 @@
                  <button type="button" class="btn btn-sm btn-blue" onclick="detailProposalApprove()" style="white-space:nowrap;">승인완료</button>
                  <button type="button" class="btn btn-sm" onclick="openDetailProposalRejectModal()" style="white-space:nowrap;background:#fecaca;color:#991b1b;border:1px solid #f87171;">반려</button>
                </span>`
-            : '');
-    const reasonDis = (lk || roAnonymous || !editorSession) ? 'disabled' : '';
-    const reasonStyle = (!editorSession || lk) ? 'background:#f8fafc;' : '';
+            : '')));
+    const reasonDis = (snapshotReadOnly || lk || roAnonymous || !editorSession) ? 'disabled' : '';
+    const reasonStyle = (snapshotReadOnly || !editorSession || lk) ? 'background:#f8fafc;' : '';
 
     document.getElementById('detailBody').innerHTML = `
       <input type="hidden" id="df-id" value="${r.id}">
       <input type="hidden" id="df-apiPathOriginal" value="${esc(r.apiPath)}">
       <div class="detail-section">
-        <div class="detail-section-title">📋 기본 정보${lockNote}</div>
+        <div class="detail-section-title">📋 기본 정보${detailModeNote}</div>
         <div class="detail-grid">
           <div class="detail-label">레포지토리</div><div class="detail-value">${esc(r.repositoryName)} ${cfg.businessName ? '('+esc(cfg.businessName)+')' : ''}</div>
           <div class="detail-label">URL 경로</div><div class="detail-value" style="display:flex;align-items:center;gap:6px;min-width:0;">
             <span id="df-apiPathText" class="api-path" style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(r.apiPath)}</span>
             <input id="df-apiPath" class="df-input" value="${esc(r.apiPath)}" style="display:none;flex:1;min-width:0;font-family:Consolas,monospace;font-size:12px;" ${dis} oninput="showDetailSave()">
-            ${lk || !isAdmin() ? '' : `<button type="button" class="btn btn-sm btn-ghost" onclick="startApiPathEdit()" style="font-size:11px;border:1px solid var(--border);">수정</button>`}
+            ${snapshotReadOnly || lk || !isAdmin() ? '' : `<button type="button" class="btn btn-sm btn-ghost" onclick="startApiPathEdit()" style="font-size:11px;border:1px solid var(--border);">수정</button>`}
             <button class="copy-btn" onclick="copyText(event,'${esc(r.apiPath)}')" title="URL 경로 복사"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>
           </div>
           <div class="detail-label">Full URL</div><div class="detail-value">${r.fullUrl ? `<a href="${esc(r.fullUrl)}" target="_blank">${esc(r.fullUrl)}</a>` : '-'}</div>
@@ -4831,11 +5437,11 @@
           <div class="detail-label">관련메뉴 <span style="color:var(--primary);font-size:10px;">✎</span></div>
           <div class="detail-value" style="white-space:normal;">
             <input id="df-descriptionOverride" class="df-input" value="${esc(r.descriptionOverride || '')}" placeholder="관련 메뉴 또는 기능을 입력하세요" style="width:100%;" ${dis} oninput="showDetailSave()">
-            ${lk || !isAdmin() ? '' : `<div style="display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap;">
+            ${snapshotReadOnly || lk || !isAdmin() ? '' : `<div style="display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap;">
               <button type="button" class="btn btn-sm btn-ghost" onclick="requestAiMenuSuggestion()" style="font-size:11px;border:1px solid #c4b5fd;color:#5b21b6;">🤖 사내 AI 제안</button>
               <span id="aiSuggestStatus" style="font-size:10px;color:var(--text-muted);"></span>
             </div>`}
-            <div style="font-size:10px;color:var(--text-muted);margin-top:4px;">※ 상단 [저장] 버튼으로 확정됩니다. 참고용 주석은 하단 필드를 확인하세요.</div>
+            <div style="font-size:10px;color:var(--text-muted);margin-top:4px;">※ 상단 [저장] 버튼으로 반영됩니다. 참고용 주석은 하단 필드를 확인하세요.</div>
           </div>
           <div class="detail-label">ApiOperation</div><div class="detail-value">${esc(v(r.apiOperationValue)) || '-'}</div>
           <div class="detail-label">Description주석</div><div class="detail-value">${esc(v(r.descriptionTag)) || '-'}</div>
@@ -4871,12 +5477,14 @@
           <div class="detail-value"><input type="text" id="df-statusChangeSummary" class="df-input" readonly style="width:100%;background:#f8fafc;font-size:12px;" value="${esc(detailSummVal)}" placeholder="${detailSummVal ? '' : '-'}"></div>
           <div class="detail-label">상태변경 사유</div>
           <div class="detail-value"><textarea id="df-statusChangeReason" class="df-textarea" rows="2" ${reasonDis} style="${reasonStyle}width:100%;" placeholder="${editorSession && !lk ? '담당자: 승인요청 시 필수' : ''}">${esc(detailReasonVal)}</textarea></div>
-          <div class="detail-label">상태확정</div>
-          <div class="detail-value">${lk
-            ? `<span class="lock-btn lock-on" style="cursor:pointer;" onclick="toggleDetailLock(${r.id},false)">🔒 확정완료</span><span style="font-size:10px;color:var(--text-muted);margin-left:8px;">클릭하여 해제</span>`
+          <div class="detail-label">URL확정여부</div>
+          <div class="detail-value">${snapshotReadOnly
+            ? `<span class="lock-btn lock-off" style="opacity:.85;">읽기 전용</span><span style="font-size:10px;color:var(--text-muted);margin-left:8px;">스냅샷 데이터는 확정·해제할 수 없습니다.</span>`
+            : (lk
+            ? `<span class="lock-btn lock-on" style="cursor:pointer;" onclick="toggleDetailLock(${r.id},false)">🔒 확정</span><span style="font-size:10px;color:var(--text-muted);margin-left:8px;">클릭하여 URL확정 해제</span>`
             : (isAdmin()
-                ? `<span class="lock-btn lock-off" style="cursor:pointer;" onclick="toggleDetailLock(${r.id},true)">미확정</span><span style="font-size:10px;color:var(--text-muted);margin-left:8px;">클릭하여 확정 (이후 수정불가)</span>`
-                : `<span class="lock-btn lock-off" style="opacity:.85;">미확정</span><span style="font-size:10px;color:var(--text-muted);margin-left:8px;">확정·해제는 관리자만 처리합니다.</span>`)}</div>
+                ? `<span class="lock-btn lock-off" style="cursor:pointer;" onclick="toggleDetailLock(${r.id},true)">미확정</span><span style="font-size:10px;color:var(--text-muted);margin-left:8px;">클릭하여 URL확정 (이후 수정불가)</span>`
+                : `<span class="lock-btn lock-off" style="opacity:.85;">미확정</span><span style="font-size:10px;color:var(--text-muted);margin-left:8px;">URL확정·해제는 관리자만 처리합니다.</span>`))}</div>
           <div class="detail-label">1년 호출건</div><div class="detail-value">${detailCallCell(r, 'total', r.callCount)}</div>
           <div class="detail-label">최근 1달 호출건</div><div class="detail-value">${detailCallCell(r, 'month', r.callCountMonth)}</div>
           <div class="detail-label">최근 1주 호출건</div><div class="detail-value">${detailCallCell(r, 'week', r.callCountWeek)}</div>
@@ -4950,33 +5558,15 @@
           <tbody>${gitRows}</tbody>
         </table>
       </div>
-      ${(() => {
-        const logs = parseChangeLog(r.statusChangeLog);
-        if (!logs.length) return '';
-        const rows = logs.map((entry, i) => {
-          const num = logs.length - i;
-          return `<div style="display:flex;align-items:baseline;gap:8px;padding:4px 0;border-bottom:1px solid var(--border);">
-            <span style="min-width:22px;text-align:right;font-size:10px;color:var(--text-muted);flex-shrink:0;">${num}</span>
-            <span style="font-size:12px;color:var(--text);word-break:break-all;">${esc(entry)}</span>
-          </div>`;
-        }).reverse().join('');
-        const editorSession = !isAdmin() && window.isEditorLoggedIn && window.isEditorLoggedIn();
-        const canAckStatusAlert = (isAdmin() || editorSession) && r.statusChanged;
-        const clearBtn = canAckStatusAlert
-          ? `<button class="btn btn-sm btn-ghost" style="padding:2px 8px;font-size:10px;" onclick="clearStatusFlag(event,${r.id})">확인 완료</button>`
-          : (r.statusChanged
-              ? '<span style="font-size:10px;color:#ea580c;font-weight:600;">로그인 후 확인 가능</span>'
-              : '<span style="font-size:10px;color:#22c55e;">확인됨</span>');
-        return `<div class="detail-section">
-          <div class="detail-section-title" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">📑 상태 변경 이력 <span style="font-size:12px;font-weight:600;color:var(--text-muted);">(${logs.length}건)</span>${clearBtn}</div>
-          <div style="max-height:200px;overflow-y:auto;">${rows}</div>
-        </div>`;
-      })()}
+      ${renderStatusHistorySection(r)}
+      ${renderLegacyStatusHistorySection(r)}
       <div class="detail-section">
         <div class="detail-section-title">🕒 메타 정보</div>
         <div class="detail-grid">
+          ${snapshotReadOnly ? `<div class="detail-label">조회 기준</div><div class="detail-value">스냅샷 ${fmtDt(r.snapshotAt || '')}${r.snapshotLabel ? ` (${esc(r.snapshotLabel)})` : ''}</div>` : ''}
           <div class="detail-label">분석일시</div><div class="detail-value">${fmtDt(r.lastAnalyzedAt)}</div>
-          <div class="detail-label">변경일시</div><div class="detail-value">${fmtDt(r.modifiedAt)}</div>
+          <div class="detail-label">변경일시</div><div class="detail-value">${fmtDt(effectiveModifiedAtOf(r))}${renderModifiedMetaLines(r, { showIp: isAdmin(), includeRawFallback: false })}</div>
+          <div class="detail-label">마지막 변경자</div><div class="detail-value">${esc(effectiveModifiedByOf(r) || '-')}</div>
         </div>
       </div>
     `;
@@ -5027,8 +5617,8 @@
       }
       input.value = s;
       showDetailSave();
-      if (statusEl) statusEl.textContent = '반영됨 — [저장]으로 확정하세요';
-      showToast('입력란에 반영했습니다. 저장을 눌러 확정하세요.', 'success');
+      if (statusEl) statusEl.textContent = '반영됨 — [저장]으로 적용하세요';
+      showToast('입력란에 반영했습니다. 저장을 눌러 적용하세요.', 'success');
     } catch (e) {
       if (e && e.message === 'readonly') return;
       if (statusEl) statusEl.textContent = '';
@@ -5135,7 +5725,12 @@
     const apiPathNew = apiPathEl ? (apiPathEl.value || '').trim() : '';
     const apiPathChanged = !!apiPathEl && apiPathNew && apiPathNew !== apiPathOriginal;
     const status = g('status');
-    if (status !== undefined && !editorSession) body.status = status || null;
+    const officialStatus = (typeof window._detailOfficialStatus === 'string') ? window._detailOfficialStatus : '';
+    const normalizedStatus = status === undefined ? undefined : (status || '');
+    const adminStatusChanged = !editorSession && normalizedStatus !== undefined && normalizedStatus !== officialStatus;
+    if (adminStatusChanged) body.status = status || null;
+    const statusReason = g('statusChangeReason');
+    if (statusReason !== undefined && adminStatusChanged) body.statusChangeReason = statusReason || null;
     const bd = g('blockedDate');      if (bd !== undefined) body.blockedDate     = bd || null;
     const br = g('blockedReason');    if (br !== undefined) body.blockedReason   = br || null;
     const dep = g('isDeprecated');    if (dep !== undefined) body.isDeprecated   = dep || null;
@@ -5211,9 +5806,9 @@
     showDetailSave();
   }
 
-  // ── 상태확정 토글 (상세 패널 전용, 독립 동작) ──────────────
+  // ── URL확정 토글 (상세 패널 전용, 독립 동작) ──────────────
   async function toggleDetailLock(id, lock) {
-    if (!isAdmin()) { showToast('상태 확정은 관리자만 변경할 수 있습니다.', 'error'); return; }
+    if (!isAdmin()) { showToast('URL 확정은 관리자만 변경할 수 있습니다.', 'error'); return; }
     try {
       const res = await adminFetch(`/api/db/record/${id}`, { method:'PATCH',
         body: JSON.stringify({ statusOverridden: lock }) });
@@ -5221,7 +5816,7 @@
       if (!res.ok) throw new Error(d.error || '변경 실패');
       const entry = allApis.find(a => a.id === id);
       if (entry) entry.statusOverridden = lock;
-      showToast(lock ? '상태 확정 완료' : '상태 확정 해제', 'success');
+      showToast(lock ? 'URL확정 완료' : 'URL확정 해제', 'success');
       openDetail(id);
       filterTable({ immediate:true });
     } catch(e) { showToast('변경 실패: ' + e.message, 'error'); }
@@ -5498,14 +6093,15 @@
   applyAdminUI();
   // 관리자 상태 변화(auth:change) 시 즉시 UI 반영
   try { window.addEventListener('auth:change', () => applyAdminUI()); } catch (e) {}
+  loadViewerTableMode();
 
   // 비교(A/B) 기본값: 오늘
   try {
     const t = todayYmd();
     const a = document.getElementById('cmpFromDate');
     const b = document.getElementById('cmpToDate');
-    if (a && !a.value) a.value = t;
-    if (b && !b.value) b.value = t;
+    if (a && !a.value) setCompareDateValue('A', t, true);
+    if (b && !b.value) setCompareDateValue('B', t, true);
   } catch (e) {}
 
   const _initPromise = initRepos();
@@ -5547,10 +6143,59 @@
     const b = document.getElementById('cmpToDate');
     if (a) a.addEventListener('change', () => loadCompareSnapshotList('A'));
     if (b) b.addEventListener('change', () => loadCompareSnapshotList('B'));
+    const fromBtn = document.getElementById('cmpFromDateBtn');
+    const toBtn = document.getElementById('cmpToDateBtn');
+    const fromClear = document.getElementById('cmpFromDateClearBtn');
+    const toClear = document.getElementById('cmpToDateClearBtn');
+    if (fromBtn) fromBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      const pop = document.getElementById('cmpFromDateCalPop');
+      if (pop && pop.style.display === 'block') closeCompareDateCalendar('A');
+      else openCompareDateCalendar('A');
+    });
+    if (toBtn) toBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      const pop = document.getElementById('cmpToDateCalPop');
+      if (pop && pop.style.display === 'block') closeCompareDateCalendar('B');
+      else openCompareDateCalendar('B');
+    });
+    if (fromClear) fromClear.addEventListener('click', (e) => {
+      e.preventDefault();
+      clearCompareDate('A');
+    });
+    if (toClear) toClear.addEventListener('click', (e) => {
+      e.preventDefault();
+      clearCompareDate('B');
+    });
+    const bindCmpMonthNav = function (side) {
+      const ids = compareDateIds(side);
+      const prev = document.getElementById(ids.prev);
+      const next = document.getElementById(ids.next);
+      const close = document.getElementById(ids.close);
+      if (prev) prev.addEventListener('click', function (e) {
+        e.preventDefault();
+        stepCompareCalendarMonth(side, -1);
+      });
+      if (next) next.addEventListener('click', function (e) {
+        e.preventDefault();
+        stepCompareCalendarMonth(side, 1);
+      });
+      if (close) close.addEventListener('click', function (e) {
+        e.preventDefault();
+        closeCompareDateCalendar(side);
+      });
+      updateCompareDateButtonLabel(side);
+    };
+    bindCmpMonthNav('A');
+    bindCmpMonthNav('B');
     // 초기값(오늘)이 미리 채워져 있으면 change 이벤트가 안 뜨므로, 페이지 진입 시 한 번 강제로 로드한다.
     // 관리자만 비교 기능을 쓰므로 isAdmin() 체크는 함수 내부에서 수행.
     if (a && (a.value || '').trim()) loadCompareSnapshotList('A');
     if (b && (b.value || '').trim()) loadCompareSnapshotList('B');
+    document.addEventListener('mousedown', compareCalDocMouseDown);
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') closeCompareDateCalendar();
+    });
   } catch(e) {}
 
   // 기준일자 입력 변화 시 모드 배지/✕버튼 즉시 반영 + 시각 드롭다운 자동 로드

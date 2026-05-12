@@ -51,6 +51,13 @@ public class AdminInterceptor implements HandlerInterceptor {
             return write401(response);
         }
 
+        // 자동분석상태 반영 — 관리자 즉시반영 / 편집자 승인요청 생성
+        if (uri.startsWith("/api/db/status/apply-auto")) {
+            if (authService.isAdmin(adminToken) || authService.isEditor(editorToken)) return true;
+            log.warn("[인증 차단] 401 {} {} (IP={})", request.getMethod(), uri, request.getRemoteAddr());
+            return write401(response);
+        }
+
         // 그 외 등록된 보호 경로 — 관리자만 (기존 동작)
         if (authService.isAdmin(adminToken)) return true;
 

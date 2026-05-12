@@ -213,6 +213,17 @@ public class GlobalConfig {
     @Column(name = "extract_issue_report_at")
     private LocalDateTime extractIssueReportAt;
 
+    /**
+     * 전역 배너 숨김이 적용된 extract issue 리포트 시각.
+     * 현재 리포트 시각과 같으면 "이 리포트는 전역 숨김 처리됨"으로 본다.
+     */
+    @Column(name = "extract_issue_dismiss_report_at")
+    private LocalDateTime extractIssueDismissReportAt;
+
+    /** extract issue 배너를 마지막으로 전역 숨김 처리한 시각 */
+    @Column(name = "extract_issue_dismissed_at")
+    private LocalDateTime extractIssueDismissedAt;
+
     /** 포털 전체 쪽지(관리자 브로드캐스트) — 로그인 사용자에게만 표시 */
     @Column(name = "portal_notice_text", columnDefinition = "TEXT")
     private String portalNoticeText;
@@ -342,6 +353,10 @@ public class GlobalConfig {
     public void setExtractIssueReport(String v) { this.extractIssueReport = v; }
     public LocalDateTime getExtractIssueReportAt() { return extractIssueReportAt; }
     public void setExtractIssueReportAt(LocalDateTime v) { this.extractIssueReportAt = v; }
+    public LocalDateTime getExtractIssueDismissReportAt() { return extractIssueDismissReportAt; }
+    public void setExtractIssueDismissReportAt(LocalDateTime v) { this.extractIssueDismissReportAt = v; }
+    public LocalDateTime getExtractIssueDismissedAt() { return extractIssueDismissedAt; }
+    public void setExtractIssueDismissedAt(LocalDateTime v) { this.extractIssueDismissedAt = v; }
 
     public String getPortalNoticeText() { return portalNoticeText; }
     public void setPortalNoticeText(String portalNoticeText) { this.portalNoticeText = portalNoticeText; }

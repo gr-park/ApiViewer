@@ -1,6 +1,6 @@
-# URL Viewer — Cursor Rules Entry
+# URL Viewer — Cursor Rules Index
 
-이 파일은 의도적으로 짧게 유지한다. 앞으로의 상세 작업 규칙은 `.cursor/rules/` 아래 파일을 기본 기준으로 사용한다.
+실제 작업 규칙은 아래 Cursor Rules 파일을 기준으로 한다.
 
 ## Primary Rule Files
 
@@ -10,16 +10,8 @@
 - `.cursor/rules/url-viewer-status.mdc`
 - `.cursor/rules/release-handoff.mdc`
 
-## Always-Keep Summary
+## Recent Behavior Notes
 
-- 화면 표기에서는 `Jira` 대신 `SmartWay`를 사용하고, 내부 식별자와 DB/코드 명칭은 `jira`를 유지한다.
-- `status`는 공식 운영 상태, `autoAnalyzedStatus`는 자동분석 결과로 유지한다.
-- 영속성 변경은 H2와 PostgreSQL 모두에서 런타임 오류 없이 동작해야 하며, 가능하면 JPQL 또는 Spring Data 메서드명을 우선 사용한다.
-- UI, 서버 동작, 배치 동작, 배포 체감 흐름이 바뀌면 `src/main/resources/static/common/nav.js`의 `APP_UI_VERSION`을 올린다.
-- 정적 UI 또는 배포 단위 동작을 바꿨다면 응답 마지막 줄에 현재 `APP_UI_VERSION`을 적는다.
-- UI 상세 스타일은 `UI-GUIDELINES.md`를 따른다.
-
-## Maintenance Rule
-
-- 소스코드나 비즈니스 로직 변경 시, 장문의 설명을 이 파일에 누적하지 말고 관련 `.cursor/rules/*.mdc` 또는 별도 문서를 갱신한다.
-- 이 파일은 "어디를 봐야 하는지"와 "항상 지켜야 하는 핵심 요약"만 유지한다.
+- `URL 분석 오류 요약` 상단 배너 닫힘은 브라우저 저장소가 아니라 서버 전역 상태를 사용한다. 현재 리포트를 닫으면 관리자 세션 전반에서 숨겨지고, 새 extract issue 리포트가 저장되면 다시 표시된다.
+- `URL 현황`의 관리자 스냅샷 비교 기준일자는 조회 화면과 같은 커스텀 달력을 사용하며, 스냅샷이 있는 날짜를 붉게 표시한다. 변경일시에는 관리자 IP와 수정자 팀/담당자 표시를 함께 노출한다.
+- `URL 현황` 테이블은 `간략히 보기 / 자세히 보기` 토글을 지원한다. 토글은 조회 필터 첫 줄에 두고, 간략 모드에서는 레포~상태와 관련메뉴~비고 중심의 주요 컬럼만 남기며 엑셀/업로드 스키마는 기존 전체 컬럼 기준을 유지한다.

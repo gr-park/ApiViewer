@@ -4,6 +4,7 @@ import com.baek.viewer.model.GlobalConfig;
 import com.baek.viewer.model.RepoConfig;
 import com.baek.viewer.repository.GlobalConfigRepository;
 import com.baek.viewer.repository.RepoConfigRepository;
+import com.baek.viewer.service.AuthService;
 import com.baek.viewer.service.YamlConfigService;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -12,6 +13,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -28,17 +30,20 @@ public class ConfigController {
     private final YamlConfigService yamlConfigService;
     private final com.baek.viewer.service.ApmMatchReportService apmMatchReportService;
     private final com.baek.viewer.service.NavNoticeService navNoticeService;
+    private final AuthService authService;
 
     public ConfigController(RepoConfigRepository repoRepo,
                             GlobalConfigRepository globalRepo,
                             YamlConfigService yamlConfigService,
                             com.baek.viewer.service.ApmMatchReportService apmMatchReportService,
-                            com.baek.viewer.service.NavNoticeService navNoticeService) {
+                            com.baek.viewer.service.NavNoticeService navNoticeService,
+                            AuthService authService) {
         this.repoRepo = repoRepo;
         this.globalRepo = globalRepo;
         this.yamlConfigService = yamlConfigService;
         this.apmMatchReportService = apmMatchReportService;
         this.navNoticeService = navNoticeService;
+        this.authService = authService;
     }
 
     // ── 공통 설정 ──────────────────────────────────────────
@@ -114,13 +119,24 @@ public class ConfigController {
      * 설정/상세는 admin-only 로 별도 조회한다.
      */
     @GetMapping("/extract-issue-summary")
-    public ResponseEntity<?> getExtractIssueSummary() {
+    public ResponseEntity<?> getExtractIssueSummary(
+            @RequestHeader(value = "X-Admin-Token", required = false) String adminToken) {
         return globalRepo.findById(1L)
                 .map(gc -> {
-                    String at = gc.getExtractIssueReportAt() != null ? gc.getExtractIssueReportAt().toString() : "";
+                    String at = time(gc.getExtractIssueReportAt());
+                    String dismissedAt = time(gc.getExtractIssueDismissedAt());
+                    boolean dismissed = isExtractIssueDismissed(gc, adminToken);
                     String json = gc.getExtractIssueReport();
                     if (json == null || json.isBlank()) {
-                        return ResponseEntity.ok(Map.of("ok", true, "at", at, "errorFileCount", 0, "zeroFileCount", 0, "warnFileCount", 0));
+                        return ResponseEntity.ok(Map.of(
+                                "ok", true,
+                                "at", at,
+                                "dismissed", false,
+                                "dismissedAt", dismissedAt,
+                                "errorFileCount", 0,
+                                "zeroFileCount", 0,
+                                "warnFileCount", 0
+                        ));
                     }
                     try {
                         @SuppressWarnings("unchecked")
@@ -133,6 +149,8 @@ public class ConfigController {
                         return ResponseEntity.ok(Map.of(
                                 "ok", true,
                                 "at", at,
+                                "dismissed", dismissed,
+                                "dismissedAt", dismissedAt,
                                 "repoName", repo,
                                 "label", label,
                                 "errorFileCount", err,
@@ -140,10 +158,24 @@ public class ConfigController {
                                 "warnFileCount", warn
                         ));
                     } catch (Exception e) {
-                        return ResponseEntity.ok(Map.of("ok", false, "at", at, "error", "parse_failed"));
+                        return ResponseEntity.ok(Map.of(
+                                "ok", false,
+                                "at", at,
+                                "dismissed", dismissed,
+                                "dismissedAt", dismissedAt,
+                                "error", "parse_failed"
+                        ));
                     }
                 })
-                .orElse(ResponseEntity.ok(Map.of("ok", true, "at", "", "errorFileCount", 0, "zeroFileCount", 0, "warnFileCount", 0)));
+                .orElse(ResponseEntity.ok(Map.of(
+                        "ok", true,
+                        "at", "",
+                        "dismissed", false,
+                        "dismissedAt", "",
+                        "errorFileCount", 0,
+                        "zeroFileCount", 0,
+                        "warnFileCount", 0
+                )));
     }
 
     /** 설정/상세 화면용 — 저장된 문제파일 리포트 조회 (admin-only). */
@@ -176,12 +208,33 @@ public class ConfigController {
             GlobalConfig gc = globalRepo.findById(1L).orElseGet(GlobalConfig::new);
             String json = new ObjectMapper().writeValueAsString(body != null ? body : Map.of());
             gc.setExtractIssueReport(json);
-            gc.setExtractIssueReportAt(java.time.LocalDateTime.now());
+            gc.setExtractIssueReportAt(LocalDateTime.now());
+            // 새 리포트가 저장되면 기존 전역 dismiss 기준은 무효화한다.
+            gc.setExtractIssueDismissReportAt(null);
+            gc.setExtractIssueDismissedAt(null);
             globalRepo.save(gc);
             return ResponseEntity.ok(Map.of("ok", true));
         } catch (Exception e) {
             return ResponseEntity.status(500).body(Map.of("ok", false, "error", "save_failed"));
         }
+    }
+
+    /** extract issue 상단 배너를 현재 리포트 기준으로 전역 숨김 처리 (admin-only). */
+    @PostMapping("/extract-issue-dismiss")
+    public ResponseEntity<?> dismissExtractIssueBanner(
+            @RequestHeader(value = "X-Admin-Token", required = false) String adminToken) {
+        if (!authService.isAdmin(adminToken)) {
+            return ResponseEntity.status(401).body(Map.of("ok", false, "error", "admin_required"));
+        }
+        GlobalConfig gc = globalRepo.findById(1L).orElseGet(GlobalConfig::new);
+        gc.setExtractIssueDismissReportAt(gc.getExtractIssueReportAt());
+        gc.setExtractIssueDismissedAt(LocalDateTime.now());
+        globalRepo.save(gc);
+        return ResponseEntity.ok(Map.of(
+                "ok", true,
+                "dismissed", isExtractIssueDismissed(gc, adminToken),
+                "dismissedAt", time(gc.getExtractIssueDismissedAt())
+        ));
     }
 
     @PutMapping("/global")
@@ -458,5 +511,16 @@ public class ConfigController {
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
+    }
+
+    private boolean isExtractIssueDismissed(GlobalConfig gc, String adminToken) {
+        if (gc == null || !authService.isAdmin(adminToken)) return false;
+        LocalDateTime reportAt = gc.getExtractIssueReportAt();
+        LocalDateTime dismissReportAt = gc.getExtractIssueDismissReportAt();
+        return reportAt != null && reportAt.equals(dismissReportAt);
+    }
+
+    private String time(LocalDateTime value) {
+        return value != null ? value.toString() : "";
     }
 }

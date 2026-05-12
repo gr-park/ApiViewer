@@ -8,8 +8,11 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface ApiRecordSnapshotRowRepository extends JpaRepository<ApiRecordSnapshotRow, Long> {
+
+    Optional<ApiRecordSnapshotRow> findByIdAndSnapshotId(Long id, Long snapshotId);
 
     @Query("""
             SELECT r FROM ApiRecordSnapshotRow r
@@ -78,7 +81,7 @@ public interface ApiRecordSnapshotRowRepository extends JpaRepository<ApiRecordS
     @Query("SELECT COUNT(r) FROM ApiRecordSnapshotRow r WHERE r.snapshotId = :snapshotId AND (:repos IS NULL OR r.repositoryName IN :repos) AND r.isNew = true AND (r.status IS NULL OR r.status <> '삭제')")
     long countNew(@Param("snapshotId") Long snapshotId, @Param("repos") List<String> repos);
 
-    @Query("SELECT COUNT(r) FROM ApiRecordSnapshotRow r WHERE r.snapshotId = :snapshotId AND (:repos IS NULL OR r.repositoryName IN :repos) AND r.statusChanged = true AND (r.status IS NULL OR r.status <> '삭제')")
+    @Query("SELECT COUNT(r) FROM ApiRecordSnapshotRow r WHERE r.snapshotId = :snapshotId AND (:repos IS NULL OR r.repositoryName IN :repos) AND r.statusChanged = true")
     long countStatusChanged(@Param("snapshotId") Long snapshotId, @Param("repos") List<String> repos);
 
     @Query("SELECT COUNT(r) FROM ApiRecordSnapshotRow r WHERE r.snapshotId = :snapshotId AND (:repos IS NULL OR r.repositoryName IN :repos) AND r.reviewResult IS NOT NULL AND r.reviewResult <> '' AND (r.status IS NULL OR r.status <> '삭제')")

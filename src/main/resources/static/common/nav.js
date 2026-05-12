@@ -13,7 +13,7 @@
  * ═══════════════════════════════════════════════════════════════ */
 (function () {
   // UI 버전 표기 (캐시/반영 여부 확인용) — 변경 시 이 값만 갱신
-  const APP_UI_VERSION = 'ver13.0.16';
+  const APP_UI_VERSION = 'ver14.1.09';
 
   const SEGMENTS = [
     {
@@ -166,7 +166,26 @@
   const SYNC_WARN_DISMISS_KEY = 'syncWarnDismiss';
   const OPS_DIGEST_DISMISS_KEY = 'opsDigestDismissAt';
   const APM_MATCH_DISMISS_KEY = 'apmMatchDismissAt';
-  const EXTRACT_ISSUE_DISMISS_KEY = 'extractIssueDismissAt';
+
+  function extractIssueAuthHeaders() {
+    const tok = window.getAdminToken ? window.getAdminToken() : '';
+    return tok ? { 'X-Admin-Token': tok } : {};
+  }
+
+  async function dismissExtractIssueBanner() {
+    const tok = window.getAdminToken ? window.getAdminToken() : '';
+    if (!tok) throw new Error('관리자 로그인 후 닫을 수 있습니다.');
+    const res = await fetch('/api/config/extract-issue-dismiss', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: extractIssueAuthHeaders()
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || data.ok === false) {
+      throw new Error(data.error || '배너 닫기 저장에 실패했습니다.');
+    }
+    return data;
+  }
 
   function renderSyncWarnings(list) {
     const slot = document.getElementById('sync-warning-slot');
@@ -383,16 +402,17 @@
     const zero = Number(data.zeroFileCount || 0);
     const warn = Number(data.warnFileCount || 0);
     const at = data.at || '';
+    const dismissed = data.dismissed === true;
     if (err <= 0 && zero <= 0 && warn <= 0) { slot.innerHTML = ''; return; }
-    try {
-      const dismissed = sessionStorage.getItem(EXTRACT_ISSUE_DISMISS_KEY);
-      if (dismissed && at && dismissed === at) { slot.innerHTML = ''; return; }
-    } catch(e) {}
+    if (dismissed) { slot.innerHTML = ''; return; }
 
     const timeStr = fmtDigestTime(at);
     const loggedIn = window.AuthState && window.AuthState.loggedIn;
     const link = loggedIn
       ? `<a href="/settings/#extract" class="sync-warning-toggle" style="text-decoration:none;">설정에서 보기 ▶</a>`
+      : '';
+    const closeBtnHtml = loggedIn
+      ? `<button type="button" class="sync-warning-close" aria-label="이 알림 닫기 (새 분석 리포트가 저장되면 다시 표시)" title="닫기">✕</button>`
       : '';
     const parts = [];
     if (err > 0) parts.push(`에러파일 <strong>${esc(err)}</strong>`);
@@ -408,21 +428,31 @@
             <div class="ops-digest-preview">${parts.join(' · ')}</div>
           </div>
           ${link}
-          <button type="button" class="sync-warning-close" aria-label="이 알림 닫기 (다음 갱신 시 다시 표시)" title="닫기">✕</button>
+          ${closeBtnHtml}
         </div>
       </div>`;
     const root = slot.querySelector('.ops-digest-banner');
     const closeBtn = root && root.querySelector('.sync-warning-close');
     if (closeBtn) {
-      closeBtn.addEventListener('click', () => {
-        try { sessionStorage.setItem(EXTRACT_ISSUE_DISMISS_KEY, at || '1'); } catch (e) {}
+      closeBtn.addEventListener('click', async () => {
+        closeBtn.disabled = true;
+        try {
+          await dismissExtractIssueBanner();
+        } catch (e) {
+          closeBtn.disabled = false;
+          toastNav(e.message || '실패', 'error');
+          return;
+        }
         slot.innerHTML = '';
       });
     }
   }
 
   function loadExtractIssueBanner() {
-    fetch('/api/config/extract-issue-summary', { credentials: 'same-origin' })
+    fetch('/api/config/extract-issue-summary', {
+      credentials: 'same-origin',
+      headers: extractIssueAuthHeaders()
+    })
       .then(r => (r.ok ? r.json() : null))
       .then(data => renderExtractIssueBanner(data))
       .catch(() => {});

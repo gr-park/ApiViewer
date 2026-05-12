@@ -68,7 +68,7 @@ public class RecordProposalController {
             if (patch == null) {
                 return ResponseEntity.badRequest().body(Map.of("error", "body.patch 객체가 필요합니다."));
             }
-            proposalService.saveOrUpdateProposal(recordId, patch, submittedByLabel(req), submitterAssigneeId(req));
+            proposalService.saveOrUpdateProposal(recordId, patch, submittedByLabel(req), submitterAssigneeId(req), clientIp(req));
             return ResponseEntity.ok(Map.of("success", true, "recordId", recordId));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
@@ -126,7 +126,7 @@ public class RecordProposalController {
     }
 
     @PostMapping("/reject")
-    public ResponseEntity<?> reject(@RequestBody Map<String, Object> body) {
+    public ResponseEntity<?> reject(@RequestBody Map<String, Object> body, HttpServletRequest req) {
         @SuppressWarnings("unchecked")
         List<Integer> rawIds = (List<Integer>) body.get("ids");
         if (rawIds == null || rawIds.isEmpty()) {
@@ -135,7 +135,7 @@ public class RecordProposalController {
         String reason = body.get("reason") != null ? String.valueOf(body.get("reason")) : "";
         List<Long> ids = rawIds.stream().map(i -> i.longValue()).toList();
         try {
-            int n = proposalService.reject(ids, reason);
+            int n = proposalService.reject(ids, reason, clientIp(req));
             return ResponseEntity.ok(Map.of("removed", n));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));

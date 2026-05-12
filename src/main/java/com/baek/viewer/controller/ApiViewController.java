@@ -3,6 +3,7 @@ package com.baek.viewer.controller;
 import com.baek.viewer.model.ApiInfo;
 import com.baek.viewer.model.ApiRecord;
 import com.baek.viewer.model.ApiRecordProposal;
+import com.baek.viewer.model.ApiRecordStatusEvent;
 import com.baek.viewer.model.ProposalRejectEvent;
 import com.baek.viewer.model.ApiRecordStatsDto;
 import com.baek.viewer.model.ApiRecordSummary;
@@ -23,6 +24,8 @@ import com.baek.viewer.repository.GlobalConfigRepository;
 import com.baek.viewer.repository.RepoConfigRepository;
 import com.baek.viewer.service.ApiExtractorService;
 import com.baek.viewer.service.ApiStorageService;
+import com.baek.viewer.service.ApiRecordStatusEventService;
+import com.baek.viewer.service.RecordProposalService;
 import com.baek.viewer.service.WhatapService;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -72,6 +75,8 @@ public class ApiViewController {
     private final com.baek.viewer.service.AuthService authService;
     private final com.baek.viewer.service.TestSuspectMatcher testSuspectMatcher;
     private final com.baek.viewer.service.YamlConfigService yamlConfigService;
+    private final ApiRecordStatusEventService statusEventService;
+    private final RecordProposalService proposalService;
     private final ApiRecordProposalRepository proposalRepository;
     private final ProposalRejectEventRepository proposalRejectEventRepository;
     private final ItAssigneeRepository itAssigneeRepository;
@@ -85,6 +90,8 @@ public class ApiViewController {
                              com.baek.viewer.service.AuthService authService,
                              com.baek.viewer.service.TestSuspectMatcher testSuspectMatcher,
                              com.baek.viewer.service.YamlConfigService yamlConfigService,
+                             ApiRecordStatusEventService statusEventService,
+                             RecordProposalService proposalService,
                              ApiRecordProposalRepository proposalRepository,
                              ProposalRejectEventRepository proposalRejectEventRepository,
                              ItAssigneeRepository itAssigneeRepository) {
@@ -97,6 +104,8 @@ public class ApiViewController {
         this.authService = authService;
         this.testSuspectMatcher = testSuspectMatcher;
         this.yamlConfigService = yamlConfigService;
+        this.statusEventService = statusEventService;
+        this.proposalService = proposalService;
         this.proposalRepository = proposalRepository;
         this.proposalRejectEventRepository = proposalRejectEventRepository;
         this.itAssigneeRepository = itAssigneeRepository;
@@ -519,9 +528,11 @@ public class ApiViewController {
                     ? java.util.Set.of()
                     : new java.util.HashSet<>(proposalRepository.findRecordIdsHavingProposal(pageIds));
             java.util.Map<Long, ProposalListExtras> proposalExtras = proposalExtrasByRecordIds(pageIds);
+            java.util.Map<Long, StatusChangeDisplayExtras> statusChangeExtras = statusChangeExtrasByRecordIds(pageIds);
             List<Map<String, Object>> summaryList = entityPage.getContent().stream()
                     .map(r -> toSummaryMap(r, pendingIds.contains(r.getId()),
-                            proposalExtras.getOrDefault(r.getId(), ProposalListExtras.EMPTY)))
+                            proposalExtras.getOrDefault(r.getId(), ProposalListExtras.EMPTY),
+                            statusChangeExtras.getOrDefault(r.getId(), StatusChangeDisplayExtras.EMPTY)))
                     .collect(Collectors.toList());
 
             log.info("[목록 조회·필터] repo={}, status={}, autoStatus={}, method={}, q={}, alert={}, expectedDone={}, page={}/{}, size={}, total={}, 소요={}ms",
@@ -619,9 +630,11 @@ public class ApiViewController {
                 ? java.util.Set.of()
                 : new java.util.HashSet<>(proposalRepository.findRecordIdsHavingProposal(pageIds2));
         java.util.Map<Long, ProposalListExtras> proposalExtras2 = proposalExtrasByRecordIds(pageIds2);
+        java.util.Map<Long, StatusChangeDisplayExtras> statusChangeExtras2 = statusChangeExtrasByRecordIds(pageIds2);
         List<Map<String, Object>> summaryList = entityPage.getContent().stream()
                 .map(r -> toSummaryMap(r, pendingIds2.contains(r.getId()),
-                        proposalExtras2.getOrDefault(r.getId(), ProposalListExtras.EMPTY)))
+                        proposalExtras2.getOrDefault(r.getId(), ProposalListExtras.EMPTY),
+                        statusChangeExtras2.getOrDefault(r.getId(), StatusChangeDisplayExtras.EMPTY)))
                 .collect(Collectors.toList());
 
         Map<String, Object> response = new LinkedHashMap<>();
@@ -861,8 +874,8 @@ public class ApiViewController {
                 if (deployUnscheduled) ps.add(cb.isNull(root.get("deployScheduledDate")));
                 else ps.add(cb.isNotNull(root.get("deployScheduledDate")));
             }
-            // alert!="deleted" 기본: 삭제 제외
-            if (alert == null || !"deleted".equals(alert)) {
+            // alert 기본: 삭제 제외. 단, 삭제 전용 / 변경감지는 삭제 상태도 포함한다.
+            if (alert == null || (!"deleted".equals(alert) && !"changed".equals(alert))) {
                 ps.add(cb.or(cb.isNull(root.get("status")), cb.notEqual(root.get("status"), "삭제")));
             }
             return cb.and(ps.toArray(new Predicate[0]));
@@ -877,20 +890,63 @@ public class ApiViewController {
         return PathParamPatternUtil.fromApiPath(r.getApiPath());
     }
 
+    private String submittedByLabel(HttpServletRequest req) {
+        String admin = req.getHeader("X-Admin-Token");
+        if (authService.isAdmin(admin)) return "ADMIN";
+        String ed = req.getHeader("X-Editor-Token");
+        Long id = authService.getEditorAssigneeId(ed);
+        if (id != null) {
+            return itAssigneeRepository.findById(id)
+                    .map(a -> a.getTeamName() + " / " + a.getAssigneeName())
+                    .orElse("EDITOR:" + id);
+        }
+        return "UNKNOWN";
+    }
+
+    private Long submitterAssigneeId(HttpServletRequest req) {
+        if (authService.isAdmin(req.getHeader("X-Admin-Token"))) {
+            return null;
+        }
+        return authService.getEditorAssigneeId(req.getHeader("X-Editor-Token"));
+    }
+
     private static final class ProposalListExtras {
-        static final ProposalListExtras EMPTY = new ProposalListExtras("", "", "", "");
+        static final ProposalListExtras EMPTY = new ProposalListExtras("", "", "", "", "", null);
         final String proposalRequestSummary;
         final String proposalStatusChangeSummary;
         final String proposalStatusChangeReason;
         /** 제안 제출 담당자 표시명(목록·엑셀·상세 접미사용) */
         final String proposalSubmitterName;
+        /** 담당자 UI/메타용 전체 표시명 */
+        final String proposalSubmittedByLabel;
+        final LocalDateTime proposalUpdatedAt;
 
         ProposalListExtras(String proposalRequestSummary, String proposalStatusChangeSummary,
-                             String proposalStatusChangeReason, String proposalSubmitterName) {
+                             String proposalStatusChangeReason, String proposalSubmitterName,
+                             String proposalSubmittedByLabel, LocalDateTime proposalUpdatedAt) {
             this.proposalRequestSummary = proposalRequestSummary != null ? proposalRequestSummary : "";
             this.proposalStatusChangeSummary = proposalStatusChangeSummary != null ? proposalStatusChangeSummary : "";
             this.proposalStatusChangeReason = proposalStatusChangeReason != null ? proposalStatusChangeReason : "";
             this.proposalSubmitterName = proposalSubmitterName != null ? proposalSubmitterName : "";
+            this.proposalSubmittedByLabel = proposalSubmittedByLabel != null ? proposalSubmittedByLabel : "";
+            this.proposalUpdatedAt = proposalUpdatedAt;
+        }
+    }
+
+    private static final class StatusChangeDisplayExtras {
+        static final StatusChangeDisplayExtras EMPTY = new StatusChangeDisplayExtras("", "", "", "", null);
+        final String summary;
+        final String reason;
+        final String eventType;
+        final String actorLabel;
+        final LocalDateTime changedAt;
+
+        StatusChangeDisplayExtras(String summary, String reason, String eventType, String actorLabel, LocalDateTime changedAt) {
+            this.summary = summary != null ? summary : "";
+            this.reason = reason != null ? reason : "";
+            this.eventType = eventType != null ? eventType : "";
+            this.actorLabel = actorLabel != null ? actorLabel : "";
+            this.changedAt = changedAt;
         }
     }
 
@@ -963,14 +1019,58 @@ public class ApiViewController {
                 log.debug("[제안 payload 파싱 스킵] recordId={}: {}", p.getRecordId(), e.getMessage());
             }
             String submitterName = resolveProposalSubmitterDisplayName(p, assigneeNameById);
-            out.put(p.getRecordId(), new ProposalListExtras(summ, changeSumm, changeReason, submitterName));
+            String submittedByLabel = p.getSubmittedBy() != null ? p.getSubmittedBy().trim() : "";
+            if ("ADMIN".equalsIgnoreCase(submittedByLabel)) {
+                submittedByLabel = "관리자";
+            }
+            out.put(p.getRecordId(), new ProposalListExtras(
+                    summ, changeSumm, changeReason, submitterName, submittedByLabel, p.getUpdatedAt()));
+        }
+        return out;
+    }
+
+    private java.util.Map<Long, StatusChangeDisplayExtras> statusChangeExtrasByRecordIds(List<Long> recordIds) {
+        if (recordIds == null || recordIds.isEmpty()) {
+            return java.util.Map.of();
+        }
+        java.util.Map<Long, ApiRecordStatusEvent> latestByRecordId = statusEventService.findLatestByRecordIds(recordIds);
+        java.util.Map<Long, StatusChangeDisplayExtras> out = new java.util.HashMap<>();
+        for (Long recordId : recordIds) {
+            ApiRecordStatusEvent ev = latestByRecordId.get(recordId);
+            if (ev == null || ApiRecordStatusEventService.EVENT_PROPOSAL_REJECTED.equals(ev.getEventType())) {
+                continue;
+            }
+            String summary = ev.getSummaryText() != null ? ev.getSummaryText().trim() : "";
+            String reason = ev.getReason() != null ? ev.getReason().trim() : "";
+            String actorLabel = ev.getActorLabel() != null ? ev.getActorLabel().trim() : "";
+            out.put(recordId, new StatusChangeDisplayExtras(summary, reason, ev.getEventType(), actorLabel, ev.getCreatedAt()));
         }
         return out;
     }
 
     /** ApiRecord → 경량 summary Map — TEXT 컬럼(fullComment 등) 응답에서 제외 */
-    private Map<String, Object> toSummaryMap(ApiRecord r, boolean hasPendingProposal, ProposalListExtras proposalExtras) {
+    private Map<String, Object> toSummaryMap(ApiRecord r, boolean hasPendingProposal, ProposalListExtras proposalExtras,
+                                             StatusChangeDisplayExtras statusChangeExtras) {
         Map<String, Object> m = new LinkedHashMap<>();
+        ProposalListExtras ex = proposalExtras != null ? proposalExtras : ProposalListExtras.EMPTY;
+        StatusChangeDisplayExtras statusEx = statusChangeExtras != null ? statusChangeExtras : StatusChangeDisplayExtras.EMPTY;
+        LocalDateTime effectiveModifiedAt = r.getModifiedAt();
+        String effectiveModifiedBy = r.getModifiedIp();
+        if (hasPendingProposal && ex.proposalUpdatedAt != null
+                && (effectiveModifiedAt == null || !ex.proposalUpdatedAt.isBefore(effectiveModifiedAt))) {
+            effectiveModifiedAt = ex.proposalUpdatedAt;
+            if (!ex.proposalSubmittedByLabel.isBlank()) {
+                effectiveModifiedBy = ex.proposalSubmittedByLabel;
+            } else if (!ex.proposalSubmitterName.isBlank()) {
+                effectiveModifiedBy = ex.proposalSubmitterName;
+            }
+        } else if (statusEx.changedAt != null
+                && (effectiveModifiedAt == null || !statusEx.changedAt.isBefore(effectiveModifiedAt))) {
+            effectiveModifiedAt = statusEx.changedAt;
+            if (!statusEx.actorLabel.isBlank()) {
+                effectiveModifiedBy = statusEx.actorLabel;
+            }
+        }
         m.put("id",                 r.getId());
         m.put("repositoryName",     r.getRepositoryName());
         m.put("apiPath",            r.getApiPath());
@@ -979,6 +1079,8 @@ public class ApiViewController {
         m.put("createdIp",          r.getCreatedIp());
         m.put("modifiedAt",         r.getModifiedAt());
         m.put("modifiedIp",         r.getModifiedIp());
+        m.put("effectiveModifiedAt", effectiveModifiedAt);
+        m.put("effectiveModifiedBy", effectiveModifiedBy);
         m.put("reviewedIp",         r.getReviewedIp());
         m.put("status",             r.getStatus());
         m.put("autoAnalyzedStatus", r.getAutoAnalyzedStatus());
@@ -1009,6 +1111,7 @@ public class ApiViewController {
         m.put("deployScheduledDate", r.getDeployScheduledDate());
         m.put("deployCsr",          r.getDeployCsr());
         m.put("deployManager",      r.getDeployManager());
+        m.put("reviewStage",        r.getReviewStage());
         m.put("reviewTeam",         r.getReviewTeam());
         m.put("reviewManager",      r.getReviewManager());
         m.put("reviewedAt",         r.getReviewedAt());
@@ -1032,11 +1135,40 @@ public class ApiViewController {
         m.put("jiraIssueUrl",       r.getJiraIssueUrl());
         m.put("jiraSyncedAt",       r.getJiraSyncedAt());
         m.put("hasPendingProposal", hasPendingProposal);
-        ProposalListExtras ex = proposalExtras != null ? proposalExtras : ProposalListExtras.EMPTY;
         m.put("proposalRequestSummary", ex.proposalRequestSummary);
         m.put("proposalStatusChangeSummary", ex.proposalStatusChangeSummary);
         m.put("proposalStatusChangeReason", ex.proposalStatusChangeReason);
         m.put("proposalSubmitterName", ex.proposalSubmitterName);
+        m.put("proposalSubmittedByLabel", ex.proposalSubmittedByLabel);
+        String displaySummary = hasPendingProposal && !ex.proposalStatusChangeSummary.isBlank()
+                ? ex.proposalStatusChangeSummary
+                : statusEx.summary;
+        String displayReason = hasPendingProposal && !ex.proposalStatusChangeReason.isBlank()
+                ? ex.proposalStatusChangeReason
+                : statusEx.reason;
+        m.put("statusChangeSummary", displaySummary);
+        m.put("statusChangeReason", displayReason);
+        m.put("statusChangeEventType", statusEx.eventType);
+        m.put("statusChangeActor", statusEx.actorLabel);
+        m.put("statusChangeAt", statusEx.changedAt);
+        return m;
+    }
+
+    private Map<String, Object> toDetailMap(ApiRecord r, boolean hasPendingProposal, ProposalListExtras proposalExtras,
+                                            StatusChangeDisplayExtras statusChangeExtras) {
+        Map<String, Object> m = toSummaryMap(r, hasPendingProposal, proposalExtras, statusChangeExtras);
+        ApiRecordStatusEvent latestEvent = statusEventService.findLatestByRecordId(r.getId()).orElse(null);
+        if (!hasPendingProposal && latestEvent != null) {
+            LocalDateTime effectiveModifiedAt = latestEvent.getCreatedAt();
+            if (effectiveModifiedAt != null
+                    && (r.getModifiedAt() == null || !effectiveModifiedAt.isBefore(r.getModifiedAt()))) {
+                m.put("effectiveModifiedAt", effectiveModifiedAt);
+                if (latestEvent.getActorLabel() != null && !latestEvent.getActorLabel().isBlank()) {
+                    m.put("effectiveModifiedBy", latestEvent.getActorLabel());
+                }
+            }
+        }
+        m.put("statusEvents", statusEventService.toResponseList(r.getId()));
         return m;
     }
 
@@ -1206,7 +1338,14 @@ public class ApiViewController {
     public ResponseEntity<?> getRecord(@PathVariable Long id) {
         log.info("[단건 조회] GET /api/db/record/{}", id);
         return recordRepository.findById(id)
-                .map(r -> ResponseEntity.ok((Object) r))
+                .map(r -> {
+                    Optional<ApiRecordProposal> pp = proposalRepository.findByRecordId(r.getId());
+                    ProposalListExtras ex = proposalExtrasByRecordIds(List.of(r.getId()))
+                            .getOrDefault(r.getId(), ProposalListExtras.EMPTY);
+                    StatusChangeDisplayExtras sx = statusChangeExtrasByRecordIds(List.of(r.getId()))
+                            .getOrDefault(r.getId(), StatusChangeDisplayExtras.EMPTY);
+                    return ResponseEntity.ok((Object) toDetailMap(r, pp.isPresent(), ex, sx));
+                })
                 .orElse(ResponseEntity.notFound().build());
     }
 
@@ -1226,7 +1365,9 @@ public class ApiViewController {
                     Optional<ApiRecordProposal> pp = proposalRepository.findByRecordId(r.getId());
                     ProposalListExtras ex = proposalExtrasByRecordIds(java.util.List.of(r.getId()))
                             .getOrDefault(r.getId(), ProposalListExtras.EMPTY);
-                    return ResponseEntity.ok(toSummaryMap(r, pp.isPresent(), ex));
+                    StatusChangeDisplayExtras sx = statusChangeExtrasByRecordIds(java.util.List.of(r.getId()))
+                            .getOrDefault(r.getId(), StatusChangeDisplayExtras.EMPTY);
+                    return ResponseEntity.ok(toSummaryMap(r, pp.isPresent(), ex, sx));
                 })
                 .orElseGet(() -> ResponseEntity.status(404).body(Map.of(
                         "error", "레코드를 찾을 수 없습니다.",
@@ -1327,6 +1468,79 @@ public class ApiViewController {
         }
     }
 
+    @PatchMapping("/db/status/apply-auto")
+    public ResponseEntity<?> applyAutoAnalyzedStatus(@RequestBody Map<String, Object> body, HttpServletRequest httpReq) {
+        try {
+            String adminTok = httpReq.getHeader("X-Admin-Token");
+            String editorTok = httpReq.getHeader("X-Editor-Token");
+            boolean admin = authService.isAdmin(adminTok);
+            boolean editor = authService.isEditor(editorTok);
+            if (!admin && !editor) {
+                return ResponseEntity.status(401).body(Map.of("error", "관리자 또는 일반사용자(담당자) 로그인이 필요합니다."));
+            }
+            @SuppressWarnings("unchecked")
+            List<Integer> rawIds = (List<Integer>) body.get("ids");
+            if (rawIds == null || rawIds.isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of("error", "ids가 비어 있습니다."));
+            }
+            List<Long> ids = rawIds.stream().map(Integer::longValue).toList();
+            String reason = body.get("statusChangeReason") != null
+                    ? body.get("statusChangeReason").toString().trim()
+                    : "자동분석 상태로 변경";
+            Map<String, Integer> result;
+            if (admin) {
+                result = storageService.applyAutoAnalyzedStatusBulk(ids, reason, getClientIp(httpReq));
+            } else {
+                int saved = 0;
+                int skippedLocked = 0;
+                int skippedSame = 0;
+                int skippedMissingAuto = 0;
+                int skippedPending = 0;
+                for (ApiRecord r : recordRepository.findAllById(ids)) {
+                    String autoStatus = r.getAutoAnalyzedStatus() != null ? r.getAutoAnalyzedStatus().trim() : "";
+                    String status = r.getStatus() != null ? r.getStatus().trim() : "";
+                    if (autoStatus.isEmpty()) {
+                        skippedMissingAuto++;
+                        continue;
+                    }
+                    if (Objects.equals(status, autoStatus)) {
+                        skippedSame++;
+                        continue;
+                    }
+                    if (r.isStatusOverridden()) {
+                        skippedLocked++;
+                        continue;
+                    }
+                    if (proposalRepository.findByRecordId(r.getId())
+                            .map(ApiRecordProposal::getPayloadJson)
+                            .map(json -> json != null && json.contains("\"status\""))
+                            .orElse(false)) {
+                        skippedPending++;
+                        continue;
+                    }
+                    proposalService.saveOrUpdateProposal(
+                            r.getId(),
+                            Map.of("status", autoStatus, "statusChangeReason", reason),
+                            submittedByLabel(httpReq),
+                            submitterAssigneeId(httpReq),
+                            getClientIp(httpReq)
+                    );
+                    saved++;
+                }
+                result = new LinkedHashMap<>();
+                result.put("saved", saved);
+                result.put("skippedLocked", skippedLocked);
+                result.put("skippedSame", skippedSame);
+                result.put("skippedMissingAuto", skippedMissingAuto);
+                result.put("skippedPending", skippedPending);
+            }
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            log.error("[자동분석상태 일괄 반영 실패] {}", e.getMessage(), e);
+            return ResponseEntity.internalServerError().body(Map.of("error", e.getMessage()));
+        }
+    }
+
     /** 알림 플래그 일괄 해제 — isNew + statusChanged 모두 (차단완료건 포함)
      *  대용량 최적화: findById 루프 제거, @Modifying 벌크 UPDATE 2건으로 처리. */
     @PatchMapping("/db/clear-alerts")
@@ -1411,7 +1625,16 @@ public class ApiViewController {
             boolean anyChanged = false;
             boolean reviewChanged = false;
             String oldStatusForLog = r.getStatus();
-            if (body.containsKey("isNew"))           { r.setNew(!Boolean.FALSE.equals(body.get("isNew")) && Boolean.parseBoolean(String.valueOf(body.get("isNew")))); }
+            String statusChangeReason = body.get("statusChangeReason") != null
+                    ? body.get("statusChangeReason").toString().trim()
+                    : null;
+            if (statusChangeReason != null && statusChangeReason.isBlank()) {
+                statusChangeReason = null;
+            }
+            if (body.containsKey("isNew")) {
+                r.setNew(!Boolean.FALSE.equals(body.get("isNew")) && Boolean.parseBoolean(String.valueOf(body.get("isNew"))));
+                anyChanged = true;
+            }
             if (body.containsKey("statusOverridden")) {
                 Object val = body.get("statusOverridden");
                 r.setStatusOverridden(val instanceof Boolean ? (Boolean) val : "true".equals(String.valueOf(val)));
@@ -1482,10 +1705,26 @@ public class ApiViewController {
             if (body.containsKey("status")) {
                 String newStatusForLog = r.getStatus();
                 if (!java.util.Objects.equals(oldStatusForLog, newStatusForLog)) {
+                    String logLine = "수동상태 " + oldStatusForLog + "→" + newStatusForLog;
+                    if (statusChangeReason != null) {
+                        logLine += " (사유: " + statusChangeReason + ")";
+                    }
                     r.setStatusChangeLog(com.baek.viewer.service.ApiStorageService.appendChangeLogText(
                             r.getStatusChangeLog(),
-                            "수동상태 " + oldStatusForLog + "→" + newStatusForLog
+                            logLine
                     ));
+                    statusEventService.recordEvent(
+                            r.getId(),
+                            ApiRecordStatusEventService.EVENT_DIRECT_STATUS_CHANGED,
+                            oldStatusForLog,
+                            newStatusForLog,
+                            ApiRecordStatusEventService.ROLE_ADMIN,
+                            "관리자",
+                            ip,
+                            statusChangeReason,
+                            oldStatusForLog + " → " + newStatusForLog,
+                            now
+                    );
                 }
             }
 

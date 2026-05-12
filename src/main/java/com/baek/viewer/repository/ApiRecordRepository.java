@@ -105,10 +105,10 @@ public interface ApiRecordRepository extends JpaRepository<ApiRecord, Long>,
     @Query("SELECT COUNT(r) FROM ApiRecord r WHERE r.isNew = true AND r.repositoryName IN :repos AND (r.status IS NULL OR r.status <> '삭제')")
     long countNewForRepos(@Param("repos") List<String> repos);
 
-    @Query("SELECT COUNT(r) FROM ApiRecord r WHERE r.statusChanged = true AND (r.status IS NULL OR r.status <> '삭제')")
+    @Query("SELECT COUNT(r) FROM ApiRecord r WHERE r.statusChanged = true")
     long countStatusChanged();
 
-    @Query("SELECT COUNT(r) FROM ApiRecord r WHERE r.statusChanged = true AND r.repositoryName IN :repos AND (r.status IS NULL OR r.status <> '삭제')")
+    @Query("SELECT COUNT(r) FROM ApiRecord r WHERE r.statusChanged = true AND r.repositoryName IN :repos")
     long countStatusChangedForRepos(@Param("repos") List<String> repos);
 
     @Query("SELECT COUNT(r) FROM ApiRecord r WHERE r.reviewResult IS NOT NULL AND r.reviewResult <> '' AND (r.status IS NULL OR r.status <> '삭제')")
@@ -248,7 +248,7 @@ public interface ApiRecordRepository extends JpaRepository<ApiRecord, Long>,
 
     @org.springframework.transaction.annotation.Transactional
     @Modifying(clearAutomatically = true, flushAutomatically = true)
-    @Query("UPDATE ApiRecord r SET r.statusChanged = false, r.statusChangeLog = null "
+    @Query("UPDATE ApiRecord r SET r.statusChanged = false "
             + "WHERE r.id IN :ids AND r.statusChanged = true")
     int bulkClearStatusChanged(@Param("ids") Collection<Long> ids);
 

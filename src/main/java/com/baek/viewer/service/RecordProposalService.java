@@ -29,6 +29,7 @@ public class RecordProposalService {
     private final ApiRecordProposalRepository proposalRepository;
     private final ApiRecordRepository recordRepository;
     private final ApiRecordPatchService patchService;
+    private final ApiRecordStatusEventService statusEventService;
     private final ItAssigneeService itAssigneeService;
     private final NavNoticeService navNoticeService;
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -36,11 +37,13 @@ public class RecordProposalService {
     public RecordProposalService(ApiRecordProposalRepository proposalRepository,
                                  ApiRecordRepository recordRepository,
                                  ApiRecordPatchService patchService,
+                                 ApiRecordStatusEventService statusEventService,
                                  ItAssigneeService itAssigneeService,
                                  NavNoticeService navNoticeService) {
         this.proposalRepository = proposalRepository;
         this.recordRepository = recordRepository;
         this.patchService = patchService;
+        this.statusEventService = statusEventService;
         this.itAssigneeService = itAssigneeService;
         this.navNoticeService = navNoticeService;
     }
@@ -63,7 +66,8 @@ public class RecordProposalService {
 
     @Transactional
     public ApiRecordProposal saveOrUpdateProposal(long recordId, Map<String, Object> patch,
-                                                    String submittedBy, Long submitterAssigneeId) {
+                                                    String submittedBy, Long submitterAssigneeId,
+                                                    String clientIp) {
         Map<String, Object> filtered = ApiRecordPatchService.filterProposalKeys(patch);
         if (filtered.isEmpty()) {
             throw new IllegalArgumentException("저장할 제안 필드가 없습니다.");
@@ -137,6 +141,20 @@ public class RecordProposalService {
         if (p.getSubmittedAt() == null) p.setSubmittedAt(now);
         p.setUpdatedAt(now);
         ApiRecordProposal saved = proposalRepository.save(p);
+        if (filtered.containsKey("status")) {
+            statusEventService.recordEvent(
+                    recordId,
+                    ApiRecordStatusEventService.EVENT_PROPOSAL_SUBMITTED,
+                    record.getStatus(),
+                    stringOrNull(filtered.get("status")),
+                    submitterAssigneeId != null ? ApiRecordStatusEventService.ROLE_EDITOR : ApiRecordStatusEventService.ROLE_ADMIN,
+                    submittedBy,
+                    clientIp,
+                    stringOrNull(filtered.get("statusChangeReason")),
+                    stringOrNull(filtered.get("statusChangeSummary")),
+                    now
+            );
+        }
         log.debug("[제안 저장] recordId={}, keys={}", recordId, filtered.keySet());
         return saved;
     }
@@ -228,7 +246,25 @@ public class RecordProposalService {
                 proposalRepository.delete(prop);
                 continue;
             }
+            String oldStatus = r.getStatus();
+            String reason = stringOrNull(map.get("statusChangeReason"));
+            String summary = stringOrNull(map.get("statusChangeSummary"));
+            boolean hasStatusPatch = map.containsKey("status");
             patchService.applyPatch(r, map, clientIp);
+            if (hasStatusPatch) {
+                statusEventService.recordEvent(
+                        rid,
+                        ApiRecordStatusEventService.EVENT_PROPOSAL_APPROVED,
+                        oldStatus,
+                        r.getStatus(),
+                        ApiRecordStatusEventService.ROLE_ADMIN,
+                        "관리자",
+                        clientIp,
+                        reason,
+                        summary,
+                        r.getModifiedAt()
+                );
+            }
             recordRepository.save(r);
             proposalRepository.delete(prop);
             applied++;
@@ -280,7 +316,7 @@ public class RecordProposalService {
     }
 
     @Transactional
-    public int reject(List<Long> recordIds, String reason) {
+    public int reject(List<Long> recordIds, String reason, String clientIp) {
         String r = reason == null ? "" : reason.trim();
         if (r.isEmpty()) {
             throw new IllegalArgumentException("반려 사유를 입력하세요.");
@@ -319,6 +355,7 @@ public class RecordProposalService {
             String notice = buildProposalRejectNoticeForGroup(group, r);
             itAssigneeService.setProposalRejectNotice(e.getKey(), notice);
             for (ProposalRejectBundle b : group) {
+                recordRejectedStatusEvent(b, r, clientIp);
                 navNoticeService.recordProposalReject(b.recordId, e.getKey(), r, b.record, b.proposal.getSummaryText(), batchId);
                 proposalRepository.delete(b.proposal);
                 n++;
@@ -326,6 +363,42 @@ public class RecordProposalService {
         }
         log.info("[상태변경 반려] 제거={}건", n);
         return n;
+    }
+
+    private void recordRejectedStatusEvent(ProposalRejectBundle bundle, String rejectReason, String clientIp) {
+        if (bundle == null || bundle.record == null || bundle.proposal == null) {
+            return;
+        }
+        Map<String, Object> patch;
+        try {
+            patch = objectMapper.readValue(bundle.proposal.getPayloadJson(), new TypeReference<>() {});
+        } catch (Exception e) {
+            log.debug("[반려 이력 저장 스킵] recordId={}, payload 파싱 실패: {}", bundle.recordId, e.getMessage());
+            return;
+        }
+        if (patch == null || !patch.containsKey("status")) {
+            return;
+        }
+        statusEventService.recordEvent(
+                bundle.recordId,
+                ApiRecordStatusEventService.EVENT_PROPOSAL_REJECTED,
+                bundle.record.getStatus(),
+                stringOrNull(patch.get("status")),
+                ApiRecordStatusEventService.ROLE_ADMIN,
+                "관리자",
+                clientIp,
+                rejectReason,
+                stringOrNull(patch.get("statusChangeSummary")),
+                LocalDateTime.now()
+        );
+    }
+
+    private static String stringOrNull(Object value) {
+        if (value == null) {
+            return null;
+        }
+        String s = value.toString().trim();
+        return s.isEmpty() ? null : s;
     }
 
     /** 제안 제출자 표시명 — `submitter_assignee_id` 우선, 없으면 `submitted_by` 파싱 */

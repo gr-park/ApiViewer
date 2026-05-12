@@ -1,6 +1,7 @@
 package com.baek.viewer.controller;
 
 import com.baek.viewer.model.ApiRecordSnapshot;
+import com.baek.viewer.model.ApiRecordSnapshotRow;
 import com.baek.viewer.repository.ApiRecordSnapshotRepository;
 import com.baek.viewer.repository.ApiRecordSnapshotRowRepository;
 import com.baek.viewer.service.SnapshotService;
@@ -210,6 +211,11 @@ public class SnapshotViewController {
                                      @RequestParam(required = false) Boolean markingIncomplete,
                                      @RequestParam(required = false) String q,
                                      @RequestParam(required = false) String sort) {
+        Optional<ApiRecordSnapshot> snapshotOpt = snapshotRepository.findById(id);
+        if (snapshotOpt.isEmpty()) {
+            return ResponseEntity.status(404).body(Map.of("error", "snapshot not found"));
+        }
+        ApiRecordSnapshot snapshot = snapshotOpt.get();
         Pageable pageable = PageRequest.of(Math.max(0, page), Math.max(1, size), parseSnapshotSort(sort));
         List<String> repos = parseRepos(repository, repositories);
         Page<?> p = snapshotRowRepository.pageByFilters(id, repos,
@@ -223,6 +229,24 @@ public class SnapshotViewController {
         resp.put("size", p.getSize());
         resp.put("totalPages", p.getTotalPages());
         resp.put("records", p.getContent());
+        resp.putAll(snapshotMetaFields(snapshot));
+        return ResponseEntity.ok(resp);
+    }
+
+    @GetMapping("/{snapshotId}/records/{rowId}")
+    public ResponseEntity<?> recordDetail(@PathVariable Long snapshotId, @PathVariable Long rowId) {
+        Optional<ApiRecordSnapshot> snapshotOpt = snapshotRepository.findById(snapshotId);
+        if (snapshotOpt.isEmpty()) {
+            return ResponseEntity.status(404).body(Map.of("error", "snapshot not found"));
+        }
+        Optional<ApiRecordSnapshotRow> rowOpt = snapshotRowRepository.findByIdAndSnapshotId(rowId, snapshotId);
+        if (rowOpt.isEmpty()) {
+            return ResponseEntity.status(404).body(Map.of("error", "snapshot row not found"));
+        }
+        ApiRecordSnapshot snapshot = snapshotOpt.get();
+        Map<String, Object> resp = new LinkedHashMap<>();
+        resp.put("record", rowOpt.get());
+        resp.putAll(snapshotMetaFields(snapshot));
         return ResponseEntity.ok(resp);
     }
 
@@ -231,6 +255,11 @@ public class SnapshotViewController {
     public ResponseEntity<?> counts(@PathVariable Long id,
                                     @RequestParam(required = false) String repository,
                                     @RequestParam(required = false) String repositories) {
+        Optional<ApiRecordSnapshot> snapshotOpt = snapshotRepository.findById(id);
+        if (snapshotOpt.isEmpty()) {
+            return ResponseEntity.status(404).body(Map.of("error", "snapshot not found"));
+        }
+        ApiRecordSnapshot snapshot = snapshotOpt.get();
         long start = System.currentTimeMillis();
         List<String> repos = parseRepos(repository, repositories);
         boolean hasRepo = (repos != null && !repos.isEmpty());
@@ -303,10 +332,19 @@ public class SnapshotViewController {
         response.put("byMethod",     byMethod);
         response.put("priorityPureCount", priorityPureCount);
 
-        response.put("snapshotId", id);
         response.put("repos", repos);
         response.put("tookMs", System.currentTimeMillis() - start);
+        response.putAll(snapshotMetaFields(snapshot));
         return ResponseEntity.ok(response);
+    }
+
+    private Map<String, Object> snapshotMetaFields(ApiRecordSnapshot snapshot) {
+        Map<String, Object> meta = new LinkedHashMap<>();
+        meta.put("readOnly", true);
+        meta.put("snapshotId", snapshot.getId());
+        meta.put("snapshotAt", snapshot.getSnapshotAt() != null ? snapshot.getSnapshotAt().toString() : null);
+        meta.put("snapshotLabel", snapshot.getLabel());
+        return meta;
     }
 
     private List<String> parseRepos(String repository, String repositories) {

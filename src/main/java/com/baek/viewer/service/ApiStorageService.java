@@ -67,16 +67,19 @@ public class ApiStorageService {
     private final GlobalConfigRepository globalConfigRepository;
     private final RepoConfigRepository repoConfigRepository;
     private final TestSuspectMatcher testSuspectMatcher;
+    private final ApiRecordStatusEventService statusEventService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     public ApiStorageService(ApiRecordRepository repository,
                              GlobalConfigRepository globalConfigRepository,
                              RepoConfigRepository repoConfigRepository,
-                             TestSuspectMatcher testSuspectMatcher) {
+                             TestSuspectMatcher testSuspectMatcher,
+                             ApiRecordStatusEventService statusEventService) {
         this.repository = repository;
         this.globalConfigRepository = globalConfigRepository;
         this.repoConfigRepository = repoConfigRepository;
         this.testSuspectMatcher = testSuspectMatcher;
+        this.statusEventService = statusEventService;
     }
 
     /**
@@ -421,6 +424,7 @@ public class ApiStorageService {
         log.info("[일괄 변경] 대상={}건, 필드={}, ip={}", ids.size(), fields.keySet(), clientIp);
         int reviewThreshold = getReviewThreshold();
         java.time.LocalDateTime now = java.time.LocalDateTime.now();
+        String statusChangeReason = toNullableStr(fields.get("statusChangeReason"));
         int updated = 0;
 
         // 대용량 최적화: ID 청크로 findAllById 로 일괄 로드 후 saveAll 로 일괄 저장
@@ -463,6 +467,18 @@ public class ApiStorageService {
                     String newStatus = r.getStatus();
                     if (!Objects.equals(oldStatus, newStatus)) {
                         appendChangeLog(r, "수동상태 " + oldStatus + "→" + newStatus);
+                        statusEventService.recordEvent(
+                                r.getId(),
+                                ApiRecordStatusEventService.EVENT_DIRECT_STATUS_CHANGED,
+                                oldStatus,
+                                newStatus,
+                                ApiRecordStatusEventService.ROLE_ADMIN,
+                                "관리자",
+                                clientIp,
+                                statusChangeReason,
+                                oldStatus + " → " + newStatus,
+                                now
+                        );
                     }
                 }
 
@@ -518,6 +534,73 @@ public class ApiStorageService {
         }
         log.info("[일괄 변경 완료] 대상={}건, 변경={}건", ids.size(), updated);
         return updated;
+    }
+
+    @Transactional
+    public Map<String, Integer> applyAutoAnalyzedStatusBulk(List<Long> ids, String reason, String clientIp) {
+        String normalizedReason = (reason == null || reason.isBlank()) ? "자동분석 상태로 변경" : reason.trim();
+        log.info("[자동분석상태 일괄 반영] 대상={}건, 사유={}, ip={}", ids.size(), normalizedReason, clientIp);
+        java.time.LocalDateTime now = java.time.LocalDateTime.now();
+        int updated = 0;
+        int skippedLocked = 0;
+        int skippedSame = 0;
+        int skippedMissingAuto = 0;
+
+        final int CHUNK = 500;
+        for (int i = 0; i < ids.size(); i += CHUNK) {
+            List<Long> chunk = ids.subList(i, Math.min(i + CHUNK, ids.size()));
+            List<ApiRecord> records = repository.findAllById(chunk);
+            List<ApiRecord> dirty = new ArrayList<>(records.size());
+
+            for (ApiRecord r : records) {
+                String autoStatus = toNullableStr(r.getAutoAnalyzedStatus());
+                if (autoStatus == null) {
+                    skippedMissingAuto++;
+                    continue;
+                }
+                if (Objects.equals(r.getStatus(), autoStatus)) {
+                    skippedSame++;
+                    continue;
+                }
+                if (r.isStatusOverridden()) {
+                    skippedLocked++;
+                    continue;
+                }
+
+                String oldStatus = r.getStatus();
+                r.setStatus(autoStatus);
+                r.setModifiedAt(now);
+                if (clientIp != null) r.setModifiedIp(clientIp);
+                appendChangeLog(r, "자동분석상태 반영 " + oldStatus + "→" + autoStatus + " (사유: " + normalizedReason + ")");
+                statusEventService.recordEvent(
+                        r.getId(),
+                        ApiRecordStatusEventService.EVENT_AUTO_STATUS_APPLIED,
+                        oldStatus,
+                        autoStatus,
+                        ApiRecordStatusEventService.ROLE_ADMIN,
+                        "관리자",
+                        clientIp,
+                        normalizedReason,
+                        oldStatus + " → " + autoStatus,
+                        now
+                );
+                refreshAutoAnalyzedStatusAndMismatchFlag(r, getReviewThreshold());
+                seedBlockedMetadataForDoneFamilyIfNeeded(r);
+                dirty.add(r);
+                updated++;
+            }
+
+            if (!dirty.isEmpty()) repository.saveAll(dirty);
+        }
+
+        log.info("[자동분석상태 일괄 반영 완료] 대상={}건, 반영={}, 잠금제외={}, 동일제외={}, 자동상태없음제외={}",
+                ids.size(), updated, skippedLocked, skippedSame, skippedMissingAuto);
+        Map<String, Integer> result = new LinkedHashMap<>();
+        result.put("updated", updated);
+        result.put("skippedLocked", skippedLocked);
+        result.put("skippedSame", skippedSame);
+        result.put("skippedMissingAuto", skippedMissingAuto);
+        return result;
     }
 
     private String toNullableStr(Object v) {
