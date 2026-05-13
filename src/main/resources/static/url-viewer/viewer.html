@@ -1164,7 +1164,7 @@
           <details class="query-filter-dates" id="queryFilterDates" open>
             <summary class="query-filter-dates-sum">
               일자 · 담당 조건
-              <span class="query-filter-dates-hint">CBO일자 · 차단예정 · 차단작업담당자 · (관리자) 변경일시</span>
+              <span class="query-filter-dates-hint">CBO일자 · 차단예정 · 차단작업담당자 · (관리자) 변경일시·변경 담당자</span>
             </summary>
             <div class="query-filter-dates-body">
               <div class="filter-row filter-row--cbo">
@@ -1189,6 +1189,8 @@
                 <input class="date" type="datetime-local" id="modifiedFrom" onchange="onModifiedRangeInputChange()">
                 <span class="label">~</span>
                 <input class="date" type="datetime-local" id="modifiedTo" onchange="onModifiedRangeInputChange()">
+                <span class="label" style="margin-left:8px;">변경 담당자</span>
+                <input type="text" id="searchModifiedBy" placeholder="IP·표시명 일부" oninput="filterTable()" style="width:130px;" autocomplete="off" title="DB modified_ip 부분일치(목록의 표시 라벨과 다를 수 있음)">
                 <span class="label" style="margin-left:4px;">빠른 선택</span>
                 <span class="date-quick-seg" id="modifiedQuickSeg" role="group" aria-label="변경일시 빠른 선택">
                   <button type="button" class="date-quick-seg__btn" onclick="setModifiedQuick('m5', this)">5분</button>
@@ -1197,10 +1199,6 @@
                   <button type="button" class="date-quick-seg__btn" onclick="setModifiedQuick('yesterday', this)">전일</button>
                   <button type="button" class="date-quick-seg__btn" onclick="setModifiedQuick('d3', this)">3일</button>
                   <button type="button" class="date-quick-seg__btn" onclick="setModifiedQuick('d7', this)">7일</button>
-                  <button type="button" class="date-quick-seg__btn" onclick="setModifiedQuick('d30', this)">30일</button>
-                  <button type="button" class="date-quick-seg__btn" onclick="setModifiedQuick('d90', this)">90일</button>
-                  <button type="button" class="date-quick-seg__btn" onclick="setModifiedQuick('d180', this)">180일</button>
-                  <button type="button" class="date-quick-seg__btn" onclick="setModifiedQuick('y1', this)">1년</button>
                 </span>
               </div>
             </div>
@@ -2254,7 +2252,7 @@
       if (window._deepLinkJustArrived) {
         window._deepLinkJustArrived = false;
       } else if (window._deepLinkActive && (!selectedNow || selectedNow.length === 0)) {
-        const ids = ['searchInput','searchTeam','searchManager','searchDeployManager','deployFrom','deployTo'];
+        const ids = ['searchInput','searchTeam','searchManager','searchDeployManager','deployFrom','deployTo','modifiedFrom','modifiedTo','searchModifiedBy'];
         ids.forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
         window._deployUnscheduledFilter = false;
         activeFilter = '';
@@ -2615,18 +2613,6 @@
         break;
       case 'd7':
         from = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 6, 0, 0, 0);
-        break;
-      case 'd30':
-        from = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 29, 0, 0, 0);
-        break;
-      case 'd90':
-        from = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 89, 0, 0, 0);
-        break;
-      case 'd180':
-        from = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 179, 0, 0, 0);
-        break;
-      case 'y1':
-        from = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 364, 0, 0, 0);
         break;
       default:
         return;
@@ -3066,7 +3052,7 @@
     // 텍스트/일자 입력값 초기화
     [
       'searchInput','searchTeam','searchManager','searchDeployManager',
-      'modifiedFrom','modifiedTo',
+      'modifiedFrom','modifiedTo','searchModifiedBy',
       'cboFrom','cboTo','deployFrom','deployTo'
     ].forEach(id => {
       const el = document.getElementById(id);
@@ -3160,6 +3146,8 @@
       const modTo   = document.getElementById('modifiedTo')?.value;
       if (modFrom) params.set('modifiedFrom', modFrom + ':00');
       if (modTo)   params.set('modifiedTo',   modTo   + ':00');
+      const modBy = (document.getElementById('searchModifiedBy')?.value || '').trim();
+      if (modBy) params.set('modifiedBy', modBy);
     }
 
     // CBO·차단예정일자 범위 + 차단작업담당자 검색
@@ -4820,6 +4808,15 @@
     }
   }
 
+  /** 엑셀「변경 담당자」열 — 팀/담당 표기 우선, 없으면 effectiveModifiedBy 원문 */
+  function formatExcelChangeAssignee(a) {
+    if (!a) return '';
+    const idn = parseModifierIdentity(a);
+    const line = [idn.teamName, idn.assigneeName].filter(Boolean).join(' / ');
+    if (line) return line;
+    return String(effectiveModifiedByOf(a) || '').trim();
+  }
+
   // ── 엑셀 다운로드 (현재 필터 전체 — 서버 페이지 순회) ─────────
   async function downloadExcel() {
     if (!serverTotal) { showToast('다운로드할 데이터가 없습니다.', 'error'); return; }
@@ -4863,8 +4860,8 @@
     // 상태  URL확정여부 침해사고 로그 제외대상  차단기준 차단일자 차단근거 비고  검토결과  검토의견
     // 31  32            33        34        35
     // Jira 검토단계     CBO예정   차단예정   차단작업CSR
-    // 36~50 변경이력1~5(각3열)  51  52
-    //                       분석 변경
+    // 36~50 변경이력1~5(각3열)  51  52  53
+    //                       분석 변경일시 변경담당자
     const headers = [
       '레포지토리','업무명','팀','담당자','URL 경로','Full URL',
       'HTTP Method','컨트롤러파일경로','컨트롤러','메소드명','프로그램ID',
@@ -4874,7 +4871,7 @@
       '비고','현업검토결과','현업검토의견',
       'SmartWay 티켓번호','검토단계',
       'CBO예정일자','차단예정일자','차단작업CSR','차단작업담당자',
-      ...commitHeaders, '분석일시', '변경일시'
+      ...commitHeaders, '분석일시', '변경일시', '변경 담당자'
     ];
     const blue='E0F2FE', yellow='FEF3C7', purple='E0E7FF', pink='FFE4E6';
     const jiraIvory='F5F0E6';
@@ -4893,9 +4890,9 @@
       jiraIvory,jiraIvory,               // 37~38: SmartWay 티켓, 검토단계
       pink,pink,pink,pink,               // 39~42: CBO예정일자,차단예정일자,차단작업CSR,차단작업담당자
       g1,g1,g1, g2,g2,g2, g3,g3,g3, g4,g4,g4, g5,g5,g5, // 43~57: 변경이력1~5
-      blue,blue                          // 58~59: 분석/변경일시
+      blue,blue,blue                          // 58~60: 분석일시/변경일시/변경 담당자
     ];
-    const groupBorders = new Set([6, 16, 21, 26, 29, 36, 38, 42, 45, 48, 51, 54, 57]);
+    const groupBorders = new Set([6, 16, 21, 26, 29, 36, 38, 42, 45, 48, 51, 54, 57, 60]);
     // 데이터 유효성 검증: 0-based 컬럼 인덱스 → 허용 값 목록
     const validations = [
       { colIdx:18, values:['Y','N'] },                                                                       // Deprecated
@@ -4954,7 +4951,7 @@
         a.deployCsr || '',
         a.deployManager || '',
         ...commitCols,
-        fmtDt(a.lastAnalyzedAt), fmtDt(effectiveModifiedAtOf(a))
+        fmtDt(a.lastAnalyzedAt), fmtDt(effectiveModifiedAtOf(a)), formatExcelChangeAssignee(a)
       ];
     });
     const filename = `url-list-${getSingleSelectedRepo() || (getSelectedRepos().length > 1 ? 'multi' : 'all')}`;
@@ -4977,7 +4974,7 @@
       '비고','현업검토결과','현업검토의견',
       'SmartWay 티켓번호','검토단계',
       'CBO예정일자','차단예정일자','차단작업CSR','차단작업담당자',
-      ...commitHeaders, '분석일시', '변경일시'
+      ...commitHeaders, '분석일시', '변경일시', '변경 담당자'
     ];
     const blue='E0F2FE', yellow='FEF3C7', purple='E0E7FF', pink='FFE4E6', jiraPurple='EDE9FE', testPurple='FDF4FF';
     const g1='D1FAE5', g2='DCFCE7', g3='ECFDF5', g4='F0FDF4', g5='F5FFF9';
@@ -4993,9 +4990,9 @@
       jiraPurple,jiraPurple,
       pink,pink,pink,pink,
       g1,g1,g1, g2,g2,g2, g3,g3,g3, g4,g4,g4, g5,g5,g5,
-      blue,blue
+      blue,blue,blue
     ];
-    const groupBorders = new Set([6, 16, 21, 26, 29, 36, 38, 42, 45, 48, 51, 54, 57]);
+    const groupBorders = new Set([6, 16, 21, 26, 29, 36, 38, 42, 45, 48, 51, 54, 57, 60]);
     const validations = [
       { colIdx:18, values:['Y','N'] },
       { colIdx:22, values:['사용','차단완료','①-① 차단대상','①-② 담당자 판단','①-③ 현업요청 제외대상','①-④ 사용으로 변경','②-① 호출0건+변경있음','②-② 호출 3건 이하+변경없음','②-③ 사용으로 변경'] }, // 9 leaf v2
@@ -5015,7 +5012,7 @@
        '','',
        '','','',
        '','','', '','','', '','','', '','','', '','','',
-       today, today],
+       today, today, 'IT카드개발팀 / 홍길동'],
       ['my-repo','업무명 예시','IT카드개발팀','홍길동','/api/old-endpoint','https://api.example.com/api/old-endpoint',
        'POST','/my-repo/src/main/java/com/example/OldController.java','OldController','oldAction','old01',
        '','','','','','',
@@ -5025,7 +5022,7 @@
        '','',
        '','','',
        '','','', '','','', '','','', '','','', '','','',
-       today, today],
+       today, today, ''],
       ['my-repo','업무명 예시','IT커머스개발팀','김철수','/api/test-target','https://api.example.com/api/test-target',
        'DELETE','/my-repo/src/main/java/com/example/TestController.java','TestController','deleteItem','test01',
        '','','','','','',
@@ -5035,7 +5032,7 @@
        '','',
        '','','',
        '','','', '','','', '','','', '','','', '','','',
-       today, today],
+       today, today, 'IT커머스개발팀 / 김철수'],
     ];
     await exportXlsx(headers, headerColors, rows, 'viewer-sample', 5, groupBorders, validations);
     showToast('샘플 파일 다운로드 완료', 'success');
@@ -6312,9 +6309,11 @@
         _modRow.style.display = 'none';
         const mf = document.getElementById('modifiedFrom');
         const mt = document.getElementById('modifiedTo');
+        const mb = document.getElementById('searchModifiedBy');
         let had = false;
         if (mf && mf.value) { mf.value = ''; had = true; }
         if (mt && mt.value) { mt.value = ''; had = true; }
+        if (mb && mb.value) { mb.value = ''; had = true; }
         if (had) { try { clearModifiedQuickActive(); } catch (e) {} }
         if (had && typeof filterTable === 'function') filterTable({ immediate: true, page: 0 });
       }

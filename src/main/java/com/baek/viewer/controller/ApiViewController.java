@@ -457,6 +457,7 @@ public class ApiViewController {
                                      @RequestParam(required = false) String ids,
                                      @RequestParam(required = false) String modifiedFrom,
                                      @RequestParam(required = false) String modifiedTo,
+                                     @RequestParam(required = false) String modifiedBy,
                                      @RequestParam(required = false) String cboFrom,
                                      @RequestParam(required = false) String cboTo,
                                      @RequestParam(required = false) String deployFrom,
@@ -496,6 +497,7 @@ public class ApiViewController {
                 || (ids != null && !ids.isBlank())
                 || (modifiedFrom != null && !modifiedFrom.isBlank())
                 || (modifiedTo != null && !modifiedTo.isBlank())
+                || (modifiedBy != null && !modifiedBy.isBlank())
                 || (cboFrom != null && !cboFrom.isBlank())
                 || (cboTo != null && !cboTo.isBlank())
                 || (deployFrom != null && !deployFrom.isBlank())
@@ -519,7 +521,7 @@ public class ApiViewController {
 
             Specification<ApiRecord> spec = buildSpec(repository, repoList, blockTargetOnly,
                     status, statusGroup, autoStatus, autoStatusGroup, testSuspect, pathParams, logWorkExcluded, recentLogOnly, httpMethod, isDeprecated, q, alert, expectedDone, ids,
-                    modifiedFrom, modifiedTo, cboFrom, cboTo, deployFrom, deployTo, deployManager, deployUnscheduled,
+                    modifiedFrom, modifiedTo, modifiedBy, cboFrom, cboTo, deployFrom, deployTo, deployManager, deployUnscheduled,
                     useRepoDisplayOrderSort, hasPendingProposal);
 
             Page<ApiRecord> entityPage = recordRepository.findAll(spec, pageable);
@@ -653,7 +655,7 @@ public class ApiViewController {
                                                 Boolean testSuspect, Boolean pathParams,
                                                 Boolean logWorkExcluded, Boolean recentLogOnly,
                                                 String httpMethod, String isDeprecated, String q, String alert, Boolean expectedDone,
-                                                String ids, String modifiedFrom, String modifiedTo,
+                                                String ids, String modifiedFrom, String modifiedTo, String modifiedBy,
                                                 String cboFrom, String cboTo,
                                                 String deployFrom, String deployTo,
                                                 String deployManager, Boolean deployUnscheduled,
@@ -849,6 +851,9 @@ public class ApiViewController {
                     LocalDateTime to = LocalDateTime.parse(modifiedTo.replace(" ", "T"));
                     ps.add(cb.lessThanOrEqualTo(root.get("modifiedAt"), to));
                 } catch (Exception ignored) {}
+            }
+            if (modifiedBy != null && !modifiedBy.isBlank()) {
+                ps.add(cb.like(cb.lower(root.get("modifiedIp")), "%" + modifiedBy.toLowerCase() + "%"));
             }
             // CBO 예정일자 / 배포 예정일자 범위 필터 (yyyy-MM-dd)
             if (cboFrom != null && !cboFrom.isBlank()) {

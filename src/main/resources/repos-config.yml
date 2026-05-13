@@ -216,6 +216,7 @@ repositories:
     domain: https://portal.mall.com
     rootPath: /Users/baegmyeongseon/Downloads/개발_코드/mall/mall-portal
     gitPullEnabled: "N"
+    tsAnalysisEnabled: "Y"   # NestJS/TS 라우트 스캔 — 전체 추출 시 Java 결과에 병합 (샘플: 이 레포만 Y)
     teamName: IT커머스개발팀
     managerName: 박수진
     businessName: 쇼핑몰포털
