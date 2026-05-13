@@ -13,7 +13,7 @@
  * ═══════════════════════════════════════════════════════════════ */
 (function () {
   // UI 버전 표기 (캐시/반영 여부 확인용) — 변경 시 이 값만 갱신
-  const APP_UI_VERSION = 'ver14.1.24';
+  const APP_UI_VERSION = 'ver14.1.27';
 
   const SEGMENTS = [
     {
@@ -166,6 +166,8 @@
   const SYNC_WARN_DISMISS_KEY = 'syncWarnDismiss';
   const OPS_DIGEST_DISMISS_KEY = 'opsDigestDismissAt';
   const APM_MATCH_DISMISS_KEY = 'apmMatchDismissAt';
+  /** 비관리자: 동일 extract 요약 시그니처에 대해 이 브라우저에서만 배너 숨김 */
+  const EXTRACT_ISSUE_LOCAL_DISMISS_KEY = 'viewer.extractIssueBanner.dismissSig';
 
   function extractIssueAuthHeaders() {
     const tok = window.getAdminToken ? window.getAdminToken() : '';
@@ -394,6 +396,15 @@
   }
 
   // ─── URL 분석(Extract) 문제파일 요약 배너 ─────────────────
+  function extractIssueDismissSig(data) {
+    if (!data) return '';
+    const at = String(data.at || '');
+    const err = Number(data.errorFileCount || 0);
+    const zero = Number(data.zeroFileCount || 0);
+    const warn = Number(data.warnFileCount || 0);
+    return `${at}::${err}:${zero}:${warn}`;
+  }
+
   function renderExtractIssueBanner(data) {
     const slot = document.getElementById('extract-issue-slot');
     if (!slot) return;
@@ -405,15 +416,23 @@
     const dismissed = data.dismissed === true;
     if (err <= 0 && zero <= 0 && warn <= 0) { slot.innerHTML = ''; return; }
     if (dismissed) { slot.innerHTML = ''; return; }
+    try {
+      const sig = extractIssueDismissSig(data);
+      const stored = localStorage.getItem(EXTRACT_ISSUE_LOCAL_DISMISS_KEY);
+      if (sig && stored && stored === sig) { slot.innerHTML = ''; return; }
+    } catch (e) {}
 
     const timeStr = fmtDigestTime(at);
     const loggedIn = window.AuthState && window.AuthState.loggedIn;
     const link = loggedIn
       ? `<a href="/settings/#extract" class="sync-warning-toggle" style="text-decoration:none;">설정에서 보기 ▶</a>`
       : '';
-    const closeBtnHtml = loggedIn
-      ? `<button type="button" class="sync-warning-close" aria-label="이 알림 닫기 (새 분석 리포트가 저장되면 다시 표시)" title="닫기">✕</button>`
-      : '';
+    const hasAdmin = !!(window.getAdminToken && window.getAdminToken());
+    const closeTitle = hasAdmin
+      ? '닫기 — 전역 숨김(관리자만, 새 분석 리포트 저장 시 다시 표시)'
+      : '닫기 — 이 브라우저에서만 숨김(같은 요약이면 다시 안 보임, 리포트가 바뀌면 다시 표시)';
+    const closeBtnHtml =
+      `<button type="button" class="sync-warning-close" aria-label="${esc(closeTitle)}" title="${esc(closeTitle)}">✕</button>`;
     const parts = [];
     if (err > 0) parts.push(`에러파일 <strong>${esc(err)}</strong>`);
     if (zero > 0) parts.push(`0개추출 <strong>${esc(zero)}</strong>`);
@@ -437,7 +456,13 @@
       closeBtn.addEventListener('click', async () => {
         closeBtn.disabled = true;
         try {
-          await dismissExtractIssueBanner();
+          const tok = window.getAdminToken && window.getAdminToken();
+          if (tok) {
+            await dismissExtractIssueBanner();
+            try { localStorage.removeItem(EXTRACT_ISSUE_LOCAL_DISMISS_KEY); } catch (e) {}
+          } else {
+            try { localStorage.setItem(EXTRACT_ISSUE_LOCAL_DISMISS_KEY, extractIssueDismissSig(data)); } catch (e) {}
+          }
         } catch (e) {
           closeBtn.disabled = false;
           toastNav(e.message || '실패', 'error');

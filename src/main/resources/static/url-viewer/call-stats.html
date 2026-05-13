@@ -57,8 +57,8 @@
     .page-btn:disabled{opacity:.5;cursor:not-allowed;}
     .page-info{color:var(--text-muted);font-size:11px;}
 
-    /* 상세 모달 */
-    .modal-overlay{display:none;position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:100;align-items:center;justify-content:center;}
+    /* 상세 모달 — 네비/커스텀다이얼로그(z-index 1만대) 위에 표시 */
+    .modal-overlay{display:none;position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:10050;align-items:center;justify-content:center;}
     .modal{background:var(--card);border-radius:12px;width:1000px;max-width:95%;max-height:90vh;overflow:auto;box-shadow:0 8px 32px rgba(0,0,0,.25);}
     .modal-header{padding:14px 22px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:var(--card);z-index:1;}
     .modal-header h3{font-size:14px;font-weight:700;}
@@ -380,6 +380,28 @@
     if (s == null) return '';
     return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
+  /** data-* / HTML 속성용 (작은따옴표 onclick 대신 사용) */
+  function escAttr(s) {
+    if (s == null) return '';
+    return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+  function openDetailFromDataset(el) {
+    if (!el) return;
+    const repo = el.getAttribute('data-repo');
+    const apiPath = el.getAttribute('data-api-path');
+    void openDetail(repo != null ? repo : '', apiPath != null ? apiPath : '');
+  }
+  function openViewerDetailFromDataset(el) {
+    if (!el) return;
+    const repo = el.getAttribute('data-repo');
+    const apiPath = el.getAttribute('data-api-path');
+    const method = el.getAttribute('data-http-method');
+    void openViewerDetailModal(repo != null ? repo : '', apiPath != null ? apiPath : '', method != null ? method : '');
+  }
+  function filterQueryByRepoFromTr(tr) {
+    if (!tr) return;
+    filterQueryByRepo(tr.getAttribute('data-repo') || '');
+  }
   function fmt(n) { return (n||0).toLocaleString(); }
   function spinnerCell(colspan) {
     return `<tr><td colspan="${colspan}" style="text-align:center;padding:30px;"><div class="spinner" style="width:20px;height:20px;border-width:2px;"></div><br><span style="color:var(--text-muted);font-size:11px;">조회 중...</span></td></tr>`;
@@ -477,7 +499,7 @@
           return String(a.repoName || '').localeCompare(String(b.repoName || ''), 'ko');
         });
         repoTbody.innerHTML = sortedRepos.map(r => `
-          <tr style="cursor:pointer;" onclick="filterQueryByRepo('${esc(r.repoName)}')">
+          <tr style="cursor:pointer;" data-repo="${escAttr(r.repoName)}" onclick="filterQueryByRepoFromTr(this)">
             <td><span class="repo-badge">${esc(r.repoName)}</span></td>
             <td class="num">${fmt(r.callCount)}</td>
             <td class="num" style="color:${r.errorCount>0?'#dc2626':'inherit'};">${fmt(r.errorCount)}</td>
@@ -492,10 +514,10 @@
       } else {
         topTbody.innerHTML = d.topApis.map((r, i) => {
           const rankCls = i < 3 ? `rank r${i+1}` : 'rank';
-          return `<tr style="cursor:pointer;" onclick="openDetail('${esc(r.repoName)}','${esc(r.apiPath)}')">
+          return `<tr style="cursor:pointer;" data-repo="${escAttr(r.repoName)}" data-api-path="${escAttr(r.apiPath)}" onclick="openDetailFromDataset(this)">
             <td><span class="${rankCls}">${i+1}</span></td>
             <td>
-              <div class="api-path clickable" title="URL분석현황 상세 보기" onclick="event.stopPropagation();openViewerDetailModal('${esc(r.repoName)}','${esc(r.apiPath)}','')">${esc(r.apiPath)}</div>
+              <div class="api-path clickable" title="URL분석현황 상세 보기" data-repo="${escAttr(r.repoName)}" data-api-path="${escAttr(r.apiPath)}" data-http-method="" onclick="event.stopPropagation();openViewerDetailFromDataset(this)">${esc(r.apiPath)}</div>
               <span class="repo-badge" style="font-size:9px;margin-top:2px;">${esc(r.repoName)}</span>
             </td>
             <td class="num">${fmt(r.callCount)}</td>
@@ -581,12 +603,13 @@
             <td style="text-align:center;color:var(--text-muted);font-size:11px;">${startNo+idx+1}</td>
             <td>
               <div class="api-path clickable" title="URL분석현황 상세 보기"
-                   onclick="openViewerDetailModal('${esc(a.repoName)}','${esc(a.apiPath)}','')">${esc(a.apiPath)}</div>
+                   data-repo="${escAttr(a.repoName)}" data-api-path="${escAttr(a.apiPath)}" data-http-method=""
+                   onclick="openViewerDetailFromDataset(this)">${esc(a.apiPath)}</div>
             </td>
             <td><span class="repo-badge">${esc(a.repoName)}</span></td>
             ${barCell(a.totalCall, maxCall, '#3b82f6')}
             <td class="num" style="color:${a.totalError>0?'#dc2626':'inherit'};">${fmt(a.totalError)}</td>
-            <td class="num"><button class="btn btn-ghost" style="font-size:10px;padding:3px 10px;height:auto;" onclick="openDetail('${esc(a.repoName)}','${esc(a.apiPath)}')">상세</button></td>
+            <td class="num"><button type="button" class="btn btn-ghost" style="font-size:10px;padding:3px 10px;height:auto;" data-repo="${escAttr(a.repoName)}" data-api-path="${escAttr(a.apiPath)}" onclick="openDetailFromDataset(this)">상세</button></td>
           </tr>`).join('');
       }
       document.getElementById('resultCount').textContent =

@@ -125,7 +125,7 @@ public class ConfigController {
                 .map(gc -> {
                     String at = time(gc.getExtractIssueReportAt());
                     String dismissedAt = time(gc.getExtractIssueDismissedAt());
-                    boolean dismissed = isExtractIssueDismissed(gc, adminToken);
+                    boolean dismissed = isExtractIssueDismissed(gc);
                     String json = gc.getExtractIssueReport();
                     if (json == null || json.isBlank()) {
                         return ResponseEntity.ok(Map.of(
@@ -232,7 +232,7 @@ public class ConfigController {
         globalRepo.save(gc);
         return ResponseEntity.ok(Map.of(
                 "ok", true,
-                "dismissed", isExtractIssueDismissed(gc, adminToken),
+                "dismissed", isExtractIssueDismissed(gc),
                 "dismissedAt", time(gc.getExtractIssueDismissedAt())
         ));
     }
@@ -513,11 +513,11 @@ public class ConfigController {
         }
     }
 
-    private boolean isExtractIssueDismissed(GlobalConfig gc, String adminToken) {
-        if (gc == null || !authService.isAdmin(adminToken)) return false;
+    private boolean isExtractIssueDismissed(GlobalConfig gc) {
+        if (gc == null) return false;
         LocalDateTime reportAt = gc.getExtractIssueReportAt();
         LocalDateTime dismissReportAt = gc.getExtractIssueDismissReportAt();
-        return reportAt != null && reportAt.equals(dismissReportAt);
+        return reportAt != null && dismissReportAt != null && reportAt.equals(dismissReportAt);
     }
 
     private String time(LocalDateTime value) {

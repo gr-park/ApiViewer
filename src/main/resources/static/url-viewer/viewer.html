@@ -2425,7 +2425,10 @@
       if (e.target.closest('button.summary-btn')) return;
       if (e.target.closest('a')) return;
       if (e.target.closest('input, select, textarea, label')) return;
-      if (e.target.closest('.query-summary-actions') && !e.target.closest('.collapser')) return;
+      if (e.target.closest('.query-summary-actions') && !e.target.closest('.collapser')) {
+        e.preventDefault();
+        return;
+      }
       if (e.target.closest('.heading-toggle-wrap') && !e.target.closest('.collapser')) {
         e.preventDefault();
         return;
