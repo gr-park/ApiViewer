@@ -93,10 +93,19 @@
       gap: 8px 10px;
     }
     .query-summary-actions {
-      display: inline-flex;
+      display: flex;
+      flex: 1;
+      min-width: 0;
       align-items: center;
       gap: 6px;
       flex-wrap: wrap;
+    }
+    .query-summary-trailing {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-left: auto;
     }
     .query-summary-primary-actions {
       display: inline-flex;
@@ -104,7 +113,173 @@
       gap: 10px;
       flex-wrap: wrap;
     }
-    .query-summary-primary-actions > .btn { margin: 0; }
+    .query-summary-primary-actions > .btn,
+    .query-summary-excel > .btn { margin: 0; }
+    /* 타이틀 줄 gap으로 간격 — .collapser.inline 전역 margin-left 와 중복 방지 */
+    .heading-toggle-wrap .collapser.inline { margin-left: 0; }
+    .query-summary-repo {
+      display: inline-flex;
+      align-items: center;
+      width: min(320px, 38vw);
+      min-width: 220px;
+      max-width: 100%;
+    }
+    .query-summary-repo #repoSelect {
+      width: 100%;
+    }
+    .basis-date-actions {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    /* 조회 카드 본문 — 기준일 등 */
+    .query-section { margin-bottom: 4px; }
+    .query-section--filters { margin-top: 2px; }
+    .query-section-title {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+      user-select: none;
+    }
+    .query-basis-inner {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .query-summary-excel {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    /* 일자·담당 필터 — 접기 가능 */
+    details.query-filter-dates {
+      width: 100%;
+      flex-basis: 100%;
+      margin-top: 6px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: #f8fafc;
+      overflow: hidden;
+    }
+    [data-theme="dark"] details.query-filter-dates {
+      background: rgba(30, 41, 59, 0.45);
+    }
+    details.query-filter-dates > summary.query-filter-dates-sum {
+      list-style: none;
+      cursor: pointer;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 6px 10px;
+      padding: 8px 10px;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text);
+      user-select: none;
+    }
+    details.query-filter-dates > summary.query-filter-dates-sum::-webkit-details-marker { display: none; }
+    details.query-filter-dates > summary.query-filter-dates-sum::after {
+      content: "▾";
+      font-size: 10px;
+      color: var(--text-muted);
+      margin-left: 4px;
+      transition: transform 0.12s ease;
+    }
+    details.query-filter-dates[open] > summary.query-filter-dates-sum::after {
+      transform: rotate(180deg);
+    }
+    .query-filter-dates-hint {
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+    .query-filter-dates-body {
+      padding: 2px 10px 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .filter-row.filter-row--cbo,
+    .filter-row.filter-row--deploy {
+      width: 100%;
+    }
+    .db-meta-sep { opacity: 0.55; user-select: none; }
+    .query-basis-head {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 6px 10px;
+      margin-bottom: 8px;
+    }
+    .query-basis-kicker {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-muted);
+      flex-shrink: 0;
+    }
+    .db-meta.db-meta--inline {
+      font-size: 11px;
+      flex-wrap: wrap;
+      min-width: 0;
+      margin-top: 0;
+      margin-bottom: 0;
+    }
+    .db-meta.db-meta--inline.db-meta--basis-row {
+      flex: 0 1 auto;
+      margin-left: 4px;
+      align-self: center;
+    }
+    .db-meta.db-meta--inline svg {
+      flex-shrink: 0;
+      opacity: 0.85;
+    }
+    .query-section-title-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px 10px;
+      margin-bottom: 8px;
+    }
+    .query-section-title-row .query-section-title {
+      margin-bottom: 0;
+    }
+    /* 목록 제목 옆 전체 리셋: 제목과 동일 타이포 + 접기(.collapser)와 동일 pill·회색 톤 */
+    .query-section-title-row .filter-reset-btn.filter-reset-btn--title {
+      height: auto;
+      min-height: 0;
+      padding: 3px 10px;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-muted);
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      line-height: 1.2;
+      box-shadow: none;
+    }
+    .query-section-title-row .filter-reset-btn.filter-reset-btn--title:hover {
+      background: #eff6ff;
+      border-color: #bfdbfe;
+      color: #1d4ed8;
+    }
+    [data-theme="dark"] .query-section-title-row .filter-reset-btn.filter-reset-btn--title {
+      background: #293548;
+      border-color: var(--border);
+      color: var(--text-muted);
+    }
+    [data-theme="dark"] .query-section-title-row .filter-reset-btn.filter-reset-btn--title:hover {
+      background: #1e3a5f;
+      border-color: #1d4ed8;
+      color: #93c5fd;
+    }
     .query-filter-divider {
       border: none;
       border-top: 1px dashed var(--border);
@@ -181,7 +356,6 @@
     }
 
     /* 조회 폼 */
-    .query-layout { display: flex; gap: 16px; align-items: flex-end; }
     label.field, .field { display: flex; flex-direction: column; gap: 4px; font-size: 11px; color: var(--text-muted); font-weight: 600; }
     label.field select, .field select { padding: 7px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 12px; outline: none; background: var(--card); color: var(--text); transition: border .15s; min-width: 180px; height: 34px; box-sizing: border-box; font-family: inherit; }
     label.field select:focus, .field select:focus { border-color: var(--primary); box-shadow: 0 0 0 2px #3b82f620; }
@@ -333,8 +507,37 @@
     .filter-bar input[type=text] { padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 12px; outline: none; width: 260px; }
     .filter-bar input:focus { border-color: var(--primary); }
     .filter-bar select { padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 12px; outline: none; background: var(--card); }
-    .filter-count { margin-left: auto; font-size: 12px; color: var(--text-muted); }
     .filter-row { width: 100%; display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+    /* 전체 리셋: 텍스트필드(28px) 높이에 맞추고 summary-btn 계열 음영 유지 */
+    .filter-reset-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      box-sizing: border-box;
+      height: 28px;
+      padding: 0 12px;
+      font-size: 12px;
+      font-weight: 700;
+      color: #334155;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      cursor: pointer;
+      user-select: none;
+      flex-shrink: 0;
+      font-family: inherit;
+    }
+    .filter-reset-btn:hover { background: #eff6ff; border-color: #bfdbfe; color: #1e40af; }
+    [data-theme="dark"] .filter-reset-btn {
+      background: #293548;
+      border-color: var(--border);
+      color: var(--text);
+    }
+    [data-theme="dark"] .filter-reset-btn:hover {
+      background: #1e3a5f;
+      border-color: #1d4ed8;
+      color: #93c5fd;
+    }
     .table-view-toggle {
       display: inline-flex;
       align-items: center;
@@ -858,8 +1061,8 @@
 
 <div class="main">
 
-  <!-- 조회 (레포·기준일 + 메타 아래 검색·필터) -->
-  <details class="card" id="queryCard" open>
+  <!-- 조회: 요약줄(레포·실행·보기 | 건수·엑셀) / 본문(기준일 → 메타 → 목록·일자필터) -->
+  <details class="card" id="queryCard">
     <summary class="section-heading section-heading--query query-card-summary">
       <span class="dot"></span>
       <span class="heading-toggle-wrap">
@@ -868,10 +1071,12 @@
           <span class="c-label"></span>
           <span class="c-arrow">▾</span>
         </span>
-        <span id="globalQueryCount" title="조회 성공 후, 필터·페이지네이션 기준 총 건수"></span>
       </span>
       <span class="query-summary-actions">
         <span class="query-summary-primary-actions">
+          <span class="query-summary-repo" title="레포지토리 선택">
+            <div id="repoSelect"></div>
+          </span>
           <button type="button" class="btn btn-blue btn-sm" id="loadBtn" onclick="loadApis()">조회</button>
           <span class="table-view-toggle" role="group" aria-label="테이블 보기 모드">
             <button type="button" class="table-view-label-btn" id="viewerCompactModeBtn" aria-pressed="false" onclick="setViewerTableMode('compact')">간단히</button>
@@ -879,20 +1084,25 @@
             <button type="button" class="table-view-label-btn" id="viewerDetailModeBtn" aria-pressed="false" onclick="setViewerTableMode('detail')">자세히</button>
           </span>
         </span>
-        <button type="button" class="btn btn-green btn-sm" id="excelBtn" onclick="downloadExcel()" style="display:none;">⬇ 엑셀다운로드</button>
-        <span id="uploadGroup" style="display:none;gap:0;">
-          <button type="button" class="btn btn-green btn-sm" id="excelUploadBtn" onclick="triggerExcelUpload()">⬆ 엑셀업로드</button>
-          <button type="button" class="btn btn-green btn-sm" id="sampleDownloadBtn" onclick="downloadViewerSample()" style="opacity:0.92;" title="업로드용 샘플 엑셀 파일 다운로드">⬇ 샘플</button>
+        <span class="query-summary-trailing">
+          <span id="globalQueryCount" title="조회 성공 후, 필터·페이지네이션 기준 총 건수"></span>
+          <span class="query-summary-excel" aria-label="엑셀">
+            <button type="button" class="btn btn-green btn-sm" id="excelBtn" onclick="downloadExcel()" style="display:none;">⬇ 엑셀다운로드</button>
+            <span id="uploadGroup" style="display:none;gap:0;">
+              <button type="button" class="btn btn-green btn-sm" id="excelUploadBtn" onclick="triggerExcelUpload()">⬆ 엑셀업로드</button>
+              <button type="button" class="btn btn-green btn-sm" id="sampleDownloadBtn" onclick="downloadViewerSample()" style="opacity:0.92;" title="업로드용 샘플 엑셀 파일 다운로드">⬇ 샘플</button>
+            </span>
+          </span>
         </span>
       </span>
     </summary>
     <div class="card-body">
-      <div class="query-layout">
-        <div class="field" style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;gap:3px;margin-top:0;min-width:220px;">업무명 | 레포지토리
-          <div id="repoSelect"></div>
+      <div class="query-section query-section--server">
+        <div class="query-basis-head">
+          <span class="query-basis-kicker" id="basisHeadingLabel">기준일자</span>
         </div>
-        <label class="field">기준일자
-          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+        <div class="query-basis-controls" role="group" aria-labelledby="basisHeadingLabel">
+          <div class="query-basis-inner">
             <input id="basisDate" type="hidden" value="">
             <div class="basis-date-picker-wrap">
               <button type="button" id="basisDateBtn" class="basis-date-btn"
@@ -910,70 +1120,91 @@
             </div>
             <select id="basisSnapshotId" style="display:none;min-width:230px;"
                     title="해당 일자의 스냅샷이 여러 개일 때 시각을 고를 수 있습니다."></select>
-            <button type="button" id="basisDateClearBtn" onclick="clearBasisDate()"
-                    title="기준일자 비우기 (현재 데이터 조회로 전환)"
-                    style="display:none;height:34px;padding:0 10px;font-size:11px;border:1px solid var(--border);border-radius:6px;background:var(--card);cursor:pointer;color:var(--text-muted);">✕ 비우기</button>
-            <span id="viewModeBadge"
-                  style="font-size:11px;font-weight:700;padding:3px 8px;border-radius:999px;background:#ecfccb;color:#365314;border:1px solid #d9f99d;">현재 데이터</span>
+            <span class="basis-date-actions">
+              <button type="button" id="basisDateClearBtn" onclick="clearBasisDate()"
+                      title="기준일자 비우기 (현재 데이터 조회로 전환)"
+                      style="display:none;height:34px;padding:0 10px;font-size:11px;border:1px solid var(--border);border-radius:6px;background:var(--card);cursor:pointer;color:var(--text-muted);">✕ 비우기</button>
+              <span id="viewModeBadge"
+                    style="font-size:11px;font-weight:700;padding:3px 8px;border-radius:999px;background:#ecfccb;color:#365314;border:1px solid #d9f99d;">현재 데이터</span>
+            </span>
+            <div class="db-meta db-meta--inline db-meta--basis-row" id="dbMeta" style="display:none" role="status" aria-live="polite">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+              <span>마지막 분석 <strong id="metaDate">-</strong></span>
+              <span class="db-meta-sep" aria-hidden="true">|</span>
+              <span>등록 URL </span><strong id="metaTotal">0</strong><span> 건</span>
+            </div>
           </div>
-        </label>
+        </div>
         <input type="file" id="excelUploadInput" accept=".xlsx" style="display:none;" onchange="handleExcelUpload(event)">
       </div>
 
-      <div class="db-meta" id="dbMeta" style="display:none">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
-        레포지토리: <strong id="metaRepo">-</strong> &nbsp;|&nbsp; 마지막 분석일: <strong id="metaDate">-</strong> &nbsp;|&nbsp; 총 <strong id="metaTotal">0</strong>개 URL
-      </div>
-      <!-- 업무명·레포·기준일 행 ↔ URL/팀/담당 검색·필터 행 구분 -->
+      <!-- 기준일자 ↔ 목록 필터 구분 -->
       <hr class="query-filter-divider" aria-hidden="true">
 
-      <div class="filter-bar" id="filterBar" style="display:flex;flex-wrap:wrap;gap:6px;">
-        <div class="filter-row">
-          <input type="text" id="searchInput" placeholder="URL, 메소드명, 메뉴명, 비고 검색" oninput="filterTable()" style="width:260px;">
-          <input type="text" id="searchTeam" placeholder="팀 검색" oninput="filterTable()" style="width:100px;">
-          <input type="text" id="searchManager" placeholder="담당자 검색" oninput="filterTable()" style="width:100px;">
-          <button class="summary-btn" type="button" onclick="resetAllFilters(event)">전체 리셋</button>
-          <span class="filter-count" id="filterCount"></span>
+      <div class="query-section query-section--filters">
+        <div class="query-section-title-row">
+          <span class="query-section-title">목록에서 찾기</span>
+          <button type="button" class="filter-reset-btn filter-reset-btn--title" onclick="resetAllFilters(event)" title="검색어·일자·담당 조건 등 목록 필터를 초기화합니다.">전체리셋</button>
         </div>
+        <div class="filter-bar" id="filterBar" style="display:flex;flex-wrap:wrap;gap:6px;">
+          <details class="query-filter-dates" id="queryFilterText" open>
+            <summary class="query-filter-dates-sum">
+              URL · 팀 · 담당 검색
+              <span class="query-filter-dates-hint">URL·메뉴·비고 / 팀(자동완성)·담당자</span>
+            </summary>
+            <div class="query-filter-dates-body">
+              <div class="filter-row">
+                <input type="text" id="searchInput" placeholder="URL, 메소드명, 메뉴명, 비고 검색" oninput="filterTable()" style="width:260px;">
+                <input type="text" id="searchTeam" list="teamsDatalist" placeholder="팀 검색" oninput="filterTable()" style="width:120px;" autocomplete="off">
+                <input type="text" id="searchManager" placeholder="담당자 검색" oninput="filterTable()" style="width:100px;">
+              </div>
+            </div>
+          </details>
 
-        <!-- CBO / 차단예정일자 / 차단작업담당자: 한 줄 -->
-        <div class="filter-row">
-          <span class="label">CBO일자</span>
-          <input class="date" type="date" id="cboFrom" onchange="filterTable({immediate:true,page:0})">
-          <span class="label">~</span>
-          <input class="date" type="date" id="cboTo" onchange="filterTable({immediate:true,page:0})">
-
-          <span class="label" style="margin-left:6px;">차단예정일자</span>
-          <input class="date" type="date" id="deployFrom" onchange="filterTable({immediate:true,page:0})">
-          <span class="label">~</span>
-          <input class="date" type="date" id="deployTo" onchange="filterTable({immediate:true,page:0})">
-
-          <span class="label" style="margin-left:6px;">차단작업담당자</span>
-          <input type="text" id="searchDeployManager" placeholder="차단작업담당자 검색" oninput="filterTable()" style="width:120px;">
-        </div>
-
-        <!-- 변경일시: 관리자만 — 위 일반 필터와 구분선 -->
-        <div class="filter-row admin-modified-filter-sep" id="filterSepBeforeModifiedAt" style="display:none;" role="separator" aria-label="관리자 전용 필터 구역">
-          <span class="admin-modified-sep-text">────────────────────────</span>
-        </div>
-        <div class="filter-row" id="filterRowModifiedAt" style="display:none;" title="관리자 전용 필터">
-          <span class="label">변경일시</span>
-          <input class="date" type="datetime-local" id="modifiedFrom" onchange="onModifiedRangeInputChange()">
-          <span class="label">~</span>
-          <input class="date" type="datetime-local" id="modifiedTo" onchange="onModifiedRangeInputChange()">
-          <span class="label" style="margin-left:4px;">빠른 선택</span>
-          <span class="date-quick-seg" id="modifiedQuickSeg" role="group" aria-label="변경일시 빠른 선택">
-            <button type="button" class="date-quick-seg__btn" onclick="setModifiedQuick('m5', this)">5분</button>
-            <button type="button" class="date-quick-seg__btn" onclick="setModifiedQuick('h1', this)">1시간</button>
-            <button type="button" class="date-quick-seg__btn" onclick="setModifiedQuick('today', this)">당일</button>
-            <button type="button" class="date-quick-seg__btn" onclick="setModifiedQuick('yesterday', this)">전일</button>
-            <button type="button" class="date-quick-seg__btn" onclick="setModifiedQuick('d3', this)">3일</button>
-            <button type="button" class="date-quick-seg__btn" onclick="setModifiedQuick('d7', this)">7일</button>
-            <button type="button" class="date-quick-seg__btn" onclick="setModifiedQuick('d30', this)">30일</button>
-            <button type="button" class="date-quick-seg__btn" onclick="setModifiedQuick('d90', this)">90일</button>
-            <button type="button" class="date-quick-seg__btn" onclick="setModifiedQuick('d180', this)">180일</button>
-            <button type="button" class="date-quick-seg__btn" onclick="setModifiedQuick('y1', this)">1년</button>
-          </span>
+          <details class="query-filter-dates" id="queryFilterDates" open>
+            <summary class="query-filter-dates-sum">
+              일자 · 담당 조건
+              <span class="query-filter-dates-hint">CBO일자 · 차단예정 · 차단작업담당자 · (관리자) 변경일시</span>
+            </summary>
+            <div class="query-filter-dates-body">
+              <div class="filter-row filter-row--cbo">
+                <span class="label">CBO일자</span>
+                <input class="date" type="date" id="cboFrom" onchange="filterTable({immediate:true,page:0})">
+                <span class="label">~</span>
+                <input class="date" type="date" id="cboTo" onchange="filterTable({immediate:true,page:0})">
+              </div>
+              <div class="filter-row filter-row--deploy">
+                <span class="label">차단예정일자</span>
+                <input class="date" type="date" id="deployFrom" onchange="filterTable({immediate:true,page:0})">
+                <span class="label">~</span>
+                <input class="date" type="date" id="deployTo" onchange="filterTable({immediate:true,page:0})">
+                <span class="label" style="margin-left:6px;">차단작업담당자</span>
+                <input type="text" id="searchDeployManager" placeholder="차단작업담당자 검색" oninput="filterTable()" style="width:120px;">
+              </div>
+              <div class="filter-row admin-modified-filter-sep" id="filterSepBeforeModifiedAt" style="display:none;" role="separator" aria-label="관리자 전용 필터 구역">
+                <span class="admin-modified-sep-text">────────────────────────</span>
+              </div>
+              <div class="filter-row" id="filterRowModifiedAt" style="display:none;" title="관리자 전용 필터">
+                <span class="label">변경일시</span>
+                <input class="date" type="datetime-local" id="modifiedFrom" onchange="onModifiedRangeInputChange()">
+                <span class="label">~</span>
+                <input class="date" type="datetime-local" id="modifiedTo" onchange="onModifiedRangeInputChange()">
+                <span class="label" style="margin-left:4px;">빠른 선택</span>
+                <span class="date-quick-seg" id="modifiedQuickSeg" role="group" aria-label="변경일시 빠른 선택">
+                  <button type="button" class="date-quick-seg__btn" onclick="setModifiedQuick('m5', this)">5분</button>
+                  <button type="button" class="date-quick-seg__btn" onclick="setModifiedQuick('h1', this)">1시간</button>
+                  <button type="button" class="date-quick-seg__btn" onclick="setModifiedQuick('today', this)">당일</button>
+                  <button type="button" class="date-quick-seg__btn" onclick="setModifiedQuick('yesterday', this)">전일</button>
+                  <button type="button" class="date-quick-seg__btn" onclick="setModifiedQuick('d3', this)">3일</button>
+                  <button type="button" class="date-quick-seg__btn" onclick="setModifiedQuick('d7', this)">7일</button>
+                  <button type="button" class="date-quick-seg__btn" onclick="setModifiedQuick('d30', this)">30일</button>
+                  <button type="button" class="date-quick-seg__btn" onclick="setModifiedQuick('d90', this)">90일</button>
+                  <button type="button" class="date-quick-seg__btn" onclick="setModifiedQuick('d180', this)">180일</button>
+                  <button type="button" class="date-quick-seg__btn" onclick="setModifiedQuick('y1', this)">1년</button>
+                </span>
+              </div>
+            </div>
+          </details>
         </div>
       </div>
     </div>
@@ -1849,6 +2080,26 @@
 
   // URL현황 레포 선택은 공용 RepoSelect(`common/repo-select.js`)를 사용한다.
 
+  /** 전역 팀 목록 + 레포 설정 팀명을 합쳐 teamsDatalist(팀 검색 자동완성)에 반영 */
+  function mergeTeamsDatalist() {
+    const dl = document.getElementById('teamsDatalist');
+    if (!dl) return;
+    const set = new Set(Array.isArray(teamsList) ? teamsList : []);
+    try {
+      Object.values(repoConfigMap || {}).forEach(c => {
+        const t = (c && c.team) ? String(c.team).trim() : '';
+        if (t) set.add(t);
+      });
+    } catch (e) {}
+    const sorted = [...set].sort((a, b) => a.localeCompare(b, 'ko'));
+    dl.innerHTML = '';
+    sorted.forEach(t => {
+      const o = document.createElement('option');
+      o.value = t;
+      dl.appendChild(o);
+    });
+  }
+
   // ── 초기화 ────────────────────────────────────────────────
   async function initRepos() {
     try {
@@ -1893,6 +2144,8 @@
       // 레포 표시순서 인덱스 (cfgs 는 서버에서 displayOrder 기준 정렬되어 내려옴)
       repoOrderIndex = {};
       cfgs.forEach((c, i) => { repoOrderIndex[c.repoName] = i; });
+
+      mergeTeamsDatalist();
 
       // 업무명|레포명 다중선택 (공용 RepoSelect)
       const repoListForMount = repos
@@ -1970,11 +2223,8 @@
     return arr.length === 1 ? arr[0] : '';
   }
 
-  /** 필터 영역(filterCount) + 조회 카드 헤더(globalQueryCount) 건수 동기화 */
+  /** 조회 카드 헤더(globalQueryCount) 건수 동기화 */
   function syncQueryCountDisplay(total) {
-    const label = total == null || total === '' ? '—' : `${Number(total).toLocaleString()}건`;
-    const fc = document.getElementById('filterCount');
-    if (fc) fc.textContent = label;
     const g = document.getElementById('globalQueryCount');
     if (g) {
       if (!viewerListQuerySucceeded || total == null || total === '') {
@@ -2023,7 +2273,6 @@
     renderUploadedFilterChip();
 
     const selectedCsv = getSelectedReposCsv();
-    const selectedArr = getSelectedRepos();
     try {
       // 기준일자(스냅샷) 모드 결정 및 resolve
       const basisRaw = (document.getElementById('basisDate')?.value || '').trim();
@@ -2123,8 +2372,6 @@
       document.getElementById('statsBar').style.display = 'flex';
       if (!isNoticeDismissed('noticeBar')) document.getElementById('noticeBar').style.display = 'block';
       document.getElementById('dbMeta').style.display = 'flex';
-      document.getElementById('metaRepo').textContent =
-        selectedArr.length === 0 ? '전체' : (selectedArr.length === 1 ? selectedArr[0] : `${selectedArr.length}개 레포`);
       document.getElementById('metaDate').textContent =
         snapshotMode && snapshotMeta && snapshotMeta.snapshotAt
           ? `스냅샷 ${fmtDt(snapshotMeta.snapshotAt)} (이후 변경/추가된 내역은 미반영)`
@@ -2165,9 +2412,11 @@
       localStorage.setItem(storageKey, el.open ? 'open' : 'closed');
     });
   }
-  // 기본: 조회 카드는 펼침, 상태안내·빠른필터 카드는 접힘 — 조회 성공 후 expandStatsCardIfVisible()으로 펼침·localStorage 동기화
-  initDetailsState('queryCard', 'viewer.ui.queryCard', true);
+  // 기본: 조회 카드는 접힘(요약줄의 레포·조회·엑셀은 항상 사용 가능). 상태안내·빠른필터 카드도 접힘 — 조회 성공 후 expandStatsCardIfVisible()으로 펼침·localStorage 동기화
+  initDetailsState('queryCard', 'viewer.ui.queryCard', false);
   initDetailsState('statsCard', 'viewer.ui.statsCard', false);
+  initDetailsState('queryFilterDates', 'viewer.ui.queryFilterDates', true);
+  initDetailsState('queryFilterText', 'viewer.ui.queryFilterText', true);
 
   // details 카드: summary 전체가 아니라 「펼치기/접기」(.collapser) 클릭 시에만 접힘 (빈 여백·힌트 클릭 오동작 방지)
   document.querySelectorAll('details.card').forEach(function (details) {
@@ -2175,10 +2424,14 @@
     if (!sum) return;
     sum.addEventListener('click', function (e) {
       if (e.type !== 'click' || e.button !== 0) return;
-      if (e.target.closest('.query-summary-actions')) return;
       if (e.target.closest('button.summary-btn')) return;
       if (e.target.closest('a')) return;
       if (e.target.closest('input, select, textarea, label')) return;
+      if (e.target.closest('.query-summary-actions') && !e.target.closest('.collapser')) return;
+      if (e.target.closest('.heading-toggle-wrap') && !e.target.closest('.collapser')) {
+        e.preventDefault();
+        return;
+      }
       if (!e.target.closest('.collapser')) e.preventDefault();
     });
   });
