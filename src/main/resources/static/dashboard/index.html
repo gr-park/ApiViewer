@@ -919,6 +919,20 @@
       </div>
     </div>
 
+    <!-- ══════════════════════════════════════════════════════════════
+         섹션 5 : LOCAi 추천 메시지
+         ══════════════════════════════════════════════════════════════ -->
+    <div class="section-header" id="locaiSummaryHeader" style="display:none;">
+      <h3>🤖 LOCAi 추천 메시지</h3>
+      <span class="section-sub">사내 AI가 현재 대시보드 내용을 분석한 요약입니다.</span>
+    </div>
+    <div class="card" id="locaiSummaryCard" style="display:none;">
+      <div id="locaiSummaryBody" style="font-size:13px;line-height:1.7;color:var(--text-primary,#1e293b);min-height:48px;">
+        <div class="spinner" style="display:inline-block;vertical-align:middle;margin-right:8px;"></div>
+        <span style="color:var(--text-muted);">AI 분석 중...</span>
+      </div>
+    </div>
+
   </div><!-- /dashContent -->
 </div>
 
@@ -1153,10 +1167,56 @@
         '최종 갱신: ' + new Date().toLocaleTimeString('ko-KR');
       document.getElementById('loadingArea').style.display = 'none';
       document.getElementById('dashContent').style.display = 'block';
+      loadLocaiSummary();
     } catch(e) {
       document.getElementById('loadingArea').innerHTML =
         `<div class="empty" style="color:var(--danger);">통계 불러오기 실패: ${e.message}</div>`;
       showToast('통계 로드 실패', 'error');
+    }
+  }
+
+  async function loadLocaiSummary() {
+    const summaryGrid = document.querySelector('#dashContent > div.summary-grid');
+    const batchCard   = document.querySelector('#dashContent > div#dashDistBatchRow > div.dash-batch-card');
+    const teamPanel   = document.querySelector('#dashContent > div#panel-overview-team');
+
+    // 세 영역 텍스트 수집 (DOM 렌더 후 innerText 사용)
+    const parts = [];
+    if (summaryGrid) parts.push('[URL 분석 요약]\n' + (summaryGrid.innerText || '').replace(/\s{2,}/g,' ').trim());
+    if (batchCard)   parts.push('[시스템 배치 수행 결과]\n' + (batchCard.innerText || '').replace(/\s{2,}/g,' ').trim());
+    if (teamPanel)   parts.push('[URL 현황 — 팀별]\n' + (teamPanel.innerText || '').replace(/\s{2,}/g,' ').trim());
+
+    const content = parts.join('\n\n');
+    if (!content.trim()) return;
+
+    // 섹션 표시 (로딩 상태)
+    document.getElementById('locaiSummaryHeader').style.display = '';
+    document.getElementById('locaiSummaryCard').style.display   = '';
+
+    try {
+      const res = await fetch('/api/ai/dashboard-summary', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({content})
+      });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const data = await res.json();
+
+      const bodyEl = document.getElementById('locaiSummaryBody');
+      if (!data.configured) {
+        // AI 미설정 시 섹션 숨김
+        document.getElementById('locaiSummaryHeader').style.display = 'none';
+        document.getElementById('locaiSummaryCard').style.display   = 'none';
+        return;
+      }
+      if (data.error && !data.summary) {
+        bodyEl.innerHTML = `<span style="color:var(--danger,#dc2626);">AI 응답 실패: ${data.error}</span>`;
+        return;
+      }
+      bodyEl.textContent = data.summary || '(응답 없음)';
+    } catch(e) {
+      const bodyEl = document.getElementById('locaiSummaryBody');
+      if (bodyEl) bodyEl.innerHTML = `<span style="color:var(--danger,#dc2626);">AI 호출 실패: ${e.message}</span>`;
     }
   }
 
