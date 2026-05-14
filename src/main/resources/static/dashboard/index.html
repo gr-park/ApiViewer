@@ -1186,6 +1186,41 @@
     if (batchCard)   parts.push('[시스템 배치 수행 결과]\n' + (batchCard.innerText || '').replace(/\s{2,}/g,' ').trim());
     if (teamPanel)   parts.push('[URL 현황 — 팀별]\n' + (teamPanel.innerText || '').replace(/\s{2,}/g,' ').trim());
 
+    // 관리자인 경우 DB 모니터 정보를 추가로 포함
+    const adminMode = isAdmin();
+    if (adminMode) {
+      try {
+        const [curRes, histRes] = await Promise.all([
+          fetch('/api/db/monitor/current'),
+          fetch('/api/db/monitor/history?days=30')
+        ]);
+        if (curRes.ok) {
+          const cur = await curRes.json();
+          const mb = v => v != null ? (v / 1024 / 1024).toFixed(1) + 'MB' : '-';
+          parts.push(
+            '[DB 현황]\n' +
+            `DB 종류: ${cur.dbType || '-'}, DB 크기: ${mb(cur.dbSizeBytes)}, ` +
+            `디스크 사용: ${cur.diskUsedPct != null ? cur.diskUsedPct + '%' : '-'} (가용: ${mb(cur.diskUsableBytes)}), ` +
+            `API 레코드: ${cur.apiRecordCount?.toLocaleString() || '-'}건, ` +
+            `APM 호출: ${cur.apmCallDataCount?.toLocaleString() || '-'}건, ` +
+            `오늘 DB 증가: ${mb(cur.todayGrowthBytes)}, APM 증가: ${cur.todayGrowthApm?.toLocaleString() || '-'}건`
+          );
+        }
+        if (histRes.ok) {
+          const histData = await histRes.json();
+          const list = histData.history || [];
+          if (list.length > 0) {
+            const rows = list.slice(-7).map(r =>
+              `${r.date}: DB ${(r.dbSizeBytes/1024/1024).toFixed(1)}MB (+${(r.deltaBytes/1024/1024).toFixed(2)}MB), APM ${r.apmCallDataCount?.toLocaleString()}건 (+${r.deltaApm?.toLocaleString()}건)`
+            ).join('\n');
+            parts.push('[DB 증가 추이 (최근 7일)]\n' + rows);
+          }
+        }
+      } catch (e) {
+        // DB 모니터 실패 시 무시하고 기본 내용만 사용
+      }
+    }
+
     const content = parts.join('\n\n');
     if (!content.trim()) return;
 
@@ -1197,7 +1232,7 @@
       const res = await fetch('/api/ai/dashboard-summary', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({content})
+        body: JSON.stringify({content, adminMode})
       });
       if (!res.ok) throw new Error('HTTP ' + res.status);
       const data = await res.json();

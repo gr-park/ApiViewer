@@ -45,7 +45,10 @@ public class AiInvokeController {
             return ResponseEntity.ok(Map.of("summary", "", "configured", false));
         }
 
-        String prompt = content + "\n\n위 내용 기준으로 100 단어 이내로 분석 결과를 요약해.";
+        boolean adminMode = Boolean.TRUE.equals(body.get("adminMode"));
+        String prompt = adminMode
+                ? content + "\n\n위 내용 기준으로 현황과 주요 이슈를 5줄 이내로 요약해."
+                : content + "\n\n위 내용 기준으로 100 단어 이내로 분석 결과를 요약해.";
         try {
             String summary = aiClient.chatCompletion(gc, prompt);
             return ResponseEntity.ok(Map.of("summary", summary != null ? summary : "", "configured", true));
