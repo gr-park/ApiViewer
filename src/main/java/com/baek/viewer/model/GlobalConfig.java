@@ -231,6 +231,13 @@ public class GlobalConfig {
     @Column(name = "portal_notice_at")
     private LocalDateTime portalNoticeAt;
 
+    /** LOCAi 추천 메시지 캐시 — AI_SUMMARY 배치가 주기적으로 갱신 */
+    @Column(name = "ai_dashboard_summary", columnDefinition = "TEXT")
+    private String aiDashboardSummary;
+
+    @Column(name = "ai_dashboard_summary_at")
+    private LocalDateTime aiDashboardSummaryAt;
+
 
     public Long getId() { return id; }
     public String getStartDate() { return startDate; }
@@ -362,6 +369,11 @@ public class GlobalConfig {
     public void setPortalNoticeText(String portalNoticeText) { this.portalNoticeText = portalNoticeText; }
     public LocalDateTime getPortalNoticeAt() { return portalNoticeAt; }
     public void setPortalNoticeAt(LocalDateTime portalNoticeAt) { this.portalNoticeAt = portalNoticeAt; }
+
+    public String getAiDashboardSummary() { return aiDashboardSummary; }
+    public void setAiDashboardSummary(String v) { this.aiDashboardSummary = v; }
+    public LocalDateTime getAiDashboardSummaryAt() { return aiDashboardSummaryAt; }
+    public void setAiDashboardSummaryAt(LocalDateTime v) { this.aiDashboardSummaryAt = v; }
 
     /** 채팅 API 전체 URL */
     public String resolveAiChatEndpoint() {

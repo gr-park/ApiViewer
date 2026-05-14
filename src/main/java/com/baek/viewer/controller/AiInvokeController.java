@@ -4,6 +4,7 @@ import com.baek.viewer.ai.AiMenuInferenceService;
 import com.baek.viewer.ai.InternalOpenAiCompatibleClient;
 import com.baek.viewer.model.GlobalConfig;
 import com.baek.viewer.repository.GlobalConfigRepository;
+import com.baek.viewer.service.AiSummaryService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
@@ -20,17 +21,28 @@ public class AiInvokeController {
     private final AiMenuInferenceService menuInferenceService;
     private final InternalOpenAiCompatibleClient aiClient;
     private final GlobalConfigRepository globalConfigRepository;
+    private final AiSummaryService aiSummaryService;
 
     public AiInvokeController(AiMenuInferenceService menuInferenceService,
                                InternalOpenAiCompatibleClient aiClient,
-                               GlobalConfigRepository globalConfigRepository) {
+                               GlobalConfigRepository globalConfigRepository,
+                               AiSummaryService aiSummaryService) {
         this.menuInferenceService = menuInferenceService;
         this.aiClient = aiClient;
         this.globalConfigRepository = globalConfigRepository;
+        this.aiSummaryService = aiSummaryService;
     }
 
     /**
-     * 대시보드 — LOCAi 추천 메시지 (화면 진입 시 호출)
+     * 대시보드 — LOCAi 추천 메시지 캐시 조회 (AI_SUMMARY 배치가 주기적으로 갱신한 결과)
+     */
+    @GetMapping("/dashboard-summary/cached")
+    public ResponseEntity<?> dashboardSummaryCached() {
+        return ResponseEntity.ok(aiSummaryService.getCached());
+    }
+
+    /**
+     * 대시보드 — LOCAi 추천 메시지 (화면 진입 시 호출) — 레거시 유지
      */
     @PostMapping("/dashboard-summary")
     public ResponseEntity<?> dashboardSummary(@RequestBody Map<String, Object> body) {
