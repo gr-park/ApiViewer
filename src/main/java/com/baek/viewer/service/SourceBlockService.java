@@ -234,6 +234,10 @@ public class SourceBlockService {
                 continue;
             }
 
+            String methodLineIndent = md.getRange()
+                    .map(rng -> leadingIndentOfPhysicalLine(source, rng.begin.line))
+                    .orElse("");
+
             boolean changed = false;
 
             // @Deprecated
@@ -250,9 +254,9 @@ public class SourceBlockService {
                     String raw = md.getJavadocComment().get().getContent();
                     String trimmed = raw == null ? "" : raw.trim();
                     if (!trimmed.endsWith("\n")) trimmed = trimmed + "\n";
-                    newDoc = trimmed + " * " + deprecateDocLine + "\n ";
+                    newDoc = trimmed + methodLineIndent + " * " + deprecateDocLine + "\n" + methodLineIndent + " ";
                 } else {
-                    newDoc = "\n * " + deprecateDocLine + "\n ";
+                    newDoc = "\n" + methodLineIndent + " * " + deprecateDocLine + "\n" + methodLineIndent + " ";
                 }
                 md.setComment(new JavadocComment(newDoc));
                 changed = true;
@@ -316,6 +320,19 @@ public class SourceBlockService {
 
     private static String buildDeprecateDocLine(LocalDate date, String ticketNo, String title) {
         return "@deprecated [URL차단작업][" + date + "][" + ticketNo + "] " + title;
+    }
+
+    /** 소스 문자열에서 1-based 물리 줄의 선행 공백·탭 (메소드 선언 줄과 Javadoc ` * ` 줄 정렬에 사용) */
+    private static String leadingIndentOfPhysicalLine(String source, int line1Based) {
+        if (source == null || line1Based < 1) return "";
+        String[] lines = source.split("\\R", -1);
+        if (line1Based > lines.length) return "";
+        String line = lines[line1Based - 1];
+        int j = 0;
+        while (j < line.length() && (line.charAt(j) == ' ' || line.charAt(j) == '\t')) {
+            j++;
+        }
+        return line.substring(0, j);
     }
 
     private static boolean isBlank(String s) {
