@@ -772,7 +772,7 @@ public class ApiStorageService {
     }
 
     /** 패키지 공개 — ApiExtractorService 등에서도 동일 판정을 쓰도록 */
-    static boolean containsUrlBlockTag(String text) {
+    public static boolean containsUrlBlockTag(String text) {
         return text != null && URL_BLOCK_TAG_PATTERN.matcher(text).find();
     }
 

@@ -52,6 +52,38 @@ public class RecordProposalService {
         return proposalRepository.findByRecordId(recordId);
     }
 
+    /**
+     * 담당자가 /api/db/record 로 데이터를 직접 저장하기 전 처리.
+     * - 제안 JSON에 {@code status} 키가 있으면(상태 승인요청 중) {@code false} — 직접 저장 불가.
+     * - 그 외(데이터만 제안된 경우) 제안 행을 삭제하고 {@code true}.
+     */
+    @Transactional
+    public boolean clearDataOnlyProposalBeforeEditorDirectWrite(long recordId) {
+        Optional<ApiRecordProposal> opt = proposalRepository.findByRecordId(recordId);
+        if (opt.isEmpty()) {
+            return true;
+        }
+        String json = opt.get().getPayloadJson();
+        if (proposalJsonContainsStatusKey(json)) {
+            return false;
+        }
+        proposalRepository.delete(opt.get());
+        return true;
+    }
+
+    private boolean proposalJsonContainsStatusKey(String json) {
+        if (json == null || json.isBlank()) {
+            return false;
+        }
+        try {
+            Map<String, Object> m = objectMapper.readValue(json, new TypeReference<>() {});
+            return m != null && m.containsKey("status");
+        } catch (Exception e) {
+            log.warn("[제안 payload] status 키 확인 실패 recordId 관련: {}", e.getMessage());
+            return false;
+        }
+    }
+
     static String formatStatusChangeSummary(String fromDb, Object toPatch) {
         String from = (fromDb == null || fromDb.isBlank()) ? "-" : fromDb.trim();
         String to;

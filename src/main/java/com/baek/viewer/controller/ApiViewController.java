@@ -64,6 +64,10 @@ public class ApiViewController {
 
     private static final Logger log = LoggerFactory.getLogger(ApiViewController.class);
 
+    /** 담당자 직접 PATCH 시 허용하지 않음 — 상태·URL확정·신규 플래그는 관리자 또는 승인요청 경로 */
+    private static final Set<String> EDITOR_RECORD_PATCH_FORBIDDEN = Set.of(
+            "status", "statusChangeReason", "statusChangeSummary", "statusOverridden", "isNew");
+
     private static final ObjectMapper PROPOSAL_PAYLOAD_MAPPER = new ObjectMapper();
 
     private final ApiExtractorService extractorService;
@@ -190,7 +194,12 @@ public class ApiViewController {
 
     private String getClientIp(HttpServletRequest req) {
         String ip = req.getHeader("X-Forwarded-For");
-        if (ip == null || ip.isBlank()) ip = req.getRemoteAddr();
+        if (ip == null || ip.isBlank()) {
+            ip = req.getRemoteAddr();
+        }
+        if (ip == null || ip.isBlank()) {
+            ip = "0.0.0.0";
+        }
         ip = ip.split(",")[0].trim();
         // IPv6 localhost → IPv4 변환
         if ("0:0:0:0:0:0:0:1".equals(ip) || "::1".equals(ip)) ip = "127.0.0.1";
@@ -1611,8 +1620,24 @@ public class ApiViewController {
     @PatchMapping("/db/record/{id}")
     public ResponseEntity<?> updateRecord(@PathVariable Long id, @RequestBody Map<String, Object> body, HttpServletRequest httpReq) {
         try {
-            if (!authService.isAdmin(httpReq.getHeader("X-Admin-Token"))) {
-                return ResponseEntity.status(401).body(Map.of("error", "관리자 인증이 필요합니다."));
+            String adminTok = httpReq.getHeader("X-Admin-Token");
+            String editorTok = httpReq.getHeader("X-Editor-Token");
+            boolean admin = authService.isAdmin(adminTok);
+            boolean editor = authService.isEditor(editorTok);
+            if (!admin && !editor) {
+                return ResponseEntity.status(401).body(Map.of("error", "관리자 또는 일반사용자(담당자) 로그인이 필요합니다."));
+            }
+            if (editor) {
+                for (String key : body.keySet()) {
+                    if (EDITOR_RECORD_PATCH_FORBIDDEN.contains(key)) {
+                        return ResponseEntity.badRequest().body(Map.of("error",
+                                "상태 변경은 상단 「승인요청」으로 제출하세요. URL 확정·신규 표시는 관리자만 변경할 수 있습니다."));
+                    }
+                }
+                if (!proposalService.clearDataOnlyProposalBeforeEditorDirectWrite(id)) {
+                    return ResponseEntity.status(409).body(Map.of("error",
+                            "처리 중인 상태 승인요청이 있어 지금은 저장할 수 없습니다. 관리자 승인·반려 후 다시 시도하세요."));
+                }
             }
             String ip = getClientIp(httpReq);
             ApiRecord r = recordRepository.findById(id)

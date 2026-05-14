@@ -714,7 +714,7 @@
     .bulk-bar .bulk-seg button { background:#334155; color:#e2e8f0; border:none; padding:6px 12px; font-size:11px; font-weight:600; cursor:pointer; }
     .bulk-bar .bulk-seg button:hover { background:#475569; color:#fff; }
     .bulk-bar .bulk-seg button + button { border-left:1px solid rgba(255,255,255,.15); }
-    #bulkCombinedModal, #bulkStatusModal { z-index:105; }
+    #bulkCombinedModal, #bulkStatusModal, #sourceBlockDownloadModal { z-index:105; }
     /* 일괄 변경 모달 — 라벨·컨트롤 한 줄 정렬 */
     #bulkCombinedModal .bulk-combined-grid {
       display: grid;
@@ -1449,6 +1449,11 @@
       <button type="button" class="btn-apply" id="bulkRejectDismissBtn" onclick="bulkDismissRejectNotices()" style="display:none;background:#fef2f2;color:#991b1b;border:1px solid #fca5a5;">반려알림확인</button>
     </span>
 
+    <span class="bulk-group" id="bulkSourceBlockDownloadGroup">
+      <span class="bulk-label" style="color:#fde68a;">차단소스 생성</span>
+      <button type="button" class="btn-apply" id="bulkSourceBlockDownloadBtn" onclick="openSourceBlockDownloadModal()" style="background:#fef3c7;color:#92400e;border:1px solid #fcd34d;">다운로드</button>
+    </span>
+
     <!-- 그룹4: Jira (관리자 전용) -->
     <span class="bulk-group" id="jiraBulkGroup">
       <span class="bulk-label">SmartWay</span>
@@ -1668,7 +1673,7 @@
         <div class="detail-label">차단작업담당자</div>
         <div class="detail-value"><input id="bulkModalDeployMgr" class="df-input" type="text" placeholder="입력 시에만 반영"></div>
       </div>
-      <p style="font-size:11px;color:var(--text-muted);margin:12px 0 0;line-height:1.5;"><b>상태</b> 변경은 상단 일괄 바의 승인요청(담당자) 또는 상태변경·일괄변경(관리자)을 사용하세요. 이 화면에서는 상태를 제외한 값만 저장되며, 입력한 항목만 반영됩니다.</p>
+      <p style="font-size:11px;color:var(--text-muted);margin:12px 0 0;line-height:1.5;"><b>상태</b> 변경은 상단 일괄 바의 승인요청(담당자) 또는 상태변경·일괄변경(관리자)을 사용하세요. 이 화면의 팀·담당자·차단·비고·CBO·차단예정 등은 담당자도 <b>즉시 저장</b>되며, 입력한 항목만 반영됩니다.</p>
     </div>
   </div>
 </div>
@@ -1721,6 +1726,43 @@
   </div>
 </div>
 
+  <div id="sourceBlockDownloadModal" class="detail-modal">
+    <div class="detail-overlay" onclick="closeSourceBlockDownloadModal()"></div>
+    <div class="detail-content" style="max-width:560px;">
+      <div class="detail-header">
+        <h3>차단 소스 다운로드</h3>
+        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:flex-end;">
+          <button type="button" id="sourceBlockDownloadSubmitBtn" class="btn-apply" onclick="submitSourceBlockDownload()" style="background:#fef3c7;color:#92400e;border:1px solid #fcd34d;">다운로드</button>
+          <button type="button" class="btn btn-ghost btn-sm" onclick="closeSourceBlockDownloadModal()">취소</button>
+        </div>
+      </div>
+      <div class="detail-body">
+        <p id="sourceBlockJavadocPolicyNotice" style="font-size:12px;color:#b91c1c;font-weight:700;line-height:1.55;margin:0 0 10px 0;padding:10px 12px;border:1px solid #fecaca;border-radius:8px;background:#fef2f2;">
+          <span style="color:#dc2626;font-weight:800;">※ 중요</span>
+          JAVADOC에는 차단예정일자, 차단작업CSR 내용을 우선 넣으며, 없는경우에 지금 입력한 값으로 세팅됩니다.
+        </p>
+        <div style="font-size:12px;color:var(--text-muted);line-height:1.5;">
+          선택한 URL에 해당하는 메소드 상단에 아래를 자동 삽입합니다.<br>
+          - Javadoc: <b>@deprecated [URL차단작업][차단일자][차단티켓번호] 차단티켓제목</b> (차단일·티켓번호는 행의 차단예정일자·차단작업CSR 우선)<br>
+          - @Deprecated<br>
+          - 첫 실행문(한 줄): <code>if (true) throw new UnsupportedOperationException("차단된 URL 입니다.");</code><br>
+          (한 번에 최대 <b>300개</b> URL)
+        </div>
+        <hr style="border:0;border-top:1px solid var(--border);margin:10px 0;">
+        <div class="detail-grid">
+          <div class="detail-label">차단일자 <span id="sourceBlockReqStarDate" class="source-block-req-star" style="display:none;color:#dc2626;font-weight:800;">*</span></div>
+          <div class="detail-value"><input id="sourceBlockBlockedDate" type="date" class="df-input"></div>
+          <div class="detail-label">차단티켓번호 <span id="sourceBlockReqStarNo" class="source-block-req-star" style="display:none;color:#dc2626;font-weight:800;">*</span></div>
+          <div class="detail-value"><input id="sourceBlockTicketNo" type="text" class="df-input" placeholder="행에 CSR이 없을 때만 필수 — 예) CSR-12345" autocomplete="off"></div>
+          <div class="detail-label">차단티켓제목 <span id="sourceBlockReqStarTitle" class="source-block-req-star" style="display:none;color:#dc2626;font-weight:800;">*</span></div>
+          <div class="detail-value"><input id="sourceBlockTicketTitle" type="text" class="df-input" placeholder="행에 CSR이 없을 때만 필수 — 예) 모발뷰 차단" autocomplete="off"></div>
+          <div class="detail-label">대상</div>
+          <div class="detail-value"><span id="sourceBlockTargetCount">0</span>개 선택됨</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -1764,7 +1806,7 @@
     } catch (e) {}
     return false;
   }
-  /** 테이블·상세에서 공식값 직접 수정 또는 제안 저장 */
+  /** 테이블·상세: 관리자는 공식값 직접 수정, 담당자는 데이터 필드 즉시 저장·상태만 승인요청 */
   function guardCanWriteTable(actionLabel) {
     if (!guardWritable(actionLabel)) return false;
     if (viewerCanEditTable()) return true;
@@ -2018,6 +2060,17 @@
       'X-Editor-Token': tok
     }, options.headers || {});
     return fetch(url, Object.assign({}, options, { headers }));
+  }
+
+  /** 담당자: 데이터 필드는 즉시 PATCH (상태 변경만 제안 API). */
+  async function editorDirectRecordPatch(id, bodyObj) {
+    const res = await tableWriteAuthFetch(`/api/db/record/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(bodyObj)
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || '저장 실패');
+    return data;
   }
 
   async function bulkWithdrawProposals() {
@@ -4243,21 +4296,13 @@
     const val = input.value.trim();
     try {
       const body = {}; body[field] = val || null;
-      let res;
       if (isAdmin()) {
-        res = await adminFetch(`/api/db/record/${id}`, { method:'PATCH', body: JSON.stringify(body) });
+        const res = await adminFetch(`/api/db/record/${id}`, { method:'PATCH', body: JSON.stringify(body) });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || '저장 실패');
       } else {
-        const patch = filterEditorProposalBody(body);
-        if (Object.keys(patch).length === 0) throw new Error('저장할 필드가 없습니다.');
-        const tok = window.getEditorToken ? window.getEditorToken() : '';
-        res = await fetch(`/api/proposals/record/${id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json', 'X-Editor-Token': tok },
-          body: JSON.stringify({ patch })
-        });
+        await editorDirectRecordPatch(id, body);
       }
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || '저장 실패');
       if (isAdmin()) {
         const entry = allApis.find(a => a.id === id);
         if (entry) entry[field] = val || null;
@@ -4273,7 +4318,19 @@
         showToast('저장 완료', 'success');
       } else {
         await refreshRow(id);
-        showToast('저장 완료 (승인대기)', 'success');
+        if (field === 'descriptionOverride') {
+          const entry = allApis.find(a => a.id === id);
+          if (entry) {
+            const shown = allDesc(entry);
+            td.innerHTML = esc(shown) + (entry.descriptionOverride
+              ? '<span style="display:inline-block;margin-left:4px;padding:0 4px;background:#dbeafe;border:1px solid #93c5fd;border-radius:3px;color:#1e40af;font-size:9px;font-weight:600;vertical-align:middle;" title="사용자 수정됨">수정</span>'
+              : '');
+            td.title = '클릭하여 수정 — 자동 파싱값 대신 사용';
+          }
+        } else {
+          td.textContent = val;
+        }
+        showToast('저장 완료', 'success');
         try { await loadCounts(getSelectedReposCsv()); renderStats(); } catch (e) {}
       }
     } catch(e) {
@@ -4387,6 +4444,8 @@
     const ba = document.getElementById('bulkStatusEditAuto');
     const bs = document.getElementById('bulkStatusEditSecondary');
     const dataGrp = document.getElementById('bulkDataChangeGroup');
+    const srcGrp = document.getElementById('bulkSourceBlockDownloadGroup');
+    const srcBtn = document.getElementById('bulkSourceBlockDownloadBtn');
     const expectedDoneGrp = document.getElementById('bulkExpectedDoneGroup');
     const expectedDoneBtn = document.getElementById('bulkExpectedDoneApplyBtn');
     const statusGrp = document.getElementById('bulkStatusGroup');
@@ -4400,6 +4459,9 @@
       if (statusGrp) statusGrp.style.display = hasSelection ? 'inline-flex' : 'none';
       if (lockGrp) lockGrp.style.display = hasSelection ? 'inline-flex' : 'none';
       if (jiraGrp) jiraGrp.style.display = (adm && hasSelection) ? '' : 'none';
+      if (srcGrp) srcGrp.style.display = hasSelection ? 'inline-flex' : 'none';
+      // disabled 로 막으면 "무반응"처럼 보여 혼동될 수 있어, 클릭은 허용하고 함수에서 제한 안내한다.
+      if (srcBtn) srcBtn.disabled = false;
       if (adm) {
         bp.textContent = '상태변경';
         bp.onclick = () => openBulkStatusModal();
@@ -4422,6 +4484,164 @@
         if (seg) seg.classList.toggle('bulk-seg--single', autoMismatchRows.length === 0);
         if (expectedDoneGrp) expectedDoneGrp.style.display = 'none';
       }
+    }
+  }
+
+  /** 차단 소스 zip 다운로드 — 한 번에 선택 가능한 URL 상한 (서버 SourceBlockService.MAX_IDS 와 동일 유지) */
+  const SOURCE_BLOCK_DOWNLOAD_MAX = 300;
+
+  const SOURCE_BLOCK_DOWNLOAD_ERR = {
+    blockedDate_required: '선택 행에 차단예정일자 또는 차단작업CSR이 비어 있어 차단일자를 입력하세요.',
+    blockedTicketNo_required: '선택 행에 차단예정일자 또는 차단작업CSR이 비어 있어 차단티켓번호를 입력하세요.',
+    blockedTicketTitle_required: '선택 행에 차단예정일자 또는 차단작업CSR이 비어 있어 차단티켓제목을 입력하세요.',
+    insufficient_block_metadata: 'JAVADOC에 넣을 차단일·티켓 정보가 부족합니다. 입력값을 확인하세요.',
+    no_valid_records_for_repo: '선택한 레포 기준으로 처리할 행이 없습니다.',
+    blockedDate_invalid: '차단일자 형식이 올바르지 않습니다.',
+    repoName_required: '레포지토리 정보가 없습니다.',
+    ids_required: '선택된 ID가 없습니다.',
+    too_many_ids: '한 번에 처리할 수 있는 개수를 초과했습니다.'
+  };
+
+  function sourceBlockSelectedRowsForModal(ids) {
+    return ids.map(id => allApis.find(a => a.id === id)).filter(Boolean);
+  }
+  function sourceBlockRowsMissingDeployFields(rows) {
+    return rows.some(r => {
+      const hasD = r.deployScheduledDate != null && String(r.deployScheduledDate).trim() !== '';
+      const hasC = r.deployCsr != null && String(r.deployCsr).trim() !== '';
+      return !hasD || !hasC;
+    });
+  }
+  function applySourceBlockModalFieldRequired(anyGap) {
+    const dt = document.getElementById('sourceBlockBlockedDate');
+    const tn = document.getElementById('sourceBlockTicketNo');
+    const tt = document.getElementById('sourceBlockTicketTitle');
+    ['sourceBlockReqStarDate', 'sourceBlockReqStarNo', 'sourceBlockReqStarTitle'].forEach(id => {
+      const s = document.getElementById(id);
+      if (s) s.style.display = anyGap ? 'inline' : 'none';
+    });
+    if (dt) dt.required = !!anyGap;
+    if (tn) tn.required = !!anyGap;
+    if (tt) tt.required = !!anyGap;
+  }
+  /** 선택 순서대로 첫 채워진 차단예정일자·차단작업CSR로 프리필 (없으면 빈 값) */
+  function prefillSourceBlockModalFromRows(ids) {
+    const dt = document.getElementById('sourceBlockBlockedDate');
+    const tn = document.getElementById('sourceBlockTicketNo');
+    const tt = document.getElementById('sourceBlockTicketTitle');
+    if (tt) tt.value = '';
+    if (dt) {
+      dt.value = '';
+      for (const id of ids) {
+        const r = allApis.find(a => a.id === id);
+        if (!r) continue;
+        const d = r.deployScheduledDate;
+        if (d != null && String(d).trim() !== '') {
+          const ds = String(d).trim();
+          dt.value = ds.length >= 10 ? ds.slice(0, 10) : ds;
+          break;
+        }
+      }
+    }
+    if (tn) {
+      tn.value = '';
+      for (const id of ids) {
+        const r = allApis.find(a => a.id === id);
+        if (!r) continue;
+        const c = r.deployCsr;
+        if (c != null && String(c).trim() !== '') {
+          tn.value = String(c).trim();
+          break;
+        }
+      }
+    }
+  }
+  function sourceBlockZipLabelDate(blockedDateStr, rows) {
+    if (blockedDateStr && String(blockedDateStr).trim()) return String(blockedDateStr).trim();
+    for (const r of rows) {
+      const d = r.deployScheduledDate;
+      if (d != null && String(d).trim() !== '') {
+        const ds = String(d).trim();
+        return ds.length >= 10 ? ds.slice(0, 10) : ds;
+      }
+    }
+    return new Date().toLocaleDateString('sv-SE');
+  }
+
+  function openSourceBlockDownloadModal() {
+    if (!selectedIds.size) { showToast('선택된 항목이 없습니다.', 'error'); return; }
+    if (!guardCanWriteTable('차단 소스 다운로드')) return;
+    if (selectedIds.size > SOURCE_BLOCK_DOWNLOAD_MAX) { showToast(`한 번에 최대 ${SOURCE_BLOCK_DOWNLOAD_MAX}개 URL만 다운로드할 수 있습니다.`, 'error'); return; }
+    const ids = Array.from(selectedIds);
+    const rows = sourceBlockSelectedRowsForModal(ids);
+    const anyGap = sourceBlockRowsMissingDeployFields(rows);
+    window._sourceBlockModalNeedsInput = anyGap;
+    prefillSourceBlockModalFromRows(ids);
+    applySourceBlockModalFieldRequired(anyGap);
+    const cnt = document.getElementById('sourceBlockTargetCount');
+    if (cnt) cnt.textContent = String(selectedIds.size);
+    document.getElementById('sourceBlockDownloadModal').style.display = 'flex';
+  }
+  function closeSourceBlockDownloadModal() {
+    const m = document.getElementById('sourceBlockDownloadModal');
+    if (m) m.style.display = 'none';
+  }
+  async function submitSourceBlockDownload() {
+    if (!selectedIds.size) { showToast('선택된 항목이 없습니다.', 'error'); return; }
+    if (!guardCanWriteTable('차단 소스 다운로드')) return;
+    if (selectedIds.size > SOURCE_BLOCK_DOWNLOAD_MAX) { showToast(`한 번에 최대 ${SOURCE_BLOCK_DOWNLOAD_MAX}개 URL만 다운로드할 수 있습니다.`, 'error'); return; }
+
+    const dtEl = document.getElementById('sourceBlockBlockedDate');
+    const ticketNoEl = document.getElementById('sourceBlockTicketNo');
+    const ticketTitleEl = document.getElementById('sourceBlockTicketTitle');
+    const blockedDate = dtEl ? String(dtEl.value || '').trim() : '';
+    const blockedTicketNo = ticketNoEl ? String(ticketNoEl.value || '').trim() : '';
+    const blockedTicketTitle = ticketTitleEl ? String(ticketTitleEl.value || '').trim() : '';
+
+    const ids = Array.from(selectedIds);
+    // 단일 레포 다운로드(선택 행 기준으로 자동 추론)
+    const selectedRows = ids.map(id => allApis.find(a => a.id === id)).filter(Boolean);
+    const anyGap = sourceBlockRowsMissingDeployFields(selectedRows);
+    if (anyGap) {
+      if (!blockedDate) { showToast('선택 행에 차단예정일자 또는 차단작업CSR이 비어 있어 차단일자 입력이 필수입니다.', 'error'); return; }
+      if (!blockedTicketNo) { showToast('선택 행에 차단예정일자 또는 차단작업CSR이 비어 있어 차단티켓번호 입력이 필수입니다.', 'error'); return; }
+      if (!blockedTicketTitle) { showToast('선택 행에 차단예정일자 또는 차단작업CSR이 비어 있어 차단티켓제목 입력이 필수입니다.', 'error'); return; }
+    }
+    const repoSet = new Set(selectedRows.map(r => r.repositoryName).filter(v => !!(v && String(v).trim())));
+    if (!repoSet.size) { showToast('선택한 항목에서 레포지토리를 찾을 수 없습니다.', 'error'); return; }
+    if (repoSet.size > 1) { showToast('선택한 항목의 레포지토리가 여러 개입니다. 레포 필터로 1개만 선택하세요.', 'error'); return; }
+    const repoName = Array.from(repoSet)[0];
+
+    const btn = document.getElementById('sourceBlockDownloadSubmitBtn');
+    if (btn) { btn.disabled = true; btn.textContent = '처리 중…'; }
+    showBulkProgress('차단 소스 생성 중…', `${ids.length}개 URL · zip 다운로드 준비`);
+    try {
+      const res = await tableWriteAuthFetch('/api/source-block/download', {
+        method: 'POST',
+        body: JSON.stringify({ repoName, ids, blockedDate, blockedTicketNo, blockedTicketTitle })
+      });
+      if (!res.ok) {
+        let data = {}; try { data = await res.json(); } catch (_) {}
+        const code = data.error != null ? String(data.error) : '';
+        throw new Error(SOURCE_BLOCK_DOWNLOAD_ERR[code] || code || '다운로드 실패');
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      const fnDate = sourceBlockZipLabelDate(blockedDate, selectedRows);
+      a.download = `url-block-${repoName}-${fnDate}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      closeSourceBlockDownloadModal();
+      showToast('차단 소스 다운로드 완료', 'success');
+    } catch (e) {
+      showToast((e && e.message) ? e.message : '다운로드 실패', 'error');
+    } finally {
+      hideBulkProgress();
+      if (btn) { btn.disabled = false; btn.textContent = '다운로드'; }
     }
   }
 
@@ -4780,20 +5000,12 @@
     try {
       const editorSession = !isAdmin() && window.isEditorLoggedIn && window.isEditorLoggedIn();
       if (editorSession) {
-        const tok = window.getEditorToken ? window.getEditorToken() : '';
         let ok = 0;
         for (const id of ids) {
-          const merged = await mergeEditorProposalPatch(id, valueFields);
-          const res = await fetch(`/api/proposals/record/${id}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json', 'X-Editor-Token': tok },
-            body: JSON.stringify({ patch: merged })
-          });
-          const d = await res.json().catch(() => ({}));
-          if (!res.ok) throw new Error(d.error || '저장 실패');
+          await editorDirectRecordPatch(id, valueFields);
           ok++;
         }
-        showToast(`저장 완료 ${ok}건 (승인대기)`, 'success');
+        showToast(`저장 완료 ${ok}건`, 'success');
       } else {
         const body = Object.assign({ ids }, valueFields);
         const res = await adminFetch('/api/db/status', { method: 'PATCH', body: JSON.stringify(body) });
@@ -6015,17 +6227,8 @@
 
       if (Object.keys(body).length) {
         if (editorSession) {
-          const patch = filterEditorProposalBody(body);
-          if (Object.keys(patch).length === 0) { showToast('저장할 제안 필드가 없습니다.', 'info'); return; }
-          const tok = window.getEditorToken ? window.getEditorToken() : '';
-          const res = await fetch(`/api/proposals/record/${id}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json', 'X-Editor-Token': tok },
-            body: JSON.stringify({ patch })
-          });
-          const d = await res.json().catch(() => ({}));
-          if (!res.ok) throw new Error(d.error || '저장 실패');
-          showToast('저장 완료 (승인대기)', 'success');
+          await editorDirectRecordPatch(id, body);
+          showToast('저장 완료', 'success');
         } else {
           const res = await adminFetch(`/api/db/record/${id}`, { method:'PATCH', body: JSON.stringify(body) });
           const d = await res.json();

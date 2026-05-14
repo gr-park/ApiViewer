@@ -1141,7 +1141,39 @@ public class ApiExtractorService {
                 info.getIsDeprecated(),
                 info.getFullComment()));
 
+        // 소스 패치/매칭용 — 메소드 Range 라인 (없을 수 있음)
+        try {
+            method.getRange().ifPresent(r -> {
+                info.setMethodBeginLine(r.begin.line);
+                info.setMethodEndLine(r.end.line);
+            });
+        } catch (Exception ignore) {}
+
         return info;
+    }
+
+    /**
+     * 서버 내부 기능(소스 패치/다운로드 등)에서 사용하기 위한 파서 결과 반환.
+     * - debugParseJavaSource 와 유사하나 preview 가 아닌 전체 ApiInfo 를 반환한다.
+     * - 파일 접근 없이, 문자열 소스만으로 파싱한다.
+     */
+    public List<ApiInfo> parseJavaSourceForInternalUse(String javaSource, String relPath, String apiPathPrefix, String pathConstantsRaw) {
+        if (javaSource == null) throw new IllegalArgumentException("source is required");
+        String rel = (relPath == null || relPath.isBlank()) ? "__internal__/Controller.java" : relPath.trim().replace('\\', '/');
+        if (rel.contains("..")) throw new IllegalArgumentException("unsafe relPath");
+        Map<String, String> constants = parsePathConstants(pathConstantsRaw);
+        List<String[]> git = List.of(
+                new String[]{"", "", ""}, new String[]{"", "", ""}, new String[]{"", "", ""},
+                new String[]{"", "", ""}, new String[]{"", "", ""});
+        ensureJavaParserConfigured();
+        NormalizationResult nr = normalizeForJavaParser(javaSource);
+        Path pseudo = Paths.get(rel);
+        try {
+            return extractWithJavaParserFromSource(nr.source(), pseudo, rel, git,
+                    apiPathPrefix == null ? "" : apiPathPrefix, constants);
+        } catch (Exception e) {
+            throw new RuntimeException("JavaParser parsing failed: " + (e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName()), e);
+        }
     }
 
     // ======================================================

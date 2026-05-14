@@ -54,8 +54,37 @@ public class RecordProposalController {
 
     private static String clientIp(HttpServletRequest req) {
         String ip = req.getHeader("X-Forwarded-For");
-        if (ip == null || ip.isBlank()) ip = req.getRemoteAddr();
+        if (ip == null || ip.isBlank()) {
+            ip = req.getRemoteAddr();
+        }
+        if (ip == null || ip.isBlank()) {
+            return "0.0.0.0";
+        }
         return ip.split(",")[0].trim();
+    }
+
+    /** {@code Map.of} 은 value 가 null 이면 NPE — 예외 메시지가 null 인 경우에도 안전하게 응답 본문을 만든다. */
+    private static Map<String, Object> errorBody(Throwable e) {
+        String msg = proposalErrorMessage(e);
+        return Map.of("error", msg);
+    }
+
+    private static String proposalErrorMessage(Throwable e) {
+        if (e == null) {
+            return "오류";
+        }
+        String m = e.getMessage();
+        if (m != null && !m.isBlank()) {
+            return m;
+        }
+        Throwable c = e.getCause();
+        if (c != null) {
+            String cm = c.getMessage();
+            if (cm != null && !cm.isBlank()) {
+                return cm;
+            }
+        }
+        return e.getClass().getSimpleName();
     }
 
     @PutMapping("/record/{recordId}")
@@ -71,10 +100,10 @@ public class RecordProposalController {
             proposalService.saveOrUpdateProposal(recordId, patch, submittedByLabel(req), submitterAssigneeId(req), clientIp(req));
             return ResponseEntity.ok(Map.of("success", true, "recordId", recordId));
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+            return ResponseEntity.badRequest().body(errorBody(e));
         } catch (Exception e) {
-            log.warn("[제안 저장 실패] recordId={}, {}", recordId, e.getMessage());
-            return ResponseEntity.internalServerError().body(Map.of("error", e.getMessage()));
+            log.error("[제안 저장 실패] recordId={}", recordId, e);
+            return ResponseEntity.internalServerError().body(errorBody(e));
         }
     }
 
@@ -96,7 +125,7 @@ public class RecordProposalController {
             proposalService.withdraw(recordId, admin, editorId);
             return ResponseEntity.ok(Map.of("success", true));
         } catch (IllegalStateException e) {
-            return ResponseEntity.status(403).body(Map.of("error", e.getMessage()));
+            return ResponseEntity.status(403).body(errorBody(e));
         }
     }
 
@@ -109,7 +138,7 @@ public class RecordProposalController {
             proposalService.withdrawStatusFieldsOnly(recordId, admin, editorId);
             return ResponseEntity.ok(Map.of("success", true));
         } catch (IllegalStateException e) {
-            return ResponseEntity.status(403).body(Map.of("error", e.getMessage()));
+            return ResponseEntity.status(403).body(errorBody(e));
         }
     }
 
@@ -138,7 +167,7 @@ public class RecordProposalController {
             int n = proposalService.reject(ids, reason, clientIp(req));
             return ResponseEntity.ok(Map.of("removed", n));
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+            return ResponseEntity.badRequest().body(errorBody(e));
         }
     }
 }

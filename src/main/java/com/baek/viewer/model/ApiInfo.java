@@ -23,6 +23,9 @@ public class ApiInfo {
     private Long callCount; // Whatap 호출건수 (null = 미조회)
     private String hasUrlBlock = "N"; // 메소드 첫 줄에 UnsupportedOperationException throw 여부
     private boolean blockMarkingIncomplete; // 실질 차단이지만 @Deprecated 또는 [URL차단작업] 주석 중 일부 누락
+    /** Java 소스 내 메소드 위치(파서 기준) — 소스 패치/매칭용. 없을 수 있음. */
+    private Integer methodBeginLine;
+    private Integer methodEndLine;
 
     public String getApiPath() { return apiPath; }
     public void setApiPath(String apiPath) {
@@ -89,4 +92,9 @@ public class ApiInfo {
     public void setHasUrlBlock(String hasUrlBlock) { this.hasUrlBlock = hasUrlBlock; }
     public boolean isBlockMarkingIncomplete() { return blockMarkingIncomplete; }
     public void setBlockMarkingIncomplete(boolean blockMarkingIncomplete) { this.blockMarkingIncomplete = blockMarkingIncomplete; }
+
+    public Integer getMethodBeginLine() { return methodBeginLine; }
+    public void setMethodBeginLine(Integer methodBeginLine) { this.methodBeginLine = methodBeginLine; }
+    public Integer getMethodEndLine() { return methodEndLine; }
+    public void setMethodEndLine(Integer methodEndLine) { this.methodEndLine = methodEndLine; }
 }
