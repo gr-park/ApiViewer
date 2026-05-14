@@ -81,10 +81,12 @@ public class AiSummaryService {
         }
     }
 
-    /** 캐시된 요약 반환 (summary, generatedAt, configured) */
+    /** 캐시된 요약 반환 (summary, generatedAt, configured, dashboardEnabled) */
     public Map<String, Object> getCached() {
         GlobalConfig gc = globalConfigRepository.findById(1L).orElse(null);
-        boolean configured = gc != null
+        boolean dashboardEnabled = gc == null || gc.isAiDashboardEnabled();
+        boolean configured = dashboardEnabled
+                && gc != null
                 && gc.getAiOpenApiBaseUrl() != null
                 && !gc.getAiOpenApiBaseUrl().isBlank();
         String summary = gc != null ? gc.getAiDashboardSummary() : null;
@@ -92,6 +94,7 @@ public class AiSummaryService {
                 ? gc.getAiDashboardSummaryAt().format(DT_FMT) : null;
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("configured", configured);
+        result.put("dashboardEnabled", dashboardEnabled);
         result.put("summary", summary != null ? summary : "");
         result.put("generatedAt", generatedAt);
         return result;

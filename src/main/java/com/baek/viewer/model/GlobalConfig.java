@@ -238,6 +238,14 @@ public class GlobalConfig {
     @Column(name = "ai_dashboard_summary_at")
     private LocalDateTime aiDashboardSummaryAt;
 
+    /** 대시보드 LOCAi 추천 메시지 영역 노출 여부 (Y/N, 기본 Y) */
+    @Column(name = "ai_dashboard_enabled", length = 5)
+    private String aiDashboardEnabled = "Y";
+
+    /** /api/ai/* API 요청 허용 여부 (Y/N, 기본 Y) */
+    @Column(name = "ai_api_enabled", length = 5)
+    private String aiApiEnabled = "Y";
+
 
     public Long getId() { return id; }
     public String getStartDate() { return startDate; }
@@ -374,6 +382,14 @@ public class GlobalConfig {
     public void setAiDashboardSummary(String v) { this.aiDashboardSummary = v; }
     public LocalDateTime getAiDashboardSummaryAt() { return aiDashboardSummaryAt; }
     public void setAiDashboardSummaryAt(LocalDateTime v) { this.aiDashboardSummaryAt = v; }
+
+    public String getAiDashboardEnabled() { return aiDashboardEnabled != null ? aiDashboardEnabled : "Y"; }
+    public void setAiDashboardEnabled(String v) { this.aiDashboardEnabled = v; }
+    public boolean isAiDashboardEnabled() { return !"N".equalsIgnoreCase(getAiDashboardEnabled()); }
+
+    public String getAiApiEnabled() { return aiApiEnabled != null ? aiApiEnabled : "Y"; }
+    public void setAiApiEnabled(String v) { this.aiApiEnabled = v; }
+    public boolean isAiApiEnabled() { return !"N".equalsIgnoreCase(getAiApiEnabled()); }
 
     /** 채팅 API 전체 URL */
     public String resolveAiChatEndpoint() {

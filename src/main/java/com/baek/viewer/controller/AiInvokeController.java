@@ -33,11 +33,20 @@ public class AiInvokeController {
         this.aiSummaryService = aiSummaryService;
     }
 
+    /** /api/ai/* 허용 여부 확인 */
+    private boolean isApiEnabled() {
+        GlobalConfig gc = globalConfigRepository.findById(1L).orElse(null);
+        return gc == null || gc.isAiApiEnabled();
+    }
+
     /**
      * 대시보드 — LOCAi 추천 메시지 캐시 조회 (AI_SUMMARY 배치가 주기적으로 갱신한 결과)
      */
     @GetMapping("/dashboard-summary/cached")
     public ResponseEntity<?> dashboardSummaryCached() {
+        if (!isApiEnabled()) {
+            return ResponseEntity.status(403).body(Map.of("error", "AI API 비활성화됨", "enabled", false));
+        }
         return ResponseEntity.ok(aiSummaryService.getCached());
     }
 
@@ -46,6 +55,9 @@ public class AiInvokeController {
      */
     @PostMapping("/dashboard-summary")
     public ResponseEntity<?> dashboardSummary(@RequestBody Map<String, Object> body) {
+        if (!isApiEnabled()) {
+            return ResponseEntity.status(403).body(Map.of("error", "AI API 비활성화됨", "enabled", false));
+        }
         Object contentObj = body != null ? body.get("content") : null;
         if (contentObj == null || contentObj.toString().isBlank()) {
             return ResponseEntity.badRequest().body(Map.of("error", "content 필수"));
@@ -78,6 +90,9 @@ public class AiInvokeController {
      */
     @PostMapping("/menu-suggestion")
     public ResponseEntity<?> menuSuggestion(@RequestBody Map<String, Object> body) {
+        if (!isApiEnabled()) {
+            return ResponseEntity.status(403).body(Map.of("error", "AI API 비활성화됨", "enabled", false));
+        }
         Object rid = body != null ? body.get("recordId") : null;
         long recordId;
         if (rid instanceof Number n) recordId = n.longValue();
