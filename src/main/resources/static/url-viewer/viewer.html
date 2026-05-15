@@ -5976,8 +5976,7 @@
             <textarea id="df-descriptionOverride" class="df-textarea" rows="3" style="width:100%;box-sizing:border-box;" ${dis} oninput="showDetailSave()" placeholder="비우면 아래 자동 표시값과 동일하게 목록에 노출됩니다. 입력하면 해당 문구로 반영됩니다.">${esc(r.descriptionOverride || '')}</textarea>
             <div style="font-size:10px;color:var(--text-muted);margin-top:6px;line-height:1.45;">자동 표시값(비웠을 때): <span style="color:var(--text);font-weight:600;">${allDesc(r) ? esc(allDesc(r)) : '—'}</span></div>
             <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px;">
-              ${snapshotReadOnly || lk || roAnonymous ? '' : `<button type="button" class="btn btn-sm btn-blue" onclick="saveDetailDescriptionOverrideOnly()">관련메뉴 저장</button>`}
-              ${snapshotReadOnly || lk || roAnonymous ? '' : `<button type="button" class="btn btn-sm btn-ghost" onclick="requestAiMenuSuggestion()" style="font-size:11px;border:1px solid #c4b5fd;color:#5b21b6;">🤖 사내 AI 제안</button>`}
+              ${snapshotReadOnly || lk || roAnonymous ? '' : `<button type="button" class="btn btn-sm btn-ghost" onclick="requestAiMenuSuggestion()" style="font-size:10px;line-height:1.35;border:1px solid #c4b5fd;color:#5b21b6;white-space:normal;text-align:left;max-width:100%;">사내 AI 통한 관련메뉴 자동제안</button>`}
               ${snapshotReadOnly || lk || roAnonymous ? '' : `<span id="aiSuggestStatus" style="font-size:10px;color:var(--text-muted);"></span>`}
             </div>
             <div style="font-size:10px;color:var(--text-muted);margin-top:6px;line-height:1.45;">ApiOperation·주석 등 출처는 아래 행을 참고하세요.</div>
@@ -6156,8 +6155,8 @@
       }
       input.value = s;
       showDetailSave();
-      if (statusEl) statusEl.textContent = '반영됨 — [관련메뉴 저장]으로 적용하세요';
-      showToast('입력란에 반영했습니다. [관련메뉴 저장]을 눌러 적용하세요.', 'success');
+      if (statusEl) statusEl.textContent = '반영됨 — 상단 [저장]으로 적용하세요';
+      showToast('입력란에 반영했습니다. 상단 [저장]을 눌러 적용하세요.', 'success');
     } catch (e) {
       if (e && e.message === 'readonly') return;
       if (statusEl) statusEl.textContent = '';
@@ -6266,36 +6265,6 @@
       filterTable({ immediate: true });
       try { await loadCounts(getSelectedReposCsv()); renderStats(); } catch (e) {}
     } catch (e) { showToast(e.message || '실패', 'error'); }
-  }
-
-  async function saveDetailDescriptionOverrideOnly() {
-    const id = parseInt(document.getElementById('df-id')?.value || '0', 10);
-    if (!id) return;
-    if (!guardWritable('관련메뉴 저장')) return;
-    const editorSession = !isAdmin() && window.isEditorLoggedIn && window.isEditorLoggedIn();
-    if (!isAdmin() && !editorSession) {
-      showToast('수정하려면 상단 「일반사용자 로그인」이 필요합니다.', 'info');
-      openAssigneeLoginModal();
-      return;
-    }
-    const ta = document.getElementById('df-descriptionOverride');
-    const desc = ta ? String(ta.value || '').trim() : '';
-    const body = { descriptionOverride: desc || null };
-    try {
-      if (editorSession) await editorDirectRecordPatch(id, body);
-      else {
-        const res = await adminFetch(`/api/db/record/${id}`, { method: 'PATCH', body: JSON.stringify(body) });
-        const d = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(d.error || '저장 실패');
-      }
-      showToast('관련메뉴 저장 완료', 'success');
-      const btn = document.getElementById('detailSaveBtn');
-      if (btn) btn.style.display = 'none';
-      await refreshRow(id);
-      openDetail(id);
-      filterTable({ immediate: true });
-      try { await loadCounts(getSelectedReposCsv()); renderStats(); } catch (e) {}
-    } catch (e) { showToast(e.message || '저장 실패', 'error'); }
   }
 
   // ── 상세 패널 — 일괄 저장 ────────────────────────────────
