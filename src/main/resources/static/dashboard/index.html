@@ -919,6 +919,20 @@
       </div>
     </div>
 
+    <!-- ══════════════════════════════════════════════════════════════
+         섹션 5 : LOCAi 추천 메시지
+         ══════════════════════════════════════════════════════════════ -->
+    <div class="section-header" id="locaiSummaryHeader" style="display:none;">
+      <h3>🤖 LOCAi 추천 메시지</h3>
+      <span class="section-sub">사내 AI가 현재 대시보드 내용을 분석한 요약입니다.</span>
+    </div>
+    <div class="card" id="locaiSummaryCard" style="display:none;">
+      <div id="locaiSummaryBody" style="font-size:13px;line-height:1.7;color:var(--text-primary,#1e293b);min-height:48px;">
+        <div class="spinner" style="display:inline-block;vertical-align:middle;margin-right:8px;"></div>
+        <span style="color:var(--text-muted);">AI 분석 중...</span>
+      </div>
+    </div>
+
   </div><!-- /dashContent -->
 </div>
 
@@ -1153,10 +1167,47 @@
         '최종 갱신: ' + new Date().toLocaleTimeString('ko-KR');
       document.getElementById('loadingArea').style.display = 'none';
       document.getElementById('dashContent').style.display = 'block';
+      loadLocaiSummary();
     } catch(e) {
       document.getElementById('loadingArea').innerHTML =
         `<div class="empty" style="color:var(--danger);">통계 불러오기 실패: ${e.message}</div>`;
       showToast('통계 로드 실패', 'error');
+    }
+  }
+
+  async function loadLocaiSummary() {
+    // AI_SUMMARY 배치가 주기적으로 생성한 캐시 메시지를 조회
+    try {
+      const res = await fetch('/api/ai/dashboard-summary/cached');
+      if (!res.ok) return;
+      const data = await res.json();
+
+      if (!data.configured || !data.summary) {
+        // AI 미설정이거나 아직 생성된 메시지 없으면 섹션 숨김
+        return;
+      }
+
+      document.getElementById('locaiSummaryHeader').style.display = '';
+      document.getElementById('locaiSummaryCard').style.display   = '';
+
+      const bodyEl = document.getElementById('locaiSummaryBody');
+      bodyEl.textContent = data.summary;
+
+      // 생성 시각 표시
+      if (data.generatedAt) {
+        const timeEl = document.getElementById('locaiSummaryCard').querySelector('.locai-generated-at');
+        if (timeEl) {
+          timeEl.textContent = '생성: ' + data.generatedAt;
+        } else {
+          const stamp = document.createElement('div');
+          stamp.className = 'locai-generated-at';
+          stamp.style.cssText = 'font-size:10px;color:var(--text-muted);margin-top:6px;text-align:right;';
+          stamp.textContent = '생성: ' + data.generatedAt;
+          document.getElementById('locaiSummaryCard').appendChild(stamp);
+        }
+      }
+    } catch(e) {
+      // 캐시 조회 실패 시 섹션 미노출 (조용히 처리)
     }
   }
 
