@@ -40,13 +40,11 @@ public class AiInvokeController {
     }
 
     /**
-     * 대시보드 — LOCAi 추천 메시지 캐시 조회 (AI_SUMMARY 배치가 주기적으로 갱신한 결과)
+     * 대시보드 — LOCAi 추천 메시지 캐시 조회 (AI_SUMMARY 배치가 주기적으로 갱신한 결과).
+     * DB만 읽으며 사내 AI 게이트웨이를 호출하지 않는다. {@code ai_api_enabled} 와 무관하게 조회 가능.
      */
     @GetMapping("/dashboard-summary/cached")
     public ResponseEntity<?> dashboardSummaryCached() {
-        if (!isApiEnabled()) {
-            return ResponseEntity.status(403).body(Map.of("error", "AI API 비활성화됨", "enabled", false));
-        }
         return ResponseEntity.ok(aiSummaryService.getCached());
     }
 

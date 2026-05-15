@@ -21,7 +21,7 @@ import java.util.stream.Collectors;
 /**
  * LOCAi 추천 메시지 — 주기적 생성 및 캐시 관리.
  * AI_SUMMARY 배치가 스케줄에 따라 generateAndCache() 를 호출한다.
- * 대시보드는 GET /api/ai/dashboard-summary/cached 로 캐시된 메시지를 조회한다.
+ * 대시보드는 GET /api/ai/dashboard-summary/cached 로 캐시만 조회한다(외부 AI 미호출).
  */
 @Service
 public class AiSummaryService {
@@ -81,14 +81,11 @@ public class AiSummaryService {
         }
     }
 
-    /** 캐시된 요약 반환 (summary, generatedAt, configured, dashboardEnabled) */
+    /** 캐시된 요약 반환 (summary, generatedAt, configured, dashboardEnabled). 외부 AI 미호출. */
     public Map<String, Object> getCached() {
         GlobalConfig gc = globalConfigRepository.findById(1L).orElse(null);
-        boolean dashboardEnabled = gc == null || gc.isAiDashboardEnabled();
-        boolean configured = dashboardEnabled
-                && gc != null
-                && gc.getAiOpenApiBaseUrl() != null
-                && !gc.getAiOpenApiBaseUrl().isBlank();
+        boolean dashboardEnabled = gc != null && gc.isAiDashboardEnabled();
+        boolean configured = dashboardEnabled;
         String summary = gc != null ? gc.getAiDashboardSummary() : null;
         String generatedAt = (gc != null && gc.getAiDashboardSummaryAt() != null)
                 ? gc.getAiDashboardSummaryAt().format(DT_FMT) : null;
