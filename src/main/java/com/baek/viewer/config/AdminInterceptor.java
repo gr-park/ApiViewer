@@ -58,6 +58,15 @@ public class AdminInterceptor implements HandlerInterceptor {
             return write401(response);
         }
 
+        // 사내 AI — 관련 메뉴 제안 (URL 현황과 동일: 관리자 또는 편집자)
+        if (uri.startsWith("/api/ai/menu-suggestion")) {
+            if (authService.isAdmin(adminToken) || authService.isEditor(editorToken)) {
+                return true;
+            }
+            log.warn("[인증 차단] 401 {} {} (IP={})", request.getMethod(), uri, request.getRemoteAddr());
+            return write401(response);
+        }
+
         // 그 외 등록된 보호 경로 — 관리자만 (기존 동작)
         if (authService.isAdmin(adminToken)) return true;
 

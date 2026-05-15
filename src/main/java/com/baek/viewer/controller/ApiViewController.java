@@ -192,6 +192,24 @@ public class ApiViewController {
         return ResponseEntity.ok(Map.of("ok", true));
     }
 
+    /** 관리자 비밀번호 변경 (GlobalConfig 평문 저장 — verify-password 와 동일 모델) */
+    @PostMapping("/auth/change-admin-password")
+    public ResponseEntity<?> changeAdminPassword(@RequestHeader(value = "X-Admin-Token", required = false) String adminToken,
+                                                 @RequestBody Map<String, String> body) {
+        if (!authService.isAdmin(adminToken)) {
+            return ResponseEntity.status(401).body(Map.of("error", "관리자 로그인이 필요합니다."));
+        }
+        String newPwd = body != null ? body.get("newPassword") : null;
+        if (newPwd == null || newPwd.length() < 4) {
+            return ResponseEntity.badRequest().body(Map.of("error", "비밀번호는 4자 이상이어야 합니다."));
+        }
+        com.baek.viewer.model.GlobalConfig gc = globalConfigRepository.findById(1L).orElse(new GlobalConfig());
+        gc.setPassword(newPwd);
+        globalConfigRepository.save(gc);
+        log.info("[관리자 비밀번호 변경] DB global_config 반영");
+        return ResponseEntity.ok(Map.of("success", true));
+    }
+
     private String getClientIp(HttpServletRequest req) {
         String ip = req.getHeader("X-Forwarded-For");
         if (ip == null || ip.isBlank()) {
@@ -472,7 +490,13 @@ public class ApiViewController {
                                      @RequestParam(required = false) String deployFrom,
                                      @RequestParam(required = false) String deployTo,
                                      @RequestParam(required = false) String deployManager,
+                                     @RequestParam(required = false) String deployCsr,
                                      @RequestParam(required = false) Boolean deployUnscheduled,
+                                     @RequestParam(required = false) String recentCommitFrom,
+                                     @RequestParam(required = false) String recentCommitTo,
+                                     @RequestParam(required = false) String blockedDateFrom,
+                                     @RequestParam(required = false) String blockedDateTo,
+                                     @RequestParam(required = false) String blockedReason,
                                      @RequestParam(required = false) Boolean hasPendingProposal,
                                      @RequestParam(required = false) Integer page,
                                      @RequestParam(required = false) Integer size,
@@ -512,6 +536,12 @@ public class ApiViewController {
                 || (deployFrom != null && !deployFrom.isBlank())
                 || (deployTo != null && !deployTo.isBlank())
                 || (deployManager != null && !deployManager.isBlank())
+                || (deployCsr != null && !deployCsr.isBlank())
+                || (recentCommitFrom != null && !recentCommitFrom.isBlank())
+                || (recentCommitTo != null && !recentCommitTo.isBlank())
+                || (blockedDateFrom != null && !blockedDateFrom.isBlank())
+                || (blockedDateTo != null && !blockedDateTo.isBlank())
+                || (blockedReason != null && !blockedReason.isBlank())
                 || (deployUnscheduled != null)
                 || Boolean.TRUE.equals(hasPendingProposal)
                 || Boolean.TRUE.equals(expectedDone)
@@ -530,7 +560,8 @@ public class ApiViewController {
 
             Specification<ApiRecord> spec = buildSpec(repository, repoList, blockTargetOnly,
                     status, statusGroup, autoStatus, autoStatusGroup, testSuspect, pathParams, logWorkExcluded, recentLogOnly, httpMethod, isDeprecated, q, alert, expectedDone, ids,
-                    modifiedFrom, modifiedTo, modifiedBy, cboFrom, cboTo, deployFrom, deployTo, deployManager, deployUnscheduled,
+                    modifiedFrom, modifiedTo, modifiedBy, cboFrom, cboTo, deployFrom, deployTo, deployManager, deployCsr, deployUnscheduled,
+                    recentCommitFrom, recentCommitTo, blockedDateFrom, blockedDateTo, blockedReason,
                     useRepoDisplayOrderSort, hasPendingProposal);
 
             Page<ApiRecord> entityPage = recordRepository.findAll(spec, pageable);
@@ -667,7 +698,9 @@ public class ApiViewController {
                                                 String ids, String modifiedFrom, String modifiedTo, String modifiedBy,
                                                 String cboFrom, String cboTo,
                                                 String deployFrom, String deployTo,
-                                                String deployManager, Boolean deployUnscheduled,
+                                                String deployManager, String deployCsr, Boolean deployUnscheduled,
+                                                String recentCommitFrom, String recentCommitTo,
+                                                String blockedDateFrom, String blockedDateTo, String blockedReason,
                                                 boolean useRepoDisplayOrderSort,
                                                 Boolean hasPendingProposal) {
         return (root, query, cb) -> {
@@ -884,9 +917,51 @@ public class ApiViewController {
             if (deployManager != null && !deployManager.isBlank()) {
                 ps.add(cb.like(cb.lower(root.get("deployManager")), "%" + deployManager.toLowerCase() + "%"));
             }
+            if (deployCsr != null && !deployCsr.isBlank()) {
+                ps.add(cb.like(cb.lower(root.get("deployCsr")), "%" + deployCsr.toLowerCase() + "%"));
+            }
             if (deployUnscheduled != null) {
                 if (deployUnscheduled) ps.add(cb.isNull(root.get("deployScheduledDate")));
                 else ps.add(cb.isNotNull(root.get("deployScheduledDate")));
+            }
+            if (recentCommitFrom != null && !recentCommitFrom.isBlank()) {
+                try {
+                    LocalDate from = LocalDate.parse(recentCommitFrom.trim().length() >= 10
+                            ? recentCommitFrom.trim().substring(0, 10) : recentCommitFrom.trim());
+                    ps.add(cb.and(
+                            cb.isNotNull(root.get("lastGitCommitDate")),
+                            cb.greaterThanOrEqualTo(root.get("lastGitCommitDate"), from)));
+                } catch (Exception ignored) {}
+            }
+            if (recentCommitTo != null && !recentCommitTo.isBlank()) {
+                try {
+                    LocalDate to = LocalDate.parse(recentCommitTo.trim().length() >= 10
+                            ? recentCommitTo.trim().substring(0, 10) : recentCommitTo.trim());
+                    ps.add(cb.and(
+                            cb.isNotNull(root.get("lastGitCommitDate")),
+                            cb.lessThanOrEqualTo(root.get("lastGitCommitDate"), to)));
+                } catch (Exception ignored) {}
+            }
+            if (blockedDateFrom != null && !blockedDateFrom.isBlank()) {
+                try {
+                    LocalDate from = LocalDate.parse(blockedDateFrom.trim().length() >= 10
+                            ? blockedDateFrom.trim().substring(0, 10) : blockedDateFrom.trim());
+                    ps.add(cb.and(
+                            cb.isNotNull(root.get("blockedDate")),
+                            cb.greaterThanOrEqualTo(root.get("blockedDate"), from)));
+                } catch (Exception ignored) {}
+            }
+            if (blockedDateTo != null && !blockedDateTo.isBlank()) {
+                try {
+                    LocalDate to = LocalDate.parse(blockedDateTo.trim().length() >= 10
+                            ? blockedDateTo.trim().substring(0, 10) : blockedDateTo.trim());
+                    ps.add(cb.and(
+                            cb.isNotNull(root.get("blockedDate")),
+                            cb.lessThanOrEqualTo(root.get("blockedDate"), to)));
+                } catch (Exception ignored) {}
+            }
+            if (blockedReason != null && !blockedReason.isBlank()) {
+                ps.add(cb.like(cb.lower(root.get("blockedReason")), "%" + blockedReason.toLowerCase() + "%"));
             }
             // alert 기본: 삭제 제외. 단, 삭제 전용 / 변경감지는 삭제 상태도 포함한다.
             if (alert == null || (!"deleted".equals(alert) && !"changed".equals(alert))) {
@@ -1138,6 +1213,7 @@ public class ApiViewController {
         m.put("managerOverride",    r.getManagerOverride());
         m.put("descriptionOverride", r.getDescriptionOverride());
         m.put("gitHistory",         r.getGitHistory());
+        m.put("lastGitCommitDate",  r.getLastGitCommitDate() != null ? r.getLastGitCommitDate().toString() : null);
         // Excel 내보내기 / 상세 표시에 필요한 TEXT 필드 (페이지 단위라 부담 작음)
         m.put("fullComment",        r.getFullComment());
         m.put("controllerComment",  r.getControllerComment());

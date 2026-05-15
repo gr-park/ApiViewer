@@ -20,6 +20,8 @@ public class ApiRecordStatusEventService {
     public static final String EVENT_PROPOSAL_SUBMITTED = "PROPOSAL_SUBMITTED";
     public static final String EVENT_PROPOSAL_APPROVED = "PROPOSAL_APPROVED";
     public static final String EVENT_PROPOSAL_REJECTED = "PROPOSAL_REJECTED";
+    /** 담당자·관리자가 제출한 상태 승인요청을 철회(취소)한 경우 */
+    public static final String EVENT_PROPOSAL_WITHDRAWN = "PROPOSAL_WITHDRAWN";
     public static final String EVENT_DIRECT_STATUS_CHANGED = "DIRECT_STATUS_CHANGED";
     public static final String EVENT_AUTO_STATUS_APPLIED = "AUTO_STATUS_APPLIED";
 
@@ -99,6 +101,7 @@ public class ApiRecordStatusEventService {
         if (Objects.equals(EVENT_PROPOSAL_SUBMITTED, eventType)) return "승인요청";
         if (Objects.equals(EVENT_PROPOSAL_APPROVED, eventType)) return "승인완료";
         if (Objects.equals(EVENT_PROPOSAL_REJECTED, eventType)) return "반려";
+        if (Objects.equals(EVENT_PROPOSAL_WITHDRAWN, eventType)) return "승인요청 취소";
         if (Objects.equals(EVENT_DIRECT_STATUS_CHANGED, eventType)) return "직접변경";
         if (Objects.equals(EVENT_AUTO_STATUS_APPLIED, eventType)) return "자동분석상태 반영";
         return eventType != null ? eventType : "";

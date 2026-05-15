@@ -1,5 +1,6 @@
 package com.baek.viewer.model;
 
+import com.baek.viewer.util.GitHistoryUtil;
 import jakarta.persistence.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -279,6 +280,13 @@ public class ApiRecord {
     @Column(name = "git_history", columnDefinition = "TEXT")
     private String gitHistory; // JSON: [{"date":"...","author":"...","message":"..."},...]
 
+    /**
+     * git_history 내 커밋 일자 중 최대값(화면「최근변경」첫 줄 일자와 동일). 조회 필터·정렬용.
+     * {@link #setGitHistory(String)} 시 자동 갱신.
+     */
+    @Column(name = "last_git_commit_date")
+    private LocalDate lastGitCommitDate;
+
     /** Jira 검토 단계 */
     @Column(name = "review_stage", length = 30)
     private String reviewStage;
@@ -431,7 +439,13 @@ public class ApiRecord {
     public String getBlockCriteria() { return blockCriteria; }
     public void setBlockCriteria(String blockCriteria) { this.blockCriteria = blockCriteria; }
     public String getGitHistory() { return gitHistory; }
-    public void setGitHistory(String gitHistory) { this.gitHistory = gitHistory; }
+    public void setGitHistory(String gitHistory) {
+        this.gitHistory = gitHistory;
+        this.lastGitCommitDate = GitHistoryUtil.maxCommitDate(gitHistory);
+    }
+
+    public LocalDate getLastGitCommitDate() { return lastGitCommitDate; }
+    public void setLastGitCommitDate(LocalDate lastGitCommitDate) { this.lastGitCommitDate = lastGitCommitDate; }
     public String getReviewStage() { return reviewStage; }
     public void setReviewStage(String reviewStage) { this.reviewStage = reviewStage; }
     public String getInternalReviewer() { return internalReviewer; }

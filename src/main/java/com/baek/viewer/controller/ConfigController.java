@@ -508,6 +508,8 @@ public class ConfigController {
             return ResponseEntity.ok(Map.of("success", true));
         } catch (NumberFormatException e) {
             return ResponseEntity.badRequest().body(Map.of("error", "assigneeMessageId 형식이 올바르지 않습니다."));
+        } catch (IllegalStateException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }

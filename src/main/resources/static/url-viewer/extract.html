@@ -422,7 +422,11 @@
 
 <div class="main">
 
-  <!-- 설정 임베드: URL(#extractSectionUrl)·키워드·경로변수·작업카드 / APM(#extractSectionApm) / MOCK(#extractSectionMock) 로 분리 마운트 -->
+  <!-- 설정 임베드: URL(#extractHeadingUrl + #extractSectionUrl)·키워드·경로변수·작업카드 / APM / MOCK 로 분리 마운트 -->
+  <div id="extractHeadingUrl" class="section-header">
+    <h3>🔍 URL 분석</h3>
+    <span class="section-sub">레포 기반 API 추출 · 단건 디버깅</span>
+  </div>
   <div id="extractSectionUrl">
   <!-- ─── API 추출 설정 ─── -->
   <div class="card">

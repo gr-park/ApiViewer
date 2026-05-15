@@ -210,6 +210,12 @@ public class SnapshotViewController {
                                      @RequestParam(required = false) Boolean pathParams,
                                      @RequestParam(required = false) Boolean markingIncomplete,
                                      @RequestParam(required = false) String q,
+                                     @RequestParam(required = false) String recentCommitFrom,
+                                     @RequestParam(required = false) String recentCommitTo,
+                                     @RequestParam(required = false) String blockedDateFrom,
+                                     @RequestParam(required = false) String blockedDateTo,
+                                     @RequestParam(required = false) String blockedReason,
+                                     @RequestParam(required = false) String deployCsr,
                                      @RequestParam(required = false) String sort) {
         Optional<ApiRecordSnapshot> snapshotOpt = snapshotRepository.findById(id);
         if (snapshotOpt.isEmpty()) {
@@ -221,7 +227,11 @@ public class SnapshotViewController {
         Page<?> p = snapshotRowRepository.pageByFilters(id, repos,
                 blankToNull(status), blankToNull(statusGroup), blankToNull(autoStatus), blankToNull(autoStatusGroup), expectedDone,
                 blankToNull(httpMethod), blankToNull(isDeprecated),
-                testSuspect, pathParams, markingIncomplete, blankToNull(q), pageable);
+                testSuspect, pathParams, markingIncomplete, blankToNull(q),
+                parseYmd(recentCommitFrom), parseYmd(recentCommitTo),
+                parseYmd(blockedDateFrom), parseYmd(blockedDateTo),
+                blankToNull(blockedReason), blankToNull(deployCsr),
+                pageable);
 
         Map<String, Object> resp = new LinkedHashMap<>();
         resp.put("total", p.getTotalElements());
@@ -364,9 +374,20 @@ public class SnapshotViewController {
         return s.isBlank() ? null : s;
     }
 
+    private LocalDate parseYmd(String s) {
+        if (s == null) return null;
+        String t = s.trim();
+        if (t.isEmpty()) return null;
+        try {
+            return LocalDate.parse(t.length() >= 10 ? t.substring(0, 10) : t);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
     private static final Set<String> SNAPSHOT_SORT_FIELDS = Set.of(
             "id", "apiPath", "httpMethod", "status", "autoAnalyzedStatus", "callCount", "callCountMonth", "callCountWeek",
-            "lastAnalyzedAt", "modifiedAt", "blockedDate", "repositoryName", "teamOverride", "managerOverride",
+            "lastAnalyzedAt", "modifiedAt", "blockedDate", "lastGitCommitDate", "repositoryName", "teamOverride", "managerOverride",
             "cboScheduledDate", "deployScheduledDate", "pathParamPattern", "methodName", "controllerName");
 
     private static Sort parseSnapshotSort(String sort) {

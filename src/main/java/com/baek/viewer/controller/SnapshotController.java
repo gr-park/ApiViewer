@@ -122,7 +122,9 @@ public class SnapshotController {
         Page<?> p = snapshotRowRepository.pageByFilters(id, repos,
                 blankToNull(status), blankToNull(statusGroup), blankToNull(autoStatus), blankToNull(autoStatusGroup), expectedDone,
                 blankToNull(httpMethod), blankToNull(isDeprecated),
-                testSuspect, pathParams, markingIncomplete, blankToNull(q), pageable);
+                testSuspect, pathParams, markingIncomplete, blankToNull(q),
+                null, null, null, null, null, null,
+                pageable);
 
         Map<String, Object> resp = new LinkedHashMap<>();
         resp.put("total", p.getTotalElements());

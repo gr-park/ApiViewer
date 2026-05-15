@@ -294,6 +294,32 @@ public class NavNoticeService {
         log.info("[담당자→관리자 쪽지] assigneeId={}, replyToNotice={}", senderAssigneeId, replyToAdminNoticeId);
     }
 
+    /**
+     * 로그인 없이 관리자에게 문의(비밀번호 분실 등). 팀·이름·내용은 본문에 함께 저장해 수신함에 표시한다.
+     */
+    @Transactional
+    public void postGuestMessageToAdmin(String teamName, String assigneeName, String text) {
+        String team = ItAssigneeService.normalizeTeam(teamName);
+        String name = ItAssigneeService.normalizeName(assigneeName);
+        if (team.isEmpty() || name.isEmpty()) {
+            throw new IllegalArgumentException("팀명과 담당자명을 입력하세요.");
+        }
+        String t = text == null ? "" : text.trim();
+        if (t.isEmpty()) {
+            throw new IllegalArgumentException("내용을 입력하세요.");
+        }
+        String body = "[미로그인 문의]\n팀: " + team + "\n담당자: " + name + "\n\n" + t;
+        AssigneeToAdminMessage m = new AssigneeToAdminMessage();
+        m.setSenderAssigneeId(null);
+        m.setBody(body);
+        m.setCreatedAt(LocalDateTime.now());
+        m.setSenderTeamName(team);
+        m.setSenderAssigneeName(name);
+        m.setReplyToAdminNoticeId(null);
+        assigneeToAdminRepository.save(m);
+        log.info("[미로그인→관리자 쪽지] team={}, name={}", team, name);
+    }
+
     @Transactional
     public void replyFromAdminToAssigneeMessage(long assigneeMessageId, String text) {
         String t = text == null ? "" : text.trim();
@@ -302,6 +328,9 @@ public class NavNoticeService {
         }
         AssigneeToAdminMessage orig = assigneeToAdminRepository.findById(assigneeMessageId)
                 .orElseThrow(() -> new IllegalArgumentException("메시지를 찾을 수 없습니다."));
+        if (orig.getSenderAssigneeId() == null) {
+            throw new IllegalStateException("미로그인 문의에는 답장할 수 없습니다. 해당 팀에 안내해 주세요.");
+        }
         AdminAssigneeNotice n = new AdminAssigneeNotice();
         n.setAssigneeId(orig.getSenderAssigneeId());
         n.setBody(t);

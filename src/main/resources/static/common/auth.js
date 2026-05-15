@@ -3,6 +3,8 @@
  *
  * AuthState: 서버 토큰의 실제 유효성을 주기적으로 검증, 변화 시
  *   window 에 `auth:change` CustomEvent({loggedIn, remainingMs}) 전파.
+ * 남은 시간 표시: 서버 remainingMs 로 만료 시각을 고정한 뒤 1초마다
+ *   `auth:session-tick` 으로 네비만 가볍게 갱신한다.
  * 기존 sessionStorage 기반 isAdmin()/getAdminToken() API 는 호환을 위해 유지하되
  *   내부적으로는 AuthState 가 단일 소스다.
  * ═══════════════════════════════════════════════════════════════ */
@@ -11,6 +13,16 @@
   const FLAG_KEY  = 'isAdmin';
   const CHECK_INTERVAL_MS = 60_000;
   const DEFAULT_TTL_MS = 8 * 60 * 60 * 1000; // 8h — 서버 remainingMs 미제공 시 fallback
+  const WARN_BEFORE_MS = 5 * 60 * 1000;
+
+  /** 관리자 세션 만료 시각(ms epoch). null 이면 미로그인·미동기화 */
+  let adminSessionDeadlineMs = null;
+  /** 에디터 세션 만료 시각 — /api/assignee/auth/check 의 remainingMs 로 동기화 */
+  let editorSessionDeadlineMs = null;
+  let adminWarn5mShown = false;
+  let editorWarn5mShown = false;
+  /** adminLogin(비번 프롬프트) 동시 호출 시 한 번만 띄움 */
+  let adminPwdPromptPromise = null;
 
   function getToken() { return sessionStorage.getItem(TOKEN_KEY) || ''; }
   function setToken(t) {
@@ -24,7 +36,6 @@
     return m ? decodeURIComponent(m[1].replace(/\+/g, ' ')) : '';
   }
 
-  /** 새 탭/창은 sessionStorage 를 공유하지 않음 — PageGuard 가 쓰는 adminToken 쿠키로 API 헤더용 토큰 복원 */
   function bootstrapTokenFromCookie() {
     if (sessionStorage.getItem(TOKEN_KEY)) return;
     const c = readCookie(TOKEN_KEY);
@@ -32,16 +43,24 @@
   }
   bootstrapTokenFromCookie();
 
-  // 초기값: sessionStorage 에 토큰이 있으면 낙관적으로 loggedIn=true 로 시작.
-  // (서버 /api/auth/check 응답 전까지 기존 페이지들의 applyAdminUI() 가 관리자 UI 를 숨기는 깜빡임 방지.
-  //  이후 check() 가 실제 유효성에 따라 정정한다.)
+  function fmtRemainingFromMs(ms) {
+    if (ms == null || ms <= 0) return '';
+    const totalSec = Math.floor(ms / 1000);
+    const s = totalSec % 60;
+    const totalMin = Math.floor(totalSec / 60);
+    const m = totalMin % 60;
+    const h = Math.floor(totalMin / 60);
+    if (h > 0) return `${h}시간 ${m}분 ${s}초`;
+    if (totalMin > 0) return `${m}분 ${s}초`;
+    return `${s}초`;
+  }
+
   const _hasToken = !!(sessionStorage.getItem(TOKEN_KEY));
   const AuthState = {
     loggedIn: _hasToken,
     remainingMs: _hasToken ? DEFAULT_TTL_MS : 0,
     _lastCheck: 0,
 
-    /** 서버에 토큰 유효성 질의 + 남은 수명 갱신 */
     async check() {
       const token = getToken();
       if (!token) { this._apply(false, 0); return false; }
@@ -51,18 +70,16 @@
         this._apply(!!data.valid, data.remainingMs || 0);
         return this.loggedIn;
       } catch (e) {
-        // 네트워크 오류 시 기존 상태 유지 (서버 다운으로 인한 의도치 않은 로그아웃 방지)
         return this.loggedIn;
       }
     },
 
-    /** 로그인 성공 처리 — login 시 서버 응답 데이터로 직접 세팅 */
     loginSuccess(token, remainingMs) {
       setToken(token);
+      adminWarn5mShown = false;
       this._apply(true, remainingMs || DEFAULT_TTL_MS);
     },
 
-    /** 로그아웃 — 서버 폐기 + 로컬 제거 + 이벤트 */
     async logout() {
       const token = getToken();
       try {
@@ -72,7 +89,7 @@
             headers: { 'Content-Type': 'application/json', 'X-Admin-Token': token }
           });
         }
-      } catch (e) { /* 무시 — 로컬은 반드시 정리 */ }
+      } catch (e) { /* 무시 */ }
       setToken('');
       this._apply(false, 0);
     },
@@ -82,24 +99,26 @@
       this.loggedIn = loggedIn;
       this.remainingMs = remainingMs;
       this._lastCheck = Date.now();
-      if (!loggedIn) setToken('');
-      // 변화 없어도 UI 는 remainingMs 재표시가 필요하므로 매번 이벤트 발행
+      if (!loggedIn) {
+        setToken('');
+        adminSessionDeadlineMs = null;
+        adminWarn5mShown = false;
+      } else if (remainingMs > 0) {
+        adminSessionDeadlineMs = Date.now() + remainingMs;
+      } else {
+        adminSessionDeadlineMs = null;
+      }
       window.dispatchEvent(new CustomEvent('auth:change', {
         detail: { loggedIn: this.loggedIn, remainingMs: this.remainingMs, changed }
       }));
     },
 
-    /** 남은 시간 "7h 23m" 포맷 */
     fmtRemaining() {
       if (!this.loggedIn || this.remainingMs <= 0) return '';
-      const mins = Math.floor(this.remainingMs / 60000);
-      const h = Math.floor(mins / 60);
-      const m = mins % 60;
-      return h > 0 ? `${h}시간 ${m}분` : `${m}분`;
+      return fmtRemainingFromMs(this.remainingMs);
     }
   };
 
-  // ─── 부팅: 즉시 1회 + 주기 + 포커스 ───────────────────────
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => AuthState.check());
   } else {
@@ -107,32 +126,68 @@
   }
   setInterval(() => AuthState.check(), CHECK_INTERVAL_MS);
   window.addEventListener('focus', () => {
-    // 포커스 시 최근 체크가 10초 이상 경과했을 때만 재확인 (과도 호출 방지)
     if (Date.now() - AuthState._lastCheck > 10_000) AuthState.check();
   });
 
-  // remainingMs 클라이언트 측 실시간 감소 — 1분마다 UI 재렌더 목적
-  setInterval(() => {
-    if (AuthState.loggedIn && AuthState.remainingMs > 0) {
-      AuthState.remainingMs = Math.max(0, AuthState.remainingMs - 60_000);
-      window.dispatchEvent(new CustomEvent('auth:change', {
-        detail: { loggedIn: AuthState.loggedIn, remainingMs: AuthState.remainingMs, changed: false, tick: true }
-      }));
-      if (AuthState.remainingMs === 0) AuthState._apply(false, 0); // 0이면 즉시 로그아웃 처리
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+      void AuthState.check();
+      if (window.getEditorToken && window.getEditorToken()) {
+        void window.syncEditorSessionDeadlineFromServer();
+      }
     }
-  }, 60_000);
-
-  // data-admin-only 속성 자동 토글 — 페이지 어디에나 적용
-  window.addEventListener('auth:change', () => {
-    document.querySelectorAll('[data-admin-only]').forEach(el => {
-      el.style.display = AuthState.loggedIn ? '' : 'none';
-    });
   });
 
-  // 전역 노출
+  // 1초: 만료 시각 기준 표시 + 만료 시 로그아웃
+  setInterval(() => {
+    const tok = getToken();
+    if (tok && adminSessionDeadlineMs != null) {
+      const rem = Math.max(0, adminSessionDeadlineMs - Date.now());
+      AuthState.remainingMs = rem;
+      if (rem === 0) {
+        adminSessionDeadlineMs = null;
+        AuthState._apply(false, 0);
+        if (window.showToast) window.showToast('관리자 세션이 만료되었습니다.', 'info');
+      } else {
+        if (!adminWarn5mShown && rem > 0 && rem <= WARN_BEFORE_MS) {
+          adminWarn5mShown = true;
+          if (window.showToast) window.showToast('관리자 세션이 곧 만료됩니다. 저장할 작업을 마쳐 주세요.', 'warning');
+        }
+        window.dispatchEvent(new CustomEvent('auth:session-tick', {
+          detail: { role: 'admin', remainingMs: rem }
+        }));
+      }
+    }
+
+    const edTok = window.getEditorToken && window.getEditorToken();
+    if (edTok && editorSessionDeadlineMs != null) {
+      const rem = Math.max(0, editorSessionDeadlineMs - Date.now());
+      if (rem === 0) {
+        editorSessionDeadlineMs = null;
+        editorWarn5mShown = false;
+        if (window.setEditorToken) window.setEditorToken('');
+        try { window.dispatchEvent(new Event('editor-auth:change')); } catch (e) {}
+        if (window.showToast) window.showToast('담당자 세션이 만료되었습니다.', 'info');
+      } else {
+        if (!editorWarn5mShown && rem > 0 && rem <= WARN_BEFORE_MS) {
+          editorWarn5mShown = true;
+          if (window.showToast) window.showToast('담당자 세션이 곧 만료됩니다.', 'warning');
+        }
+        window.dispatchEvent(new CustomEvent('auth:session-tick', {
+          detail: { role: 'editor', remainingMs: rem }
+        }));
+      }
+    }
+  }, 1000);
+
+  setInterval(() => {
+    if (window.getEditorToken && window.getEditorToken()) {
+      void window.syncEditorSessionDeadlineFromServer();
+    }
+  }, CHECK_INTERVAL_MS);
+
   window.AuthState = AuthState;
 
-  // ─── 기존 common.js 호환 API (점진 교체용) ─────────────────
   window.isAdmin        = () => AuthState.loggedIn;
   window.getAdminToken  = () => getToken();
   window.adminHeaders   = (extra = {}) => Object.assign({
@@ -140,8 +195,36 @@
     'X-Admin-Token': getToken()
   }, extra);
 
-  /** 관리자 비밀번호 모달 — customPrompt(마스킹) 우선, 없으면 기본 prompt 폴백. 성공 시 true 반환 */
-  window.adminLogin = async function () {
+  window.syncEditorSessionDeadlineFromRemainingMs = function (ms) {
+    const n = Number(ms);
+    if (!n || n <= 0) {
+      editorSessionDeadlineMs = null;
+      return;
+    }
+    editorSessionDeadlineMs = Date.now() + n;
+    editorWarn5mShown = false;
+  };
+
+  window.syncEditorSessionDeadlineFromServer = async function () {
+    const t = window.getEditorToken ? window.getEditorToken() : '';
+    if (!t) {
+      editorSessionDeadlineMs = null;
+      return;
+    }
+    try {
+      const res = await fetch('/api/assignee/auth/check', { headers: { 'X-Editor-Token': t } });
+      const d = await res.json().catch(() => ({}));
+      if (d.valid && d.remainingMs != null) {
+        window.syncEditorSessionDeadlineFromRemainingMs(d.remainingMs);
+      } else {
+        editorSessionDeadlineMs = null;
+        if (window.setEditorToken) window.setEditorToken('');
+        try { window.dispatchEvent(new Event('editor-auth:change')); } catch (e) {}
+      }
+    } catch (e) { /* 유지 */ }
+  };
+
+  async function adminPasswordPromptOnce() {
     let pw;
     if (typeof window.customPrompt === 'function') {
       pw = await window.customPrompt('관리자 비밀번호를 입력하세요:', { type: 'password', title: '🔑 관리자 인증' });
@@ -166,14 +249,25 @@
       if (window.showToast) showToast('로그인 실패', 'error');
       return false;
     }
+  }
+
+  window.adminLogin = async function () {
+    if (adminPwdPromptPromise) return adminPwdPromptPromise;
+    adminPwdPromptPromise = (async () => {
+      try {
+        return await adminPasswordPromptOnce();
+      } finally {
+        adminPwdPromptPromise = null;
+      }
+    })();
+    return adminPwdPromptPromise;
   };
 
   window.reAuth = async function () {
     return window.adminLogin();
   };
 
-  /** 401 자동 재인증 래퍼 — 기존 호출부 호환 */
-  window.adminFetch = async function (url, options = {}) {
+  window.__centralAdminFetch = async function (url, options = {}) {
     options.headers = Object.assign({
       'Content-Type': 'application/json',
       'X-Admin-Token': getToken()
@@ -188,6 +282,7 @@
     }
     return res;
   };
+  window.adminFetch = window.__centralAdminFetch;
 
   const EDITOR_TOKEN_KEY = 'editorToken';
   window.getEditorToken = function () { return sessionStorage.getItem(EDITOR_TOKEN_KEY) || ''; };
@@ -199,4 +294,10 @@
   window.editorHeaders = function (extra) {
     return Object.assign({ 'Content-Type': 'application/json', 'X-Editor-Token': window.getEditorToken() }, extra || {});
   };
+
+  if (window.getEditorToken()) {
+    void window.syncEditorSessionDeadlineFromServer();
+  }
+
+  window.formatSessionRemainingMs = fmtRemainingFromMs;
 })();

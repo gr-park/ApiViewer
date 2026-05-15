@@ -53,6 +53,12 @@ public interface ApiRecordSnapshotRowRepository extends JpaRepository<ApiRecordS
                 OR lower(r.methodName) LIKE concat('%', lower(:q), '%')
                 OR lower(r.memo) LIKE concat('%', lower(:q), '%')
               )
+              AND (:recentCommitFrom IS NULL OR (r.lastGitCommitDate IS NOT NULL AND r.lastGitCommitDate >= :recentCommitFrom))
+              AND (:recentCommitTo IS NULL OR (r.lastGitCommitDate IS NOT NULL AND r.lastGitCommitDate <= :recentCommitTo))
+              AND (:blockedDateFrom IS NULL OR (r.blockedDate IS NOT NULL AND r.blockedDate >= :blockedDateFrom))
+              AND (:blockedDateTo IS NULL OR (r.blockedDate IS NOT NULL AND r.blockedDate <= :blockedDateTo))
+              AND (:blockedReason IS NULL OR :blockedReason = '' OR lower(r.blockedReason) LIKE concat('%', lower(:blockedReason), '%'))
+              AND (:deployCsr IS NULL OR :deployCsr = '' OR lower(r.deployCsr) LIKE concat('%', lower(:deployCsr), '%'))
             """)
     Page<ApiRecordSnapshotRow> pageByFilters(@Param("snapshotId") Long snapshotId,
                                             @Param("repos") List<String> repos,
@@ -67,6 +73,12 @@ public interface ApiRecordSnapshotRowRepository extends JpaRepository<ApiRecordS
                                             @Param("pathParams") Boolean pathParams,
                                             @Param("markingIncomplete") Boolean markingIncomplete,
                                             @Param("q") String q,
+                                            @Param("recentCommitFrom") java.time.LocalDate recentCommitFrom,
+                                            @Param("recentCommitTo") java.time.LocalDate recentCommitTo,
+                                            @Param("blockedDateFrom") java.time.LocalDate blockedDateFrom,
+                                            @Param("blockedDateTo") java.time.LocalDate blockedDateTo,
+                                            @Param("blockedReason") String blockedReason,
+                                            @Param("deployCsr") String deployCsr,
                                             Pageable pageable);
 
     @Query("SELECT COALESCE(r.status, '사용'), COUNT(r) FROM ApiRecordSnapshotRow r WHERE r.snapshotId = :snapshotId AND (:repos IS NULL OR r.repositoryName IN :repos) GROUP BY r.status")

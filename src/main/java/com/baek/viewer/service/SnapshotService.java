@@ -96,6 +96,7 @@ public class SnapshotService {
               deploy_csr, deploy_manager, review_team, review_manager, reviewed_at,
               blocked_date, blocked_reason, status_changed, status_change_log, is_new, data_source,
               team_override, manager_override, manager_overridden, description_override, git_history,
+              last_git_commit_date,
               review_stage, internal_reviewer, internal_reviewed_at, internal_memo,
               jira_epic_key, jira_issue_key, jira_issue_url, jira_synced_at
             )
@@ -112,6 +113,7 @@ public class SnapshotService {
               r.deploy_csr, r.deploy_manager, r.review_team, r.review_manager, r.reviewed_at,
               r.blocked_date, r.blocked_reason, r.status_changed, r.status_change_log, r.is_new, r.data_source,
               r.team_override, r.manager_override, r.manager_overridden, r.description_override, r.git_history,
+              r.last_git_commit_date,
               r.review_stage, r.internal_reviewer, r.internal_reviewed_at, r.internal_memo,
               r.jira_epic_key, r.jira_issue_key, r.jira_issue_url, r.jira_synced_at
             FROM api_record r
@@ -328,6 +330,7 @@ public class SnapshotService {
                   deploy_csr, deploy_manager, review_team, review_manager, reviewed_at,
                   blocked_date, blocked_reason, status_changed, status_change_log, is_new, data_source,
                   team_override, manager_override, manager_overridden, description_override, git_history,
+                  last_git_commit_date,
                   review_stage, internal_reviewer, internal_reviewed_at, internal_memo,
                   jira_epic_key, jira_issue_key, jira_issue_url, jira_synced_at
                 )
@@ -343,6 +346,7 @@ public class SnapshotService {
                   deploy_csr, deploy_manager, review_team, review_manager, reviewed_at,
                   blocked_date, blocked_reason, status_changed, status_change_log, is_new, data_source,
                   team_override, manager_override, manager_overridden, description_override, git_history,
+                  last_git_commit_date,
                   review_stage, internal_reviewer, internal_reviewed_at, internal_memo,
                   jira_epic_key, jira_issue_key, jira_issue_url, jira_synced_at
                 FROM api_record_snapshot_row

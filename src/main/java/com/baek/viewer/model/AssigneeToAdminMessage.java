@@ -12,7 +12,8 @@ public class AssigneeToAdminMessage {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "sender_assignee_id", nullable = false)
+    /** 로그인 담당자 PK. 미로그인(비밀번호 문의 등) 시 null */
+    @Column(name = "sender_assignee_id", nullable = true)
     private Long senderAssigneeId;
 
     @Column(name = "body", nullable = false, columnDefinition = "TEXT")

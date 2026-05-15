@@ -83,6 +83,7 @@ function adminHeaders(extra = {}) {
 }
 
 async function reAuth() {
+  if (typeof window.adminLogin === 'function') return window.adminLogin();
   const pw = prompt('관리자 토큰이 만료되었습니다. 비밀번호를 다시 입력하세요:');
   if (!pw) return false;
   try {
@@ -92,6 +93,7 @@ async function reAuth() {
     const d = await res.json();
     if (d.valid) {
       sessionStorage.setItem('adminToken', d.token);
+      sessionStorage.setItem('isAdmin', 'true');
       showToast('재인증 성공', 'success');
       return true;
     }
@@ -100,15 +102,18 @@ async function reAuth() {
   } catch (e) { showToast('재인증 실패', 'error'); return false; }
 }
 
-// 401 자동 재인증 래퍼
+// 401 자동 재인증 래퍼 — auth.js 의 중앙 구현이 있으면 위임
 async function adminFetch(url, options = {}) {
+  if (typeof window.__centralAdminFetch === 'function') {
+    return window.__centralAdminFetch(url, options);
+  }
   options.headers = Object.assign({
     'Content-Type': 'application/json',
     'X-Admin-Token': getAdminToken()
   }, options.headers || {});
   let res = await fetch(url, options);
   if (res.status === 401) {
-    const ok = await reAuth();
+    const ok = typeof window.adminLogin === 'function' ? await window.adminLogin() : await reAuth();
     if (!ok) return res;
     options.headers['X-Admin-Token'] = getAdminToken();
     res = await fetch(url, options);

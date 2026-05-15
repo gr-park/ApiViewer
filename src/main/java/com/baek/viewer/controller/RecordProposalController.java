@@ -122,7 +122,7 @@ public class RecordProposalController {
         try {
             boolean admin = authService.isAdmin(req.getHeader("X-Admin-Token"));
             Long editorId = authService.getEditorAssigneeId(req.getHeader("X-Editor-Token"));
-            proposalService.withdraw(recordId, admin, editorId);
+            proposalService.withdraw(recordId, admin, editorId, clientIp(req));
             return ResponseEntity.ok(Map.of("success", true));
         } catch (IllegalStateException e) {
             return ResponseEntity.status(403).body(errorBody(e));
@@ -135,7 +135,7 @@ public class RecordProposalController {
         try {
             boolean admin = authService.isAdmin(req.getHeader("X-Admin-Token"));
             Long editorId = authService.getEditorAssigneeId(req.getHeader("X-Editor-Token"));
-            proposalService.withdrawStatusFieldsOnly(recordId, admin, editorId);
+            proposalService.withdrawStatusFieldsOnly(recordId, admin, editorId, clientIp(req));
             return ResponseEntity.ok(Map.of("success", true));
         } catch (IllegalStateException e) {
             return ResponseEntity.status(403).body(errorBody(e));

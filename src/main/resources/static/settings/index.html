@@ -1304,24 +1304,8 @@ function updateAdminBadge(valid) {
     <button class="btn btn-blue" style="height:32px;" onclick="saveReviewStatus()">저장</button>
   </div>
 
-  <!-- 대분류(🔍 URL 분석 등)는 extract.html 의 #extractHeading* + loadExtractContent 에서 마운트 -->
+  <!-- 대분류(URL 분석·APM·MOCK)는 extract.html 의 #extractHeading* + loadExtractContent 에서 마운트 -->
   <div id="extractMountUrl" style="margin-bottom:14px;"><div style="text-align:center;padding:40px;color:var(--text-muted);">탭을 클릭하면 로드됩니다.</div></div>
-
-  <div class="card card--tint-info" style="margin-bottom:14px;">
-    <div class="section-heading section-heading--analyze"><span class="dot"></span>최근 URL 분석 오류 요약</div>
-    <div style="font-size:11px;color:var(--text-muted);margin-bottom:8px;line-height:1.6;">
-      분석 수행 중 발생한 <b>파싱/추출 에러</b>, <b>0개 추출</b>, <b>WARN</b>를 마지막 1회 기준으로 저장해 둡니다.
-      대시보드·모든 화면 상단의 <b>URL 분석 오류 요약</b> 배너와 동일한 데이터입니다.
-    </div>
-    <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:10px;">
-      <div style="font-size:11px;color:var(--text-muted);">갱신 시각: <span id="extractIssueAt">-</span></div>
-      <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap;">
-        <button class="btn btn-ghost" style="height:28px;padding:4px 10px;font-size:11px;" onclick="loadExtractIssueReport()">새로고침</button>
-        <button class="btn btn-ghost" style="height:28px;padding:4px 10px;font-size:11px;" onclick="downloadExtractIssueJson()">JSON 다운로드</button>
-      </div>
-    </div>
-    <div id="extractIssueSummaryBox" style="font-size:12px;color:var(--text-muted);">(없음)</div>
-  </div>
 
   <!-- extract.html: 키워드 · 경로변수 · 작업 카드 -->
   <div id="extractMountUrlExtras" style="margin-bottom:14px;"></div>
@@ -4421,7 +4405,7 @@ function updateAdminBadge(valid) {
       tab.classList.add('active');
       document.querySelectorAll('.settings-section').forEach(s => s.classList.toggle('active', s.dataset.section === target));
       // extract 탭 lazy-load (fetch → DOM 직접 삽입, iframe 미사용)
-      if (target === 'extract') { loadExtractIssueReport(); loadExtractContent(); }
+      if (target === 'extract') { loadExtractContent(); }
       if (target === 'jira') loadJiraConfig();
       if (target === 'ai') loadAiTab();
       if (target === 'it-assignees') loadItAssignees();
@@ -4549,63 +4533,6 @@ function updateAdminBadge(valid) {
       extractLoaded = true;
     } catch(e) {
       mountUrl.innerHTML = `<div style="text-align:center;padding:40px;color:var(--danger);">로드 실패: ${e.message}</div>`;
-    }
-  }
-
-  // ── 최근 URL 분석 오류 요약 (서버 저장본) ──────────────────
-  let _lastExtractIssueReport = null;
-  async function loadExtractIssueReport() {
-    const atEl = document.getElementById('extractIssueAt');
-    const box = document.getElementById('extractIssueSummaryBox');
-    if (!atEl || !box) return;
-    try {
-      box.textContent = '로딩 중...';
-      const res = await adminFetch('/api/config/extract-issue-report', { method: 'GET' });
-      const d = await res.json();
-      if (!res.ok) throw new Error(d.error || '조회 실패');
-      _lastExtractIssueReport = d;
-      atEl.textContent = d.at ? String(d.at).replace('T', ' ').substring(0, 19) : '-';
-      const err = Number(d.errorFileCount || 0);
-      const zero = Number(d.zeroFileCount || 0);
-      const warn = Number(d.warnFileCount || 0);
-      if (!err && !zero && !warn) {
-        box.textContent = '(저장된 오류 요약이 없습니다)';
-        return;
-      }
-      const label = d.label ? ` · ${d.label}` : '';
-      const repo = d.repoName ? ` · 레포: ${d.repoName}` : '';
-      const parts = [];
-      if (err) parts.push(`에러파일 ${err}`);
-      if (zero) parts.push(`0개추출 ${zero}`);
-      if (warn) parts.push(`WARN ${warn}`);
-      box.innerHTML = `
-        <div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:10px 12px;border-left:4px solid #2563eb;">
-          <div style="font-size:12px;font-weight:800;color:#1d4ed8;">${esc(parts.join(' · '))}${esc(repo)}${esc(label)}</div>
-          <div style="font-size:11px;color:var(--text-muted);margin-top:4px;line-height:1.6;">
-            상세 파일 목록은 분석 화면의 "문제 파일 요약"에서 확인할 수 있습니다.
-          </div>
-        </div>`;
-    } catch (e) {
-      box.innerHTML = `<span style="color:var(--danger);">조회 실패: ${esc(e.message)}</span>`;
-    }
-  }
-
-  function downloadExtractIssueJson() {
-    try {
-      const d = _lastExtractIssueReport;
-      if (!d || (!d.errorFileCount && !d.zeroFileCount && !d.warnFileCount)) {
-        showToast('다운로드할 데이터가 없습니다.', 'info');
-        return;
-      }
-      const blob = new Blob([JSON.stringify(d, null, 2)], { type: 'application/json;charset=utf-8' });
-      const a = document.createElement('a');
-      const ts = (d.at || '').replace(/[:T]/g, '-').slice(0, 19) || 'unknown';
-      a.href = URL.createObjectURL(blob);
-      a.download = `extract-issue-report-${ts}.json`;
-      a.click();
-      setTimeout(() => URL.revokeObjectURL(a.href), 500);
-    } catch (e) {
-      showToast('다운로드 실패', 'error');
     }
   }
 

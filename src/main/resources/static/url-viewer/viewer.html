@@ -674,6 +674,14 @@
       background: linear-gradient(180deg, #60a5fa 0%, #3b82f6 100%);
       color: #fff;
     }
+    .bulk-bar .bulk-seg.bulk-seg-status-edit button.bulk-btn-withdraw {
+      background: linear-gradient(180deg, #fb923c 0%, #ea580c 100%);
+      color: #fff;
+    }
+    .bulk-bar .bulk-seg.bulk-seg-status-edit button.bulk-btn-withdraw:hover {
+      background: linear-gradient(180deg, #fdba74 0%, #f97316 100%);
+      color: #fff;
+    }
     .bulk-bar .bulk-seg.bulk-seg-status-edit.bulk-seg--single { border-radius: 6px; }
     /* SmartWay 티켓 링크·발행 버튼 — 아이보리(승인대기 보라 행과 구분) */
     .jira-badge {
@@ -1164,9 +1172,21 @@
           <details class="query-filter-dates" id="queryFilterDates" open>
             <summary class="query-filter-dates-sum">
               일자 · 담당 조건
-              <span class="query-filter-dates-hint">CBO일자 · 차단예정 · 차단작업담당자 · (관리자) 변경일시·변경 담당자</span>
+              <span class="query-filter-dates-hint">최근변경(커밋) · 차단일자·근거(JAVADOC) · CBO · 차단예정 · 차단작업CSR/담당자 · (관리자) 변경일시·변경 담당자</span>
             </summary>
             <div class="query-filter-dates-body">
+              <div class="filter-row filter-row--recent-block">
+                <span class="label">최근변경(커밋)</span>
+                <input class="date" type="date" id="recentCommitFrom" onchange="filterTable({immediate:true,page:0})" title="git_history 기준 최신 커밋일">
+                <span class="label">~</span>
+                <input class="date" type="date" id="recentCommitTo" onchange="filterTable({immediate:true,page:0})">
+                <span class="label" style="margin-left:8px;">차단일자(JAVADOC)</span>
+                <input class="date" type="date" id="blockedDateFrom" onchange="filterTable({immediate:true,page:0})">
+                <span class="label">~</span>
+                <input class="date" type="date" id="blockedDateTo" onchange="filterTable({immediate:true,page:0})">
+                <span class="label" style="margin-left:8px;">차단근거(JAVADOC)</span>
+                <input type="text" id="searchBlockedReason" placeholder="부분일치" oninput="filterTable()" style="width:140px;">
+              </div>
               <div class="filter-row filter-row--cbo">
                 <span class="label">CBO일자</span>
                 <input class="date" type="date" id="cboFrom" onchange="filterTable({immediate:true,page:0})">
@@ -1178,6 +1198,8 @@
                 <input class="date" type="date" id="deployFrom" onchange="filterTable({immediate:true,page:0})">
                 <span class="label">~</span>
                 <input class="date" type="date" id="deployTo" onchange="filterTable({immediate:true,page:0})">
+                <span class="label" style="margin-left:6px;">차단작업CSR</span>
+                <input type="text" id="searchDeployCsr" placeholder="CSR 검색" oninput="filterTable()" style="width:100px;">
                 <span class="label" style="margin-left:6px;">차단작업담당자</span>
                 <input type="text" id="searchDeployManager" placeholder="차단작업담당자 검색" oninput="filterTable()" style="width:120px;">
               </div>
@@ -1418,6 +1440,7 @@
       <span class="bulk-label" style="color:#bae6fd;">상태변경</span>
       <span class="bulk-seg bulk-seg-status-edit" id="bulkStatusEditSeg">
         <button type="button" id="bulkStatusEditPrimary">승인요청</button>
+        <button type="button" id="bulkStatusWithdrawBtn" class="bulk-btn-withdraw" style="display:none;">승인요청 취소</button>
         <button type="button" id="bulkStatusEditAuto" style="display:none;">자동분석상태로 변경</button>
         <button type="button" id="bulkStatusEditSecondary" style="display:none;">일괄변경</button>
       </span>
@@ -1499,7 +1522,7 @@
           <th class="hg-dev col-compact-hide" onclick="sortBy('controllerName')">컨트롤러 <span class="sort-icon">↕</span></th>
           <th class="hg-dev col-compact-hide" style="min-width:160px;" onclick="sortBy('methodName')">메소드명 <span class="sort-icon">↕</span></th>
           <!-- 기타 메타 -->
-          <th class="hg-dev no-sort col-compact-hide">최근변경</th>
+          <th class="hg-dev col-compact-hide" onclick="sortBy('lastGitCommitDate')">최근변경 <span class="sort-icon">↕</span></th>
           <th class="hg-desc" onclick="sortBy('apiOperationValue')">관련메뉴 <span class="sort-icon">↕</span></th>
           <th class="hg-desc" style="min-width:120px;" onclick="sortBy('callCount')">1년 호출건 <span class="sort-icon">↕</span></th>
           <th class="hg-desc" style="min-width:110px;" onclick="sortBy('callCountMonth')">1달 호출건 <span class="sort-icon">↕</span></th>
@@ -2096,6 +2119,33 @@
     showToast(`요청 취소 ${ok}건${fail ? ` · 실패 ${fail}건` : ''}`, ok ? 'success' : 'error');
   }
 
+  /** 상태 변경 승인요청만 취소 (데이터 필드 제안은 유지). 이력: PROPOSAL_WITHDRAWN */
+  async function bulkWithdrawStatusProposalRequests() {
+    if (!viewerCanEditTable()) return;
+    const ids = Array.from(selectedIds)
+      .map(id => allApis.find(a => a.id === id))
+      .filter(r => r && rowHasPendingStatusProposal(r))
+      .map(r => r.id);
+    if (!ids.length) { showToast('상태 승인요청이 있는 행을 선택하세요.', 'error'); return; }
+    if (!await customConfirm(`선택 ${ids.length}건의 상태 변경 승인요청을 취소할까요?`)) return;
+    if (!guardWritable('승인요청 취소')) return;
+    showBulkProgress('승인요청 취소 중...', ids.length);
+    let ok = 0, fail = 0;
+    let done = 0;
+    for (const id of ids) {
+      try {
+        const res = await proposalDeleteAuthFetch(`/api/proposals/record/${id}/withdraw-status-fields`, { method: 'POST' });
+        if (res.ok) ok++; else fail++;
+      } catch (e) { fail++; }
+      done++;
+      try { updateBulkProgress(done); } catch (e) {}
+    }
+    hideBulkProgress();
+    clearSelection();
+    await refreshAll();
+    showToast(`승인요청 취소 ${ok}건${fail ? ` · 실패 ${fail}건` : ''}`, ok ? 'success' : 'error');
+  }
+
   // 상태 표시 레이블 — DB 값 = 화면 라벨 (9 leaf v2). 별도 매핑 없이 status 그대로 노출.
   // 9 leaf v2: 사용 / 차단완료 /
   //            ①-① 차단대상 / ①-② 담당자 판단 / ①-③ 현업요청 제외대상 / ①-④ 사용으로 변경 /
@@ -2305,7 +2355,7 @@
       if (window._deepLinkJustArrived) {
         window._deepLinkJustArrived = false;
       } else if (window._deepLinkActive && (!selectedNow || selectedNow.length === 0)) {
-        const ids = ['searchInput','searchTeam','searchManager','searchDeployManager','deployFrom','deployTo','modifiedFrom','modifiedTo','searchModifiedBy'];
+        const ids = ['searchInput','searchTeam','searchManager','searchDeployManager','searchDeployCsr','searchBlockedReason','deployFrom','deployTo','modifiedFrom','modifiedTo','searchModifiedBy','recentCommitFrom','recentCommitTo','blockedDateFrom','blockedDateTo'];
         ids.forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
         window._deployUnscheduledFilter = false;
         activeFilter = '';
@@ -3107,7 +3157,8 @@
     if (evt) { evt.preventDefault(); evt.stopPropagation(); }
     // 텍스트/일자 입력값 초기화
     [
-      'searchInput','searchTeam','searchManager','searchDeployManager',
+      'searchInput','searchTeam','searchManager','searchDeployManager','searchDeployCsr','searchBlockedReason',
+      'recentCommitFrom','recentCommitTo','blockedDateFrom','blockedDateTo',
       'modifiedFrom','modifiedTo','searchModifiedBy',
       'cboFrom','cboTo','deployFrom','deployTo'
     ].forEach(id => {
@@ -3212,11 +3263,23 @@
     const depF = document.getElementById('deployFrom')?.value;
     const depT = document.getElementById('deployTo')?.value;
     const depMgr = (document.getElementById('searchDeployManager')?.value || '').trim();
+    const depCsr = (document.getElementById('searchDeployCsr')?.value || '').trim();
+    const rcF = document.getElementById('recentCommitFrom')?.value;
+    const rcT = document.getElementById('recentCommitTo')?.value;
+    const bdF = document.getElementById('blockedDateFrom')?.value;
+    const bdT = document.getElementById('blockedDateTo')?.value;
+    const brQ = (document.getElementById('searchBlockedReason')?.value || '').trim();
     if (cboF) params.set('cboFrom', cboF);
     if (cboT) params.set('cboTo',   cboT);
     if (depF) params.set('deployFrom', depF);
     if (depT) params.set('deployTo',   depT);
     if (depMgr) params.set('deployManager', depMgr);
+    if (depCsr) params.set('deployCsr', depCsr);
+    if (rcF) params.set('recentCommitFrom', rcF);
+    if (rcT) params.set('recentCommitTo', rcT);
+    if (bdF) params.set('blockedDateFrom', bdF);
+    if (bdT) params.set('blockedDateTo', bdT);
+    if (brQ) params.set('blockedReason', brQ);
     if (window._deployUnscheduledFilter) params.set('deployUnscheduled', 'true');
 
     // activeFilter → status / autoStatus / alert / method/deprecated
@@ -3259,7 +3322,7 @@
     }
 
     // 정렬 — 서버에서 매핑 가능한 필드만 전송 (클라이언트 파생 필드는 스킵)
-    const serverSortable = new Set(['id','apiPath','httpMethod','status','autoAnalyzedStatus','callCount','callCountMonth','callCountWeek','lastAnalyzedAt','modifiedAt','blockedDate','repositoryName','teamOverride','managerOverride','cboScheduledDate','deployScheduledDate','pathParamPattern','methodName','controllerName']);
+    const serverSortable = new Set(['id','apiPath','httpMethod','status','autoAnalyzedStatus','callCount','callCountMonth','callCountWeek','lastAnalyzedAt','modifiedAt','blockedDate','lastGitCommitDate','repositoryName','teamOverride','managerOverride','cboScheduledDate','deployScheduledDate','pathParamPattern','methodName','controllerName']);
     let sk = sortKey;
     if (sk === 'teamName')     sk = 'teamOverride';
     else if (sk === 'managerName') sk = 'managerOverride';
@@ -3293,7 +3356,7 @@
       let res;
       if (uploadedIdsFilter && uploadedIdsFilter.length > 0) {
         // 엑셀 업로드 필터 — POST로 ID 배열 전달 (URL 길이 제한 없음)
-        const serverSortable = new Set(['id','apiPath','httpMethod','status','autoAnalyzedStatus','callCount','callCountMonth','callCountWeek','lastAnalyzedAt','modifiedAt','blockedDate','repositoryName','teamOverride','managerOverride','cboScheduledDate','deployScheduledDate','pathParamPattern','methodName','controllerName']);
+        const serverSortable = new Set(['id','apiPath','httpMethod','status','autoAnalyzedStatus','callCount','callCountMonth','callCountWeek','lastAnalyzedAt','modifiedAt','blockedDate','lastGitCommitDate','repositoryName','teamOverride','managerOverride','cboScheduledDate','deployScheduledDate','pathParamPattern','methodName','controllerName']);
         let sk = sortKey;
         if (sk === 'teamName') sk = 'teamOverride';
         else if (sk === 'managerName') sk = 'managerOverride';
@@ -4483,6 +4546,14 @@
         if (dataGrp) dataGrp.style.display = hasSelection ? '' : 'none';
         if (seg) seg.classList.toggle('bulk-seg--single', autoMismatchRows.length === 0);
         if (expectedDoneGrp) expectedDoneGrp.style.display = 'none';
+      }
+      const bw = document.getElementById('bulkStatusWithdrawBtn');
+      if (bw) {
+        const withStatusProp = selectedRows.filter(rowHasPendingStatusProposal);
+        const ed = window.isEditorLoggedIn && window.isEditorLoggedIn();
+        const showWithdraw = hasSelection && withStatusProp.length > 0 && (adm || ed);
+        bw.style.display = showWithdraw ? '' : 'none';
+        bw.onclick = showWithdraw ? () => bulkWithdrawStatusProposalRequests() : null;
       }
     }
   }
@@ -5859,7 +5930,8 @@
         ? (pendingStatusReq
             ? `<span style="display:inline-flex;flex-wrap:wrap;gap:6px;align-items:center;flex:none;">
                  <button type="button" class="btn btn-sm btn-blue" disabled style="flex:none;white-space:nowrap;opacity:0.55;cursor:not-allowed;">승인요청</button>
-                 <span style="font-size:10px;color:#64748b;white-space:nowrap;">이미 승인요청 중</span>
+                 <button type="button" class="btn btn-sm btn-ghost" onclick="detailWithdrawStatusProposal()" style="flex:none;white-space:nowrap;border:1px solid #fdba74;color:#c2410c;background:#fff7ed;font-weight:600;">승인요청 취소</button>
+                 <span style="font-size:10px;color:#64748b;white-space:nowrap;">승인 대기 중</span>
                </span>`
             : `<button type="button" class="btn btn-sm btn-blue" onclick="detailSubmitStatusProposal()" style="flex:none;white-space:nowrap;">승인요청</button>`)
         : (adminPendingProposal
@@ -5901,12 +5973,14 @@
         <div class="detail-grid">
           <div class="detail-label">관련메뉴 <span style="color:var(--primary);font-size:10px;">✎</span></div>
           <div class="detail-value" style="white-space:normal;">
-            <input id="df-descriptionOverride" class="df-input" value="${esc(r.descriptionOverride || '')}" placeholder="관련 메뉴 또는 기능을 입력하세요" style="width:100%;" ${dis} oninput="showDetailSave()">
-            ${snapshotReadOnly || lk || !isAdmin() ? '' : `<div style="display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap;">
-              <button type="button" class="btn btn-sm btn-ghost" onclick="requestAiMenuSuggestion()" style="font-size:11px;border:1px solid #c4b5fd;color:#5b21b6;">🤖 사내 AI 제안</button>
-              <span id="aiSuggestStatus" style="font-size:10px;color:var(--text-muted);"></span>
-            </div>`}
-            <div style="font-size:10px;color:var(--text-muted);margin-top:4px;">※ 상단 [저장] 버튼으로 반영됩니다. 참고용 주석은 하단 필드를 확인하세요.</div>
+            <textarea id="df-descriptionOverride" class="df-textarea" rows="3" style="width:100%;box-sizing:border-box;" ${dis} oninput="showDetailSave()" placeholder="비우면 아래 자동 표시값과 동일하게 목록에 노출됩니다. 입력하면 해당 문구로 반영됩니다.">${esc(r.descriptionOverride || '')}</textarea>
+            <div style="font-size:10px;color:var(--text-muted);margin-top:6px;line-height:1.45;">자동 표시값(비웠을 때): <span style="color:var(--text);font-weight:600;">${allDesc(r) ? esc(allDesc(r)) : '—'}</span></div>
+            <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px;">
+              ${snapshotReadOnly || lk || roAnonymous ? '' : `<button type="button" class="btn btn-sm btn-blue" onclick="saveDetailDescriptionOverrideOnly()">관련메뉴 저장</button>`}
+              ${snapshotReadOnly || lk || roAnonymous ? '' : `<button type="button" class="btn btn-sm btn-ghost" onclick="requestAiMenuSuggestion()" style="font-size:11px;border:1px solid #c4b5fd;color:#5b21b6;">🤖 사내 AI 제안</button>`}
+              ${snapshotReadOnly || lk || roAnonymous ? '' : `<span id="aiSuggestStatus" style="font-size:10px;color:var(--text-muted);"></span>`}
+            </div>
+            <div style="font-size:10px;color:var(--text-muted);margin-top:6px;line-height:1.45;">ApiOperation·주석 등 출처는 아래 행을 참고하세요.</div>
           </div>
           <div class="detail-label">ApiOperation</div><div class="detail-value">${esc(v(r.apiOperationValue)) || '-'}</div>
           <div class="detail-label">Description주석</div><div class="detail-value">${esc(v(r.descriptionTag)) || '-'}</div>
@@ -6060,10 +6134,10 @@
     if (!id) return;
     if (statusEl) statusEl.textContent = '요청 중…';
     try {
-      const res = await adminFetch('/api/ai/menu-suggestion', {
-        method: 'POST',
-        body: JSON.stringify({ recordId: id })
-      });
+      const body = JSON.stringify({ recordId: id });
+      const res = isAdmin()
+        ? await adminFetch('/api/ai/menu-suggestion', { method: 'POST', body })
+        : await tableWriteAuthFetch('/api/ai/menu-suggestion', { method: 'POST', body });
       let data = {};
       try { data = await res.json(); } catch (_) {}
       if (!res.ok) {
@@ -6082,8 +6156,8 @@
       }
       input.value = s;
       showDetailSave();
-      if (statusEl) statusEl.textContent = '반영됨 — [저장]으로 적용하세요';
-      showToast('입력란에 반영했습니다. 저장을 눌러 적용하세요.', 'success');
+      if (statusEl) statusEl.textContent = '반영됨 — [관련메뉴 저장]으로 적용하세요';
+      showToast('입력란에 반영했습니다. [관련메뉴 저장]을 눌러 적용하세요.', 'success');
     } catch (e) {
       if (e && e.message === 'readonly') return;
       if (statusEl) statusEl.textContent = '';
@@ -6141,6 +6215,28 @@
     }
   }
 
+  async function detailWithdrawStatusProposal() {
+    const id = parseInt(document.getElementById('df-id')?.value || '0', 10);
+    if (!id) return;
+    const curRow = allApis.find(a => a.id === id);
+    if (!curRow || !rowHasPendingStatusProposal(curRow)) {
+      showToast('취소할 상태 승인요청이 없습니다.', 'error');
+      return;
+    }
+    if (!await customConfirm('이 URL의 상태 변경 승인요청을 취소할까요?')) return;
+    if (!guardWritable('승인요청 취소')) return;
+    try {
+      const res = await proposalDeleteAuthFetch(`/api/proposals/record/${id}/withdraw-status-fields`, { method: 'POST' });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(d.error || '취소 실패');
+      showToast('승인요청을 취소했습니다.', 'success');
+      await refreshRow(id);
+      openDetail(id);
+      filterTable({ immediate: true });
+      try { await loadCounts(getSelectedReposCsv()); renderStats(); } catch (e) {}
+    } catch (e) { showToast(e.message || '실패', 'error'); }
+  }
+
   async function detailSubmitStatusProposal() {
     const id = parseInt(document.getElementById('df-id')?.value || '0', 10);
     if (!id) return;
@@ -6170,6 +6266,36 @@
       filterTable({ immediate: true });
       try { await loadCounts(getSelectedReposCsv()); renderStats(); } catch (e) {}
     } catch (e) { showToast(e.message || '실패', 'error'); }
+  }
+
+  async function saveDetailDescriptionOverrideOnly() {
+    const id = parseInt(document.getElementById('df-id')?.value || '0', 10);
+    if (!id) return;
+    if (!guardWritable('관련메뉴 저장')) return;
+    const editorSession = !isAdmin() && window.isEditorLoggedIn && window.isEditorLoggedIn();
+    if (!isAdmin() && !editorSession) {
+      showToast('수정하려면 상단 「일반사용자 로그인」이 필요합니다.', 'info');
+      openAssigneeLoginModal();
+      return;
+    }
+    const ta = document.getElementById('df-descriptionOverride');
+    const desc = ta ? String(ta.value || '').trim() : '';
+    const body = { descriptionOverride: desc || null };
+    try {
+      if (editorSession) await editorDirectRecordPatch(id, body);
+      else {
+        const res = await adminFetch(`/api/db/record/${id}`, { method: 'PATCH', body: JSON.stringify(body) });
+        const d = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(d.error || '저장 실패');
+      }
+      showToast('관련메뉴 저장 완료', 'success');
+      const btn = document.getElementById('detailSaveBtn');
+      if (btn) btn.style.display = 'none';
+      await refreshRow(id);
+      openDetail(id);
+      filterTable({ immediate: true });
+      try { await loadCounts(getSelectedReposCsv()); renderStats(); } catch (e) {}
+    } catch (e) { showToast(e.message || '저장 실패', 'error'); }
   }
 
   // ── 상세 패널 — 일괄 저장 ────────────────────────────────

@@ -113,6 +113,11 @@
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || '로그인 실패');
       if (window.setEditorToken) window.setEditorToken(data.token || '');
+      if (data.remainingMs != null && window.syncEditorSessionDeadlineFromRemainingMs) {
+        window.syncEditorSessionDeadlineFromRemainingMs(data.remainingMs);
+      } else if (window.syncEditorSessionDeadlineFromServer) {
+        void window.syncEditorSessionDeadlineFromServer();
+      }
       toast('담당자 로그인됨 — 변경은 제안으로 저장됩니다.', 'success');
       closeAssigneeLoginModal();
       await refreshAssigneeAuthUi();
@@ -128,6 +133,7 @@
       }
     } catch (e) {}
     if (window.setEditorToken) window.setEditorToken('');
+    if (window.syncEditorSessionDeadlineFromRemainingMs) window.syncEditorSessionDeadlineFromRemainingMs(0);
     await refreshAssigneeAuthUi();
     try { if (typeof window.applyAdminUI === 'function') window.applyAdminUI(); } catch (e) {}
     toast('담당자 로그아웃', 'info');
@@ -141,9 +147,13 @@
         const d = await res.json().catch(() => ({}));
         if (!d.valid || (!d.teamName && !d.assigneeName)) {
           if (window.setEditorToken) window.setEditorToken('');
+          if (window.syncEditorSessionDeadlineFromRemainingMs) window.syncEditorSessionDeadlineFromRemainingMs(0);
+        } else if (d.remainingMs != null && window.syncEditorSessionDeadlineFromRemainingMs) {
+          window.syncEditorSessionDeadlineFromRemainingMs(d.remainingMs);
         }
       } catch (e) {
         if (window.setEditorToken) window.setEditorToken('');
+        if (window.syncEditorSessionDeadlineFromRemainingMs) window.syncEditorSessionDeadlineFromRemainingMs(0);
       }
     }
     try { window.dispatchEvent(new Event('editor-auth:change')); } catch (e) {}

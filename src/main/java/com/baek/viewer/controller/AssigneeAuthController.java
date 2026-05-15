@@ -113,6 +113,31 @@ public class AssigneeAuthController {
         return ResponseEntity.ok(m);
     }
 
+    @PostMapping("/auth/change-password")
+    public ResponseEntity<?> changePassword(@RequestHeader(value = "X-Editor-Token", required = false) String token,
+                                            @RequestBody Map<String, String> body) {
+        if (!authService.isEditor(token)) {
+            return ResponseEntity.status(401).body(Map.of("error", "담당자 로그인이 필요합니다."));
+        }
+        Long id = authService.getEditorAssigneeId(token);
+        if (id == null) {
+            return ResponseEntity.status(401).body(Map.of("error", "담당자 로그인이 필요합니다."));
+        }
+        try {
+            itAssigneeService.changePasswordWithTeamNameCheck(
+                    id,
+                    body != null ? body.get("teamName") : null,
+                    body != null ? body.get("assigneeName") : null,
+                    body != null ? body.get("newPassword") : null);
+            return ResponseEntity.ok(Map.of("success", true));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            log.warn("[담당자 비밀번호 변경 실패] {}", e.getMessage());
+            return ResponseEntity.internalServerError().body(Map.of("error", e.getMessage()));
+        }
+    }
+
     @PostMapping("/auth/dismiss-proposal-notice")
     public ResponseEntity<?> dismissProposalNotice(@RequestHeader(value = "X-Editor-Token", required = false) String token) {
         if (!authService.isEditor(token)) {
@@ -212,6 +237,25 @@ public class AssigneeAuthController {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    /**
+     * 로그인 없이 관리자에게 문의(비밀번호 분실 등). 팀·담당자명·내용을 받는다.
+     */
+    @PostMapping("/message-to-admin-public")
+    public ResponseEntity<?> messageToAdminPublic(@RequestBody Map<String, String> body) {
+        try {
+            String team = body != null ? body.get("teamName") : null;
+            String name = body != null ? body.get("assigneeName") : null;
+            String text = body != null ? body.get("text") : null;
+            navNoticeService.postGuestMessageToAdmin(team, name, text);
+            return ResponseEntity.ok(Map.of("success", true));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            log.warn("[미로그인→관리자 쪽지 실패] {}", e.getMessage());
+            return ResponseEntity.internalServerError().body(Map.of("error", e.getMessage()));
         }
     }
 

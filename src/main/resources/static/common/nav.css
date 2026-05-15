@@ -93,19 +93,6 @@
 .nav-btn-primary { background: var(--primary); color: #fff; border-color: var(--primary); }
 .nav-btn-primary:hover { background: var(--primary-hover); border-color: var(--primary-hover); color: #fff; }
 
-.admin-indicator {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 10px;
-  background: var(--primary-light);
-  color: var(--primary-dark);
-  border: 1px solid var(--primary-border);
-  border-radius: var(--radius-md);
-  font-size: var(--fs-sm);
-  font-weight: 600;
-}
-
 /* ── Tier 2-A: 대영역 세그먼트 ───────────────────────────── */
 .app-nav-segments {
   display: flex;
@@ -317,6 +304,15 @@
 [data-theme="dark"] .nav-page-link:hover { background: #293548; }
 [data-theme="dark"] .nav-page-link.active { color: #93c5fd !important; border-color: #60a5fa !important; background: #1e3a5f; }
 [data-theme="dark"] .admin-indicator { background: #1e3a5f; color: #93c5fd; border-color: #1d4ed8; }
+[data-theme="dark"] .nav-assignee-indicator {
+  background: none;
+  color: var(--text-muted);
+  border-color: var(--border);
+}
+[data-theme="dark"] .nav-assignee-indicator:hover {
+  background: #293548;
+  color: #f1f5f9;
+}
 
 /* 다크모드 — 경고 배너는 가독성을 위해 채도를 낮춘 호박색 톤 */
 [data-theme="dark"] .sync-warning-banner {
@@ -480,6 +476,67 @@
   border-radius: 8px;
   resize: vertical;
   min-height: 100px;
+}
+.nav-modal-input {
+  width: 100%;
+  box-sizing: border-box;
+  font-family: inherit;
+  font-size: 12px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.nav-account-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.nav-session-remaining {
+  font-size: 10px;
+  font-weight: 600;
+  opacity: 0.92;
+  white-space: nowrap;
+}
+.nav-assignee-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  min-height: calc(1em + 10px);
+  box-sizing: border-box;
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  font-size: var(--fs-base);
+  font-weight: 600;
+  color: var(--text-muted);
+  font-family: inherit;
+  cursor: default;
+  user-select: none;
+  transition: background .12s, color .12s, border-color .12s;
+}
+.nav-assignee-indicator:hover {
+  background: #f1f5f9;
+  color: var(--text);
+}
+.admin-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: var(--primary-light);
+  color: var(--primary-dark);
+  border: 1px solid var(--primary-border);
+  border-radius: var(--radius-md);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  cursor: default;
+  user-select: none;
+}
+.admin-indicator small {
+  font-weight: 600;
+  opacity: 0.9;
 }
 .nav-modal-actions {
   display: flex;

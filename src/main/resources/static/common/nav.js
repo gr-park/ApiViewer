@@ -13,7 +13,7 @@
  * ═══════════════════════════════════════════════════════════════ */
 (function () {
   // UI 버전 표기 (캐시/반영 여부 확인용) — 변경 시 이 값만 갱신
-  const APP_UI_VERSION = 'ver14.1.36';
+  const APP_UI_VERSION = 'ver14.1.48';
 
   const SEGMENTS = [
     {
@@ -111,6 +111,7 @@
         <span class="brand-sub">${esc(brandSub)}</span>
         <div class="utils">
           <button class="dark-toggle" onclick="toggleDarkMode && toggleDarkMode()">🌙 다크모드</button>
+          <span id="nav-guest-msg-slot"></span>
           <span id="nav-assignee-slot"></span>
           <span id="nav-admin-slot"></span>
         </div>
@@ -486,10 +487,183 @@
   const NAV_PORTAL_DISMISS_KEY = 'navPortalNoticeDismissAt';
   let _navAssigneeSelectInst = null;
 
+  const NAV_PW_CHANGE_MODALS_HTML = `
+<div id="navEditorChangePwModal" class="nav-modal-overlay" style="display:none;">
+  <div class="nav-modal-box" onclick="event.stopPropagation()">
+    <div class="nav-modal-head"><strong>SmartWay 비밀번호 변경</strong><button type="button" class="nav-modal-x" onclick="window.AppNav.closeEditorChangePwModal && window.AppNav.closeEditorChangePwModal()">✕</button></div>
+    <div class="nav-modal-body">
+      <label class="nav-modal-label" for="navEditorChgPwTeam">팀</label>
+      <input id="navEditorChgPwTeam" type="text" class="nav-modal-input" autocomplete="organization" placeholder="팀명">
+      <label class="nav-modal-label" for="navEditorChgPwName">성명</label>
+      <input id="navEditorChgPwName" type="text" class="nav-modal-input" autocomplete="name" placeholder="담당자명">
+      <label class="nav-modal-label" for="navEditorChgPwNew">새 비밀번호</label>
+      <input id="navEditorChgPwNew" type="password" class="nav-modal-input" autocomplete="new-password" placeholder="4자 이상">
+      <label class="nav-modal-label" for="navEditorChgPwConfirm">비밀번호 확인</label>
+      <input id="navEditorChgPwConfirm" type="password" class="nav-modal-input" autocomplete="new-password" placeholder="한 번 더 입력">
+      <div class="nav-modal-actions">
+        <button type="button" class="nav-btn nav-btn-primary" onclick="window.AppNav.submitEditorChangePw && window.AppNav.submitEditorChangePw()">변경</button>
+        <button type="button" class="nav-btn" onclick="window.AppNav.closeEditorChangePwModal && window.AppNav.closeEditorChangePwModal()">취소</button>
+      </div>
+    </div>
+  </div>
+</div>
+<div id="navAdminChangePwModal" class="nav-modal-overlay" style="display:none;">
+  <div class="nav-modal-box" onclick="event.stopPropagation()">
+    <div class="nav-modal-head"><strong>관리자 비밀번호 변경</strong><button type="button" class="nav-modal-x" onclick="window.AppNav.closeAdminChangePwModal && window.AppNav.closeAdminChangePwModal()">✕</button></div>
+    <div class="nav-modal-body">
+      <label class="nav-modal-label" for="navAdminChgPwNew">새 비밀번호</label>
+      <input id="navAdminChgPwNew" type="password" class="nav-modal-input" autocomplete="new-password" placeholder="4자 이상">
+      <label class="nav-modal-label" for="navAdminChgPwConfirm">비밀번호 확인</label>
+      <input id="navAdminChgPwConfirm" type="password" class="nav-modal-input" autocomplete="new-password" placeholder="한 번 더 입력">
+      <div class="nav-modal-actions">
+        <button type="button" class="nav-btn nav-btn-primary" onclick="window.AppNav.submitAdminChangePw && window.AppNav.submitAdminChangePw()">변경</button>
+        <button type="button" class="nav-btn" onclick="window.AppNav.closeAdminChangePwModal && window.AppNav.closeAdminChangePwModal()">취소</button>
+      </div>
+    </div>
+  </div>
+</div>`;
+
+  function mountPasswordChangeModals() {
+    if (document.getElementById('navEditorChangePwModal')) return;
+    document.body.insertAdjacentHTML('beforeend', NAV_PW_CHANGE_MODALS_HTML);
+    const ed = document.getElementById('navEditorChangePwModal');
+    const ad = document.getElementById('navAdminChangePwModal');
+    if (ed) {
+      ed.addEventListener('click', (e) => {
+        if (e.target && e.target.id === 'navEditorChangePwModal') closeEditorChangePwModal();
+      });
+    }
+    if (ad) {
+      ad.addEventListener('click', (e) => {
+        if (e.target && e.target.id === 'navAdminChangePwModal') closeAdminChangePwModal();
+      });
+    }
+  }
+
+  function closeEditorChangePwModal() {
+    const m = document.getElementById('navEditorChangePwModal');
+    if (m) m.style.display = 'none';
+  }
+
+  function openEditorChangePwModal() {
+    ensureNavOverlays();
+    mountPasswordChangeModals();
+    const m = document.getElementById('navEditorChangePwModal');
+    if (!m) return;
+    const tok = window.getEditorToken ? window.getEditorToken() : '';
+    const teamEl = document.getElementById('navEditorChgPwTeam');
+    const nameEl = document.getElementById('navEditorChgPwName');
+    const n1 = document.getElementById('navEditorChgPwNew');
+    const n2 = document.getElementById('navEditorChgPwConfirm');
+    if (n1) n1.value = '';
+    if (n2) n2.value = '';
+    if (tok) {
+      fetch('/api/assignee/auth/check', { headers: { 'X-Editor-Token': tok } })
+        .then(r => (r.ok ? r.json() : null))
+        .then(d => {
+          if (teamEl && d) teamEl.value = d.teamName != null ? String(d.teamName) : '';
+          if (nameEl && d) nameEl.value = d.assigneeName != null ? String(d.assigneeName) : '';
+        })
+        .catch(() => {});
+    } else {
+      if (teamEl) teamEl.value = '';
+      if (nameEl) nameEl.value = '';
+    }
+    m.style.display = 'flex';
+  }
+
+  async function submitEditorChangePw() {
+    const tok = window.getEditorToken ? window.getEditorToken() : '';
+    if (!tok) { toastNav('담당자 로그인이 필요합니다.', 'error'); return; }
+    const team = document.getElementById('navEditorChgPwTeam')?.value?.trim() || '';
+    const name = document.getElementById('navEditorChgPwName')?.value?.trim() || '';
+    const pw = document.getElementById('navEditorChgPwNew')?.value || '';
+    const pw2 = document.getElementById('navEditorChgPwConfirm')?.value || '';
+    if (!team || !name) { toastNav('팀·성명을 입력하세요.', 'error'); return; }
+    if (pw.length < 4) { toastNav('새 비밀번호는 4자 이상이어야 합니다.', 'error'); return; }
+    if (pw !== pw2) { toastNav('새 비밀번호와 확인이 일치하지 않습니다.', 'error'); return; }
+    try {
+      const res = await fetch('/api/assignee/auth/change-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Editor-Token': tok },
+        body: JSON.stringify({ teamName: team, assigneeName: name, newPassword: pw })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || '실패');
+      toastNav('비밀번호가 변경되었습니다.', 'success');
+      closeEditorChangePwModal();
+    } catch (e) { toastNav(e.message || '실패', 'error'); }
+  }
+
+  function closeAdminChangePwModal() {
+    const m = document.getElementById('navAdminChangePwModal');
+    if (m) m.style.display = 'none';
+  }
+
+  function openAdminChangePwModal() {
+    ensureNavOverlays();
+    mountPasswordChangeModals();
+    const m = document.getElementById('navAdminChangePwModal');
+    if (!m) return;
+    const n1 = document.getElementById('navAdminChgPwNew');
+    const n2 = document.getElementById('navAdminChgPwConfirm');
+    if (n1) n1.value = '';
+    if (n2) n2.value = '';
+    m.style.display = 'flex';
+  }
+
+  async function submitAdminChangePw() {
+    const tok = window.getAdminToken ? window.getAdminToken() : '';
+    if (!tok) { toastNav('관리자 로그인이 필요합니다.', 'error'); return; }
+    const pw = document.getElementById('navAdminChgPwNew')?.value || '';
+    const pw2 = document.getElementById('navAdminChgPwConfirm')?.value || '';
+    if (pw.length < 4) { toastNav('새 비밀번호는 4자 이상이어야 합니다.', 'error'); return; }
+    if (pw !== pw2) { toastNav('새 비밀번호와 확인이 일치하지 않습니다.', 'error'); return; }
+    try {
+      const res = await fetch('/api/auth/change-admin-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Admin-Token': tok },
+        body: JSON.stringify({ newPassword: pw })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || '실패');
+      toastNav('관리자 비밀번호가 변경되었습니다.', 'success');
+      closeAdminChangePwModal();
+    } catch (e) { toastNav(e.message || '실패', 'error'); }
+  }
+
   function upgradeNavOverlaysIfNeeded() {
     const msgBody = document.querySelector('#navMsgToAdminModal .nav-modal-body');
     if (msgBody && !document.getElementById('navMsgToAdminReplyToId')) {
       msgBody.insertAdjacentHTML('afterbegin', '<input type="hidden" id="navMsgToAdminReplyToId" value="">');
+    }
+    if (!document.getElementById('navGuestMsgToAdminModal')) {
+      document.body.insertAdjacentHTML('beforeend', `
+<div id="navGuestMsgToAdminModal" class="nav-modal-overlay" style="display:none;">
+  <div class="nav-modal-box" onclick="event.stopPropagation()">
+    <div class="nav-modal-head"><strong>관리자에게 문의</strong><button type="button" class="nav-modal-x" onclick="window.AppNav.closeGuestMsgToAdminModal && window.AppNav.closeGuestMsgToAdminModal()">✕</button></div>
+    <div class="nav-modal-body">
+      <div class="nav-muted" style="font-size:11px;margin-bottom:8px;line-height:1.45;">로그인 없이 문의합니다. 비밀번호 분실 등 내용을 적어 주세요.</div>
+      <label class="nav-modal-label">팀</label>
+      <input type="text" id="navGuestMsgTeam" class="nav-modal-input" maxlength="200" list="navGuestMsgTeamDatalist" autocomplete="organization" placeholder="팀명">
+      <datalist id="navGuestMsgTeamDatalist"></datalist>
+      <label class="nav-modal-label">이름</label>
+      <input type="text" id="navGuestMsgName" class="nav-modal-input" maxlength="200" autocomplete="name" placeholder="담당자명">
+      <label class="nav-modal-label">내용</label>
+      <textarea id="navGuestMsgBody" class="nav-modal-textarea" rows="5" placeholder="문의 내용"></textarea>
+      <div class="nav-modal-actions">
+        <button type="button" class="nav-btn nav-btn-primary" onclick="window.AppNav.submitGuestMsgToAdmin && window.AppNav.submitGuestMsgToAdmin()">보내기</button>
+        <button type="button" class="nav-btn" onclick="window.AppNav.closeGuestMsgToAdminModal && window.AppNav.closeGuestMsgToAdminModal()">취소</button>
+      </div>
+    </div>
+  </div>
+</div>`);
+      const gm = document.getElementById('navGuestMsgToAdminModal');
+      if (gm) {
+        gm.addEventListener('click', (e) => {
+          if (e.target && e.target.id === 'navGuestMsgToAdminModal') closeGuestMsgToAdminModal();
+        });
+      }
     }
     if (!document.getElementById('navReplyFromAdminModal')) {
       document.body.insertAdjacentHTML('beforeend', `
@@ -514,11 +688,14 @@
         });
       }
     }
+    mountPasswordChangeModals();
+    ensureGuestMsgTeamDatalistDom();
   }
 
   function ensureNavOverlays() {
     if (document.getElementById('nav-inbox-backdrop')) {
       upgradeNavOverlaysIfNeeded();
+      mountPasswordChangeModals();
       return;
     }
     document.body.insertAdjacentHTML('beforeend', `
@@ -557,6 +734,25 @@
     </div>
   </div>
 </div>
+<div id="navGuestMsgToAdminModal" class="nav-modal-overlay" style="display:none;">
+  <div class="nav-modal-box" onclick="event.stopPropagation()">
+    <div class="nav-modal-head"><strong>관리자에게 문의</strong><button type="button" class="nav-modal-x" onclick="window.AppNav.closeGuestMsgToAdminModal && window.AppNav.closeGuestMsgToAdminModal()">✕</button></div>
+    <div class="nav-modal-body">
+      <div class="nav-muted" style="font-size:11px;margin-bottom:8px;line-height:1.45;">로그인 없이 문의합니다. 비밀번호 분실 등 내용을 적어 주세요.</div>
+      <label class="nav-modal-label">팀</label>
+      <input type="text" id="navGuestMsgTeam" class="nav-modal-input" maxlength="200" list="navGuestMsgTeamDatalist" autocomplete="organization" placeholder="팀명">
+      <datalist id="navGuestMsgTeamDatalist"></datalist>
+      <label class="nav-modal-label">이름</label>
+      <input type="text" id="navGuestMsgName" class="nav-modal-input" maxlength="200" autocomplete="name" placeholder="담당자명">
+      <label class="nav-modal-label">내용</label>
+      <textarea id="navGuestMsgBody" class="nav-modal-textarea" rows="5" placeholder="문의 내용"></textarea>
+      <div class="nav-modal-actions">
+        <button type="button" class="nav-btn nav-btn-primary" onclick="window.AppNav.submitGuestMsgToAdmin && window.AppNav.submitGuestMsgToAdmin()">보내기</button>
+        <button type="button" class="nav-btn" onclick="window.AppNav.closeGuestMsgToAdminModal && window.AppNav.closeGuestMsgToAdminModal()">취소</button>
+      </div>
+    </div>
+  </div>
+</div>
 <div id="navReplyFromAdminModal" class="nav-modal-overlay" style="display:none;">
   <div class="nav-modal-box" onclick="event.stopPropagation()">
     <div class="nav-modal-head"><strong>담당자에게 답장</strong><button type="button" class="nav-modal-x" onclick="window.AppNav.closeReplyFromAdminModal && window.AppNav.closeReplyFromAdminModal()">✕</button></div>
@@ -585,12 +781,20 @@
     document.getElementById('navMsgToAdminModal').addEventListener('click', (e) => {
       if (e.target && e.target.id === 'navMsgToAdminModal') closeMsgToAdminModal();
     });
+    const gmsg = document.getElementById('navGuestMsgToAdminModal');
+    if (gmsg) {
+      gmsg.addEventListener('click', (e) => {
+        if (e.target && e.target.id === 'navGuestMsgToAdminModal') closeGuestMsgToAdminModal();
+      });
+    }
     const rpl = document.getElementById('navReplyFromAdminModal');
     if (rpl) {
       rpl.addEventListener('click', (e) => {
         if (e.target && e.target.id === 'navReplyFromAdminModal') closeReplyFromAdminModal();
       });
     }
+    mountPasswordChangeModals();
+    ensureGuestMsgTeamDatalistDom();
   }
 
   function positionPopover(pop, anchor) {
@@ -832,9 +1036,13 @@
       parts.push('<div class="nav-inbox-section"><div class="nav-inbox-h">담당자 메시지</div>');
       msgs.forEach(x => {
         const who = esc((x.senderTeamName || '') + ' / ' + (x.senderAssigneeName || ''));
+        const canReply = x.senderAssigneeId != null;
+        const replyBtn = canReply
+          ? `<button type="button" class="nav-btn nav-btn-sm nav-btn-primary" data-nav-reply-to-assignee="${x.id}">답장</button>`
+          : '';
         parts.push(`<div class="nav-inbox-item"><div class="nav-inbox-meta">${who}</div><div class="nav-inbox-p">${esc(x.body)}</div>
           <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;">
-            <button type="button" class="nav-btn nav-btn-sm nav-btn-primary" data-nav-reply-to-assignee="${x.id}">답장</button>
+            ${replyBtn}
             <button type="button" class="nav-btn nav-btn-sm" data-nav-dismiss-msg="${x.id}">확인</button>
           </div></div>`);
       });
@@ -1060,9 +1268,97 @@
     } catch (e) { toastNav(e.message || '실패', 'error'); }
   }
 
+  /** 관리자에게 문의 — 팀 필드: 일반 로그인과 동일 API로 datalist 자동완성 */
+  let _navGuestTeamHintTimer = null;
+  function scheduleNavGuestMsgTeamHint() {
+    clearTimeout(_navGuestTeamHintTimer);
+    _navGuestTeamHintTimer = setTimeout(loadNavGuestMsgTeamDatalist, 220);
+  }
+
+  async function loadNavGuestMsgTeamDatalist() {
+    const inp = document.getElementById('navGuestMsgTeam');
+    const dl = document.getElementById('navGuestMsgTeamDatalist');
+    if (!inp || !dl) return;
+    const q = (inp.value || '').trim().slice(0, 48);
+    try {
+      const res = await fetch('/api/assignee/team-suggestions?q=' + encodeURIComponent(q));
+      const data = await res.json().catch(() => ({}));
+      const teams = data.teams || [];
+      dl.innerHTML = teams.map((t) => {
+        const v = String(t).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+        return `<option value="${v}">`;
+      }).join('');
+    } catch (e) { /* ignore */ }
+  }
+
+  function ensureGuestMsgTeamDatalistDom() {
+    const inp = document.getElementById('navGuestMsgTeam');
+    if (!inp) return;
+    if (!inp.getAttribute('list')) inp.setAttribute('list', 'navGuestMsgTeamDatalist');
+    if (!document.getElementById('navGuestMsgTeamDatalist')) {
+      const dl = document.createElement('datalist');
+      dl.id = 'navGuestMsgTeamDatalist';
+      inp.parentNode.insertBefore(dl, inp.nextSibling);
+    }
+  }
+
+  function ensureGuestMsgTeamAutocompleteBindings() {
+    const t = document.getElementById('navGuestMsgTeam');
+    if (!t || t._navGuestTeamDlBound) return;
+    t._navGuestTeamDlBound = true;
+    t.addEventListener('input', () => { try { scheduleNavGuestMsgTeamHint(); } catch (e) {} });
+    t.addEventListener('focus', () => { try { loadNavGuestMsgTeamDatalist(); } catch (e) {} });
+  }
+
+  function openGuestMsgToAdminModal() {
+    ensureNavOverlays();
+    ensureGuestMsgTeamDatalistDom();
+    ensureGuestMsgTeamAutocompleteBindings();
+    const m = document.getElementById('navGuestMsgToAdminModal');
+    const t = document.getElementById('navGuestMsgTeam');
+    const n = document.getElementById('navGuestMsgName');
+    const ta = document.getElementById('navGuestMsgBody');
+    if (t) t.value = '';
+    if (n) n.value = '';
+    if (ta) ta.value = '';
+    if (m) m.style.display = 'flex';
+    try { void loadNavGuestMsgTeamDatalist(); } catch (e) {}
+    try { t && t.focus(); } catch (e) {}
+  }
+
+  function closeGuestMsgToAdminModal() {
+    const m = document.getElementById('navGuestMsgToAdminModal');
+    if (m) m.style.display = 'none';
+  }
+
+  async function submitGuestMsgToAdmin() {
+    const teamEl = document.getElementById('navGuestMsgTeam');
+    const nameEl = document.getElementById('navGuestMsgName');
+    const ta = document.getElementById('navGuestMsgBody');
+    const teamName = teamEl ? String(teamEl.value || '').trim() : '';
+    const assigneeName = nameEl ? String(nameEl.value || '').trim() : '';
+    const text = ta ? String(ta.value || '').trim() : '';
+    if (!teamName) { toastNav('팀을 입력하세요.', 'error'); return; }
+    if (!assigneeName) { toastNav('이름을 입력하세요.', 'error'); return; }
+    if (!text) { toastNav('내용을 입력하세요.', 'error'); return; }
+    try {
+      const res = await fetch('/api/assignee/message-to-admin-public', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ teamName, assigneeName, text })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || '실패');
+      toastNav('전송되었습니다.', 'success');
+      closeGuestMsgToAdminModal();
+    } catch (e) { toastNav(e.message || '실패', 'error'); }
+  }
+
   // ─── 일반사용자(IT담당자) 로그인 슬롯 (전 페이지) ─────────────────────────
   function renderAssigneeSlot() {
     const slot = document.getElementById('nav-assignee-slot');
+    const guestMsgSlot = document.getElementById('nav-guest-msg-slot');
+    if (guestMsgSlot) guestMsgSlot.innerHTML = '';
     if (!slot) return;
     if (window.AuthState && window.AuthState.loggedIn) {
       slot.innerHTML = '';
@@ -1072,19 +1368,27 @@
     try { ed = window.isEditorLoggedIn && window.isEditorLoggedIn(); } catch (e) {}
     if (ed) {
       slot.innerHTML = `
-        <span class="nav-assignee-indicator" id="navAssigneeLabel" title="일반 사용자 세션">👤 …</span>
+        <span class="nav-account-inline">
+          <span class="nav-assignee-indicator" id="navAssigneeLabel" title="SmartWay 계정"><span id="navAssigneeMain">👤 …</span> <small id="navEditorSessionSmall" class="nav-session-remaining"></small></span>
+          <button type="button" class="nav-btn" id="navEditorChangePwBtn" title="비밀번호 변경">🔒 비번변경</button>
+        </span>
         <button type="button" class="nav-btn" id="navEditorInboxBtn" title="쪽지함">📝<span class="nav-inbox-badge" id="navEditorInboxBadge" style="display:none;"></span></button>
         <button type="button" class="nav-btn" onclick="window.assigneeLogout && window.assigneeLogout()">일반 로그아웃</button>`;
       const btn = document.getElementById('navEditorInboxBtn');
       if (btn) btn.addEventListener('click', (ev) => toggleEditorInbox(ev));
+      const pwBtn = document.getElementById('navEditorChangePwBtn');
+      if (pwBtn) pwBtn.addEventListener('click', () => window.AppNav.openEditorChangePwModal && window.AppNav.openEditorChangePwModal());
       const tok = window.getEditorToken ? window.getEditorToken() : '';
       if (tok) {
         fetch('/api/assignee/auth/check', { headers: { 'X-Editor-Token': tok } })
           .then(r => (r.ok ? r.json() : null))
           .then(d => {
-            const el = document.getElementById('navAssigneeLabel');
-            if (el && d && d.valid && (d.teamName || d.assigneeName)) {
-              el.textContent = '👤 ' + esc(d.teamName || '') + ' / ' + esc(d.assigneeName || '');
+            const main = document.getElementById('navAssigneeMain');
+            if (main && d && d.valid && (d.teamName || d.assigneeName)) {
+              main.textContent = '👤 ' + esc(d.teamName || '') + ' / ' + esc(d.assigneeName || '');
+            }
+            if (d && d.valid && d.remainingMs != null && window.syncEditorSessionDeadlineFromRemainingMs) {
+              window.syncEditorSessionDeadlineFromRemainingMs(d.remainingMs);
             }
           })
           .catch(() => {});
@@ -1092,7 +1396,15 @@
       setTimeout(() => { refreshEditorInboxBadge(); }, 0);
     } else {
       slot.innerHTML =
-        '<button type="button" class="nav-btn" onclick="window.openAssigneeLoginModal && window.openAssigneeLoginModal()">👤 일반사용자 로그인</button>';
+        '<span class="nav-account-inline">' +
+        '<button type="button" class="nav-btn" onclick="window.openAssigneeLoginModal && window.openAssigneeLoginModal()">👤 일반사용자 로그인</button>' +
+        '</span>';
+      if (guestMsgSlot) {
+        guestMsgSlot.innerHTML =
+          '<button type="button" class="nav-btn" id="navGuestMsgToAdminBtn" title="로그인 없이 관리자에게 문의">📩 관리자에게 문의</button>';
+        const gbtn = document.getElementById('navGuestMsgToAdminBtn');
+        if (gbtn) gbtn.addEventListener('click', () => openGuestMsgToAdminModal());
+      }
     }
   }
 
@@ -1105,11 +1417,16 @@
       slot.innerHTML = `
         <button type="button" class="nav-btn" onclick="window.AppNav.openSendNoticeModal && window.AppNav.openSendNoticeModal()">📨 쪽지 발송</button>
         <button type="button" class="nav-btn" id="navAdminInboxBtn" title="수신함">📝<span class="nav-inbox-badge" id="navAdminInboxBadge" style="display:none;"></span></button>
-        <span class="admin-indicator" title="관리자 세션">👤 관리자 <small>· 남은 ${esc(A.fmtRemaining())}</small></span>
-        <button class="nav-btn" onclick="AuthState.logout()">로그아웃</button>
+        <span class="nav-account-inline">
+          <span class="admin-indicator" id="navAdminAccountLabel" title="관리자 세션">👤 관리자 <small id="navAdminSessionSmall" class="nav-session-remaining">· 남은 ${esc(A.fmtRemaining())}</small></span>
+          <button type="button" class="nav-btn" id="navAdminChangePwBtn" title="관리자 비밀번호 변경">🔒 비번변경</button>
+        </span>
+        <button type="button" class="nav-btn" onclick="AuthState.logout()">로그아웃</button>
       `;
       const ib = document.getElementById('navAdminInboxBtn');
       if (ib) ib.addEventListener('click', (ev) => toggleAdminInbox(ev));
+      const adminPwBtn = document.getElementById('navAdminChangePwBtn');
+      if (adminPwBtn) adminPwBtn.addEventListener('click', () => window.AppNav.openAdminChangePwModal && window.AppNav.openAdminChangePwModal());
       setTimeout(() => { refreshAdminInboxBadge(); }, 0);
     } else {
       slot.innerHTML = `
@@ -1145,6 +1462,20 @@
     window.addEventListener('editor-auth:change', () => {
       renderAssigneeSlot();
     });
+    window.addEventListener('auth:session-tick', (ev) => {
+      const d = ev.detail;
+      if (!d || d.remainingMs == null) return;
+      const fmt = window.formatSessionRemainingMs || function () { return ''; };
+      const txt = '· 남은 ' + fmt(d.remainingMs);
+      if (d.role === 'admin') {
+        const sm = document.getElementById('navAdminSessionSmall');
+        if (sm) sm.textContent = txt;
+      }
+      if (d.role === 'editor') {
+        const sm = document.getElementById('navEditorSessionSmall');
+        if (sm) sm.textContent = txt;
+      }
+    });
   }
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', boot);
@@ -1171,9 +1502,18 @@
     openMsgToAdminModal,
     closeMsgToAdminModal,
     submitMsgToAdmin,
+    openGuestMsgToAdminModal,
+    closeGuestMsgToAdminModal,
+    submitGuestMsgToAdmin,
     openReplyFromAdminModal,
     closeReplyFromAdminModal,
     submitReplyFromAdmin,
+    openEditorChangePwModal,
+    closeEditorChangePwModal,
+    submitEditorChangePw,
+    openAdminChangePwModal,
+    closeAdminChangePwModal,
+    submitAdminChangePw,
     /** URL현황 등에서 반려 일괄 확인 후 배지·쪽지 패널 동기화 */
     refreshEditorInbox: async () => {
       await refreshEditorInboxBadge();

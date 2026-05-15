@@ -99,6 +99,24 @@ public class ItAssigneeService {
         log.info("[IT담당자 비밀번호 리셋] id={}", id);
     }
 
+    /**
+     * 편집자 세션으로 본인 비밀번호 변경. 요청 팀·성명이 DB의 해당 ID 행과 동일 조합(대소문자 무시)일 때만 허용.
+     */
+    @Transactional
+    public void changePasswordWithTeamNameCheck(long assigneeId, String teamName, String assigneeName, String newPassword) {
+        String team = normalizeTeam(teamName);
+        String name = normalizeName(assigneeName);
+        if (team.isEmpty() || name.isEmpty()) {
+            throw new IllegalArgumentException("팀명과 담당자명은 필수입니다.");
+        }
+        Optional<ItAssignee> byKey = repository.findByTeamNameIgnoreCaseAndAssigneeNameIgnoreCase(team, name);
+        if (byKey.isEmpty() || byKey.get().getId() != assigneeId) {
+            throw new IllegalArgumentException("팀·담당자명이 로그인 계정과 일치하지 않습니다.");
+        }
+        resetPassword(assigneeId, newPassword);
+        log.info("[IT담당자 비밀번호 변경] id={}", assigneeId);
+    }
+
     public Optional<ItAssignee> findById(long id) {
         return repository.findById(id);
     }

@@ -196,7 +196,7 @@ public class RecordProposalService {
      * @param editorId     편집자 토큰의 담당자 ID (관리자면 무시)
      */
     @Transactional
-    public void withdraw(long recordId, boolean isAdmin, Long editorId) {
+    public void withdraw(long recordId, boolean isAdmin, Long editorId, String clientIp) {
         Optional<ApiRecordProposal> opt = proposalRepository.findByRecordId(recordId);
         if (opt.isEmpty()) {
             return;
@@ -208,6 +208,9 @@ public class RecordProposalService {
                 throw new IllegalStateException("본인이 제출한 제안만 철회할 수 있습니다.");
             }
         }
+        ApiRecord record = recordRepository.findById(recordId).orElse(null);
+        Map<String, Object> payloadBefore = parseProposalPayloadMap(p.getPayloadJson());
+        recordWithdrawnStatusEventIfNeeded(recordId, record, payloadBefore, isAdmin, p, clientIp);
         proposalRepository.delete(p);
         log.info("[제안 철회] recordId={}, admin={}", recordId, isAdmin);
     }
@@ -216,7 +219,7 @@ public class RecordProposalService {
      * 제안 JSON에서 상태 변경 관련 키만 제거. 나머지 필드가 없으면 제안 행 삭제.
      */
     @Transactional
-    public void withdrawStatusFieldsOnly(long recordId, boolean isAdmin, Long editorId) {
+    public void withdrawStatusFieldsOnly(long recordId, boolean isAdmin, Long editorId, String clientIp) {
         Optional<ApiRecordProposal> opt = proposalRepository.findByRecordId(recordId);
         if (opt.isEmpty()) {
             return;
@@ -234,6 +237,11 @@ public class RecordProposalService {
         } catch (Exception e) {
             log.warn("[제안 상태 부분 철회] JSON 파싱 실패 recordId={}", recordId);
             return;
+        }
+        boolean hadStatus = map != null && map.containsKey("status");
+        ApiRecord record = recordRepository.findById(recordId).orElse(null);
+        if (hadStatus) {
+            recordWithdrawnStatusEventIfNeeded(recordId, record, map, isAdmin, p, clientIp);
         }
         LinkedHashMap<String, Object> next = new LinkedHashMap<>(map);
         next.remove("status");
@@ -255,6 +263,46 @@ public class RecordProposalService {
         p.setUpdatedAt(LocalDateTime.now());
         proposalRepository.save(p);
         log.info("[제안 상태 부분 철회] recordId={}", recordId);
+    }
+
+    private Map<String, Object> parseProposalPayloadMap(String json) {
+        if (json == null || json.isBlank()) {
+            return Map.of();
+        }
+        try {
+            Map<String, Object> m = objectMapper.readValue(json, new TypeReference<>() {});
+            return m != null ? m : Map.of();
+        } catch (Exception e) {
+            log.debug("[제안 payload] 파싱 실패: {}", e.getMessage());
+            return Map.of();
+        }
+    }
+
+    private void recordWithdrawnStatusEventIfNeeded(long recordId, ApiRecord record, Map<String, Object> payloadBefore,
+                                                    boolean isAdmin, ApiRecordProposal proposal, String clientIp) {
+        if (record == null || payloadBefore == null || !payloadBefore.containsKey("status")) {
+            return;
+        }
+        String actorRole = isAdmin ? ApiRecordStatusEventService.ROLE_ADMIN : ApiRecordStatusEventService.ROLE_EDITOR;
+        String actorLabel;
+        if (isAdmin) {
+            actorLabel = "관리자";
+        } else {
+            String sub = proposal.getSubmittedBy();
+            actorLabel = (sub != null && !sub.isBlank()) ? sub.trim() : "담당자";
+        }
+        statusEventService.recordEvent(
+                recordId,
+                ApiRecordStatusEventService.EVENT_PROPOSAL_WITHDRAWN,
+                record.getStatus(),
+                stringOrNull(payloadBefore.get("status")),
+                actorRole,
+                actorLabel,
+                clientIp,
+                "승인요청 취소",
+                stringOrNull(payloadBefore.get("statusChangeSummary")),
+                LocalDateTime.now()
+        );
     }
 
     @Transactional

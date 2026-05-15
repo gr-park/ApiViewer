@@ -197,6 +197,9 @@ public class ApiRecordSnapshotRow {
     @Column(name = "git_history", columnDefinition = "TEXT")
     private String gitHistory;
 
+    @Column(name = "last_git_commit_date")
+    private LocalDate lastGitCommitDate;
+
     @Column(name = "review_stage", length = 30)
     private String reviewStage;
 
@@ -238,5 +241,8 @@ public class ApiRecordSnapshotRow {
     public void setAutoAnalyzedStatus(String autoAnalyzedStatus) { this.autoAnalyzedStatus = autoAnalyzedStatus; }
     public String getPathParamPattern() { return pathParamPattern; }
     public void setPathParamPattern(String pathParamPattern) { this.pathParamPattern = pathParamPattern; }
+
+    public LocalDate getLastGitCommitDate() { return lastGitCommitDate; }
+    public void setLastGitCommitDate(LocalDate lastGitCommitDate) { this.lastGitCommitDate = lastGitCommitDate; }
 }
 
