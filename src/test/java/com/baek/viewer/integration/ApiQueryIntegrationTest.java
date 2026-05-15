@@ -293,4 +293,25 @@ class ApiQueryIntegrationTest {
         assertThat(b).doesNotContain("/a/3");  // 의심 사유 있어 제외
         assertThat(b).contains("/c/1");        // 의심 없음
     }
+
+    @Test
+    @DisplayName("?relatedMenuDeficient=true — 플래그 true 레코드만")
+    void queryRelatedMenuDeficientTrue() throws Exception {
+        ApiRecord ok = recordRepo.findByRepositoryNameAndApiPathAndHttpMethod(REPO_A, "/a/1", "GET").orElseThrow();
+        ok.setRelatedMenuDeficient(false);
+        recordRepo.save(ok);
+
+        ApiRecord bad = recordRepo.findByRepositoryNameAndApiPathAndHttpMethod(REPO_A, "/a/2", "POST").orElseThrow();
+        bad.setRelatedMenuDeficient(true);
+        recordRepo.save(bad);
+
+        MvcResult res = mockMvc.perform(get("/api/db/apis")
+                        .param("relatedMenuDeficient", "true")
+                        .param("page", "0")
+                        .param("size", "100"))
+                .andExpect(status().isOk()).andReturn();
+        String b = body(res);
+        assertThat(b).contains("/a/2");
+        assertThat(b).doesNotContain("/a/1");
+    }
 }

@@ -88,11 +88,15 @@ public class MockAnalysisDataService {
     private final ApiRecordRepository repo;
     private final JdbcTemplate jdbc;
     private final TestSuspectMatcher testSuspectMatcher;
+    private final RelatedMenuDeficiencyChecker relatedMenuDeficiencyChecker;
 
-    public MockAnalysisDataService(ApiRecordRepository repo, JdbcTemplate jdbc, TestSuspectMatcher testSuspectMatcher) {
+    public MockAnalysisDataService(ApiRecordRepository repo, JdbcTemplate jdbc,
+                                   TestSuspectMatcher testSuspectMatcher,
+                                   RelatedMenuDeficiencyChecker relatedMenuDeficiencyChecker) {
         this.repo = repo;
         this.jdbc = jdbc;
         this.testSuspectMatcher = testSuspectMatcher;
+        this.relatedMenuDeficiencyChecker = relatedMenuDeficiencyChecker;
     }
 
     /**
@@ -403,6 +407,7 @@ public class MockAnalysisDataService {
         // repoPath=src/main/java/com/mock/.. 등 키워드 풍부하므로 대다수 mock 레코드가 의심 표시됨
         r.setTestSuspectReason(testSuspectMatcher.matchFromRecord(r));
         r.setPathParamPattern(PathParamPatternUtil.fromApiPath(apiPath));
+        relatedMenuDeficiencyChecker.applyTo(r);
 
         return r;
     }

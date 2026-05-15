@@ -3,6 +3,7 @@ package com.baek.viewer.controller;
 import com.baek.viewer.model.ApiRecord;
 import com.baek.viewer.repository.ApiRecordRepository;
 import com.baek.viewer.service.ApiStorageService;
+import com.baek.viewer.service.RelatedMenuDeficiencyChecker;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,10 +23,14 @@ public class UploadController {
     private static final Logger log = LoggerFactory.getLogger(UploadController.class);
     private final ApiRecordRepository repository;
     private final ApiStorageService storageService;
+    private final RelatedMenuDeficiencyChecker relatedMenuDeficiencyChecker;
 
-    public UploadController(ApiRecordRepository repository, ApiStorageService storageService) {
+    public UploadController(ApiRecordRepository repository,
+                            ApiStorageService storageService,
+                            RelatedMenuDeficiencyChecker relatedMenuDeficiencyChecker) {
         this.repository = repository;
         this.storageService = storageService;
+        this.relatedMenuDeficiencyChecker = relatedMenuDeficiencyChecker;
     }
 
     private static final String BLOCKED = "차단완료";
@@ -119,6 +124,7 @@ public class UploadController {
             r.setModifiedIp(ip);
 
             storageService.refreshAutoAnalyzedStatusAndMismatchFlag(r);
+            relatedMenuDeficiencyChecker.applyTo(r);
             repository.save(r);
             updatedIds.add(r.getId());
             updated++;

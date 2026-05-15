@@ -113,6 +113,7 @@ public class SnapshotController {
                                      @RequestParam(required = false) Boolean testSuspect,
                                      @RequestParam(required = false) Boolean pathParams,
                                      @RequestParam(required = false) Boolean markingIncomplete,
+                                     @RequestParam(required = false) Boolean relatedMenuDeficient,
                                      @RequestParam(required = false) String q,
                                      @RequestParam(required = false) String sort) {
         Pageable pageable = PageRequest.of(Math.max(0, page), Math.max(1, size), parseSnapshotSort(sort));
@@ -122,7 +123,7 @@ public class SnapshotController {
         Page<?> p = snapshotRowRepository.pageByFilters(id, repos,
                 blankToNull(status), blankToNull(statusGroup), blankToNull(autoStatus), blankToNull(autoStatusGroup), expectedDone,
                 blankToNull(httpMethod), blankToNull(isDeprecated),
-                testSuspect, pathParams, markingIncomplete, blankToNull(q),
+                testSuspect, pathParams, markingIncomplete, relatedMenuDeficient, blankToNull(q),
                 null, null, null, null, null, null,
                 pageable);
 

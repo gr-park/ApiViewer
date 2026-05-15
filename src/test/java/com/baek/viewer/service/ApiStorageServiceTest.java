@@ -44,6 +44,9 @@ class ApiStorageServiceTest {
     @Mock
     private TestSuspectMatcher testSuspectMatcher;
 
+    @Mock
+    private RelatedMenuDeficiencyChecker relatedMenuDeficiencyChecker;
+
     @InjectMocks
     private ApiStorageService service;
 

@@ -67,6 +67,7 @@ public class ApiStorageService {
     private final GlobalConfigRepository globalConfigRepository;
     private final RepoConfigRepository repoConfigRepository;
     private final TestSuspectMatcher testSuspectMatcher;
+    private final RelatedMenuDeficiencyChecker relatedMenuDeficiencyChecker;
     private final ApiRecordStatusEventService statusEventService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -74,11 +75,13 @@ public class ApiStorageService {
                              GlobalConfigRepository globalConfigRepository,
                              RepoConfigRepository repoConfigRepository,
                              TestSuspectMatcher testSuspectMatcher,
+                             RelatedMenuDeficiencyChecker relatedMenuDeficiencyChecker,
                              ApiRecordStatusEventService statusEventService) {
         this.repository = repository;
         this.globalConfigRepository = globalConfigRepository;
         this.repoConfigRepository = repoConfigRepository;
         this.testSuspectMatcher = testSuspectMatcher;
+        this.relatedMenuDeficiencyChecker = relatedMenuDeficiencyChecker;
         this.statusEventService = statusEventService;
     }
 
@@ -253,6 +256,7 @@ public class ApiStorageService {
         // 테스트용 의심 매칭 — null 이면 비의심
         r.setTestSuspectReason(testSuspectMatcher.matchFromApiInfo(a));
         r.setPathParamPattern(PathParamPatternUtil.fromApiPath(r.getApiPath()));
+        relatedMenuDeficiencyChecker.applyTo(r);
     }
 
     /** fullComment에서 [URL차단작업][YYYY-MM-DD] 패턴의 날짜 파싱 */

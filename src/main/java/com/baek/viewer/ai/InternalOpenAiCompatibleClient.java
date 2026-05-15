@@ -35,6 +35,13 @@ public class InternalOpenAiCompatibleClient {
      * @return 모델 응답 텍스트 (choices[0].message.content)
      */
     public String chatCompletion(GlobalConfig gc, String userMessage) {
+        return chatCompletion(gc, userMessage, null);
+    }
+
+    /**
+     * @param maxTokens null이면 요청에 max_tokens 를 넣지 않음. 연결 확인 등 짧은 응답용.
+     */
+    public String chatCompletion(GlobalConfig gc, String userMessage, Integer maxTokens) {
         String url = gc.resolveAiChatEndpoint();
         if (url == null || url.isBlank()) {
             throw new IllegalStateException("사내 AI 베이스 URL이 설정되지 않았습니다.");
@@ -51,6 +58,9 @@ public class InternalOpenAiCompatibleClient {
         }
         if (model != null && !model.isBlank()) {
             root.put("model", model.trim());
+        }
+        if (maxTokens != null && maxTokens > 0) {
+            root.put("max_tokens", maxTokens);
         }
         ArrayNode messages = root.putArray("messages");
         ObjectNode user = messages.addObject();

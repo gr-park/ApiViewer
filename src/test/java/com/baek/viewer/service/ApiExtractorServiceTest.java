@@ -1,5 +1,6 @@
 package com.baek.viewer.service;
 
+import com.baek.viewer.ai.InternalOpenAiCompatibleClient;
 import com.baek.viewer.model.ApiInfo;
 import com.baek.viewer.model.ExtractRequest;
 import com.baek.viewer.repository.GlobalConfigRepository;
@@ -50,12 +51,19 @@ class ApiExtractorServiceTest {
     @Mock
     private SnapshotService snapshotService;
 
+    @Mock
+    private InternalOpenAiCompatibleClient internalOpenAiCompatibleClient;
+
+    @Mock
+    private RelatedMenuAiAutoFillService relatedMenuAiAutoFillService;
+
     private ApiExtractorService service;
 
     @BeforeEach
     void setUp() {
         service = new ApiExtractorService(storageService, apmCollectionService,
-                repoConfigRepository, globalConfigRepository, snapshotService);
+                repoConfigRepository, globalConfigRepository, snapshotService,
+                internalOpenAiCompatibleClient, relatedMenuAiAutoFillService);
         ReflectionTestUtils.setField(service, "defaultGitBinPath", "/bin/false");
     }
 

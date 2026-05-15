@@ -162,6 +162,13 @@ public class ApiRecord {
     @Column(name = "block_marking_incomplete")
     private Boolean blockMarkingIncomplete;
 
+    /**
+     * 관련메뉴 표시값이 짧음/김/HTML·코드 누출 등 품질 기준 미달일 때 true.
+     * {@link com.baek.viewer.service.RelatedMenuDeficiencyChecker} 와 viewer allDesc 기준 동일.
+     */
+    @Column(name = "related_menu_deficient")
+    private Boolean relatedMenuDeficient;
+
     @Column(name = "program_id", length = 500)
     private String programId;
 
@@ -375,6 +382,12 @@ public class ApiRecord {
     /** null-safe 반환: 레거시 NULL 레코드는 false 로 취급 */
     public boolean isBlockMarkingIncomplete() { return Boolean.TRUE.equals(blockMarkingIncomplete); }
     public void setBlockMarkingIncomplete(boolean blockMarkingIncomplete) { this.blockMarkingIncomplete = blockMarkingIncomplete; }
+
+    /** null-safe — 레거시 NULL 은 false */
+    public boolean isRelatedMenuDeficient() { return Boolean.TRUE.equals(relatedMenuDeficient); }
+    public Boolean getRelatedMenuDeficient() { return relatedMenuDeficient; }
+    public void setRelatedMenuDeficient(Boolean relatedMenuDeficient) { this.relatedMenuDeficient = relatedMenuDeficient; }
+
     public String getProgramId() { return programId; }
     public void setProgramId(String programId) { this.programId = programId; }
     public String getApiOperationValue() { return apiOperationValue; }

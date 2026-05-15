@@ -1814,12 +1814,15 @@
 
   // ── API 추출 ─────────────────────────────────────────────
   let progressTimer = null;
+  /** 사내 AI 관련메뉴 자동분석 연결 실패 토스트 — 레포당 1회 */
+  let relatedMenuAiProbeToastShown = false;
 
   async function doExtract() {
     const selected = normalizeExtractSelection(getRepoConfigValues());
 
     // 초기화
     lastLogCount = 0;
+    relatedMenuAiProbeToastShown = false;
     showProgressCard(true);
     showLogCard(true);
     clearLogs();
@@ -1935,6 +1938,7 @@
         const data = await res.json();
         if (!res.ok) { reject(new Error(data.error || '서버 오류')); return; }
 
+        relatedMenuAiProbeToastShown = false;
         progressTimer = setInterval(async () => {
           try {
             const p = await (await fetch('/api/progress')).json();
@@ -1979,6 +1983,13 @@
       const stageMsg = p.currentFile && p.currentFile.trim() ? p.currentFile : '파일 탐색 중...';
       document.getElementById('progCount').textContent = stageMsg;
       if (p.extracting) document.getElementById('progStatus').textContent = '준비 중...';
+    }
+
+    if (p.extracting && p.relatedMenuAiProbeFailed && !relatedMenuAiProbeToastShown && typeof showToast === 'function') {
+      relatedMenuAiProbeToastShown = true;
+      const detail = (p.relatedMenuAiProbeMessage && String(p.relatedMenuAiProbeMessage).trim())
+        ? String(p.relatedMenuAiProbeMessage).trim() : '사내 AI에 연결할 수 없습니다.';
+      showToast('관련메뉴 미흡 자동분석을 건너뜁니다: ' + detail + ' (URL 분석은 계속됩니다)', 'warn');
     }
 
     // 서버 로그 동기화

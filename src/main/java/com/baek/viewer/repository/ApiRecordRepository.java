@@ -21,6 +21,10 @@ public interface ApiRecordRepository extends JpaRepository<ApiRecord, Long>,
 
     List<ApiRecord> findByRepositoryName(String repositoryName);
 
+    @Query("SELECT r FROM ApiRecord r WHERE r.repositoryName = :repo AND r.relatedMenuDeficient = true "
+            + "AND (r.status IS NULL OR r.status <> '삭제') ORDER BY r.id ASC")
+    List<ApiRecord> findRelatedMenuDeficientActiveByRepository(@Param("repo") String repo);
+
     /** 기동 시 auto_analyzed_status 백필용 */
     Page<ApiRecord> findByAutoAnalyzedStatusIsNull(Pageable pageable);
 
@@ -167,6 +171,12 @@ public interface ApiRecordRepository extends JpaRepository<ApiRecord, Long>,
             )
             """)
     long countPathParamPatternForRepos(@Param("repos") List<String> repos);
+
+    @Query("SELECT COUNT(r) FROM ApiRecord r WHERE r.relatedMenuDeficient = true AND (r.status IS NULL OR r.status <> '삭제')")
+    long countRelatedMenuDeficient();
+
+    @Query("SELECT COUNT(r) FROM ApiRecord r WHERE r.relatedMenuDeficient = true AND r.repositoryName IN :repos AND (r.status IS NULL OR r.status <> '삭제')")
+    long countRelatedMenuDeficientForRepos(@Param("repos") List<String> repos);
 
     // ── 전체 선택/벌크 작업용 ID 목록 조회 (경량) ─────────────────────────
     @Query("SELECT r.id FROM ApiRecord r")

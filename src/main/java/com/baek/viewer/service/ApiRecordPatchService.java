@@ -24,9 +24,12 @@ public class ApiRecordPatchService {
     );
 
     private final ApiStorageService storageService;
+    private final RelatedMenuDeficiencyChecker relatedMenuDeficiencyChecker;
 
-    public ApiRecordPatchService(ApiStorageService storageService) {
+    public ApiRecordPatchService(ApiStorageService storageService,
+                                 RelatedMenuDeficiencyChecker relatedMenuDeficiencyChecker) {
         this.storageService = storageService;
+        this.relatedMenuDeficiencyChecker = relatedMenuDeficiencyChecker;
     }
 
     /** 제안 JSON에서 허용된 키만 남긴다. */
@@ -195,6 +198,7 @@ public class ApiRecordPatchService {
         if (anyChanged || reviewChanged) {
             storageService.refreshAutoAnalyzedStatusAndMismatchFlag(r);
             storageService.seedBlockedMetadataForDoneFamilyIfNeeded(r);
+            relatedMenuDeficiencyChecker.applyTo(r);
         }
 
         return anyChanged || reviewChanged;

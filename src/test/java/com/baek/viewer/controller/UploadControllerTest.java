@@ -35,6 +35,7 @@ class UploadControllerTest {
 
     @Mock private ApiRecordRepository repository;
     @Mock private ApiStorageService storageService;
+    @Mock private com.baek.viewer.service.RelatedMenuDeficiencyChecker relatedMenuDeficiencyChecker;
     @Mock private HttpServletRequest req;
 
     @InjectMocks private UploadController controller;
@@ -42,6 +43,7 @@ class UploadControllerTest {
     @BeforeEach
     void stubStorageRefresh() {
         lenient().doNothing().when(storageService).refreshAutoAnalyzedStatusAndMismatchFlag(any(ApiRecord.class));
+        lenient().doNothing().when(relatedMenuDeficiencyChecker).applyTo(any(ApiRecord.class));
     }
 
     private Map<String, Object> row(String repo, String path, String method) {

@@ -1,7 +1,9 @@
 package com.baek.viewer.service;
 
+import com.baek.viewer.ai.InternalOpenAiCompatibleClient;
 import com.baek.viewer.model.ApiInfo;
 import com.baek.viewer.model.ExtractRequest;
+import com.baek.viewer.model.GlobalConfig;
 import com.github.javaparser.ParserConfiguration;
 import com.github.javaparser.StaticJavaParser;
 import com.github.javaparser.ParseProblemException;
@@ -148,16 +150,22 @@ public class ApiExtractorService {
     private final com.baek.viewer.repository.RepoConfigRepository repoConfigRepository;
     private final com.baek.viewer.repository.GlobalConfigRepository globalConfigRepository;
     private final SnapshotService snapshotService;
+    private final InternalOpenAiCompatibleClient internalOpenAiCompatibleClient;
+    private final RelatedMenuAiAutoFillService relatedMenuAiAutoFillService;
 
     public ApiExtractorService(ApiStorageService storageService, ApmCollectionService apmCollectionService,
                                com.baek.viewer.repository.RepoConfigRepository repoConfigRepository,
                                com.baek.viewer.repository.GlobalConfigRepository globalConfigRepository,
-                               SnapshotService snapshotService) {
+                               SnapshotService snapshotService,
+                               InternalOpenAiCompatibleClient internalOpenAiCompatibleClient,
+                               RelatedMenuAiAutoFillService relatedMenuAiAutoFillService) {
         this.storageService = storageService;
         this.apmCollectionService = apmCollectionService;
         this.repoConfigRepository = repoConfigRepository;
         this.globalConfigRepository = globalConfigRepository;
         this.snapshotService = snapshotService;
+        this.internalOpenAiCompatibleClient = internalOpenAiCompatibleClient;
+        this.relatedMenuAiAutoFillService = relatedMenuAiAutoFillService;
     }
 
     private volatile List<ApiInfo> cachedApis = new ArrayList<>();
@@ -169,6 +177,8 @@ public class ApiExtractorService {
     private volatile String lastError = null;
     private volatile int savedCount = -1; // -1 = 미저장, 0 이상 = 저장 건수
     private volatile int statusRevertedCount = 0; // 차단대상→사용(차단대상 제외) 전환 건수
+    private volatile boolean relatedMenuAiProbeFailed = false;
+    private volatile String relatedMenuAiProbeMessage = null;
     private final List<String> extractLogs = Collections.synchronizedList(new ArrayList<>());
 
     private void addLog(String level, String msg) {
@@ -195,13 +205,63 @@ public class ApiExtractorService {
         p.put("error", lastError);
         p.put("savedCount", savedCount);
         p.put("statusRevertedCount", statusRevertedCount);
+        p.put("relatedMenuAiProbeFailed", relatedMenuAiProbeFailed);
+        p.put("relatedMenuAiProbeMessage", relatedMenuAiProbeMessage);
         p.put("logs", new ArrayList<>(extractLogs));
         return p;
+    }
+
+    /**
+     * 관련메뉴 미흡 자동분석이 켜져 있으면, 본격 분석 전에 사내 AI chat 을 한 번 호출해 연결을 검증한다.
+     * 실패 시 본 Extract 에서는 자동 보완을 수행하지 않는다(분석·저장은 계속).
+     */
+    private void runRelatedMenuAiConnectivityProbe(ExtractRequest req, GlobalConfig gc) {
+        relatedMenuAiProbeFailed = false;
+        relatedMenuAiProbeMessage = null;
+        if (!req.isPersistToDatabase()) {
+            return;
+        }
+        String repo = req.getRepositoryName();
+        if (repo == null || repo.isBlank()) {
+            return;
+        }
+        if (!gc.isAiRelatedMenuDeficientAutoEnabled()) {
+            return;
+        }
+        if (!gc.isAiApiEnabled()) {
+            relatedMenuAiProbeFailed = true;
+            relatedMenuAiProbeMessage = "AI API 요청이 비활성화되어 있습니다.";
+            addLog("WARN", "[관련메뉴 자동분석] " + relatedMenuAiProbeMessage + " URL 분석은 계속됩니다.");
+            return;
+        }
+        if (gc.getAiOpenApiBaseUrl() == null || gc.getAiOpenApiBaseUrl().isBlank()) {
+            relatedMenuAiProbeFailed = true;
+            relatedMenuAiProbeMessage = "사내 AI 베이스 URL이 설정되지 않았습니다.";
+            addLog("WARN", "[관련메뉴 자동분석] " + relatedMenuAiProbeMessage + " URL 분석은 계속됩니다.");
+            return;
+        }
+        if (gc.getAiOpenApiToken() == null || gc.getAiOpenApiToken().isBlank()) {
+            relatedMenuAiProbeFailed = true;
+            relatedMenuAiProbeMessage = "사내 AI 토큰이 설정되지 않았습니다.";
+            addLog("WARN", "[관련메뉴 자동분석] " + relatedMenuAiProbeMessage + " URL 분석은 계속됩니다.");
+            return;
+        }
+        try {
+            internalOpenAiCompatibleClient.chatCompletion(gc, "ping", 8);
+            addLog("INFO", "[관련메뉴 자동분석] 사내 AI 연결 확인 완료");
+        } catch (Exception e) {
+            relatedMenuAiProbeFailed = true;
+            relatedMenuAiProbeMessage = e.getMessage() != null ? e.getMessage() : "사내 AI 호출 실패";
+            addLog("WARN", "[관련메뉴 자동분석] 연결 확인 실패 — 자동 보완을 건너뜁니다. URL 분석은 계속됩니다: "
+                    + relatedMenuAiProbeMessage);
+        }
     }
 
     public void startExtractAsync(ExtractRequest req) {
         savedCount = -1;
         statusRevertedCount = 0;
+        relatedMenuAiProbeFailed = false;
+        relatedMenuAiProbeMessage = null;
         extractLogs.clear();
         // 이전 추출의 잔여 진행률 초기화 — pull 단계 초반에 이전 값(예: 100%)이 잠깐 보이는 현상 방지.
         // 프론트는 `currentFile` 로 Git 동기화 단계임을 표시하고, 분석 단계에서 processedFiles/totalFiles 로 실제 진행률을 채움.
@@ -219,8 +279,9 @@ public class ApiExtractorService {
     public List<ApiInfo> extract(ExtractRequest req) {
         if (extracting) throw new IllegalStateException("이미 추출 중입니다.");
         extracting = true;
-        debugMode = globalConfigRepository.findById(1L)
-                .map(com.baek.viewer.model.GlobalConfig::isApmDebug).orElse(false);
+        GlobalConfig gcBoot = globalConfigRepository.findById(1L).orElse(new GlobalConfig());
+        debugMode = gcBoot.isApmDebug();
+        runRelatedMenuAiConnectivityProbe(req, gcBoot);
         String rootPath = req.getRootPath();
         String domain = req.getDomain() != null ? req.getDomain() : "";
         String apiPathPrefix = req.getApiPathPrefix() != null ? req.getApiPathPrefix() : "";
@@ -370,6 +431,19 @@ public class ApiExtractorService {
                 String saveMsg = "DB 저장 완료 — " + savedCount + "개 저장/갱신";
                 if (statusRevertedCount > 0) saveMsg += ", 자동①-③·공식 불일치 " + statusRevertedCount + "건 (현업검토=차단대상 제외)";
                 addLog("OK", saveMsg);
+
+                if (savedCount >= 0 && !relatedMenuAiProbeFailed) {
+                    GlobalConfig gcFill = globalConfigRepository.findById(1L).orElse(new GlobalConfig());
+                    if (gcFill.isAiRelatedMenuDeficientAutoEnabled()) {
+                        try {
+                            addLog("INFO", "관련메뉴 미흡 건 사내 AI 자동 보완 시작…");
+                            int filled = relatedMenuAiAutoFillService.fillDeficientInRepository(repoNameOut.trim());
+                            addLog("OK", "관련메뉴 미흡 AI 자동 보완 완료 — " + filled + "건 반영");
+                        } catch (Exception aiEx) {
+                            addLog("WARN", "관련메뉴 미흡 AI 자동 보완 중 오류: " + aiEx.getMessage());
+                        }
+                    }
+                }
             } catch (Exception e) {
                 savedCount = -1;
                 addLog("ERROR", "DB 저장 실패: " + e.getMessage());

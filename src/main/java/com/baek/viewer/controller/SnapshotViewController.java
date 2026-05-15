@@ -209,6 +209,7 @@ public class SnapshotViewController {
                                      @RequestParam(required = false) Boolean testSuspect,
                                      @RequestParam(required = false) Boolean pathParams,
                                      @RequestParam(required = false) Boolean markingIncomplete,
+                                     @RequestParam(required = false) Boolean relatedMenuDeficient,
                                      @RequestParam(required = false) String q,
                                      @RequestParam(required = false) String recentCommitFrom,
                                      @RequestParam(required = false) String recentCommitTo,
@@ -227,7 +228,7 @@ public class SnapshotViewController {
         Page<?> p = snapshotRowRepository.pageByFilters(id, repos,
                 blankToNull(status), blankToNull(statusGroup), blankToNull(autoStatus), blankToNull(autoStatusGroup), expectedDone,
                 blankToNull(httpMethod), blankToNull(isDeprecated),
-                testSuspect, pathParams, markingIncomplete, blankToNull(q),
+                testSuspect, pathParams, markingIncomplete, relatedMenuDeficient, blankToNull(q),
                 parseYmd(recentCommitFrom), parseYmd(recentCommitTo),
                 parseYmd(blockedDateFrom), parseYmd(blockedDateTo),
                 blankToNull(blockedReason), blankToNull(deployCsr),
@@ -306,6 +307,7 @@ public class SnapshotViewController {
         long markingIncompleteCount = snapshotRowRepository.countBlockMarkingIncomplete(id, hasRepo ? repos : null);
         long testSuspectCount = snapshotRowRepository.countTestSuspect(id, hasRepo ? repos : null);
         long pathParamPatternCount = snapshotRowRepository.countPathParamPattern(id, hasRepo ? repos : null);
+        long relatedMenuDeficientCount = snapshotRowRepository.countRelatedMenuDeficient(id, hasRepo ? repos : null);
         long expectedDoneCount = snapshotRowRepository.countExpectedDone(id, hasRepo ? repos : null);
         long priorityPureCount = byStatus.getOrDefault("①-① 차단대상", 0L);
 
@@ -335,6 +337,7 @@ public class SnapshotViewController {
         response.put("markingIncompleteCount", markingIncompleteCount);
         response.put("testSuspectCount", testSuspectCount);
         response.put("pathParamPatternCount", pathParamPatternCount);
+        response.put("relatedMenuDeficientCount", relatedMenuDeficientCount);
         response.put("expectedDoneCount", expectedDoneCount);
         response.put("byStatus",     byStatus);
         response.put("autoByStatus", autoByStatus);

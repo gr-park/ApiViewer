@@ -80,6 +80,7 @@ class SnapshotDeletedRowsIntegrationTest {
                 null,
                 null,
                 null,
+                null,
                 PageRequest.of(0, 50)
         ).getTotalElements();
 

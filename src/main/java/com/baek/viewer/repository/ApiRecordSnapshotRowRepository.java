@@ -47,6 +47,7 @@ public interface ApiRecordSnapshotRowRepository extends JpaRepository<ApiRecordS
                     OR r.apiPath LIKE '%{%'
               )))
               AND (:markingIncomplete IS NULL OR (:markingIncomplete = true AND r.blockMarkingIncomplete = true))
+              AND (:relatedMenuDeficient IS NULL OR (:relatedMenuDeficient = true AND r.relatedMenuDeficient = true))
               AND (
                 :q IS NULL OR :q = ''
                 OR lower(r.apiPath) LIKE concat('%', lower(:q), '%')
@@ -72,6 +73,7 @@ public interface ApiRecordSnapshotRowRepository extends JpaRepository<ApiRecordS
                                             @Param("testSuspect") Boolean testSuspect,
                                             @Param("pathParams") Boolean pathParams,
                                             @Param("markingIncomplete") Boolean markingIncomplete,
+                                            @Param("relatedMenuDeficient") Boolean relatedMenuDeficient,
                                             @Param("q") String q,
                                             @Param("recentCommitFrom") java.time.LocalDate recentCommitFrom,
                                             @Param("recentCommitTo") java.time.LocalDate recentCommitTo,
@@ -124,6 +126,9 @@ public interface ApiRecordSnapshotRowRepository extends JpaRepository<ApiRecordS
               AND ((r.pathParamPattern IS NOT NULL AND r.pathParamPattern <> '') OR r.apiPath LIKE '%{%')
             """)
     long countPathParamPattern(@Param("snapshotId") Long snapshotId, @Param("repos") List<String> repos);
+
+    @Query("SELECT COUNT(r) FROM ApiRecordSnapshotRow r WHERE r.snapshotId = :snapshotId AND (:repos IS NULL OR r.repositoryName IN :repos) AND r.relatedMenuDeficient = true AND (r.status IS NULL OR r.status <> '삭제')")
+    long countRelatedMenuDeficient(@Param("snapshotId") Long snapshotId, @Param("repos") List<String> repos);
 
     @Query("SELECT COUNT(r) FROM ApiRecordSnapshotRow r WHERE r.snapshotId = :snapshotId AND (:repos IS NULL OR r.repositoryName IN :repos) AND (r.status IS NULL OR r.status <> '삭제')")
     long countAll(@Param("snapshotId") Long snapshotId, @Param("repos") List<String> repos);

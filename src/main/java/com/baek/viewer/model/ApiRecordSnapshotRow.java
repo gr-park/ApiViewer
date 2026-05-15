@@ -107,6 +107,9 @@ public class ApiRecordSnapshotRow {
     @Column(name = "block_marking_incomplete")
     private Boolean blockMarkingIncomplete;
 
+    @Column(name = "related_menu_deficient")
+    private Boolean relatedMenuDeficient;
+
     @Column(name = "program_id", length = 500)
     private String programId;
 
@@ -241,6 +244,10 @@ public class ApiRecordSnapshotRow {
     public void setAutoAnalyzedStatus(String autoAnalyzedStatus) { this.autoAnalyzedStatus = autoAnalyzedStatus; }
     public String getPathParamPattern() { return pathParamPattern; }
     public void setPathParamPattern(String pathParamPattern) { this.pathParamPattern = pathParamPattern; }
+
+    public boolean isRelatedMenuDeficient() { return Boolean.TRUE.equals(relatedMenuDeficient); }
+    public Boolean getRelatedMenuDeficient() { return relatedMenuDeficient; }
+    public void setRelatedMenuDeficient(Boolean relatedMenuDeficient) { this.relatedMenuDeficient = relatedMenuDeficient; }
 
     public LocalDate getLastGitCommitDate() { return lastGitCommitDate; }
     public void setLastGitCommitDate(LocalDate lastGitCommitDate) { this.lastGitCommitDate = lastGitCommitDate; }

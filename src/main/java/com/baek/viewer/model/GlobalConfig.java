@@ -246,6 +246,11 @@ public class GlobalConfig {
     @Column(name = "ai_api_enabled", length = 5)
     private String aiApiEnabled = "Y";
 
+    /**
+     * URL 분석(Extract) 시 관련메뉴 미흡 건에 대해 사내 AI로 관련메뉴(override) 자동 보완 (Y/N, 기본 N).
+     */
+    @Column(name = "ai_related_menu_deficient_auto", length = 5)
+    private String aiRelatedMenuDeficientAuto = "N";
 
     public Long getId() { return id; }
     public String getStartDate() { return startDate; }
@@ -390,6 +395,14 @@ public class GlobalConfig {
     public String getAiApiEnabled() { return aiApiEnabled != null ? aiApiEnabled : "Y"; }
     public void setAiApiEnabled(String v) { this.aiApiEnabled = v; }
     public boolean isAiApiEnabled() { return !"N".equalsIgnoreCase(getAiApiEnabled()); }
+
+    public String getAiRelatedMenuDeficientAuto() {
+        return aiRelatedMenuDeficientAuto != null ? aiRelatedMenuDeficientAuto : "N";
+    }
+    public void setAiRelatedMenuDeficientAuto(String v) { this.aiRelatedMenuDeficientAuto = v; }
+    public boolean isAiRelatedMenuDeficientAutoEnabled() {
+        return "Y".equalsIgnoreCase(getAiRelatedMenuDeficientAuto());
+    }
 
     /** 채팅 API 전체 URL */
     public String resolveAiChatEndpoint() {

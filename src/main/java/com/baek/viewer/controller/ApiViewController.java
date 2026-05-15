@@ -78,6 +78,7 @@ public class ApiViewController {
     private final ApiStorageService storageService;
     private final com.baek.viewer.service.AuthService authService;
     private final com.baek.viewer.service.TestSuspectMatcher testSuspectMatcher;
+    private final com.baek.viewer.service.RelatedMenuDeficiencyChecker relatedMenuDeficiencyChecker;
     private final com.baek.viewer.service.YamlConfigService yamlConfigService;
     private final ApiRecordStatusEventService statusEventService;
     private final RecordProposalService proposalService;
@@ -93,6 +94,7 @@ public class ApiViewController {
                              ApiStorageService storageService,
                              com.baek.viewer.service.AuthService authService,
                              com.baek.viewer.service.TestSuspectMatcher testSuspectMatcher,
+                             com.baek.viewer.service.RelatedMenuDeficiencyChecker relatedMenuDeficiencyChecker,
                              com.baek.viewer.service.YamlConfigService yamlConfigService,
                              ApiRecordStatusEventService statusEventService,
                              RecordProposalService proposalService,
@@ -107,6 +109,7 @@ public class ApiViewController {
         this.storageService = storageService;
         this.authService = authService;
         this.testSuspectMatcher = testSuspectMatcher;
+        this.relatedMenuDeficiencyChecker = relatedMenuDeficiencyChecker;
         this.yamlConfigService = yamlConfigService;
         this.statusEventService = statusEventService;
         this.proposalService = proposalService;
@@ -474,6 +477,7 @@ public class ApiViewController {
                                      @RequestParam(required = false) String autoStatusGroup,
                                      @RequestParam(required = false) Boolean testSuspect,
                                      @RequestParam(required = false) Boolean pathParams,
+                                     @RequestParam(required = false) Boolean relatedMenuDeficient,
                                      @RequestParam(required = false) Boolean logWorkExcluded,
                                      @RequestParam(required = false) Boolean recentLogOnly,
                                      @RequestParam(required = false) String httpMethod,
@@ -520,6 +524,7 @@ public class ApiViewController {
                 || (autoStatusGroup != null && !autoStatusGroup.isBlank())
                 || (testSuspect != null)
                 || (pathParams != null)
+                || (relatedMenuDeficient != null)
                 || (logWorkExcluded != null)
                 || (recentLogOnly != null)
                 || (httpMethod != null && !httpMethod.isBlank())
@@ -559,7 +564,7 @@ public class ApiViewController {
                     : PageRequest.of(pageIdx, pageSize, sortSpec);
 
             Specification<ApiRecord> spec = buildSpec(repository, repoList, blockTargetOnly,
-                    status, statusGroup, autoStatus, autoStatusGroup, testSuspect, pathParams, logWorkExcluded, recentLogOnly, httpMethod, isDeprecated, q, alert, expectedDone, ids,
+                    status, statusGroup, autoStatus, autoStatusGroup, testSuspect, pathParams, relatedMenuDeficient, logWorkExcluded, recentLogOnly, httpMethod, isDeprecated, q, alert, expectedDone, ids,
                     modifiedFrom, modifiedTo, modifiedBy, cboFrom, cboTo, deployFrom, deployTo, deployManager, deployCsr, deployUnscheduled,
                     recentCommitFrom, recentCommitTo, blockedDateFrom, blockedDateTo, blockedReason,
                     useRepoDisplayOrderSort, hasPendingProposal);
@@ -692,7 +697,7 @@ public class ApiViewController {
     /** 동적 필터 Specification 빌더 */
     private Specification<ApiRecord> buildSpec(String repository, List<String> repoList, boolean blockTargetOnly,
                                                 String status, String statusGroup, String autoStatus, String autoStatusGroup,
-                                                Boolean testSuspect, Boolean pathParams,
+                                                Boolean testSuspect, Boolean pathParams, Boolean relatedMenuDeficient,
                                                 Boolean logWorkExcluded, Boolean recentLogOnly,
                                                 String httpMethod, String isDeprecated, String q, String alert, Boolean expectedDone,
                                                 String ids, String modifiedFrom, String modifiedTo, String modifiedBy,
@@ -796,6 +801,15 @@ public class ApiViewController {
                                     cb.equal(root.get("pathParamPattern"), "")),
                             cb.or(cb.isNull(root.get("apiPath")),
                                     cb.notLike(root.get("apiPath"), "%{%"))));
+                }
+            }
+            if (relatedMenuDeficient != null) {
+                if (relatedMenuDeficient) {
+                    ps.add(cb.isTrue(root.get("relatedMenuDeficient")));
+                } else {
+                    ps.add(cb.or(
+                            cb.isNull(root.get("relatedMenuDeficient")),
+                            cb.isFalse(root.get("relatedMenuDeficient"))));
                 }
             }
             if (logWorkExcluded != null) {
@@ -1189,6 +1203,7 @@ public class ApiViewController {
         m.put("isDeprecated",       r.getIsDeprecated());
         m.put("hasUrlBlock",        r.getHasUrlBlock());
         m.put("blockMarkingIncomplete", r.isBlockMarkingIncomplete());
+        m.put("relatedMenuDeficient", r.isRelatedMenuDeficient());
         m.put("programId",          r.getProgramId());
         m.put("apiOperationValue",  r.getApiOperationValue());
         m.put("descriptionTag",     r.getDescriptionTag());
@@ -1353,6 +1368,9 @@ public class ApiViewController {
         long pathParamPatternCount = hasRepo
                 ? recordRepository.countPathParamPatternForRepos(repoFilter)
                 : recordRepository.countPathParamPattern();
+        long relatedMenuDeficientCount = hasRepo
+                ? recordRepository.countRelatedMenuDeficientForRepos(repoFilter)
+                : recordRepository.countRelatedMenuDeficient();
         long expectedDoneCount = hasRepo
                 ? recordRepository.countExpectedDoneForRepos(repoFilter)
                 : recordRepository.countExpectedDone();
@@ -1392,6 +1410,7 @@ public class ApiViewController {
         response.put("markingIncompleteCount", markingIncompleteCount);
         response.put("testSuspectCount", testSuspectCount);
         response.put("pathParamPatternCount", pathParamPatternCount);
+        response.put("relatedMenuDeficientCount", relatedMenuDeficientCount);
         response.put("expectedDoneCount", expectedDoneCount);
         response.put("pendingProposalCount", pendingProposalCount);
         response.put("openRejectEventCount", openRejectEventCount);
@@ -1837,6 +1856,8 @@ public class ApiViewController {
             if (!body.isEmpty()) {
                 storageService.refreshAutoAnalyzedStatusAndMismatchFlag(r);
             }
+
+            relatedMenuDeficiencyChecker.applyTo(r);
 
             recordRepository.save(r);
             log.info("[레코드 수정] id={}, 필드={}", id, body.keySet());
