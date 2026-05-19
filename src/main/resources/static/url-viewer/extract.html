@@ -576,13 +576,46 @@
       <b>파라미터URL 패턴</b> 컬럼에 저장합니다. 추출 시 자동 반영되며, 기존 DB 일괄 보정 시 아래 버튼을 사용하세요.
       (호출 이력 URL과 표시 경로가 다를 수 있음을 구분하는 용도)
     </p>
+    <div style="margin-bottom:10px;">
+      <div style="font-size:11px;font-weight:700;color:var(--text-muted);margin-bottom:4px;">대상 레포</div>
+      <div id="pathParamRecalcRepo" class="repo-select-mount"></div>
+      <div style="font-size:10px;color:var(--text-muted);margin-top:4px;">미선택 시 전체 레포</div>
+    </div>
     <div style="display:flex;justify-content:flex-end;">
       <button type="button" class="btn btn-blue" onclick="recalculatePathParamPattern(event)">
-        🔄 전체 재계산
+        🔄 재계산
       </button>
     </div>
   </div>
   </div><!-- /#extractSectionPathParams -->
+
+  <!-- ─── 관련메뉴 미흡 플래그 일괄 재계산 ─── -->
+  <div id="extractSectionRelatedMenuDeficient">
+  <div class="card" data-admin-only>
+    <div class="section-heading section-heading--analyze">
+      <span class="dot"></span>관련메뉴 미흡 처리 일괄 재계산
+    </div>
+    <p style="font-size:12px;color:var(--text-muted);margin-bottom:8px;line-height:1.6;">
+      공통설정의 <b>관련메뉴 최소·최대 글자수</b>와 URL 현황 표시 규칙(오버라이드 → @ApiOperation → @Description → 주석)으로
+      <code>related_menu_deficient</code> 컬럼을 일괄 갱신합니다. 추출·수정 시에도 자동 반영되나,
+      과거 데이터·차단완료 행 등 플래그가 어긋난 경우 보정용입니다.
+    </p>
+    <div style="margin-bottom:10px;">
+      <div style="font-size:11px;font-weight:700;color:var(--text-muted);margin-bottom:4px;">대상 레포</div>
+      <div id="relatedMenuRecalcRepo" class="repo-select-mount"></div>
+      <div style="font-size:10px;color:var(--text-muted);margin-top:4px;">미선택 시 전체 레포</div>
+    </div>
+    <label style="display:flex;align-items:center;gap:8px;font-size:12px;margin-bottom:10px;cursor:pointer;">
+      <input type="checkbox" id="relatedMenuRecalcApplyAi" style="width:14px;height:14px;accent-color:var(--primary);">
+      <span>재계산 후 사내 AI 통한 관련메뉴 자동제안 적용</span>
+    </label>
+    <div style="display:flex;justify-content:flex-end;">
+      <button type="button" class="btn btn-blue" onclick="recalculateRelatedMenuDeficient(event)">
+        🔄 재계산
+      </button>
+    </div>
+  </div>
+  </div><!-- /#extractSectionRelatedMenuDeficient -->
 
   <div id="extractHeadingApm" class="section-header">
     <h3>📈 APM 추출</h3>
@@ -956,6 +989,21 @@
         placeholder: '전체',
         onChange: () => {}
       });
+
+      if (document.getElementById('pathParamRecalcRepo')) {
+        window._pathParamRecalcRepoSel = RepoSelect.mountCompact('#pathParamRecalcRepo', {
+          repos: allRepos,
+          placeholder: '전체',
+          onChange: () => {}
+        });
+      }
+      if (document.getElementById('relatedMenuRecalcRepo')) {
+        window._relatedMenuRecalcRepoSel = RepoSelect.mountCompact('#relatedMenuRecalcRepo', {
+          repos: allRepos,
+          placeholder: '전체',
+          onChange: () => {}
+        });
+      }
 
       // 첫 진입: 레포 1개만 선택되어 있으면 자동으로 APM 종류/기간 세팅
       if (allRepos.length > 0) onApmRepoChange();
@@ -3427,19 +3475,69 @@
     }
   }
 
+  function recalcRepoQueryString(sel, extra) {
+    const params = new URLSearchParams();
+    if (extra) {
+      Object.keys(extra).forEach(k => params.set(k, String(extra[k])));
+    }
+    const picked = sel && typeof sel.getSelected === 'function' ? sel.getSelected() : [];
+    if (picked.length) params.set('repoNames', picked.join(','));
+    const s = params.toString();
+    return s ? '?' + s : '';
+  }
+
   async function recalculatePathParamPattern(ev) {
     const btn = ev && ev.target ? ev.target : null;
     const origText = btn ? btn.textContent : '';
     if (btn) { btn.disabled = true; btn.textContent = '재계산 중...'; }
     const token = (window.AuthState && AuthState.token) || '';
+    const repoQ = recalcRepoQueryString(window._pathParamRecalcRepoSel);
     try {
-      const res = await fetch('/api/recalculate-path-param-pattern', {
+      const res = await fetch('/api/recalculate-path-param-pattern' + repoQ, {
         method: 'POST',
         headers: { 'X-Admin-Token': token }
       });
       if (!res.ok) throw new Error('재계산 실패 (' + res.status + ')');
       const r = await res.json();
-      showToast(`✅ 경로변수 패턴 재계산 완료 — 전체 ${r.total}건 중 ${r.updated}건 갱신 (${r.elapsedMs}ms)`, 'success');
+      const scope = r.repoNames && r.repoNames.length ? ` [${r.repoNames.join(', ')}]` : '';
+      showToast(`✅ 경로변수 패턴 재계산 완료${scope} — 전체 ${r.total}건 중 ${r.updated}건 갱신 (${r.elapsedMs}ms)`, 'success');
+    } catch (e) {
+      showToast('❌ ' + (e.message || e), 'error');
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = origText; }
+    }
+  }
+
+  async function recalculateRelatedMenuDeficient(ev) {
+    const btn = ev && ev.target ? ev.target : null;
+    const origText = btn ? btn.textContent : '';
+    const applyAi = !!document.getElementById('relatedMenuRecalcApplyAi')?.checked;
+    if (btn) { btn.disabled = true; btn.textContent = applyAi ? '재계산·AI 보완 중...' : '재계산 중...'; }
+    const token = (window.AuthState && AuthState.token) || '';
+    const repoQ = recalcRepoQueryString(window._relatedMenuRecalcRepoSel, { applyAiAfter: applyAi ? 'true' : 'false' });
+    try {
+      const res = await fetch('/api/recalculate-related-menu-deficient' + repoQ, {
+        method: 'POST',
+        headers: { 'X-Admin-Token': token }
+      });
+      const r = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const msg = r.aiError || r.error || ('재계산 실패 (' + res.status + ')');
+        throw new Error(msg);
+      }
+      const detail = (r.nowDeficient || r.nowOk)
+        ? ` (미흡 전환 ${r.nowDeficient || 0} / 정상 전환 ${r.nowOk || 0})`
+        : '';
+      const scope = r.repoNames && r.repoNames.length ? ` [${r.repoNames.join(', ')}]` : '';
+      if (applyAi) {
+        if ((r.remainingDeficient || 0) === 0) {
+          showToast(`✅ 관련메뉴 재계산·AI 보완 완료${scope} — 미흡 0건 (AI 반영 ${r.aiApplied || 0}건, ${r.elapsedMs}ms)`, 'success');
+        } else {
+          showToast(`⚠️ 재계산·AI 보완 후에도 미흡 ${r.remainingDeficient}건 남음 (AI 반영 ${r.aiApplied || 0}건)${detail}`, 'warn');
+        }
+      } else {
+        showToast(`✅ 관련메뉴 미흡 재계산 완료${scope} — 전체 ${r.total}건 중 ${r.updated}건 갱신${detail} (${r.elapsedMs}ms)`, 'success');
+      }
     } catch (e) {
       showToast('❌ ' + (e.message || e), 'error');
     } finally {

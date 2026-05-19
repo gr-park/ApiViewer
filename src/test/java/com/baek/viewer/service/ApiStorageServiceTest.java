@@ -289,6 +289,7 @@ class ApiStorageServiceTest {
         assertThat(saved).isEqualTo(0);
         // 변경 저장 없음 (insert/update/delete 모두 없음)
         verify(repository, never()).saveAll(anyList());
+        verify(relatedMenuDeficiencyChecker).applyTo(blocked);
     }
 
     @Test

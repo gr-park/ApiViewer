@@ -157,6 +157,7 @@ public class ApiStorageService {
                     if (seedBlockedMetadataFromCommentIfNeeded(existing, a.getFullComment())) {
                         toUpdate.add(existing);
                     }
+                    relatedMenuDeficiencyChecker.applyTo(existing);
                     continue;
                 }
 

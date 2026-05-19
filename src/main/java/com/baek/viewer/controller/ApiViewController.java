@@ -27,6 +27,9 @@ import com.baek.viewer.service.ApiStorageService;
 import com.baek.viewer.service.DescriptionOverrideHelper;
 import com.baek.viewer.service.ApiRecordStatusEventService;
 import com.baek.viewer.service.RecordProposalService;
+import com.baek.viewer.service.PathParamPatternRecalcService;
+import com.baek.viewer.service.RecalcRepoScope;
+import com.baek.viewer.service.RelatedMenuDeficiencyRecalcService;
 import com.baek.viewer.service.WhatapService;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -80,6 +83,8 @@ public class ApiViewController {
     private final com.baek.viewer.service.AuthService authService;
     private final com.baek.viewer.service.TestSuspectMatcher testSuspectMatcher;
     private final com.baek.viewer.service.RelatedMenuDeficiencyChecker relatedMenuDeficiencyChecker;
+    private final com.baek.viewer.service.RelatedMenuDeficiencyRecalcService relatedMenuDeficiencyRecalcService;
+    private final PathParamPatternRecalcService pathParamPatternRecalcService;
     private final com.baek.viewer.service.YamlConfigService yamlConfigService;
     private final ApiRecordStatusEventService statusEventService;
     private final RecordProposalService proposalService;
@@ -96,6 +101,8 @@ public class ApiViewController {
                              com.baek.viewer.service.AuthService authService,
                              com.baek.viewer.service.TestSuspectMatcher testSuspectMatcher,
                              com.baek.viewer.service.RelatedMenuDeficiencyChecker relatedMenuDeficiencyChecker,
+                             com.baek.viewer.service.RelatedMenuDeficiencyRecalcService relatedMenuDeficiencyRecalcService,
+                             PathParamPatternRecalcService pathParamPatternRecalcService,
                              com.baek.viewer.service.YamlConfigService yamlConfigService,
                              ApiRecordStatusEventService statusEventService,
                              RecordProposalService proposalService,
@@ -111,6 +118,8 @@ public class ApiViewController {
         this.authService = authService;
         this.testSuspectMatcher = testSuspectMatcher;
         this.relatedMenuDeficiencyChecker = relatedMenuDeficiencyChecker;
+        this.relatedMenuDeficiencyRecalcService = relatedMenuDeficiencyRecalcService;
+        this.pathParamPatternRecalcService = pathParamPatternRecalcService;
         this.yamlConfigService = yamlConfigService;
         this.statusEventService = statusEventService;
         this.proposalService = proposalService;
@@ -2770,41 +2779,49 @@ public class ApiViewController {
         return ResponseEntity.ok(result);
     }
 
-    /** api_path 기준으로 path_param_pattern 컬럼 일괄 재계산 (정렬·집계 정확도). */
-    @PostMapping("/recalculate-path-param-pattern")
-    public ResponseEntity<?> recalculatePathParamPattern() {
-        long start = System.currentTimeMillis();
-        log.info("[경로변수 패턴 재계산] 시작");
-        int batchSize = 1000;
-        int updated = 0;
-        int total = 0;
-        org.springframework.data.domain.Pageable pageable =
-                org.springframework.data.domain.PageRequest.of(0, batchSize,
-                        org.springframework.data.domain.Sort.by("id"));
-        org.springframework.data.domain.Page<ApiRecord> page;
-        do {
-            page = recordRepository.findAll(pageable);
-            java.util.List<ApiRecord> changed = new java.util.ArrayList<>();
-            for (ApiRecord r : page.getContent()) {
-                String next = PathParamPatternUtil.fromApiPath(r.getApiPath());
-                if (!java.util.Objects.equals(r.getPathParamPattern(), next)) {
-                    r.setPathParamPattern(next);
-                    changed.add(r);
-                }
-            }
-            if (!changed.isEmpty()) {
-                recordRepository.saveAll(changed);
-            }
-            updated += changed.size();
-            total += page.getNumberOfElements();
-            pageable = pageable.next();
-        } while (page.hasNext());
-        long elapsed = System.currentTimeMillis() - start;
-        log.info("[경로변수 패턴 재계산] 완료: 전체={}건, 변경={}건, 소요={}ms", total, updated, elapsed);
+    /** 관련메뉴 미흡 플래그(related_menu_deficient) 일괄 재계산. ?repoNames= · applyAiAfter= */
+    @PostMapping("/recalculate-related-menu-deficient")
+    public ResponseEntity<?> recalculateRelatedMenuDeficient(
+            @RequestParam(required = false) String repoName,
+            @RequestParam(required = false) String repoNames,
+            @RequestParam(defaultValue = "false") boolean applyAiAfter) {
+        java.util.List<String> scope = RecalcRepoScope.parseRepoNames(repoName, repoNames);
+        RelatedMenuDeficiencyRecalcService.RecalcResult r =
+                relatedMenuDeficiencyRecalcService.recalculate(scope, applyAiAfter);
         Map<String, Object> result = new LinkedHashMap<>();
-        result.put("total", total);
-        result.put("updated", updated);
-        result.put("elapsedMs", elapsed);
+        result.put("total", r.total());
+        result.put("updated", r.updated());
+        result.put("nowDeficient", r.nowDeficient());
+        result.put("nowOk", r.nowOk());
+        result.put("elapsedMs", r.elapsedMs());
+        result.put("aiApplied", r.aiApplied());
+        result.put("remainingDeficient", r.remainingDeficient());
+        if (r.repoNames() != null && !r.repoNames().isEmpty()) {
+            result.put("repoNames", r.repoNames());
+        }
+        if (r.aiError() != null) {
+            result.put("aiError", r.aiError());
+        }
+        if (applyAiAfter && r.aiError() != null) {
+            return ResponseEntity.badRequest().body(result);
+        }
+        return ResponseEntity.ok(result);
+    }
+
+    /** api_path 기준으로 path_param_pattern 컬럼 일괄 재계산 (정렬·집계 정확도). ?repoNames= */
+    @PostMapping("/recalculate-path-param-pattern")
+    public ResponseEntity<?> recalculatePathParamPattern(
+            @RequestParam(required = false) String repoName,
+            @RequestParam(required = false) String repoNames) {
+        java.util.List<String> scope = RecalcRepoScope.parseRepoNames(repoName, repoNames);
+        PathParamPatternRecalcService.RecalcResult r = pathParamPatternRecalcService.recalculate(scope);
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("total", r.total());
+        result.put("updated", r.updated());
+        result.put("elapsedMs", r.elapsedMs());
+        if (r.repoNames() != null && !r.repoNames().isEmpty()) {
+            result.put("repoNames", r.repoNames());
+        }
         return ResponseEntity.ok(result);
     }
 

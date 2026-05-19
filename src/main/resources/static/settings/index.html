@@ -433,6 +433,9 @@ function updateAdminBadge(valid) {
         <span class="field-hint">이 값 초과면 관련메뉴 미흡 (기본 29, 예: 30자 이상)</span>
       </label>
     </div>
+    <p style="font-size:11px;color:var(--text-muted);margin:8px 0 0;line-height:1.5;">
+      글자수 기준을 바꾼 뒤에는 <b>설정 → URL분석/검토</b> 탭의 「관련메뉴 미흡 처리 일괄 재계산」으로 기존 DB 플래그를 맞출 수 있습니다.
+    </p>
   </div>
 
   <div class="section-header">
@@ -4599,6 +4602,7 @@ function updateAdminBadge(valid) {
         const urlSec = doc.getElementById('extractSectionUrl');
         const kwSec = doc.getElementById('extractSectionKeywords');
         const pathSec = doc.getElementById('extractSectionPathParams');
+        const relatedMenuSec = doc.getElementById('extractSectionRelatedMenuDeficient');
         const headApm = doc.getElementById('extractHeadingApm');
         const apmSec = doc.getElementById('extractSectionApm');
         const headMock = doc.getElementById('extractHeadingMock');
@@ -4608,6 +4612,7 @@ function updateAdminBadge(valid) {
         if (urlSec) mountUrl.appendChild(document.importNode(urlSec, true));
         if (kwSec) mountUrlExtras.appendChild(document.importNode(kwSec, true));
         if (pathSec) mountUrlExtras.appendChild(document.importNode(pathSec, true));
+        if (relatedMenuSec) mountUrlExtras.appendChild(document.importNode(relatedMenuSec, true));
         if (headApm) mountApm.appendChild(document.importNode(headApm, true));
         if (apmSec) mountApm.appendChild(document.importNode(apmSec, true));
         if (headMock) mountMock.appendChild(document.importNode(headMock, true));

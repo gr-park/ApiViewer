@@ -21,6 +21,10 @@ public interface ApiRecordRepository extends JpaRepository<ApiRecord, Long>,
 
     List<ApiRecord> findByRepositoryName(String repositoryName);
 
+    Page<ApiRecord> findByRepositoryName(String repositoryName, Pageable pageable);
+
+    Page<ApiRecord> findByRepositoryNameIn(Collection<String> repositoryNames, Pageable pageable);
+
     @Query("SELECT r FROM ApiRecord r WHERE r.repositoryName = :repo AND r.relatedMenuDeficient = true "
             + "AND (r.status IS NULL OR r.status <> '삭제') ORDER BY r.id ASC")
     List<ApiRecord> findRelatedMenuDeficientActiveByRepository(@Param("repo") String repo);

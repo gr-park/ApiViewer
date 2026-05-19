@@ -76,6 +76,7 @@ public class WebConfig implements WebMvcConfigurer {
                         "/api/clone/**",            // Bitbucket 클론 관리
                         "/api/recalculate-test-suspect",  // 테스트 의심 키워드 재평가
                         "/api/recalculate-path-param-pattern",  // 경로변수 패턴 컬럼 일괄 갱신
+                        "/api/recalculate-related-menu-deficient",  // 관련메뉴 미흡 플래그 일괄 갱신
                         "/api/ai/**",             // 사내 AI 호출 (프롬프트·토큰 서버측만)
                         "/api/proposals/**"       // URL 제안 저장·승인 (관리자 또는 EDITOR 토큰)
                 )
