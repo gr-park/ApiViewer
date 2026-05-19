@@ -715,7 +715,7 @@ function updateAdminBadge(valid) {
   <div class="card">
     <div class="section-heading section-heading--save" style="margin-bottom:12px;">
       <span class="dot"></span>주기성 배치 스케줄
-      <span style="font-size:11px;font-weight:400;color:var(--text-muted);margin-left:6px;">Git Pull & 분석, APM 호출건수 수집 등 자동 실행 주기를 설정합니다.</span>
+      <span style="font-size:11px;font-weight:400;color:var(--text-muted);margin-left:6px;">Git Pull만(소스 최신화), Git Pull &amp; 분석, APM 호출건수 수집 등 자동 실행 주기를 설정합니다. <b>GIT_PULL</b>은 추출 없이 동기화만 수행합니다.</span>
       <div style="margin-left:auto;display:flex;gap:6px;">
         <button class="btn btn-ghost" style="height:28px;padding:4px 14px;font-size:12px;" onclick="loadSchedules()">새로고침</button>
         <button class="btn btn-ghost" style="height:28px;padding:4px 14px;font-size:12px;" onclick="resetSchedules()">기본값 재생성</button>
@@ -1217,8 +1217,8 @@ function updateAdminBadge(valid) {
         <span class="field-hint">비우면 application.properties의 api.viewer.ai.default-model 사용</span>
       </label>
       <label class="field">ops_digest 트리거 배치
-        <input id="aiOpsDigestJobTypes" type="text" placeholder="GIT_PULL_EXTRACT,APM_COLLECT,DATA_BACKUP">
-        <span class="field-hint">콤마 구분 jobType. 비우면 위 기본과 동일</span>
+        <input id="aiOpsDigestJobTypes" type="text" placeholder="GIT_PULL,GIT_PULL_EXTRACT,APM_COLLECT,DATA_BACKUP">
+        <span class="field-hint">콤마 구분 jobType. 비우면 GIT_PULL·GIT_PULL_EXTRACT·APM_COLLECT·DATA_BACKUP</span>
       </label>
     </div>
   </div>
@@ -3480,6 +3480,7 @@ function updateAdminBadge(valid) {
             ${statusDot}
             <input type="checkbox" id="schChk-${s.id}" ${s.enabled?'checked':''} onclick="event.stopPropagation();toggleSchedule(${s.id},this.checked)" style="width:16px;height:16px;cursor:pointer;">
             <span style="font-size:13px;font-weight:700;">${esc(s.description||s.jobType)}</span>
+            ${s.jobType==='GIT_PULL' ? '<span style="font-size:10px;color:var(--text-muted);font-weight:500;">(Pull만·추출 없음)</span>' : ''}
             ${s.enabled ? '<span style="font-size:10px;color:#16a34a;font-weight:600;">활성</span>' : '<span style="font-size:10px;color:#94a3b8;">비활성</span>'}
           </div>
           <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;">

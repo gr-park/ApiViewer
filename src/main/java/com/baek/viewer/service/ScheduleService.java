@@ -8,6 +8,7 @@ import com.baek.viewer.job.WhatapKeepaliveJob;
 import com.baek.viewer.job.DataBackupJob;
 import com.baek.viewer.job.DbSnapshotJob;
 import com.baek.viewer.job.GitPullExtractJob;
+import com.baek.viewer.job.GitPullJob;
 import com.baek.viewer.job.JiraSyncJob;
 import com.baek.viewer.model.ScheduleConfig;
 import com.baek.viewer.repository.ScheduleConfigRepository;
@@ -60,6 +61,7 @@ public class ScheduleService {
 
     /** 기본 스케줄 설정이 없으면 생성 + 구 APM_DAILY/APM_WEEKLY → APM_COLLECT 통합 */
     private void ensureDefaultConfigs() {
+        createIfAbsent("GIT_PULL", "Git 소스 동기화 (Pull만)", "DAILY", "02:00", null);
         createIfAbsent("GIT_PULL_EXTRACT", "Git Pull & 소스 분석", "DAILY", "03:00", null);
         createIfAbsentEnabled("DB_SNAPSHOT", "DB 파일 사이즈 일별 기록", "DAILY", "00:05", null);
 
@@ -223,6 +225,7 @@ public class ScheduleService {
 
     private Class<? extends Job> resolveJobClass(String jobType) {
         return switch (jobType) {
+            case "GIT_PULL" -> GitPullJob.class;
             case "GIT_PULL_EXTRACT" -> GitPullExtractJob.class;
             case "APM_COLLECT", "APM_DAILY", "APM_WEEKLY" -> ApmCollectJob.class;
             case "DB_SNAPSHOT" -> DbSnapshotJob.class;

@@ -130,11 +130,10 @@ class ScheduleServiceTest {
 
         service.ensureAndApplyDefaults();
 
-        // GIT_PULL_EXTRACT, DB_SNAPSHOT, APM_COLLECT 총 3건 save
         ArgumentCaptor<ScheduleConfig> captor = ArgumentCaptor.forClass(ScheduleConfig.class);
-        verify(repository, atLeast(3)).save(captor.capture());
+        verify(repository, atLeast(4)).save(captor.capture());
         List<String> jobTypes = captor.getAllValues().stream().map(ScheduleConfig::getJobType).toList();
-        assertThat(jobTypes).contains("GIT_PULL_EXTRACT", "DB_SNAPSHOT", "APM_COLLECT");
+        assertThat(jobTypes).contains("GIT_PULL", "GIT_PULL_EXTRACT", "DB_SNAPSHOT", "APM_COLLECT");
     }
 
     @Test
@@ -162,6 +161,34 @@ class ScheduleServiceTest {
 
         verify(scheduler, never()).triggerJob(any(JobKey.class), any());
         verify(scheduler, times(1)).scheduleJob(any(JobDetail.class), any(Trigger.class));
+    }
+
+    @Test
+    @DisplayName("applySchedule — GIT_PULL enabled 면 scheduleJob 등록")
+    void applySchedule_gitPull_enabled() throws Exception {
+        ScheduleConfig cfg = new ScheduleConfig();
+        cfg.setJobType("GIT_PULL");
+        cfg.setEnabled(true);
+        cfg.setScheduleType("DAILY");
+        cfg.setRunTime("02:00");
+
+        when(scheduler.checkExists(any(JobKey.class))).thenReturn(false);
+
+        service.applySchedule(cfg);
+
+        verify(scheduler, times(1)).scheduleJob(any(), any());
+    }
+
+    @Test
+    @DisplayName("triggerJobOnce — GIT_PULL 일회 실행")
+    void triggerJobOnce_gitPull() throws Exception {
+        ScheduleConfig cfg = new ScheduleConfig();
+        cfg.setJobType("GIT_PULL");
+        when(scheduler.checkExists(new JobKey("GIT_PULL"))).thenReturn(true);
+
+        service.triggerJobOnce(cfg);
+
+        verify(scheduler, times(1)).triggerJob(eq(new JobKey("GIT_PULL")), any());
     }
 
     @Test

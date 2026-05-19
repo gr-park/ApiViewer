@@ -10,7 +10,7 @@ public class ScheduleConfig {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    /** 작업 유형: GIT_PULL_EXTRACT, APM_COLLECT */
+    /** 작업 유형: GIT_PULL, GIT_PULL_EXTRACT, APM_COLLECT 등 */
     @Column(name = "job_type", nullable = false, unique = true, length = 50)
     private String jobType;
 

@@ -27,7 +27,7 @@ public class AiOpsDigestService {
     private static final Logger log = LoggerFactory.getLogger(AiOpsDigestService.class);
 
     private static final Set<String> DEFAULT_JOB_TYPES = Set.of(
-            "GIT_PULL_EXTRACT", "APM_COLLECT", "DATA_BACKUP");
+            "GIT_PULL", "GIT_PULL_EXTRACT", "APM_COLLECT", "DATA_BACKUP");
 
     private final GlobalConfigRepository globalRepo;
     private final AiPromptTemplateRepository templateRepo;
