@@ -644,6 +644,19 @@
     }
     .range-check input { margin:0; }
     [data-theme="dark"] .range-check { background:#293548; }
+
+    #locaiSummaryBody.locai-rich-text mark {
+      background: #fef08a;
+      color: inherit;
+      padding: 0 2px;
+      border-radius: 2px;
+    }
+    #locaiSummaryBody.locai-rich-text strong,
+    #locaiSummaryBody.locai-rich-text b { font-weight: 800; }
+    [data-theme="dark"] #locaiSummaryBody.locai-rich-text mark {
+      background: #854d0e;
+      color: #fef9c3;
+    }
   </style>
   <meta name="nav-segment" content="dashboard">
   <meta name="nav-page" content="home">
@@ -663,7 +676,7 @@
     <h2>IT소스 관리포털 대시보드</h2>
     <div style="display:flex;align-items:center;gap:12px;">
       <span class="last-updated" id="lastUpdated"></span>
-      <button class="btn-refresh" onclick="loadStats()">↻ 새로고침</button>
+      <button class="btn-refresh" onclick="refreshDashboard()">↻ 새로고침</button>
     </div>
   </div>
 
@@ -673,6 +686,19 @@
   </div>
 
   <div id="dashContent" style="display:none;">
+
+    <!-- ══════════════════════════════════════════════════════════════
+         LOCAi 추천 메시지 (URL 분석 위)
+         ══════════════════════════════════════════════════════════════ -->
+    <div class="section-header" id="locaiSummaryHeader" style="display:none;">
+      <h3>🤖 LOCAi 추천 메시지</h3>
+      <span class="section-sub">사내 AI가 현재 대시보드 내용을 분석한 요약입니다.</span>
+    </div>
+    <div class="card card--tint-info" id="locaiSummaryCard" style="display:none;border-color:#a5b4fc;">
+      <div id="locaiSummaryBody" class="locai-rich-text" style="font-size:13px;line-height:1.7;color:var(--text-primary,#1e293b);white-space:pre-wrap;min-height:48px;">
+        <span style="color:var(--text-muted);">요약 불러오는 중…</span>
+      </div>
+    </div>
 
     <!-- ══════════════════════════════════════════════════════════════
          섹션 1 : URL 분석
@@ -919,19 +945,6 @@
       </div>
     </div>
 
-    <!-- ══════════════════════════════════════════════════════════════
-         섹션 5 : LOCAi 추천 메시지
-         ══════════════════════════════════════════════════════════════ -->
-    <div class="section-header" id="locaiSummaryHeader" style="display:none;">
-      <h3>🤖 LOCAi 추천 메시지</h3>
-      <span class="section-sub">사내 AI가 현재 대시보드 내용을 분석한 요약입니다.</span>
-    </div>
-    <div class="card" id="locaiSummaryCard" style="display:none;">
-      <div id="locaiSummaryBody" style="font-size:13px;line-height:1.7;color:var(--text-primary,#1e293b);min-height:48px;">
-        <div class="spinner" style="display:inline-block;vertical-align:middle;margin-right:8px;"></div>
-        <span style="color:var(--text-muted);">AI 분석 중...</span>
-      </div>
-    </div>
 
   </div><!-- /dashContent -->
 </div>
@@ -1167,7 +1180,6 @@
         '최종 갱신: ' + new Date().toLocaleTimeString('ko-KR');
       document.getElementById('loadingArea').style.display = 'none';
       document.getElementById('dashContent').style.display = 'block';
-      loadLocaiSummary();
     } catch(e) {
       document.getElementById('loadingArea').innerHTML =
         `<div class="empty" style="color:var(--danger);">통계 불러오기 실패: ${e.message}</div>`;
@@ -1175,27 +1187,60 @@
     }
   }
 
+  const LOCAI_LOG = '[LOCAi]';
+
+  function hideLocaiSummarySection(reason) {
+    const header = document.getElementById('locaiSummaryHeader');
+    const card = document.getElementById('locaiSummaryCard');
+    if (header) header.style.display = 'none';
+    if (card) card.style.display = 'none';
+    if (reason) console.info(LOCAI_LOG, '섹션 숨김:', reason);
+  }
+
+  /** 통계(loadStats)와 독립 — AI_SUMMARY 배치 캐시만 조회 */
   async function loadLocaiSummary() {
-    // AI_SUMMARY 배치가 주기적으로 생성한 캐시 메시지를 조회
+    console.info(LOCAI_LOG, '캐시 조회 시작');
+    hideLocaiSummarySection();
     try {
       const res = await fetch('/api/ai/dashboard-summary/cached');
-      if (!res.ok) return;
+      if (!res.ok) {
+        console.warn(LOCAI_LOG, 'HTTP 실패', res.status, res.statusText);
+        return;
+      }
       const data = await res.json();
+      const summary = data.summary != null ? String(data.summary) : '';
+      const summaryTrim = summary.trim();
+      console.info(LOCAI_LOG, '응답', {
+        configured: data.configured,
+        dashboardEnabled: data.dashboardEnabled,
+        summaryLen: summary.length,
+        generatedAt: data.generatedAt || null
+      });
 
-      if (!data.configured || !data.summary) {
-        // AI 미설정이거나 아직 생성된 메시지 없으면 섹션 숨김
+      if (!data.configured) {
+        hideLocaiSummarySection('configured=false (대시보드 LOCAi 노출 꺼짐)');
+        return;
+      }
+      if (!summaryTrim) {
+        hideLocaiSummarySection('summary 비어 있음 (AI_SUMMARY 배치 미생성)');
         return;
       }
 
-      document.getElementById('locaiSummaryHeader').style.display = '';
-      document.getElementById('locaiSummaryCard').style.display   = '';
-
+      const header = document.getElementById('locaiSummaryHeader');
+      const card = document.getElementById('locaiSummaryCard');
       const bodyEl = document.getElementById('locaiSummaryBody');
-      bodyEl.textContent = data.summary;
+      if (!header || !card || !bodyEl) {
+        console.error(LOCAI_LOG, 'DOM 없음 — locaiSummaryHeader/Card/Body 확인 필요');
+        return;
+      }
 
-      // 생성 시각 표시
+      header.style.display = 'flex';
+      card.style.display = 'block';
+      const rich = window.LocAiRichText && window.LocAiRichText.sanitizeLocAiRichHtml;
+      bodyEl.innerHTML = rich ? rich(summary) : summary.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
       if (data.generatedAt) {
-        const timeEl = document.getElementById('locaiSummaryCard').querySelector('.locai-generated-at');
+        const timeEl = card.querySelector('.locai-generated-at');
         if (timeEl) {
           timeEl.textContent = '생성: ' + data.generatedAt;
         } else {
@@ -1203,12 +1248,19 @@
           stamp.className = 'locai-generated-at';
           stamp.style.cssText = 'font-size:10px;color:var(--text-muted);margin-top:6px;text-align:right;';
           stamp.textContent = '생성: ' + data.generatedAt;
-          document.getElementById('locaiSummaryCard').appendChild(stamp);
+          card.appendChild(stamp);
         }
       }
-    } catch(e) {
-      // 캐시 조회 실패 시 섹션 미노출 (조용히 처리)
+      console.info(LOCAI_LOG, '섹션 표시 완료', { preview: summaryTrim.slice(0, 60) });
+    } catch (e) {
+      console.warn(LOCAI_LOG, '조회 예외', e);
+      hideLocaiSummarySection('예외: ' + (e && e.message ? e.message : e));
     }
+  }
+
+  function refreshDashboard() {
+    loadStats();
+    loadLocaiSummary();
   }
 
   // ── 렌더 (9 leaf v2 — byCategory 우선, byStatus 폴백) ────────
@@ -2490,6 +2542,7 @@
     }
   } catch (e) {}
   loadStats();
+  loadLocaiSummary();
   loadTopApis();
   loadTopRepos();
   // 관리자 페이지 접근 차단 시 안내
@@ -2499,6 +2552,7 @@
   }
 </script>
 
+<script src="/common/locai-rich-text.js"></script>
 <script src="/common/auth.js"></script>
 <script src="/common/assignee-login.js"></script>
 <script src="/common/nav.js"></script>

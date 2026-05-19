@@ -19,6 +19,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.UUID;
 
 @Service
 public class ScheduleService {
@@ -180,6 +181,44 @@ public class ScheduleService {
 
     public List<ScheduleConfig> findAll() {
         return repository.findAll();
+    }
+
+    /**
+     * 스케줄 활성 여부와 관계없이 배치 1회 즉시 실행.
+     * 등록된 Job 이 있으면 {@link Scheduler#triggerJob} 으로 큐에 넣고,
+     * 비활성으로 Quartz 에 없으면 일회성 Job+Trigger 로 실행한다.
+     *
+     * @param config jobType·jobParam 등 실행에 필요한 값만 사용 (DB에 반영하지 않음)
+     */
+    public void triggerJobOnce(ScheduleConfig config) throws SchedulerException {
+        Class<? extends Job> jobClass = resolveJobClass(config.getJobType());
+        if (jobClass == null) {
+            throw new IllegalArgumentException("지원하지 않는 jobType: " + config.getJobType());
+        }
+        JobDataMap data = new JobDataMap();
+        data.put("jobParam", config.getJobParam() != null ? config.getJobParam() : "");
+        data.put("period", "DAILY");
+        data.put("logicalJobType", config.getJobType());
+
+        JobKey registered = new JobKey(config.getJobType());
+        if (scheduler.checkExists(registered)) {
+            scheduler.triggerJob(registered, data);
+            return;
+        }
+
+        String uid = UUID.randomUUID().toString();
+        JobKey manualKey = new JobKey(config.getJobType() + "-manual-" + uid, "MANUAL");
+        JobDetail detail = JobBuilder.newJob(jobClass)
+                .withIdentity(manualKey)
+                .usingJobData(data)
+                .storeDurably(false)
+                .build();
+        Trigger tr = TriggerBuilder.newTrigger()
+                .withIdentity("tr-" + uid, "MANUAL")
+                .forJob(detail)
+                .startNow()
+                .build();
+        scheduler.scheduleJob(detail, tr);
     }
 
     private Class<? extends Job> resolveJobClass(String jobType) {

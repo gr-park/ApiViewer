@@ -34,15 +34,18 @@ public class AiOpsDigestService {
     private final BatchExecutionLogRepository batchLogRepo;
     private final InternalOpenAiCompatibleClient aiClient;
     private final ObjectMapper objectMapper = new ObjectMapper();
+    private final AiPromptTemplateLastRunUpdater lastRunUpdater;
 
     public AiOpsDigestService(GlobalConfigRepository globalRepo,
                               AiPromptTemplateRepository templateRepo,
                               BatchExecutionLogRepository batchLogRepo,
-                              InternalOpenAiCompatibleClient aiClient) {
+                              InternalOpenAiCompatibleClient aiClient,
+                              AiPromptTemplateLastRunUpdater lastRunUpdater) {
         this.globalRepo = globalRepo;
         this.templateRepo = templateRepo;
         this.batchLogRepo = batchLogRepo;
         this.aiClient = aiClient;
+        this.lastRunUpdater = lastRunUpdater;
     }
 
     /**
@@ -107,9 +110,13 @@ public class AiOpsDigestService {
             gc.setAiLastOpsDigest(digest);
             gc.setAiLastOpsDigestAt(LocalDateTime.now());
             globalRepo.save(gc);
+            lastRunUpdater.recordProductionBySlug(AiPromptSlugs.OPS_DIGEST, digest,
+                    "trigger=" + finishedJobType, null);
             log.info("[AI] ops_digest 저장 완료: triggerJob={}, len={}",
                     finishedJobType, digest != null ? digest.length() : 0);
         } catch (Exception e) {
+            lastRunUpdater.recordProductionBySlug(AiPromptSlugs.OPS_DIGEST, null,
+                    "trigger=" + finishedJobType, e.getMessage());
             log.warn("[AI] ops_digest 실패: {}", e.getMessage());
         }
     }

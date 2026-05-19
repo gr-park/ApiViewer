@@ -25,13 +25,16 @@ public class AiPromptTestService {
     private final AiPromptTemplateRepository templateRepo;
     private final GlobalConfigRepository globalRepo;
     private final InternalOpenAiCompatibleClient aiClient;
+    private final AiPromptTemplateLastRunUpdater lastRunUpdater;
 
     public AiPromptTestService(AiPromptTemplateRepository templateRepo,
                                GlobalConfigRepository globalRepo,
-                               InternalOpenAiCompatibleClient aiClient) {
+                               InternalOpenAiCompatibleClient aiClient,
+                               AiPromptTemplateLastRunUpdater lastRunUpdater) {
         this.templateRepo = templateRepo;
         this.globalRepo = globalRepo;
         this.aiClient = aiClient;
+        this.lastRunUpdater = lastRunUpdater;
     }
 
     /**
@@ -57,9 +60,16 @@ public class AiPromptTestService {
 
         log.debug("[AI] 프롬프트 테스트: templateId={}, slug={}, filledLen={}",
                 templateId, tpl.getSlug(), filled.length());
-        String reply = aiClient.chatCompletion(gc, filled);
+        String reply;
+        try {
+            reply = aiClient.chatCompletion(gc, filled);
+        } catch (Exception e) {
+            lastRunUpdater.recordTestRun(templateId, null, e.getMessage());
+            throw e;
+        }
         log.info("[AI] 프롬프트 테스트 완료: templateId={}, slug={}, replyLen={}",
                 templateId, tpl.getSlug(), reply != null ? reply.length() : 0);
+        lastRunUpdater.recordTestRun(templateId, reply != null ? reply : "", null);
 
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("slug", tpl.getSlug());

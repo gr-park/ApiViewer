@@ -197,6 +197,9 @@ public class ApiRecordSnapshotRow {
     @Column(name = "description_override", columnDefinition = "TEXT")
     private String descriptionOverride;
 
+    @Column(name = "description_override_source", length = 20)
+    private String descriptionOverrideSource;
+
     @Column(name = "git_history", columnDefinition = "TEXT")
     private String gitHistory;
 
@@ -251,5 +254,12 @@ public class ApiRecordSnapshotRow {
 
     public LocalDate getLastGitCommitDate() { return lastGitCommitDate; }
     public void setLastGitCommitDate(LocalDate lastGitCommitDate) { this.lastGitCommitDate = lastGitCommitDate; }
+
+    public String getDescriptionOverride() { return descriptionOverride; }
+    public void setDescriptionOverride(String descriptionOverride) { this.descriptionOverride = descriptionOverride; }
+    public String getDescriptionOverrideSource() { return descriptionOverrideSource; }
+    public void setDescriptionOverrideSource(String descriptionOverrideSource) {
+        this.descriptionOverrideSource = descriptionOverrideSource;
+    }
 }
 

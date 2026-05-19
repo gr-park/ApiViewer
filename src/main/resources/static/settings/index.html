@@ -418,6 +418,23 @@ function updateAdminBadge(valid) {
     </div>
   </div>
 
+  <div class="card" style="border:1px solid #86efac;margin-top:12px;">
+    <div class="section-heading section-heading--analyze" style="margin-bottom:12px;">
+      <span class="dot"></span>분석 설정
+      <span style="font-size:11px;font-weight:400;color:var(--text-muted);margin-left:6px;">관련메뉴 미흡 판정 글자수</span>
+    </div>
+    <div class="field-row col2" style="margin-bottom:4px;">
+      <label class="field">관련메뉴 최소 글자수
+        <input id="gRelatedMenuMinLen" type="number" min="1" max="100" placeholder="3" style="width:120px;">
+        <span class="field-hint">이 값 미만이면 관련메뉴 미흡 (기본 3, 예: 1~2자)</span>
+      </label>
+      <label class="field">관련메뉴 최대 글자수
+        <input id="gRelatedMenuMaxLen" type="number" min="1" max="500" placeholder="29" style="width:120px;">
+        <span class="field-hint">이 값 초과면 관련메뉴 미흡 (기본 29, 예: 30자 이상)</span>
+      </label>
+    </div>
+  </div>
+
   <div class="section-header">
     <h3>📡 APM·수집</h3>
     <span class="section-sub">와탭 페이징 상한 등 공통 APM 옵션</span>
@@ -1170,7 +1187,7 @@ function updateAdminBadge(valid) {
       <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;user-select:none;">
         <input type="checkbox" id="aiRelatedMenuDeficientAuto" style="width:15px;height:15px;accent-color:#6366f1;cursor:pointer;">
         URL 분석 시 관련메뉴 미흡 대상 자동 분석(사내 AI)
-        <span style="font-size:11px;color:var(--text-muted);">— 분석 시작 시 AI 연결을 먼저 확인합니다. 실패 시 해당 분석에서는 자동 보완을 건너뜁니다</span>
+        <span style="font-size:11px;color:var(--text-muted);">— 추출 시작 전 확인 후 진행합니다. 시작 시 AI 연결을 먼저 확인하며, 실패 시 해당 분석에서는 자동 보완을 건너뜁니다</span>
       </label>
     </div>
   </div>
@@ -1206,11 +1223,18 @@ function updateAdminBadge(valid) {
     </div>
   </div>
 
+  <div class="card" style="margin-top:14px;border:1px solid #818cf8;">
+    <div class="section-heading section-heading--query"><span class="dot"></span>마지막 LOCAi 요약 (AI_SUMMARY 배치)</div>
+    <div style="font-size:11px;color:var(--text-muted);margin-bottom:8px;line-height:1.55;">배치가 성공하면 대시보드 LOCAi 영역에 쓰이는 요약이 서버에 캐시됩니다. 아래는 그 <b>마지막 저장본</b>입니다.</div>
+    <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">갱신 시각: <span id="aiLocaiSummaryAt">-</span></div>
+    <div id="aiLocaiSummaryText" class="locai-rich-text" style="margin:0;padding:12px;background:#f8fafc;border:1px solid var(--border);border-radius:8px;font-size:12px;line-height:1.55;white-space:pre-wrap;max-height:220px;overflow-y:auto;">(없음)</div>
+  </div>
+
   <div class="card" style="margin-top:14px;border:1px solid #e2e8f0;">
     <div class="section-heading section-heading--query"><span class="dot"></span>최근 배치 요약 (ops_digest)</div>
-    <div style="font-size:11px;color:var(--text-muted);margin-bottom:8px;">선택 배치가 <b>성공</b> 종료된 뒤, 템플릿 <code>ops_digest</code>가 켜져 있으면 비동기로 갱신됩니다. 동일 내용이 <b>대시보드·모든 화면 상단</b> 노란 배너(운영·배치 요약)로도 표시됩니다.</div>
+    <div style="font-size:11px;color:var(--text-muted);margin-bottom:8px;">선택 배치가 <b>성공</b> 종료된 뒤, 템플릿 <code>ops_digest</code>가 켜져 있으면 비동기로 갱신됩니다. 동일 본문이 아래 <code>ops_digest</code> 템플릿 카드의 「실제 사용」에도 남으며, <b>대시보드·모든 화면 상단</b> 노란 배너(운영·배치 요약)로도 표시됩니다.</div>
     <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">갱신 시각: <span id="aiLastDigestAt">-</span></div>
-    <pre id="aiLastDigest" style="margin:0;padding:12px;background:#f8fafc;border:1px solid var(--border);border-radius:8px;font-size:12px;white-space:pre-wrap;max-height:200px;overflow-y:auto;">(없음)</pre>
+    <div id="aiLastDigest" class="locai-rich-text" style="margin:0;padding:12px;background:#f8fafc;border:1px solid var(--border);border-radius:8px;font-size:12px;line-height:1.55;white-space:pre-wrap;max-height:200px;overflow-y:auto;">(없음)</div>
   </div>
 
   <div class="card" style="margin-top:14px;border:1px solid #c4b5fd;">
@@ -1222,7 +1246,8 @@ function updateAdminBadge(valid) {
       <code>source_api_operation</code>, <code>source_description_tag</code>, <code>source_method_javadoc</code>,
       <code>source_controller_javadoc</code>, <code>source_request_property</code>, <code>source_controller_request_property</code>
       · <b>ops_digest</b>: <code>recent_batch_logs_json</code>
-      <br><span style="color:var(--text-muted);">각 템플릿의 <b>테스트 요청</b>은 위 변수에 고정 샘플 값을 넣어 사내 AI를 호출합니다. 편집 중인 본문으로 시험할 수 있습니다(저장 불필요).</span>
+      <br><span style="color:var(--text-muted);">각 템플릿의 <b>테스트 요청</b>은 위 변수에 고정 샘플 값을 넣어 사내 AI를 호출합니다. 편집 중인 본문으로 시험할 수 있습니다(저장 불필요). 각 카드에 <b>마지막 결과</b>(테스트 / URL현황·배치 등 실제 호출)가 표시됩니다.</span>
+      <br><span style="color:var(--text-muted);">LOCAi·ops_digest 요약의 강조는 <code>&lt;strong&gt;</code>, <code>&lt;em&gt;</code>, <code>&lt;mark&gt;</code>, <code>&lt;b&gt;</code>, <code>&lt;i&gt;</code> 만 화면에 반영됩니다.</span>
     </div>
     <div id="aiTemplateList"><div style="color:var(--text-muted);font-size:12px;">탭을 열면 로드됩니다.</div></div>
   </div>
@@ -1518,6 +1543,8 @@ function updateAdminBadge(valid) {
       document.getElementById('gReviewThreshold').value  = g.reviewThreshold  ?? 3;
       document.getElementById('gPageSize').value         = g.pageSize         ?? 200;
       document.getElementById('gPageNavSize').value      = g.pageNavSize      ?? 10;
+      document.getElementById('gRelatedMenuMinLen').value = g.relatedMenuDeficientMinLen ?? 3;
+      document.getElementById('gRelatedMenuMaxLen').value = g.relatedMenuDeficientMaxLen ?? 29;
       // whatapMockEnabled/jenniferMockEnabled 제거됨 (WHATAP/JENNIFER는 항상 실제 API)
       document.getElementById('gApmLogLevel').value     = g.apmLogLevel || 'INFO';
       document.getElementById('gWhatapPtotal').value   = g.whatapPtotal ?? 100;
@@ -1629,6 +1656,16 @@ function updateAdminBadge(valid) {
       cur.reviewThreshold = parseInt(document.getElementById('gReviewThreshold').value) || 3;
       cur.pageSize = parseInt(document.getElementById('gPageSize').value) || 200;
       cur.pageNavSize = parseInt(document.getElementById('gPageNavSize').value) || 10;
+      let rmMin = parseInt(document.getElementById('gRelatedMenuMinLen').value, 10);
+      let rmMax = parseInt(document.getElementById('gRelatedMenuMaxLen').value, 10);
+      if (!Number.isFinite(rmMin) || rmMin < 1) rmMin = 3;
+      if (!Number.isFinite(rmMax) || rmMax < 1) rmMax = 29;
+      if (rmMax < rmMin) {
+        showToast('관련메뉴 최대 글자수는 최소 글자수 이상이어야 합니다.', 'error');
+        return;
+      }
+      cur.relatedMenuDeficientMinLen = rmMin;
+      cur.relatedMenuDeficientMaxLen = rmMax;
       cur.apmLogLevel = document.getElementById('gApmLogLevel').value;
       cur.logTailLines = parseInt(document.getElementById('gLogTailLines').value) || 1000;
       cur.whatapPtotal = parseInt(document.getElementById('gWhatapPtotal').value) || 100;
@@ -2844,10 +2881,15 @@ function updateAdminBadge(valid) {
       document.getElementById('aiModel').value = g.aiOpenApiModel || '';
       document.getElementById('aiOpsDigestJobTypes').value = g.aiOpsDigestJobTypes || '';
       document.getElementById('aiToken').value = '';
-      document.getElementById('aiLastDigest').textContent = g.aiLastOpsDigest || '(없음)';
+      setLocaiRichPreview('aiLastDigest', g.aiLastOpsDigest);
       const at = g.aiLastOpsDigestAt;
       document.getElementById('aiLastDigestAt').textContent = at
         ? String(at).replace('T', ' ').substring(0, 19) : '-';
+      const locAt = g.aiDashboardSummaryAt;
+      const locEl = document.getElementById('aiLocaiSummaryAt');
+      const locPre = document.getElementById('aiLocaiSummaryText');
+      if (locEl) locEl.textContent = locAt ? String(locAt).replace('T', ' ').substring(0, 19) : '-';
+      if (locPre) setLocaiRichPreview('aiLocaiSummaryText', g.aiDashboardSummary);
       // 기능 제어 플래그 (null/undefined이면 Y로 간주)
       document.getElementById('aiDashboardEnabled').checked = g.aiDashboardEnabled !== 'N';
       document.getElementById('aiApiEnabled').checked = g.aiApiEnabled !== 'N';
@@ -2945,6 +2987,11 @@ function updateAdminBadge(valid) {
         lb.appendChild(ta);
         card.appendChild(lb);
 
+        const lastRun = document.createElement('div');
+        lastRun.className = 'ai-tpl-last-run';
+        lastRun.innerHTML = buildAiTplLastRunInner(t);
+        card.appendChild(lastRun);
+
         const btnRow = document.createElement('div');
         btnRow.style.cssText = 'display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap;';
 
@@ -3026,7 +3073,52 @@ function updateAdminBadge(valid) {
     } catch (e) {
       if (out) out.textContent = '요청 오류';
       showToast('테스트 요청 오류', 'error');
+    } finally {
+      refreshAiTplLastRun(id).catch(() => {});
     }
+  }
+
+  async function refreshAiTplLastRun(id) {
+    const card = document.querySelector('[data-ai-tpl-id="' + id + '"]');
+    if (!card) return;
+    const lr = card.querySelector('.ai-tpl-last-run');
+    if (!lr) return;
+    const res = await adminFetch('/api/config/ai/templates/' + id);
+    if (!res.ok) return;
+    const t = await res.json();
+    lr.innerHTML = buildAiTplLastRunInner(t);
+  }
+
+  function buildAiTplLastRunInner(t) {
+    function dt(x) {
+      if (!x) return '-';
+      return String(x).replace('T', ' ').substring(0, 19);
+    }
+    const testErr = t.lastTestError ? esc(t.lastTestError) : '';
+    const testReply = t.lastTestReply ? esc(t.lastTestReply) : '';
+    const prodErr = t.lastProdError ? esc(t.lastProdError) : '';
+    const prodReply = t.lastProdReply ? esc(t.lastProdReply) : '';
+    const prodMeta = t.lastProdMeta ? esc(t.lastProdMeta) : '';
+    return (
+      '<div style="border-top:1px solid var(--border);padding-top:10px;margin-top:8px;">' +
+      '<div style="font-weight:700;font-size:12px;color:var(--text);margin-bottom:8px;">마지막 결과</div>' +
+      '<div style="font-size:11px;color:#64748b;margin-bottom:4px;"><b>테스트 요청</b> · ' + dt(t.lastTestAt) +
+      (t.lastTestError ? ' <span style="color:#dc2626;font-weight:600;">실패</span>' : '') + '</div>' +
+      (t.lastTestError
+        ? '<pre style="margin:6px 0 10px;padding:10px;background:#fef2f2;color:#991b1b;border-radius:8px;font-size:11px;white-space:pre-wrap;max-height:200px;overflow-y:auto;">' + testErr + '</pre>'
+        : (t.lastTestReply
+            ? '<pre style="margin:6px 0 10px;padding:10px;background:#0f172a;color:#e2e8f0;border-radius:8px;font-size:11px;white-space:pre-wrap;max-height:200px;overflow-y:auto;">' + testReply + '</pre>'
+            : '<div style="font-size:11px;color:var(--text-muted);margin-bottom:10px;">(기록 없음)</div>')) +
+      '<div style="font-size:11px;color:#64748b;margin-bottom:4px;"><b>실제 사용</b> · ' + dt(t.lastProdAt) +
+      (prodMeta ? ' <span style="color:#94a3b8;">(' + prodMeta + ')</span>' : '') +
+      (t.lastProdError ? ' <span style="color:#dc2626;font-weight:600;">실패</span>' : '') + '</div>' +
+      (t.lastProdError
+        ? '<pre style="margin:6px 0 0;padding:10px;background:#fef2f2;color:#991b1b;border-radius:8px;font-size:11px;white-space:pre-wrap;max-height:200px;overflow-y:auto;">' + prodErr + '</pre>'
+        : (t.lastProdReply
+            ? '<pre style="margin:6px 0 0;padding:10px;background:#0f172a;color:#e2e8f0;border-radius:8px;font-size:11px;white-space:pre-wrap;max-height:220px;overflow-y:auto;">' + prodReply + '</pre>'
+            : '<div style="font-size:11px;color:var(--text-muted);">(기록 없음)</div>')) +
+      '</div>'
+    );
   }
 
   // ── 헬퍼 ──────────────────────────────────────────────────
@@ -3200,6 +3292,18 @@ function updateAdminBadge(valid) {
       if (!res.ok) throw new Error(d.error || '리셋 실패');
       showToast('비밀번호가 변경되었습니다.', 'success');
     } catch (e) { showToast(e.message || '리셋 실패', 'error'); }
+  }
+
+  function setLocaiRichPreview(elementId, raw) {
+    const el = document.getElementById(elementId);
+    if (!el) return;
+    const text = raw != null ? String(raw).trim() : '';
+    if (!text) {
+      el.textContent = '(없음)';
+      return;
+    }
+    const rich = window.LocAiRichText && window.LocAiRichText.sanitizeLocAiRichHtml;
+    el.innerHTML = rich ? rich(text) : text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   }
 
   function showToast(msg, type='success') {
@@ -3412,6 +3516,7 @@ function updateAdminBadge(valid) {
               </select>
             </label>` : ''}
             ${schBlockUrlMonitorParamRow(s)}
+            <button type="button" class="btn btn-ghost" style="height:30px;padding:4px 14px;font-size:12px;border:1px solid var(--border);" onclick="runScheduleNow(${s.id}, this)">수동수행</button>
             <button class="btn btn-blue" style="height:30px;padding:4px 14px;font-size:12px;" onclick="saveSchedule(${s.id})">저장</button>
           </div>
           <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);font-size:11px;color:var(--text-muted);">
@@ -3468,7 +3573,7 @@ function updateAdminBadge(valid) {
     } catch(e) { showToast('변경 실패','error'); }
   }
 
-  async function saveSchedule(id) {
+  function collectSchedulePatchBody(id) {
     let jobParam = null;
     const schParamEl = document.getElementById('schParam-'+id);
     if (schParamEl) jobParam = schParamEl.value || null;
@@ -3478,7 +3583,7 @@ function updateAdminBadge(valid) {
       const t = document.getElementById('schBmT-'+id)?.checked ? '1' : '0';
       jobParam = 'R' + bmR.value + 'B' + b + 'T' + t;
     }
-    const body = {
+    return {
       enabled: document.getElementById('schChk-'+id).checked,
       scheduleType: document.getElementById('schType-'+id).value,
       runTime: schTimeValue(id),
@@ -3487,6 +3592,29 @@ function updateAdminBadge(valid) {
       cronExpression: document.getElementById('schCron-'+id)?.value || null,
       jobParam
     };
+  }
+
+  async function runScheduleNow(id, btn) {
+    if (!confirm('이 배치를 지금 바로 1회 실행합니다. 화면에 입력된 조건(저장 여부와 무관)으로 실행 큐에 넣습니다. 계속할까요?')) return;
+    const body = collectSchedulePatchBody(id);
+    const sx = window.scrollX, sy = window.scrollY;
+    const orig = btn ? btn.textContent : '';
+    if (btn) { btn.disabled = true; btn.textContent = '큐에 넣는 중...'; }
+    try {
+      const res = await adminFetch(`/api/schedule/${id}/run`, { method: 'POST', body: JSON.stringify(body) });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || ('HTTP ' + res.status));
+      showToast(data.message || '실행 큐에 넣었습니다.', 'success');
+    } catch (e) {
+      showToast(e.message || '수동 실행 실패', 'error');
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = orig; }
+      window.scrollTo(sx, sy);
+    }
+  }
+
+  async function saveSchedule(id) {
+    const body = collectSchedulePatchBody(id);
     // 스크롤 위치 보존을 위해 현재 스크롤 좌표 저장
     const sx = window.scrollX, sy = window.scrollY;
     try {
@@ -4705,6 +4833,7 @@ function updateAdminBadge(valid) {
 </script>
 
 <!-- 공통 네비게이션 (대영역·하위메뉴·관리자 인증 인디케이터) -->
+<script src="/common/locai-rich-text.js"></script>
 <script src="/common/auth.js"></script>
 <script src="/common/assignee-login.js"></script>
 <script src="/common/nav.js"></script>

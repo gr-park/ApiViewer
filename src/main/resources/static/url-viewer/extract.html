@@ -1817,8 +1817,36 @@
   /** 사내 AI 관련메뉴 자동분석 연결 실패 토스트 — 레포당 1회 */
   let relatedMenuAiProbeToastShown = false;
 
+  async function confirmRelatedMenuAiExtract() {
+    try {
+      const res = await fetch('/api/config/global');
+      if (!res.ok) return true;
+      const g = await res.json();
+      if (g.aiRelatedMenuDeficientAuto !== 'Y') return true;
+      const minLen = g.relatedMenuDeficientMinLen ?? 3;
+      const maxLen = g.relatedMenuDeficientMaxLen ?? 29;
+      return await customConfirm(
+        '관련메뉴 미흡 자동분석(사내 AI)이 켜져 있습니다.\n\n' +
+        'URL 분석이 끝난 뒤, 관련메뉴가 미흡으로 판정된 건(글자수 ' + minLen + '자 미만 또는 ' + maxLen + '자 초과 등)에 대해\n' +
+        '사내 AI로 관련메뉴를 보완합니다. 분석 시작 시 AI 연결을 먼저 확인합니다.\n\n' +
+        '분석을 계속 진행하시겠습니까?'
+      );
+    } catch (e) {
+      return true;
+    }
+  }
+
   async function doExtract() {
     const selected = normalizeExtractSelection(getRepoConfigValues());
+
+    if (!selected.length) {
+      showToast('레포지토리를 선택하세요.', 'error');
+      return;
+    }
+
+    if (!await confirmRelatedMenuAiExtract()) {
+      return;
+    }
 
     // 초기화
     lastLogCount = 0;
@@ -1827,11 +1855,6 @@
     showLogCard(true);
     clearLogs();
     hideResult();
-
-    if (!selected.length) {
-      showToast('레포지토리를 선택하세요.', 'error');
-      return;
-    }
     
     // 선택 레포만 순차 추출 (MultiSelect "전체" 버튼으로 모두 선택 가능)
     const picked = selected
@@ -1973,7 +1996,21 @@
     document.getElementById('progPct').textContent = displayPct + '%';
     document.getElementById('progFile').textContent = p.currentFile || '';
 
-    if (p.total > 0) {
+    const phase = (p.phase || '').trim();
+    if (phase === 'ai_fill' || (p.aiFillTotal != null && p.aiFillTotal > 0)) {
+      const aiDone = p.aiFillProcessed || 0;
+      const aiTot = p.aiFillTotal || 0;
+      const inner = aiTot > 0
+        ? `사내 AI 관련메뉴 보완 ${aiDone} / ${aiTot}`
+        : (p.currentFile || '사내 AI 관련메뉴 보완 중...');
+      const outer = overallProgress ? ` (레포 ${overallProgress.completed+1}/${overallProgress.total})` : '';
+      document.getElementById('progCount').textContent = inner + outer;
+      document.getElementById('progStatus').textContent = p.extracting ? '사내 AI 보완 중...' : '완료';
+    } else if (phase === 'save' || phase === 'apm' || phase === 'snapshot') {
+      const labels = { save: 'DB 저장', apm: '호출건수 집계', snapshot: '스냅샷 생성' };
+      document.getElementById('progCount').textContent = p.currentFile || labels[phase] || '후처리 중...';
+      document.getElementById('progStatus').textContent = p.extracting ? '후처리 중...' : '완료';
+    } else if (p.total > 0) {
       const inner = `${p.processed} / ${p.total} 파일`;
       const outer = overallProgress ? ` (레포 ${overallProgress.completed+1}/${overallProgress.total} · 현재 ${currentPct}%)` : '';
       document.getElementById('progCount').textContent = inner + outer;
@@ -3431,6 +3468,7 @@
   })();
 </script>
 
+<script src="/common/locai-rich-text.js"></script>
 <script src="/common/auth.js"></script>
 <script src="/common/assignee-login.js"></script>
 <script src="/common/nav.js"></script>

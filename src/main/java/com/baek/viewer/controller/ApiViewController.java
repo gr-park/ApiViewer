@@ -24,6 +24,7 @@ import com.baek.viewer.repository.GlobalConfigRepository;
 import com.baek.viewer.repository.RepoConfigRepository;
 import com.baek.viewer.service.ApiExtractorService;
 import com.baek.viewer.service.ApiStorageService;
+import com.baek.viewer.service.DescriptionOverrideHelper;
 import com.baek.viewer.service.ApiRecordStatusEventService;
 import com.baek.viewer.service.RecordProposalService;
 import com.baek.viewer.service.WhatapService;
@@ -1227,6 +1228,7 @@ public class ApiViewController {
         m.put("teamOverride",       r.getTeamOverride());
         m.put("managerOverride",    r.getManagerOverride());
         m.put("descriptionOverride", r.getDescriptionOverride());
+        m.put("descriptionOverrideSource", r.getDescriptionOverrideSource());
         m.put("gitHistory",         r.getGitHistory());
         m.put("lastGitCommitDate",  r.getLastGitCommitDate() != null ? r.getLastGitCommitDate().toString() : null);
         // Excel 내보내기 / 상세 표시에 필요한 TEXT 필드 (페이지 단위라 부담 작음)
@@ -1791,9 +1793,7 @@ public class ApiViewController {
                 anyChanged = true;
             }
             if (body.containsKey("descriptionOverride")) {
-                Object v = body.get("descriptionOverride");
-                String s = v == null ? null : v.toString().trim();
-                r.setDescriptionOverride(s == null || s.isEmpty() ? null : s);
+                DescriptionOverrideHelper.applyFromPatchBody(r, body);
                 anyChanged = true;
             }
             if (body.containsKey("reviewResult"))    { r.setReviewResult(body.get("reviewResult") != null ? body.get("reviewResult").toString() : null); anyChanged = true; reviewChanged = true; }

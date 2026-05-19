@@ -13,7 +13,7 @@
  * ═══════════════════════════════════════════════════════════════ */
 (function () {
   // UI 버전 표기 (캐시/반영 여부 확인용) — 변경 시 이 값만 갱신
-  const APP_UI_VERSION = 'ver14.1.53';
+  const APP_UI_VERSION = 'ver14.1.62';
 
   const SEGMENTS = [
     {
@@ -265,6 +265,21 @@
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
   }
 
+  function locaiRichHtml(raw) {
+    const fn = window.LocAiRichText && window.LocAiRichText.sanitizeLocAiRichHtml;
+    return fn ? fn(raw) : esc(raw);
+  }
+
+  function locaiRichPreview(raw, maxLen) {
+    const api = window.LocAiRichText;
+    if (api && typeof api.richPreviewSnippet === 'function') {
+      return api.richPreviewSnippet(raw, maxLen).html;
+    }
+    const body = String(raw == null ? '' : raw).trim();
+    const n = Math.max(40, Number(maxLen) || 200);
+    return body.length > n ? esc(body.slice(0, n)) + '…' : esc(body);
+  }
+
   function renderOpsDigestBanner(text, atIso) {
     const slot = document.getElementById('ops-digest-slot');
     if (!slot || !text || !String(text).trim()) {
@@ -272,7 +287,8 @@
       return;
     }
     const body = String(text).trim();
-    const preview = body.length > 200 ? body.slice(0, 200) + '…' : body;
+    const previewHtml = locaiRichPreview(body, 200);
+    const bodyHtml = locaiRichHtml(body);
     const timeStr = fmtDigestTime(atIso);
     slot.innerHTML = `
       <div class="sync-warning-banner ops-digest-banner" role="status">
@@ -281,13 +297,13 @@
           <div class="sync-warning-text ops-digest-text-wrap">
             <div><strong>운영·배치 요약</strong> <span class="ops-digest-badge">AI</span></div>
             ${timeStr ? `<div class="ops-digest-time">갱신: ${esc(timeStr)}</div>` : ''}
-            <div class="ops-digest-preview">${esc(preview)}</div>
+            <div class="ops-digest-preview locai-rich-text">${previewHtml}</div>
           </div>
           <button type="button" class="sync-warning-toggle" aria-expanded="false">자세히 ▼</button>
           <button type="button" class="sync-warning-close" aria-label="이 요약 닫기 (다음 갱신 시 다시 표시)" title="닫기">✕</button>
         </div>
         <div class="sync-warning-details ops-digest-details" hidden>
-          <pre class="ops-digest-pre">${esc(body)}</pre>
+          <div class="ops-digest-body locai-rich-text">${bodyHtml}</div>
         </div>
       </div>`;
 
@@ -1443,13 +1459,30 @@
     });
   }
 
+  function withLocAiRichText(done) {
+    if (window.LocAiRichText) {
+      done();
+      return;
+    }
+    const src = '/common/locai-rich-text.js';
+    const existing = document.querySelector('script[src="' + src + '"]');
+    if (existing) {
+      existing.addEventListener('load', done, { once: true });
+      return;
+    }
+    const s = document.createElement('script');
+    s.src = src;
+    s.onload = done;
+    document.head.appendChild(s);
+  }
+
   // ─── 부팅 ───────────────────────────────────────────────
   function boot() {
     ensureNavOverlays();
     render();
     applyAdminVisibility();
     loadSyncWarnings();
-    loadOpsDigestBanner();
+    withLocAiRichText(loadOpsDigestBanner);
     loadApmMatchBanner();
     loadExtractIssueBanner();
     window.addEventListener('auth:change', () => {

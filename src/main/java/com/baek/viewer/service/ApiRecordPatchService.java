@@ -115,9 +115,7 @@ public class ApiRecordPatchService {
             anyChanged = true;
         }
         if (work.containsKey("descriptionOverride")) {
-            Object v = work.get("descriptionOverride");
-            String s = v == null ? null : v.toString().trim();
-            r.setDescriptionOverride(s == null || s.isEmpty() ? null : s);
+            DescriptionOverrideHelper.applyFromPatchBody(r, work);
             anyChanged = true;
         }
         if (work.containsKey("reviewResult")) {

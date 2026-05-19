@@ -53,6 +53,8 @@ public class ReposYamlConfig {
         private String aiOpenApiChatPath;
         private String aiOpenApiModel;
         private String aiOpsDigestJobTypes;
+        private Integer relatedMenuDeficientMinLen;
+        private Integer relatedMenuDeficientMaxLen;
 
         public PeriodGlobal getPeriod() { return period; }
         public void setPeriod(PeriodGlobal period) { this.period = period; }
@@ -124,6 +126,10 @@ public class ReposYamlConfig {
         public void setAiOpenApiModel(String v) { this.aiOpenApiModel = v; }
         public String getAiOpsDigestJobTypes() { return aiOpsDigestJobTypes; }
         public void setAiOpsDigestJobTypes(String v) { this.aiOpsDigestJobTypes = v; }
+        public Integer getRelatedMenuDeficientMinLen() { return relatedMenuDeficientMinLen; }
+        public void setRelatedMenuDeficientMinLen(Integer v) { this.relatedMenuDeficientMinLen = v; }
+        public Integer getRelatedMenuDeficientMaxLen() { return relatedMenuDeficientMaxLen; }
+        public void setRelatedMenuDeficientMaxLen(Integer v) { this.relatedMenuDeficientMaxLen = v; }
     }
 
     public static class PeriodGlobal {

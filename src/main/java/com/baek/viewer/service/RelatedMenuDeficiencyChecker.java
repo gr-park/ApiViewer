@@ -1,6 +1,9 @@
 package com.baek.viewer.service;
 
 import com.baek.viewer.model.ApiRecord;
+import com.baek.viewer.model.GlobalConfig;
+import com.baek.viewer.repository.GlobalConfigRepository;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -33,10 +36,31 @@ public class RelatedMenuDeficiencyChecker {
     );
 
     private final Pattern javaKeyword;
+    private final GlobalConfigRepository globalConfigRepo;
+    private final int propertyDefaultMinLen;
+    private final int propertyDefaultMaxLen;
 
-    public RelatedMenuDeficiencyChecker() {
+    public RelatedMenuDeficiencyChecker(
+            GlobalConfigRepository globalConfigRepo,
+            @Value("${api.viewer.related-menu.deficient-min-len:3}") int propertyDefaultMinLen,
+            @Value("${api.viewer.related-menu.deficient-max-len:29}") int propertyDefaultMaxLen) {
+        this.globalConfigRepo = globalConfigRepo;
+        this.propertyDefaultMinLen = sanitizeDefaultLen(propertyDefaultMinLen, 3);
+        this.propertyDefaultMaxLen = sanitizeDefaultLen(propertyDefaultMaxLen, 29);
         String alt = String.join("|", JAVA_KEYWORD_PARTS);
         this.javaKeyword = Pattern.compile("\\b(?:" + alt + ")\\b", Pattern.CASE_INSENSITIVE);
+    }
+
+    public int resolveMinLen() {
+        return globalConfigRepo.findById(1L)
+                .map(GlobalConfig::getRelatedMenuDeficientMinLen)
+                .orElse(propertyDefaultMinLen);
+    }
+
+    public int resolveMaxLen() {
+        return globalConfigRepo.findById(1L)
+                .map(GlobalConfig::getRelatedMenuDeficientMaxLen)
+                .orElse(propertyDefaultMaxLen);
     }
 
     /** viewer allDesc 와 동일한 표시용 문자열 */
@@ -60,8 +84,13 @@ public class RelatedMenuDeficiencyChecker {
     public boolean isDeficientText(String effective) {
         if (effective == null) effective = "";
         int len = effective.length();
-        if (len <= 2) return true;
-        if (len >= 30) return true;
+        int minLen = resolveMinLen();
+        int maxLen = resolveMaxLen();
+        if (maxLen < minLen) {
+            maxLen = minLen;
+        }
+        if (len < minLen) return true;
+        if (len > maxLen) return true;
         if (HTML_TAG.matcher(effective).find()) return true;
         if (ANNOTATION_OTHER_THAN_DEPRECATED.matcher(effective).find()) return true;
         if (javaKeyword.matcher(effective).find()) return true;
@@ -76,5 +105,9 @@ public class RelatedMenuDeficiencyChecker {
     public void applyTo(ApiRecord r) {
         if (r == null) return;
         r.setRelatedMenuDeficient(isDeficient(r));
+    }
+
+    private static int sanitizeDefaultLen(int value, int fallback) {
+        return value >= 1 ? value : fallback;
     }
 }

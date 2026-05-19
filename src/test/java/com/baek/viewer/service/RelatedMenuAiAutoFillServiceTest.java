@@ -8,8 +8,9 @@ class RelatedMenuAiAutoFillServiceTest {
 
     @Test
     void sanitizeMenuOverride_trimsAndCapsLength() {
-        assertThat(RelatedMenuAiAutoFillService.sanitizeMenuOverride("  a\nb\tc  ")).isEqualTo("a b c");
+        assertThat(RelatedMenuAiAutoFillService.sanitizeMenuOverride("  a\nb\tc  ", 29)).isEqualTo("a b c");
         String longIn = "x".repeat(50);
-        assertThat(RelatedMenuAiAutoFillService.sanitizeMenuOverride(longIn).length()).isLessThanOrEqualTo(29);
+        assertThat(RelatedMenuAiAutoFillService.sanitizeMenuOverride(longIn, 29).length()).isLessThanOrEqualTo(29);
+        assertThat(RelatedMenuAiAutoFillService.sanitizeMenuOverride(longIn, 15).length()).isLessThanOrEqualTo(15);
     }
 }

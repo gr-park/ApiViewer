@@ -262,22 +262,35 @@
 .ops-digest-details {
   padding: 8px 24px 12px 52px !important;
 }
-.ops-digest-pre {
+.ops-digest-body {
   margin: 0;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, monospace;
   font-size: 12px;
-  line-height: 1.5;
+  line-height: 1.55;
   white-space: pre-wrap;
   word-break: break-word;
   color: #78350f;
 }
+.locai-rich-text mark {
+  background: #fef08a;
+  color: inherit;
+  padding: 0 2px;
+  border-radius: 2px;
+}
+.locai-rich-text strong,
+.locai-rich-text b { font-weight: 800; }
+.locai-rich-text em,
+.locai-rich-text i { font-style: italic; }
 [data-theme="dark"] .ops-digest-banner .ops-digest-badge {
   background: #78350f;
   color: #fef3c7;
 }
 [data-theme="dark"] .ops-digest-banner .ops-digest-time { color: #fcd34d; }
 [data-theme="dark"] .ops-digest-banner .ops-digest-preview { color: #fde68a; }
-[data-theme="dark"] .ops-digest-pre { color: #fde68a; }
+[data-theme="dark"] .ops-digest-body { color: #fde68a; }
+[data-theme="dark"] .locai-rich-text mark {
+  background: #854d0e;
+  color: #fef9c3;
+}
 
 /* ── 반응형 ──────────────────────────────────────────────── */
 @media (max-width: 1200px) {

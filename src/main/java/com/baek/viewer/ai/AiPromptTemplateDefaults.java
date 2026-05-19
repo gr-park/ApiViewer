@@ -38,6 +38,8 @@ public final class AiPromptTemplateDefaults {
         t.setTitle("분석·배치 현황 요약 알림");
         t.setBody("""
                 다음은 URL Viewer 시스템의 최근 배치 실행 이력(JSON)입니다. 관리자가 오늘 확인하면 좋은 포인트를 한국어로 3줄 이내 불릿(- 로 시작)으로 요약하세요. 과장 없이 사실만 반영하세요.
+                중요한 실패·지연·이상 징후는 HTML 인라인 태그로 강조하세요.
+                허용 태그만 사용: <strong>, <em>, <mark>, <b>, <i> (속성·다른 태그·스크립트 금지).
 
                 {{recent_batch_logs_json}}
                 """);

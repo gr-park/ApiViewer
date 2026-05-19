@@ -3911,7 +3911,7 @@
         <td class="col-compact-hide" style="font-size:12px;min-width:160px;"><div style="display:flex;align-items:center;gap:4px;"><button class="copy-btn" onclick="copyText(event,'${esc(a.methodName)}')" title="메소드명 복사"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>${esc(a.methodName)}</div></td>
         <!-- 기타 메타 -->
         <td class="git-col col-compact-hide">${git1 ? `<span class="git-col-d">${esc(git1.date)}</span> <span class="git-col-a">${esc(git1.author)}</span><br><span class="git-col-m" title="${esc(git1.message)}">${esc(git1.message)}</span>` : '<span style="color:#cbd5e1;">-</span>'}</td>
-        <td class="desc-col ${noDesc?'':'memo-editable'}" onclick="${noDesc?'':('editField(this,'+a.id+',&apos;descriptionOverride&apos;)')}" title="${noDesc?esc(allDesc(a)):'클릭하여 수정 — 자동 파싱값 대신 사용'}" style="font-size:11px;">${esc(allDesc(a))}${a.descriptionOverride ? '<span style=\"display:inline-block;margin-left:4px;padding:0 4px;background:#dbeafe;border:1px solid #93c5fd;border-radius:3px;color:#1e40af;font-size:9px;font-weight:600;vertical-align:middle;\" title=\"사용자 수정됨\">수정</span>' : ''}</td>
+        <td class="desc-col ${noDesc?'':'memo-editable'}" onclick="${noDesc?'':('editField(this,'+a.id+',&apos;descriptionOverride&apos;)')}" title="${noDesc?esc(allDesc(a)):'클릭하여 수정 — 자동 파싱값 대신 사용'}" style="font-size:11px;">${esc(allDesc(a))}${relatedMenuOverrideBadge(a)}</td>
         <td style="text-align:center;font-size:11px;white-space:nowrap;" title="${a.relatedMenuDeficient ? '관련메뉴 품질 점검 대상' : ''}">${a.relatedMenuDeficient ? '<span style="display:inline-block;padding:2px 7px;background:#fef3c7;border:1px solid #fcd34d;border-radius:4px;color:#b45309;font-size:10px;font-weight:700;">대상</span>' : '<span style="color:#cbd5e1;">-</span>'}</td>
         <td style="text-align:right;font-size:12px;">${callCountCell(a, 'total')}</td>
         <td style="text-align:right;font-size:12px;">${callCountCell(a, 'month')}</td>
@@ -4365,6 +4365,9 @@
     const val = input.value.trim();
     try {
       const body = {}; body[field] = val || null;
+      if (field === 'descriptionOverride') {
+        body.descriptionOverrideSource = val ? 'MANUAL' : null;
+      }
       if (isAdmin()) {
         const res = await adminFetch(`/api/db/record/${id}`, { method:'PATCH', body: JSON.stringify(body) });
         const data = await res.json();
@@ -4376,10 +4379,9 @@
         const entry = allApis.find(a => a.id === id);
         if (entry) entry[field] = val || null;
         if (field === 'descriptionOverride' && entry) {
+          entry.descriptionOverrideSource = val ? 'MANUAL' : null;
           const shown = allDesc(entry);
-          td.innerHTML = esc(shown) + (entry.descriptionOverride
-            ? '<span style="display:inline-block;margin-left:4px;padding:0 4px;background:#dbeafe;border:1px solid #93c5fd;border-radius:3px;color:#1e40af;font-size:9px;font-weight:600;vertical-align:middle;" title="사용자 수정됨">수정</span>'
-            : '');
+          td.innerHTML = esc(shown) + relatedMenuOverrideBadge(entry);
           td.title = '클릭하여 수정 — 자동 파싱값 대신 사용';
         } else {
           td.textContent = val;
@@ -4390,10 +4392,9 @@
         if (field === 'descriptionOverride') {
           const entry = allApis.find(a => a.id === id);
           if (entry) {
+            entry.descriptionOverrideSource = val ? 'MANUAL' : null;
             const shown = allDesc(entry);
-            td.innerHTML = esc(shown) + (entry.descriptionOverride
-              ? '<span style="display:inline-block;margin-left:4px;padding:0 4px;background:#dbeafe;border:1px solid #93c5fd;border-radius:3px;color:#1e40af;font-size:9px;font-weight:600;vertical-align:middle;" title="사용자 수정됨">수정</span>'
-              : '');
+            td.innerHTML = esc(shown) + relatedMenuOverrideBadge(entry);
             td.title = '클릭하여 수정 — 자동 파싱값 대신 사용';
           }
         } else {
@@ -5447,6 +5448,19 @@
     return '';
   }
 
+  /** 관련메뉴 오버라이드 출처 배지 (수정 / AI자동보완 / AI수동수정) */
+  function relatedMenuOverrideBadge(a) {
+    if (!a || !a.descriptionOverride) return '';
+    const src = String(a.descriptionOverrideSource || '').toUpperCase();
+    if (src === 'AI_AUTO') {
+      return '<span style="display:inline-block;margin-left:4px;padding:0 4px;background:#ede9fe;border:1px solid #c4b5fd;border-radius:3px;color:#5b21b6;font-size:9px;font-weight:600;vertical-align:middle;" title="URL 분석 시 사내 AI가 자동 보완">AI자동보완</span>';
+    }
+    if (src === 'AI_MANUAL') {
+      return '<span style="display:inline-block;margin-left:4px;padding:0 4px;background:#fae8ff;border:1px solid #e9d5ff;border-radius:3px;color:#86198f;font-size:9px;font-weight:600;vertical-align:middle;" title="상세 화면에서 사내 AI 제안을 저장">AI수동수정</span>';
+    }
+    return '<span style="display:inline-block;margin-left:4px;padding:0 4px;background:#dbeafe;border:1px solid #93c5fd;border-radius:3px;color:#1e40af;font-size:9px;font-weight:600;vertical-align:middle;" title="사용자 수정됨">수정</span>';
+  }
+
   function fmtDt(s) {
     if (!s) return '-';
     return s.replace('T',' ').substring(0,16);
@@ -5972,7 +5986,7 @@
       <div class="detail-section">
         <div class="detail-section-title">📝 관련메뉴 / 참고용 주석</div>
         <div class="detail-grid">
-          <div class="detail-label">관련메뉴 <span style="color:var(--primary);font-size:10px;">✎</span></div>
+          <div class="detail-label">관련메뉴 <span style="color:var(--primary);font-size:10px;">✎</span> ${relatedMenuOverrideBadge(r)}</div>
           <div class="detail-value" style="white-space:normal;">
             <textarea id="df-descriptionOverride" class="df-textarea" rows="3" style="width:100%;box-sizing:border-box;" ${dis} oninput="showDetailSave()" placeholder="비우면 아래 자동 표시값과 동일하게 목록에 노출됩니다. 입력하면 해당 문구로 반영됩니다.">${esc(r.descriptionOverride || '')}</textarea>
             <div style="font-size:10px;color:var(--text-muted);margin-top:6px;line-height:1.45;">자동 표시값(비웠을 때): <span style="color:var(--text);font-weight:600;">${allDesc(r) ? esc(allDesc(r)) : '—'}</span></div>
@@ -6109,6 +6123,8 @@
         </div>
       </div>
     `;
+    window._detailDescOverrideOriginal = (r.descriptionOverride || '').trim();
+    window._detailDescOverrideAiManual = false;
   }
 
   // ── adminFetch 헬퍼 (X-Admin-Token 자동 포함) ─────────────
@@ -6155,8 +6171,9 @@
         return;
       }
       input.value = s;
+      window._detailDescOverrideAiManual = true;
       showDetailSave();
-      if (statusEl) statusEl.textContent = '반영됨 — 상단 [저장]으로 적용하세요';
+      if (statusEl) statusEl.textContent = '반영됨 — 상단 [저장]으로 적용하세요 (저장 시 AI수동수정 배지)';
       showToast('입력란에 반영했습니다. 상단 [저장]을 눌러 적용하세요.', 'success');
     } catch (e) {
       if (e && e.message === 'readonly') return;
@@ -6298,7 +6315,17 @@
     const memo = g('memo');           if (memo !== undefined) body.memo           = memo || null;
     const team = g('teamOverride');   if (team !== undefined) body.teamOverride   = team || null;
     const mgr = g('managerOverride'); if (mgr !== undefined) body.managerOverride = mgr || null;
-    const desc = g('descriptionOverride'); if (desc !== undefined) body.descriptionOverride = desc || null;
+    const descEl = document.getElementById('df-descriptionOverride');
+    const descNew = descEl ? descEl.value.trim() : '';
+    const descOriginal = (typeof window._detailDescOverrideOriginal === 'string') ? window._detailDescOverrideOriginal.trim() : '';
+    const descChanged = !!descEl && descNew !== descOriginal;
+    if (descEl) body.descriptionOverride = descNew || null;
+    if (window._detailDescOverrideAiManual) {
+      body.descriptionOverrideSource = 'AI_MANUAL';
+      window._detailDescOverrideAiManual = false;
+    } else if (descChanged) {
+      body.descriptionOverrideSource = descNew ? 'MANUAL' : null;
+    }
     const dSched = g('deployScheduledDate'); if (dSched !== undefined) body.deployScheduledDate = dSched || null;
     const dCsr = g('deployCsr');             if (dCsr !== undefined) body.deployCsr = dCsr || null;
     const dMgr = g('deployManager');         if (dMgr !== undefined) body.deployManager = dMgr || null;

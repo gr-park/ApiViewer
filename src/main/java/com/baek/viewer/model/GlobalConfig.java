@@ -252,6 +252,14 @@ public class GlobalConfig {
     @Column(name = "ai_related_menu_deficient_auto", length = 5)
     private String aiRelatedMenuDeficientAuto = "N";
 
+    /** 관련메뉴 미흡 — effective 글자수가 이 값 미만이면 미흡 (기본 3) */
+    @Column(name = "related_menu_deficient_min_len")
+    private Integer relatedMenuDeficientMinLen;
+
+    /** 관련메뉴 미흡 — effective 글자수가 이 값 초과이면 미흡 (기본 29) */
+    @Column(name = "related_menu_deficient_max_len")
+    private Integer relatedMenuDeficientMaxLen;
+
     public Long getId() { return id; }
     public String getStartDate() { return startDate; }
     public void setStartDate(String startDate) { this.startDate = startDate; }
@@ -403,6 +411,16 @@ public class GlobalConfig {
     public boolean isAiRelatedMenuDeficientAutoEnabled() {
         return "Y".equalsIgnoreCase(getAiRelatedMenuDeficientAuto());
     }
+
+    public Integer getRelatedMenuDeficientMinLen() {
+        return relatedMenuDeficientMinLen != null ? relatedMenuDeficientMinLen : 3;
+    }
+    public void setRelatedMenuDeficientMinLen(Integer v) { this.relatedMenuDeficientMinLen = v; }
+
+    public Integer getRelatedMenuDeficientMaxLen() {
+        return relatedMenuDeficientMaxLen != null ? relatedMenuDeficientMaxLen : 29;
+    }
+    public void setRelatedMenuDeficientMaxLen(Integer v) { this.relatedMenuDeficientMaxLen = v; }
 
     /** 채팅 API 전체 URL */
     public String resolveAiChatEndpoint() {

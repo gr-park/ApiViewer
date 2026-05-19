@@ -9,14 +9,18 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.quartz.JobDetail;
 import org.quartz.JobKey;
 import org.quartz.Scheduler;
+import org.quartz.Trigger;
 
 import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 /**
@@ -131,5 +135,44 @@ class ScheduleServiceTest {
         verify(repository, atLeast(3)).save(captor.capture());
         List<String> jobTypes = captor.getAllValues().stream().map(ScheduleConfig::getJobType).toList();
         assertThat(jobTypes).contains("GIT_PULL_EXTRACT", "DB_SNAPSHOT", "APM_COLLECT");
+    }
+
+    @Test
+    @DisplayName("triggerJobOnce — Quartz 에 Job 이 있으면 triggerJob 만 호출")
+    void triggerJobOnce_registered_triggers() throws Exception {
+        ScheduleConfig cfg = new ScheduleConfig();
+        cfg.setJobType("GIT_PULL_EXTRACT");
+        cfg.setJobParam("7");
+        when(scheduler.checkExists(new JobKey("GIT_PULL_EXTRACT"))).thenReturn(true);
+
+        service.triggerJobOnce(cfg);
+
+        verify(scheduler, times(1)).triggerJob(eq(new JobKey("GIT_PULL_EXTRACT")), any());
+        verify(scheduler, never()).scheduleJob(any(JobDetail.class), any(Trigger.class));
+    }
+
+    @Test
+    @DisplayName("triggerJobOnce — Quartz 에 Job 이 없으면 일회성 scheduleJob")
+    void triggerJobOnce_notRegistered_schedulesEphemeral() throws Exception {
+        ScheduleConfig cfg = new ScheduleConfig();
+        cfg.setJobType("GIT_PULL_EXTRACT");
+        when(scheduler.checkExists(new JobKey("GIT_PULL_EXTRACT"))).thenReturn(false);
+
+        service.triggerJobOnce(cfg);
+
+        verify(scheduler, never()).triggerJob(any(JobKey.class), any());
+        verify(scheduler, times(1)).scheduleJob(any(JobDetail.class), any(Trigger.class));
+    }
+
+    @Test
+    @DisplayName("triggerJobOnce — 알 수 없는 jobType 이면 IllegalArgumentException")
+    void triggerJobOnce_unknown_throws() {
+        ScheduleConfig cfg = new ScheduleConfig();
+        cfg.setJobType("UNKNOWN_X");
+
+        assertThatThrownBy(() -> service.triggerJobOnce(cfg))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("지원하지 않는 jobType");
+        verifyNoInteractions(scheduler);
     }
 }

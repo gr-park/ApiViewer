@@ -284,6 +284,13 @@ public class ApiRecord {
     @Column(name = "description_override", columnDefinition = "TEXT")
     private String descriptionOverride;
 
+    /**
+     * 관련메뉴 오버라이드 출처 — {@link com.baek.viewer.util.DescriptionOverrideSources}.
+     * null 이면 기존 수동 수정(화면 「수정」 배지).
+     */
+    @Column(name = "description_override_source", length = 20)
+    private String descriptionOverrideSource;
+
     @Column(name = "git_history", columnDefinition = "TEXT")
     private String gitHistory; // JSON: [{"date":"...","author":"...","message":"..."},...]
 
@@ -447,6 +454,10 @@ public class ApiRecord {
     public void setManagerOverridden(boolean managerOverridden) { this.managerOverridden = managerOverridden; }
     public String getDescriptionOverride() { return descriptionOverride; }
     public void setDescriptionOverride(String descriptionOverride) { this.descriptionOverride = descriptionOverride; }
+    public String getDescriptionOverrideSource() { return descriptionOverrideSource; }
+    public void setDescriptionOverrideSource(String descriptionOverrideSource) {
+        this.descriptionOverrideSource = descriptionOverrideSource;
+    }
     public String getBlockTarget() { return blockTarget; }
     public void setBlockTarget(String blockTarget) { this.blockTarget = blockTarget; }
     public String getBlockCriteria() { return blockCriteria; }

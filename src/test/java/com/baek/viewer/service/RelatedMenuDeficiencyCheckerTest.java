@@ -1,14 +1,37 @@
 package com.baek.viewer.service;
 
 import com.baek.viewer.model.ApiRecord;
+import com.baek.viewer.model.GlobalConfig;
+import com.baek.viewer.repository.GlobalConfigRepository;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.when;
 
+@ExtendWith(MockitoExtension.class)
 class RelatedMenuDeficiencyCheckerTest {
 
-    private final RelatedMenuDeficiencyChecker checker = new RelatedMenuDeficiencyChecker();
+    @Mock
+    private GlobalConfigRepository globalConfigRepo;
+
+    private RelatedMenuDeficiencyChecker checker;
+
+    @BeforeEach
+    void setUp() {
+        GlobalConfig gc = new GlobalConfig();
+        gc.setRelatedMenuDeficientMinLen(3);
+        gc.setRelatedMenuDeficientMaxLen(29);
+        lenient().when(globalConfigRepo.findById(1L)).thenReturn(Optional.of(gc));
+        checker = new RelatedMenuDeficiencyChecker(globalConfigRepo, 3, 29);
+    }
 
     @Test
     @DisplayName("빈 effective 텍스트 → 미흡")
@@ -34,6 +57,19 @@ class RelatedMenuDeficiencyCheckerTest {
     @DisplayName("30자 이상 → 미흡")
     void longText_isDeficient() {
         assertThat(checker.isDeficientText("가".repeat(30))).isTrue();
+    }
+
+    @Test
+    @DisplayName("설정 변경 시 길이 기준 반영")
+    void customLengthThresholds() {
+        GlobalConfig gc = new GlobalConfig();
+        gc.setRelatedMenuDeficientMinLen(5);
+        gc.setRelatedMenuDeficientMaxLen(20);
+        when(globalConfigRepo.findById(1L)).thenReturn(Optional.of(gc));
+
+        assertThat(checker.isDeficientText("1234")).isTrue();
+        assertThat(checker.isDeficientText("12345")).isFalse();
+        assertThat(checker.isDeficientText("가".repeat(21))).isTrue();
     }
 
     @Test

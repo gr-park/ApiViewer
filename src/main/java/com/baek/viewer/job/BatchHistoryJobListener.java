@@ -66,7 +66,10 @@ public class BatchHistoryJobListener implements JobListener {
     @Override
     public void jobWasExecuted(JobExecutionContext context, JobExecutionException jobException) {
         try {
-            String jobType = context.getJobDetail().getKey().getName();
+            String jobType = context.getMergedJobDataMap().getString("logicalJobType");
+            if (jobType == null || jobType.isBlank()) {
+                jobType = context.getJobDetail().getKey().getName();
+            }
             LocalDateTime start = (LocalDateTime) context.get(KEY_START);
             if (start == null) start = LocalDateTime.now();
             LocalDateTime end = LocalDateTime.now();

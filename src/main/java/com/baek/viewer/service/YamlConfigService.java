@@ -167,6 +167,8 @@ public class YamlConfigService {
             if (g.getAiOpenApiChatPath() != null) gc.setAiOpenApiChatPath(g.getAiOpenApiChatPath());
             if (g.getAiOpenApiModel() != null) gc.setAiOpenApiModel(g.getAiOpenApiModel());
             if (g.getAiOpsDigestJobTypes() != null) gc.setAiOpsDigestJobTypes(g.getAiOpsDigestJobTypes());
+            if (g.getRelatedMenuDeficientMinLen() != null) gc.setRelatedMenuDeficientMinLen(g.getRelatedMenuDeficientMinLen());
+            if (g.getRelatedMenuDeficientMaxLen() != null) gc.setRelatedMenuDeficientMaxLen(g.getRelatedMenuDeficientMaxLen());
 
             // teams, 와탭/제니퍼 공통 프로필 JSON 저장
             try {

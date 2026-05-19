@@ -65,7 +65,12 @@ public class AiSummaryService {
             return null;
         }
 
-        String prompt = content + "\n\n위 내용 기준으로 현황과 주요 이슈를 5줄 이내로 요약해.";
+        String prompt = content + """
+
+                위 내용 기준으로 현황과 주요 이슈를 5줄 이내로 요약하세요.
+                중요한 수치·상태·조치 포인트는 HTML 인라인 태그로 강조하세요.
+                허용 태그만 사용: <strong>, <em>, <mark>, <b>, <i> (속성·다른 태그·스크립트 금지).
+                """;
         try {
             String summary = aiClient.chatCompletion(gc, prompt);
             if (summary == null) summary = "";
@@ -87,12 +92,15 @@ public class AiSummaryService {
         boolean dashboardEnabled = gc != null && gc.isAiDashboardEnabled();
         boolean configured = dashboardEnabled;
         String summary = gc != null ? gc.getAiDashboardSummary() : null;
+        String summaryOut = summary != null ? summary : "";
         String generatedAt = (gc != null && gc.getAiDashboardSummaryAt() != null)
                 ? gc.getAiDashboardSummaryAt().format(DT_FMT) : null;
+        log.debug("[LOCAi] cached 조회 configured={} summaryLen={} generatedAt={}",
+                configured, summaryOut.length(), generatedAt);
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("configured", configured);
         result.put("dashboardEnabled", dashboardEnabled);
-        result.put("summary", summary != null ? summary : "");
+        result.put("summary", summaryOut);
         result.put("generatedAt", generatedAt);
         return result;
     }

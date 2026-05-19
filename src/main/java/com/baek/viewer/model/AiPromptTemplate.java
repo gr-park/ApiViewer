@@ -26,6 +26,29 @@ public class AiPromptTemplate {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
+    /** 설정 화면 「테스트 요청」 마지막 응답 본문 */
+    @Column(name = "last_test_reply", columnDefinition = "TEXT")
+    private String lastTestReply;
+
+    @Column(name = "last_test_at")
+    private LocalDateTime lastTestAt;
+
+    @Column(name = "last_test_error", length = 500)
+    private String lastTestError;
+
+    /** URL현황·배치 등 실제 호출 마지막 응답 본문 */
+    @Column(name = "last_prod_reply", columnDefinition = "TEXT")
+    private String lastProdReply;
+
+    @Column(name = "last_prod_at")
+    private LocalDateTime lastProdAt;
+
+    @Column(name = "last_prod_meta", length = 500)
+    private String lastProdMeta;
+
+    @Column(name = "last_prod_error", length = 500)
+    private String lastProdError;
+
     @PrePersist
     @PreUpdate
     void touch() {
@@ -44,4 +67,19 @@ public class AiPromptTemplate {
     public void setEnabled(boolean enabled) { this.enabled = enabled; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }
     public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
+
+    public String getLastTestReply() { return lastTestReply; }
+    public void setLastTestReply(String lastTestReply) { this.lastTestReply = lastTestReply; }
+    public LocalDateTime getLastTestAt() { return lastTestAt; }
+    public void setLastTestAt(LocalDateTime lastTestAt) { this.lastTestAt = lastTestAt; }
+    public String getLastTestError() { return lastTestError; }
+    public void setLastTestError(String lastTestError) { this.lastTestError = lastTestError; }
+    public String getLastProdReply() { return lastProdReply; }
+    public void setLastProdReply(String lastProdReply) { this.lastProdReply = lastProdReply; }
+    public LocalDateTime getLastProdAt() { return lastProdAt; }
+    public void setLastProdAt(LocalDateTime lastProdAt) { this.lastProdAt = lastProdAt; }
+    public String getLastProdMeta() { return lastProdMeta; }
+    public void setLastProdMeta(String lastProdMeta) { this.lastProdMeta = lastProdMeta; }
+    public String getLastProdError() { return lastProdError; }
+    public void setLastProdError(String lastProdError) { this.lastProdError = lastProdError; }
 }

@@ -26,17 +26,20 @@ public class AiMenuInferenceService {
     private final ApiRecordRepository recordRepo;
     private final RepoConfigRepository repoConfigRepo;
     private final InternalOpenAiCompatibleClient aiClient;
+    private final AiPromptTemplateLastRunUpdater lastRunUpdater;
 
     public AiMenuInferenceService(GlobalConfigRepository globalRepo,
                                   AiPromptTemplateRepository templateRepo,
                                   ApiRecordRepository recordRepo,
                                   RepoConfigRepository repoConfigRepo,
-                                  InternalOpenAiCompatibleClient aiClient) {
+                                  InternalOpenAiCompatibleClient aiClient,
+                                  AiPromptTemplateLastRunUpdater lastRunUpdater) {
         this.globalRepo = globalRepo;
         this.templateRepo = templateRepo;
         this.recordRepo = recordRepo;
         this.repoConfigRepo = repoConfigRepo;
         this.aiClient = aiClient;
+        this.lastRunUpdater = lastRunUpdater;
     }
 
     /**
@@ -77,9 +80,18 @@ public class AiMenuInferenceService {
 
         String prompt = PromptPlaceholderUtil.apply(tpl.getBody(), vars);
         log.debug("[AI] menu_inference 요청: recordId={}", recordId);
-        String out = aiClient.chatCompletion(gc, prompt);
-        log.info("[AI] menu_inference 완료: recordId={}, outLen={}", recordId, out != null ? out.length() : 0);
-        return out != null ? out : "";
+        try {
+            String out = aiClient.chatCompletion(gc, prompt);
+            String normalized = out != null ? out : "";
+            lastRunUpdater.recordProductionBySlug(AiPromptSlugs.MENU_INFERENCE, normalized,
+                    "recordId=" + recordId, null);
+            log.info("[AI] menu_inference 완료: recordId={}, outLen={}", recordId, normalized.length());
+            return normalized;
+        } catch (Exception e) {
+            lastRunUpdater.recordProductionBySlug(AiPromptSlugs.MENU_INFERENCE, null,
+                    "recordId=" + recordId, e.getMessage());
+            throw e;
+        }
     }
 
     private static String nz(String s) {

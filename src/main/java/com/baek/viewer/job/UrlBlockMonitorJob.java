@@ -44,7 +44,7 @@ public class UrlBlockMonitorJob implements Job {
 
     @Override
     public void execute(JobExecutionContext context) {
-        String rawParam = context.getJobDetail().getJobDataMap().getString("jobParam");
+        String rawParam = context.getMergedJobDataMap().getString("jobParam");
         Parsed p = parseParam(rawParam);
         long t0 = System.currentTimeMillis();
 

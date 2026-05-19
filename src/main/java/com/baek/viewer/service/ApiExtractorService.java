@@ -179,7 +179,16 @@ public class ApiExtractorService {
     private volatile int statusRevertedCount = 0; // 차단대상→사용(차단대상 제외) 전환 건수
     private volatile boolean relatedMenuAiProbeFailed = false;
     private volatile String relatedMenuAiProbeMessage = null;
+    /** 진행 단계: git, scan, save, ai_fill, apm, snapshot */
+    private volatile String progressPhase = "";
+    private volatile int aiFillTotal = 0;
+    private volatile int aiFillProcessed = 0;
     private final List<String> extractLogs = Collections.synchronizedList(new ArrayList<>());
+
+    private static final int PCT_FILES_MAX = 78;
+    private static final int PCT_SAVE = 80;
+    private static final int PCT_AI_START = 82;
+    private static final int PCT_AI_END = 96;
 
     private void addLog(String level, String msg) {
         String ts = java.time.LocalTime.now().toString().substring(0, 8);
@@ -201,7 +210,10 @@ public class ApiExtractorService {
         p.put("total", totalFiles);
         p.put("processed", processedFiles);
         p.put("currentFile", currentFile);
-        p.put("percent", totalFiles > 0 ? (processedFiles * 100 / totalFiles) : 0);
+        p.put("percent", computeProgressPercent());
+        p.put("phase", progressPhase != null ? progressPhase : "");
+        p.put("aiFillTotal", aiFillTotal);
+        p.put("aiFillProcessed", aiFillProcessed);
         p.put("error", lastError);
         p.put("savedCount", savedCount);
         p.put("statusRevertedCount", statusRevertedCount);
@@ -209,6 +221,32 @@ public class ApiExtractorService {
         p.put("relatedMenuAiProbeMessage", relatedMenuAiProbeMessage);
         p.put("logs", new ArrayList<>(extractLogs));
         return p;
+    }
+
+    private int computeProgressPercent() {
+        if (totalFiles > 0 && processedFiles < totalFiles) {
+            return Math.min(PCT_FILES_MAX, processedFiles * PCT_FILES_MAX / totalFiles);
+        }
+        if ("ai_fill".equals(progressPhase)) {
+            if (aiFillTotal <= 0) {
+                return PCT_AI_END;
+            }
+            int span = PCT_AI_END - PCT_AI_START;
+            return PCT_AI_START + Math.min(span, aiFillProcessed * span / aiFillTotal);
+        }
+        if ("save".equals(progressPhase)) {
+            return PCT_SAVE;
+        }
+        if ("apm".equals(progressPhase)) {
+            return 98;
+        }
+        if ("snapshot".equals(progressPhase)) {
+            return 99;
+        }
+        if (totalFiles > 0 && processedFiles >= totalFiles) {
+            return PCT_FILES_MAX;
+        }
+        return extracting ? 0 : 100;
     }
 
     /**
@@ -228,6 +266,7 @@ public class ApiExtractorService {
         if (!gc.isAiRelatedMenuDeficientAutoEnabled()) {
             return;
         }
+        currentFile = "사내 AI 연결 확인 중...";
         if (!gc.isAiApiEnabled()) {
             relatedMenuAiProbeFailed = true;
             relatedMenuAiProbeMessage = "AI API 요청이 비활성화되어 있습니다.";
@@ -267,6 +306,9 @@ public class ApiExtractorService {
         // 프론트는 `currentFile` 로 Git 동기화 단계임을 표시하고, 분석 단계에서 processedFiles/totalFiles 로 실제 진행률을 채움.
         totalFiles = 0;
         processedFiles = 0;
+        progressPhase = "";
+        aiFillTotal = 0;
+        aiFillProcessed = 0;
         currentFile = "Git 동기화 준비 중...";
         lastError = null;
         new Thread(() -> extract(req)).start();
@@ -424,6 +466,8 @@ public class ApiExtractorService {
                 addLog("INFO", "DB 저장 건너뜀 — 요청에 따라 미리보기만 수행 (APM·스냅샷 생략)");
             } else {
             try {
+                progressPhase = "save";
+                currentFile = "DB 저장 중...";
                 addLog("INFO", "DB 저장 중 — 레포: " + repoNameOut.trim());
                 int[] saveResult = storageService.save(repoNameOut.trim(), cachedApis, req.getClientIp());
                 savedCount = saveResult[0];
@@ -436,11 +480,31 @@ public class ApiExtractorService {
                     GlobalConfig gcFill = globalConfigRepository.findById(1L).orElse(new GlobalConfig());
                     if (gcFill.isAiRelatedMenuDeficientAutoEnabled()) {
                         try {
+                            progressPhase = "ai_fill";
+                            aiFillTotal = 0;
+                            aiFillProcessed = 0;
+                            currentFile = "사내 AI 관련메뉴 보완 준비 중...";
                             addLog("INFO", "관련메뉴 미흡 건 사내 AI 자동 보완 시작…");
-                            int filled = relatedMenuAiAutoFillService.fillDeficientInRepository(repoNameOut.trim());
-                            addLog("OK", "관련메뉴 미흡 AI 자동 보완 완료 — " + filled + "건 반영");
+                            int filled = relatedMenuAiAutoFillService.fillDeficientInRepository(
+                                    repoNameOut.trim(),
+                                    (processed, total) -> {
+                                        aiFillTotal = total;
+                                        aiFillProcessed = processed;
+                                        if (total <= 0) {
+                                            currentFile = "사내 AI 관련메뉴 보완 (대상 없음)";
+                                        } else if (processed <= 0) {
+                                            currentFile = "사내 AI 관련메뉴 보완 (0/" + total + ")";
+                                        } else {
+                                            currentFile = "사내 AI 관련메뉴 보완 (" + processed + "/" + total + ")";
+                                        }
+                                    });
+                            addLog("OK", "관련메뉴 미흡 AI 자동 보완 완료 — " + filled + "/" + aiFillTotal + "건 반영");
                         } catch (Exception aiEx) {
                             addLog("WARN", "관련메뉴 미흡 AI 자동 보완 중 오류: " + aiEx.getMessage());
+                        } finally {
+                            progressPhase = "";
+                            aiFillTotal = 0;
+                            aiFillProcessed = 0;
                         }
                     }
                 }
@@ -451,6 +515,8 @@ public class ApiExtractorService {
 
             // APM 호출건수 자동 집계 (데이터가 있을 때만)
             try {
+                progressPhase = "apm";
+                currentFile = "호출건수 집계 중...";
                 var result = apmCollectionService.aggregateToRecords(repoNameOut.trim());
                 int aggUpdated = ((Number) result.get("updated")).intValue();
                 if (aggUpdated > 0) {
@@ -470,6 +536,8 @@ public class ApiExtractorService {
             } else {
                 try {
                     if (savedCount >= 0) {
+                        progressPhase = "snapshot";
+                        currentFile = "스냅샷 생성 중...";
                         String ts = java.time.LocalDateTime.now().toString().replace("T", " ");
                         if (ts.length() > 19) ts = ts.substring(0, 19);
                         String label = "Extract " + repoNameOut.trim() + " @ " + ts;

@@ -45,7 +45,12 @@ public class AiInvokeController {
      */
     @GetMapping("/dashboard-summary/cached")
     public ResponseEntity<?> dashboardSummaryCached() {
-        return ResponseEntity.ok(aiSummaryService.getCached());
+        Map<String, Object> body = aiSummaryService.getCached();
+        Object summary = body.get("summary");
+        int len = summary != null ? summary.toString().length() : 0;
+        log.info("[LOCAi] GET /dashboard-summary/cached configured={} summaryLen={}",
+                body.get("configured"), len);
+        return ResponseEntity.ok(body);
     }
 
     /**

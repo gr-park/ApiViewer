@@ -12,6 +12,10 @@ global:
   pageSize: 200            # 페이지당 표시 건수 (URL호출현황 등)
   pageNavSize: 10          # 페이지 네비게이션 표시 개수
 
+  # 관련메뉴 미흡 판정 글자수 (effective 텍스트 기준: min 미만·max 초과)
+  relatedMenuDeficientMinLen: 3
+  relatedMenuDeficientMaxLen: 29
+
   # 팀 목록 (현업검토/담당자 입력 시 자동완성용 — 오타/공백 방지)
   teams:
     - IT카드개발팀

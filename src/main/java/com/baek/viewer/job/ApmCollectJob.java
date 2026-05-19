@@ -28,7 +28,7 @@ public class ApmCollectJob implements Job {
 
     @Override
     public void execute(JobExecutionContext context) {
-        String jobParam = context.getJobDetail().getJobDataMap().getString("jobParam"); // 수집 범위 일수
+        String jobParam = context.getMergedJobDataMap().getString("jobParam"); // 수집 범위 일수 (수동 트리거 시 병합 맵)
         int days = parseDays(jobParam, 7);
         long startMs = System.currentTimeMillis();
 

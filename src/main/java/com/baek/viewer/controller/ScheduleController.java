@@ -7,6 +7,8 @@ import com.baek.viewer.repository.BatchExecutionLogRepository;
 import com.baek.viewer.repository.ScheduleConfigRepository;
 import com.baek.viewer.service.BatchDashboardHistoryService;
 import com.baek.viewer.service.ScheduleService;
+import org.quartz.SchedulerException;
+import org.springframework.beans.BeanUtils;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -58,15 +60,46 @@ public class ScheduleController {
         ScheduleConfig existing = scheduleRepo.findById(id).orElse(null);
         if (existing == null) return ResponseEntity.notFound().build();
 
-        if (body.containsKey("enabled"))       existing.setEnabled(Boolean.TRUE.equals(body.get("enabled")));
-        if (body.containsKey("scheduleType"))  existing.setScheduleType((String) body.get("scheduleType"));
-        if (body.containsKey("runTime"))       existing.setRunTime((String) body.get("runTime"));
-        if (body.containsKey("runDay"))        existing.setRunDay((String) body.get("runDay"));
-        if (body.containsKey("intervalHours")) existing.setIntervalHours(body.get("intervalHours") != null ? ((Number) body.get("intervalHours")).intValue() : null);
-        if (body.containsKey("cronExpression"))existing.setCronExpression((String) body.get("cronExpression"));
-        if (body.containsKey("jobParam"))      existing.setJobParam(body.get("jobParam") != null ? body.get("jobParam").toString() : null);
+        applySchedulePatch(existing, body);
 
         return ResponseEntity.ok(scheduleService.saveAndApply(existing));
+    }
+
+    /**
+     * 배치 1회 즉시 실행(스케줄 저장과 별개). 요청 본문은 PUT과 동일하게 주면 화면의 값으로 실행되며,
+     * 본문 생략 시 DB에 저장된 설정으로 실행한다.
+     */
+    @PostMapping("/{id}/run")
+    public ResponseEntity<?> runNow(@PathVariable Long id, @RequestBody(required = false) Map<String, Object> body) {
+        ScheduleConfig stored = scheduleRepo.findById(id).orElse(null);
+        if (stored == null) return ResponseEntity.notFound().build();
+        ScheduleConfig snap = snapshotForRun(stored, body);
+        try {
+            scheduleService.triggerJobOnce(snap);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        } catch (SchedulerException e) {
+            return ResponseEntity.internalServerError().body(Map.of("error", e.getMessage()));
+        }
+        return ResponseEntity.ok(Map.of("ok", true, "message", "배치를 실행 큐에 넣었습니다. 완료까지 시간이 걸릴 수 있습니다."));
+    }
+
+    private static ScheduleConfig snapshotForRun(ScheduleConfig stored, Map<String, Object> body) {
+        ScheduleConfig snap = new ScheduleConfig();
+        BeanUtils.copyProperties(stored, snap, "id");
+        applySchedulePatch(snap, body);
+        return snap;
+    }
+
+    private static void applySchedulePatch(ScheduleConfig target, Map<String, Object> body) {
+        if (body == null) return;
+        if (body.containsKey("enabled"))        target.setEnabled(Boolean.TRUE.equals(body.get("enabled")));
+        if (body.containsKey("scheduleType"))   target.setScheduleType((String) body.get("scheduleType"));
+        if (body.containsKey("runTime"))        target.setRunTime((String) body.get("runTime"));
+        if (body.containsKey("runDay"))         target.setRunDay((String) body.get("runDay"));
+        if (body.containsKey("intervalHours"))  target.setIntervalHours(body.get("intervalHours") != null ? ((Number) body.get("intervalHours")).intValue() : null);
+        if (body.containsKey("cronExpression")) target.setCronExpression((String) body.get("cronExpression"));
+        if (body.containsKey("jobParam"))       target.setJobParam(body.get("jobParam") != null ? body.get("jobParam").toString() : null);
     }
 
     /**
