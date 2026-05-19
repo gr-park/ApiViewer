@@ -539,18 +539,30 @@
   </div>
   </div><!-- /#extractSectionUrl -->
 
-  <!-- ─── 테스트용 의심 키워드 (분석 시 매칭에 사용) ─── -->
+  <!-- ─── 테스트용 의심 키워드 (기본 접힘) ─── -->
   <div id="extractSectionKeywords">
   <div class="card" data-admin-only>
-    <div class="section-heading section-heading--analyze">
-      <span class="dot"></span>테스트용 의심 키워드 (분석 시 매칭)
+    <div class="section-heading section-heading--analyze" style="justify-content:space-between;">
+      <div style="display:flex;align-items:center;gap:8px;min-width:0;">
+        <span class="dot"></span>
+        <span>테스트용 의심 키워드 (분석 시 매칭)</span>
+      </div>
+      <button type="button" class="btn btn-ghost" id="testSuspectFoldToggleBtn"
+              style="height:28px;padding:4px 12px;font-size:12px;flex-shrink:0;"
+              onclick="toggleExtractFoldSection('testSuspect')">펼치기</button>
     </div>
+    <div id="testSuspectFoldBody">
     <p style="font-size:12px;color:var(--text-muted);margin-bottom:8px;line-height:1.6;">
       URL 경로 / 메소드명 / 컨트롤러명 / 파일경로 / 메소드주석 / 컨트롤러주석 / @ApiOperation / @Description 에서
       대소문자 무시 매칭. 영문·숫자만 2~3글자 키워드는 단어 경계(+ 메소드/컨트롤러 camelCase 토큰 일치), 그 외는 부분일치.
       fullUrl 은 도메인 false positive 방지로 제외.
       매칭 결과는 분석현황의 "테스트용 의심" 컬럼에 자동 표시됩니다.
     </p>
+    <div style="margin-bottom:10px;">
+      <div style="font-size:11px;font-weight:700;color:var(--text-muted);margin-bottom:4px;">재평가 대상 레포</div>
+      <div id="testSuspectRecalcRepo" class="repo-select-mount"></div>
+      <div style="font-size:10px;color:var(--text-muted);margin-top:4px;">미선택 시 전체 레포</div>
+    </div>
     <label class="field" style="display:block;">
       <div id="testSuspectKwList" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px;min-height:28px;"></div>
       <div style="display:flex;gap:6px;align-items:center;">
@@ -559,18 +571,25 @@
                onkeydown="if(event.key==='Enter'){event.preventDefault();addTestKeyword();}">
         <button type="button" class="btn btn-ghost" onclick="addTestKeyword()">+ 추가</button>
         <button type="button" class="btn btn-blue" onclick="saveTestKeywordsAndRecalc()"
-                style="margin-left:auto;">💾 저장 + 전체 재평가</button>
+                style="margin-left:auto;">💾 저장 + 재평가</button>
       </div>
     </label>
+    </div><!-- /#testSuspectFoldBody -->
   </div>
   </div><!-- /#extractSectionKeywords -->
 
-  <!-- ─── 경로변수 패턴 (api_path의 {name} 요약) ─── -->
   <div id="extractSectionPathParams">
   <div class="card" data-admin-only>
-    <div class="section-heading section-heading--save">
-      <span class="dot"></span>경로변수 패턴 일괄 재계산
+    <div class="section-heading section-heading--save" style="justify-content:space-between;">
+      <div style="display:flex;align-items:center;gap:8px;min-width:0;">
+        <span class="dot"></span>
+        <span>경로변수 패턴 일괄 재계산</span>
+      </div>
+      <button type="button" class="btn btn-ghost" id="pathParamFoldToggleBtn"
+              style="height:28px;padding:4px 12px;font-size:12px;flex-shrink:0;"
+              onclick="toggleExtractFoldSection('pathParam')">펼치기</button>
     </div>
+    <div id="pathParamFoldBody">
     <p style="font-size:12px;color:var(--text-muted);margin-bottom:8px;line-height:1.6;">
       <code>api_path</code>에 포함된 Spring 스타일 경로 변수(<code>{version}</code> 등)를 추출해
       <b>파라미터URL 패턴</b> 컬럼에 저장합니다. 추출 시 자동 반영되며, 기존 DB 일괄 보정 시 아래 버튼을 사용하세요.
@@ -586,15 +605,23 @@
         🔄 재계산
       </button>
     </div>
+    </div><!-- /#pathParamFoldBody -->
   </div>
   </div><!-- /#extractSectionPathParams -->
 
-  <!-- ─── 관련메뉴 미흡 플래그 일괄 재계산 ─── -->
+  <!-- ─── 관련메뉴 미흡 플래그 일괄 재계산 (기본 접힘) ─── -->
   <div id="extractSectionRelatedMenuDeficient">
   <div class="card" data-admin-only>
-    <div class="section-heading section-heading--analyze">
-      <span class="dot"></span>관련메뉴 미흡 처리 일괄 재계산
+    <div class="section-heading section-heading--analyze" style="justify-content:space-between;">
+      <div style="display:flex;align-items:center;gap:8px;min-width:0;">
+        <span class="dot"></span>
+        <span>관련메뉴 미흡 처리 일괄 재계산</span>
+      </div>
+      <button type="button" class="btn btn-ghost" id="relatedMenuFoldToggleBtn"
+              style="height:28px;padding:4px 12px;font-size:12px;flex-shrink:0;"
+              onclick="toggleExtractFoldSection('relatedMenu')">펼치기</button>
     </div>
+    <div id="relatedMenuFoldBody">
     <p style="font-size:12px;color:var(--text-muted);margin-bottom:8px;line-height:1.6;">
       공통설정의 <b>관련메뉴 최소·최대 글자수</b>와 URL 현황 표시 규칙(오버라이드 → @ApiOperation → @Description → 주석)으로
       <code>related_menu_deficient</code> 컬럼을 일괄 갱신합니다. 추출·수정 시에도 자동 반영되나,
@@ -614,6 +641,7 @@
         🔄 재계산
       </button>
     </div>
+    </div><!-- /#relatedMenuFoldBody -->
   </div>
   </div><!-- /#extractSectionRelatedMenuDeficient -->
 
@@ -1004,6 +1032,13 @@
           onChange: () => {}
         });
       }
+      if (document.getElementById('testSuspectRecalcRepo')) {
+        window._testSuspectRecalcRepoSel = RepoSelect.mountCompact('#testSuspectRecalcRepo', {
+          repos: allRepos,
+          placeholder: '전체',
+          onChange: () => {}
+        });
+      }
 
       // 첫 진입: 레포 1개만 선택되어 있으면 자동으로 APM 종류/기간 세팅
       if (allRepos.length > 0) onApmRepoChange();
@@ -1053,6 +1088,34 @@
   (function initSingleDebugFold() {
     const collapsed = localStorage.getItem(SINGLE_DEBUG_FOLD_KEY) !== 'false';
     applySingleDebugFoldState(collapsed);
+  })();
+
+  // ── 테스트 의심 / 경로변수 / 관련메뉴 보정 — 섹션별 접기/펼치기 ─────────
+  const EXTRACT_FOLD_KEYS = {
+    testSuspect: 'extract.testSuspectSectionCollapsed',
+    pathParam: 'extract.pathParamSectionCollapsed',
+    relatedMenu: 'extract.relatedMenuSectionCollapsed'
+  };
+  function applyExtractFoldSection(key, collapsed) {
+    const body = document.getElementById(key + 'FoldBody');
+    const btn = document.getElementById(key + 'FoldToggleBtn');
+    if (!body || !btn) return;
+    body.style.display = collapsed ? 'none' : 'block';
+    btn.textContent = collapsed ? '펼치기' : '접기';
+  }
+  function toggleExtractFoldSection(key) {
+    const storageKey = EXTRACT_FOLD_KEYS[key];
+    if (!storageKey) return;
+    const collapsed = localStorage.getItem(storageKey) !== 'false';
+    const next = !collapsed;
+    localStorage.setItem(storageKey, String(next));
+    applyExtractFoldSection(key, next);
+  }
+  (function initExtractFoldSections() {
+    Object.keys(EXTRACT_FOLD_KEYS).forEach((key) => {
+      const collapsed = localStorage.getItem(EXTRACT_FOLD_KEYS[key]) !== 'false';
+      applyExtractFoldSection(key, collapsed);
+    });
   })();
 
   // RepoSelect 기반 헬퍼 — 다중 선택 시 [선택된 repoName 배열] 반환.
@@ -3462,12 +3525,14 @@
         body: JSON.stringify(cur)
       });
       if (!saveRes.ok) throw new Error('키워드 저장 실패');
-      const recalcRes = await fetch('/api/recalculate-test-suspect', {
+      const repoQ = recalcRepoQueryString(window._testSuspectRecalcRepoSel);
+      const recalcRes = await fetch('/api/recalculate-test-suspect' + repoQ, {
         method: 'POST', headers: { 'X-Admin-Token': token }
       });
       if (!recalcRes.ok) throw new Error('재평가 실패');
       const r = await recalcRes.json();
-      showToast(`✅ 키워드 저장 + 재평가 완료 — 전체 ${r.total}건 중 ${r.updated}건 갱신 (${r.elapsedMs}ms)`, 'success');
+      const scope = r.repoNames && r.repoNames.length ? ` [${r.repoNames.join(', ')}]` : '';
+      showToast(`✅ 키워드 저장 + 재평가 완료${scope} — 전체 ${r.total}건 중 ${r.updated}건 갱신 (${r.elapsedMs}ms)`, 'success');
     } catch (e) {
       showToast('❌ ' + (e.message || e), 'error');
     } finally {

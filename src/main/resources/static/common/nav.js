@@ -13,7 +13,7 @@
  * ═══════════════════════════════════════════════════════════════ */
 (function () {
   // UI 버전 표기 (캐시/반영 여부 확인용) — 변경 시 이 값만 갱신
-  const APP_UI_VERSION = 'ver14.1.65';
+  const APP_UI_VERSION = 'ver14.1.68';
 
   const SEGMENTS = [
     {

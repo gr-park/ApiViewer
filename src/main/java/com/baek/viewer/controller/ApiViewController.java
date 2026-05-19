@@ -30,6 +30,7 @@ import com.baek.viewer.service.RecordProposalService;
 import com.baek.viewer.service.PathParamPatternRecalcService;
 import com.baek.viewer.service.RecalcRepoScope;
 import com.baek.viewer.service.RelatedMenuDeficiencyRecalcService;
+import com.baek.viewer.service.TestSuspectRecalcService;
 import com.baek.viewer.service.WhatapService;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -85,6 +86,7 @@ public class ApiViewController {
     private final com.baek.viewer.service.RelatedMenuDeficiencyChecker relatedMenuDeficiencyChecker;
     private final com.baek.viewer.service.RelatedMenuDeficiencyRecalcService relatedMenuDeficiencyRecalcService;
     private final PathParamPatternRecalcService pathParamPatternRecalcService;
+    private final TestSuspectRecalcService testSuspectRecalcService;
     private final com.baek.viewer.service.YamlConfigService yamlConfigService;
     private final ApiRecordStatusEventService statusEventService;
     private final RecordProposalService proposalService;
@@ -103,6 +105,7 @@ public class ApiViewController {
                              com.baek.viewer.service.RelatedMenuDeficiencyChecker relatedMenuDeficiencyChecker,
                              com.baek.viewer.service.RelatedMenuDeficiencyRecalcService relatedMenuDeficiencyRecalcService,
                              PathParamPatternRecalcService pathParamPatternRecalcService,
+                             TestSuspectRecalcService testSuspectRecalcService,
                              com.baek.viewer.service.YamlConfigService yamlConfigService,
                              ApiRecordStatusEventService statusEventService,
                              RecordProposalService proposalService,
@@ -120,6 +123,7 @@ public class ApiViewController {
         this.relatedMenuDeficiencyChecker = relatedMenuDeficiencyChecker;
         this.relatedMenuDeficiencyRecalcService = relatedMenuDeficiencyRecalcService;
         this.pathParamPatternRecalcService = pathParamPatternRecalcService;
+        this.testSuspectRecalcService = testSuspectRecalcService;
         this.yamlConfigService = yamlConfigService;
         this.statusEventService = statusEventService;
         this.proposalService = proposalService;
@@ -2738,44 +2742,23 @@ public class ApiViewController {
     }
 
     /**
-     * 테스트용 의심 키워드 변경 후 전체 ApiRecord 재평가.
-     * 변경된 레코드만 testSuspectReason 갱신 + 응답에 변경 건수 반환.
+     * 테스트용 의심 키워드 변경 후 ApiRecord 재평가.
+     * ?repoNames= 선택 (미전달 시 전체). 변경된 레코드만 testSuspectReason 갱신.
      */
     @PostMapping("/recalculate-test-suspect")
-    public ResponseEntity<?> recalculateTestSuspect() {
-        long start = System.currentTimeMillis();
-        log.info("[테스트의심 재평가] 시작");
-        java.util.List<String> keywords = testSuspectMatcher.currentKeywords();
-        int batchSize = 1000;
-        int updated = 0;
-        int total = 0;
-        org.springframework.data.domain.Pageable pageable =
-                org.springframework.data.domain.PageRequest.of(0, batchSize,
-                        org.springframework.data.domain.Sort.by("id"));
-        org.springframework.data.domain.Page<ApiRecord> page;
-        do {
-            page = recordRepository.findAll(pageable);
-            java.util.List<ApiRecord> changed = new java.util.ArrayList<>();
-            for (ApiRecord r : page.getContent()) {
-                String newReason = testSuspectMatcher.matchFromRecord(r, keywords);
-                if (!java.util.Objects.equals(r.getTestSuspectReason(), newReason)) {
-                    r.setTestSuspectReason(newReason);
-                    changed.add(r);
-                }
-            }
-            if (!changed.isEmpty()) recordRepository.saveAll(changed);
-            updated += changed.size();
-            total += page.getNumberOfElements();
-            pageable = pageable.next();
-        } while (page.hasNext());
-        long elapsed = System.currentTimeMillis() - start;
-        log.info("[테스트의심 재평가] 완료: 전체={}건, 변경={}건, 키워드={}, 소요={}ms",
-                total, updated, keywords.size(), elapsed);
+    public ResponseEntity<?> recalculateTestSuspect(
+            @RequestParam(required = false) String repoName,
+            @RequestParam(required = false) String repoNames) {
+        java.util.List<String> scope = RecalcRepoScope.parseRepoNames(repoName, repoNames);
+        TestSuspectRecalcService.RecalcResult r = testSuspectRecalcService.recalculate(scope);
         Map<String, Object> result = new LinkedHashMap<>();
-        result.put("total", total);
-        result.put("updated", updated);
-        result.put("keywords", keywords);
-        result.put("elapsedMs", elapsed);
+        result.put("total", r.total());
+        result.put("updated", r.updated());
+        result.put("keywords", r.keywords());
+        result.put("elapsedMs", r.elapsedMs());
+        if (r.repoNames() != null && !r.repoNames().isEmpty()) {
+            result.put("repoNames", r.repoNames());
+        }
         return ResponseEntity.ok(result);
     }
 
